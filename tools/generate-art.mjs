@@ -56,7 +56,7 @@ const SHARED = [
   {
     id: 'cloth',
     outfile: 'assets/cloth.png',
-    prompt: 'A large dark velvet reading cloth spread on a stone table, deep midnight blue-black fabric with subtle gold thread constellations woven into it, scattered silver starlight, soft candlelight from off-frame illuminating the surface, a few wisps of incense smoke rising at the edges, moody atmospheric fantasy setting, widescreen 16:9',
+    prompt: 'Orthographic top-down bird\'s-eye view directly overhead of a large dark velvet reading cloth spread flat on a wooden table, the cloth fills most of the frame edge to edge, deep midnight blue-black fabric with subtle gold thread constellations woven throughout it, scattered silver starlight embroidery, warm candlelight glow around the perimeter of the cloth, subtle dark wood grain visible only at the very corners outside the cloth, tabletop surface viewed straight down from above, no perspective, no horizon, no walls, no ceiling, no figures, no cards, empty flat surface ready for a tarot reading, moody atmospheric fantasy setting, widescreen 16:9',
     width: 1536,
     height: 864
   }
