@@ -46,8 +46,47 @@ Hooks.once('ready', async () => {
       await game.settings.set(MODULE_ID, 'playDeck', state);
     }
   };
+  if (game.user.isGM) await ensureWorldMacros();
   console.log(`${MODULE_ID} | ready — api attached to game.modules.get('${MODULE_ID}').api`);
 });
+
+const MACRO_DEFS = [
+  {
+    name: 'DOMMT: Play the Deck',
+    img: 'icons/svg/card-hand.svg',
+    command: `game.modules.get('${MODULE_ID}').api.openDeck();`
+  },
+  {
+    name: 'DOMMT: Divine — Celtic Cross',
+    img: 'icons/svg/eye.svg',
+    command: `game.modules.get('${MODULE_ID}').api.openDivination();`
+  },
+  {
+    name: 'DOMMT: Reset Play Deck (GM)',
+    img: 'icons/svg/regen.svg',
+    command: `if (!game.user.isGM) return ui.notifications.warn('GM only');\nawait game.modules.get('${MODULE_ID}').api.resetDeck();\nui.notifications.info('Deck reset');`
+  }
+];
+
+async function ensureWorldMacros() {
+  const toCreate = [];
+  for (const def of MACRO_DEFS) {
+    if (!game.macros.find((m) => m.name === def.name)) {
+      toCreate.push({
+        name: def.name,
+        type: 'script',
+        img: def.img,
+        command: def.command,
+        scope: 'global',
+        flags: { [MODULE_ID]: { generated: true } }
+      });
+    }
+  }
+  if (toCreate.length) {
+    await Macro.createDocuments(toCreate);
+    ui.notifications?.info(`Deck of Many More Things: created ${toCreate.length} macro(s) in your Macro Directory.`);
+  }
+}
 
 Hooks.on('getSceneControlButtons', (controls) => {
   const tokenControl = controls.find?.((c) => c.name === 'token') ?? controls.token;
