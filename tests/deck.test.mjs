@@ -134,10 +134,32 @@ describe('readingFromSpread', () => {
   });
 
   it('flags empty divination text', () => {
+    // cards.json is fully transcribed, so exercise the flag against a card
+    // whose slots are blank — the state a not-yet-transcribed card would be in.
+    const blank = {
+      ...CARDS[0],
+      divination: Object.fromEntries(
+        DIVINATION_CATEGORIES.map((cat) => [cat, { upright: '', reversed: '' }])
+      )
+    };
+    const byId = makeCardsById([blank]);
     const { spread } = dealCelticCross(CARDS, { seed: 'r', category: 'situation' });
-    const reading = readingFromSpread(CARDS, BY_ID, { category: 'situation', spread });
+    const blankSpread = spread.map((s) => ({ ...s, cardId: blank.id }));
+    const reading = readingFromSpread([blank], byId, { category: 'situation', spread: blankSpread });
     for (const p of reading.positions) {
       expect(p.empty).toBe(true);
+      expect(p.text).toBe('');
+    }
+  });
+
+  it('returns divination text for every position now that cards.json is transcribed', () => {
+    for (const category of DIVINATION_CATEGORIES) {
+      const { spread } = dealCelticCross(CARDS, { seed: `t-${category}`, category });
+      const reading = readingFromSpread(CARDS, BY_ID, { category, spread });
+      for (const p of reading.positions) {
+        expect(p.empty).toBe(false);
+        expect(p.text.length).toBeGreaterThan(0);
+      }
     }
   });
 });
