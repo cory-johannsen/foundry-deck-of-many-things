@@ -18,3 +18,8 @@ packs/*/*.ldb
 
 # ComfyUI intermediate artifacts
 tools/.comfyui-cache/
+
+# Hardcopy photos + OCR transcription — scratch input for the one-time
+# divination import (tools/import-divination.mjs). data/cards.json is the
+# source of truth for that text.
+card-text-images/

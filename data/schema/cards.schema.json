@@ -8,12 +8,13 @@
   "definitions": {
     "card": {
       "type": "object",
-      "required": ["id", "number", "name", "set", "rules", "mechanics", "art", "divination"],
+      "required": ["id", "number", "name", "flavor", "set", "rules", "mechanics", "art", "divination"],
       "additionalProperties": false,
       "properties": {
         "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
         "number": { "type": "integer", "minimum": 1, "maximum": 66 },
         "name": { "type": "string", "minLength": 1 },
+        "flavor": { "type": "string", "minLength": 1 },
         "set": { "enum": ["classic", "expansion"] },
         "rules": {
           "type": "object",
