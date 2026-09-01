@@ -1,0 +1,65 @@
+/* Deck of Many More Things — v0.0.1 */
+
+.dommt-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  max-width: 100%;
+  display: block;
+}
+.dommt-card--reversed { transform: rotate(180deg); }
+
+/* ----- Chat card ----- */
+.dommt-chat { display: flex; flex-direction: column; gap: 0.5rem; }
+.dommt-chat__header { display: flex; justify-content: space-between; align-items: baseline; }
+.dommt-chat__header h3 { margin: 0; }
+.dommt-chat__actor { font-size: 0.85em; opacity: 0.75; }
+.dommt-chat__art { max-height: 300px; width: auto; margin: 0 auto; }
+.dommt-chat__summary { font-weight: 600; }
+.dommt-chat__gm {
+  border-left: 3px solid #b8860b;
+  padding: 0.4rem 0.6rem;
+  background: rgba(184, 134, 11, 0.08);
+}
+.dommt-chat__auto {
+  border-left: 3px solid #4b8b3b;
+  padding: 0.4rem 0.6rem;
+  background: rgba(75, 139, 59, 0.08);
+}
+.dommt-chat__full { margin-top: 0.4rem; }
+
+/* ----- Deck app ----- */
+.dommt-deck { display: flex; flex-direction: column; gap: 0.6rem; padding: 0.5rem; }
+.dommt-deck label { display: flex; flex-direction: column; gap: 0.2rem; font-weight: 600; }
+.dommt-deck .hint { font-size: 0.85em; opacity: 0.7; margin: 0; }
+.dommt-deck footer { display: flex; gap: 0.5rem; justify-content: flex-end; }
+
+/* ----- Celtic Cross layout ----- */
+.dommt-cross { padding: 0.5rem; }
+.dommt-cross__grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr) 1fr;
+  grid-template-rows: repeat(3, auto);
+  gap: 0.6rem;
+  grid-template-areas:
+    ".      .           crown       .            .           self"
+    "recent_past significator challenge near_future  .        environment"
+    ".      .           foundation  .            .           hopes_fears"
+    ".      .           .           .            .           outcome";
+}
+.dommt-cross__slot { padding: 0.3rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; text-align: center; }
+.dommt-cross__slot--significator { grid-area: significator; }
+.dommt-cross__slot--challenge    { grid-area: challenge; transform: rotate(90deg); transform-origin: center; }
+.dommt-cross__slot--foundation   { grid-area: foundation; }
+.dommt-cross__slot--recent_past  { grid-area: recent_past; }
+.dommt-cross__slot--crown        { grid-area: crown; }
+.dommt-cross__slot--near_future  { grid-area: near_future; }
+.dommt-cross__slot--self         { grid-area: self; }
+.dommt-cross__slot--environment  { grid-area: environment; }
+.dommt-cross__slot--hopes_fears  { grid-area: hopes_fears; }
+.dommt-cross__slot--outcome      { grid-area: outcome; }
+
+.dommt-cross__position { display: flex; gap: 0.3rem; justify-content: center; font-size: 0.85em; opacity: 0.8; margin-bottom: 0.2rem; }
+.dommt-cross__num { font-weight: 700; }
+.dommt-cross__card-name { font-size: 0.9em; margin-top: 0.2rem; }
+.dommt-cross__text { font-size: 0.85em; padding: 0.3rem; text-align: left; }
+.dommt-cross__text--empty { font-style: italic; opacity: 0.5; }

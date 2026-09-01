@@ -1,0 +1,10 @@
+{
+  "_id": "macrodivinexxxxx",
+  "name": "DOMMT: Divine — Celtic Cross",
+  "type": "script",
+  "scope": "global",
+  "author": null,
+  "img": "icons/svg/eye.svg",
+  "command": "game.modules.get('deck-of-many-more-things').api.openDivination();",
+  "flags": {}
+}

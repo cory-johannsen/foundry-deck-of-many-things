@@ -1,0 +1,21 @@
+{
+  "name": "deck-of-many-more-things",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Foundry VTT v13 module: Deck of Many More Things for Pathfinder 2E.",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "validate": "node tools/validate-cards.mjs",
+    "art": "node tools/generate-art.mjs",
+    "build:pack": "node tools/build-pack.mjs",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "prettier": "^3.3.3",
+    "vitest": "^2.1.4"
+  }
+}

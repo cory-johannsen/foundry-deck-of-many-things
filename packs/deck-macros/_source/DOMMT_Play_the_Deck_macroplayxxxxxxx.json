@@ -1,0 +1,10 @@
+{
+  "_id": "macroplayxxxxxxx",
+  "name": "DOMMT: Play the Deck",
+  "type": "script",
+  "scope": "global",
+  "author": null,
+  "img": "icons/svg/card-hand.svg",
+  "command": "game.modules.get('deck-of-many-more-things').api.openDeck();",
+  "flags": {}
+}

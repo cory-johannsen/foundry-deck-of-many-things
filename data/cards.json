@@ -1,0 +1,2931 @@
+[
+  {
+    "id": "aberration",
+    "number": 1,
+    "name": "Aberration",
+    "set": "expansion",
+    "rules": {
+      "summary": "Gain telepathy within 90 feet.",
+      "full": "You gain the ability to communicate telepathically with any creature you can see within 90 feet of you. The creature understands you only if the two of you share a language.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "grant_telepathy",
+      "params": {
+        "range_ft": 90
+      }
+    },
+    "art": {
+      "front": "assets/cards/aberration.png",
+      "prompt": "Tarot card: a humanoid figure with alien eyes — too many, in wrong places — telepathic waves rendered as visible ripples emanating outward, thoughts of nearby creatures visible as ghostly impressions floating around them, strange and powerful and not quite human anymore. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "balance",
+    "number": 2,
+    "name": "Balance",
+    "set": "classic",
+    "rules": {
+      "summary": "Your alignment reverses (lawful↔chaotic, good↔evil).",
+      "full": "Your mind suffers a wrenching alteration, causing your alignment to change. Lawful becomes chaotic, good becomes evil, and vice versa. If you are neutral or unaligned, this card has no effect on you.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "alignment_flip",
+      "params": {}
+    },
+    "art": {
+      "front": "assets/cards/balance.png",
+      "prompt": "Tarot card: a set of ornate golden scales perfectly balanced, each pan holding abstract glowing symbols representing opposing moral forces — light on one side, shadow on the other — suspended in void, the scales at exact equilibrium, cosmic energy crackling at the fulcrum. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "beast",
+    "number": 3,
+    "name": "Beast",
+    "set": "expansion",
+    "rules": {
+      "summary": "Transform into a random CR 5 or lower beast for 2d12 days.",
+      "full": "You are transformed into a random beast of challenge rating 5 or lower for 2d12 days. Your game statistics, including mental ability scores, are replaced by those of the beast. You retain your alignment and personality.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "beast_form",
+      "params": {
+        "max_cr": 5,
+        "duration_days_formula": "2d12"
+      }
+    },
+    "art": {
+      "front": "assets/cards/beast.png",
+      "prompt": "Tarot card: a human figure mid-transformation into a large animal, the body caught between forms, clothing tearing as limbs reshape, the face frozen in the last moment before animal instinct takes over — humanity visible behind animal eyes in a disorienting split. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "book",
+    "number": 4,
+    "name": "Book",
+    "set": "expansion",
+    "rules": {
+      "summary": "Learn 1d6+2 languages.",
+      "full": "You immediately learn 1d6+2 languages of your choice. You gain fluency in these languages as if you had studied them for years.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "learn_languages",
+      "params": {
+        "count_formula": "1d6+2"
+      }
+    },
+    "art": {
+      "front": "assets/cards/book.png",
+      "prompt": "Tarot card: a large open tome radiating dozens of glowing scripts simultaneously — elvish, draconic, celestial, ancient sigil-languages — each script drifting upward as light and entering an open mind from above, the languages of the world freely given. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "bridge",
+    "number": 5,
+    "name": "Bridge",
+    "set": "expansion",
+    "rules": {
+      "summary": "Cast Time Stop 1d3 times.",
+      "full": "You can cast Time Stop (or its PF2e equivalent, Time Freeze) 1d3 times without expending a spell slot. In PF2e this becomes 1d3 free castings of Time Freeze; the GM tracks uses.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "cast_time_stop_n",
+      "params": {
+        "count_dice": "1d3",
+        "pf2e_spell": "time-freeze"
+      }
+    },
+    "art": {
+      "front": "assets/cards/bridge.png",
+      "prompt": "Tarot card: a figure standing perfectly still at the center of a frozen tableau — every other person around them locked motionless mid-step, mid-word, mid-blink — time visibly stopped, the figure the only point of motion in a world held in amber. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "campfire",
+    "number": 6,
+    "name": "Campfire",
+    "set": "expansion",
+    "rules": {
+      "summary": "Gain benefits of a long rest immediately.",
+      "full": "You immediately gain the benefits of a long rest — in PF2e, this restores you to full HP, resets focus points, and refreshes your daily preparations as if you had rested 8 hours.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "long_rest",
+      "params": {}
+    },
+    "art": {
+      "front": "assets/cards/campfire.png",
+      "prompt": "Tarot card: a warm campfire burning cheerfully in the center of the card, deep night around it, a bedroll and pack visible at the fire's edge suggesting a traveler resting, the flames gold and amber and deeply comforting — rest made tangible, fatigue visibly lifting. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "cavern",
+    "number": 7,
+    "name": "Cavern",
+    "set": "expansion",
+    "rules": {
+      "summary": "Gain a climbing speed equal to your walking speed; climb surfaces freely.",
+      "full": "You gain a climbing speed equal to your current walking speed and can climb difficult surfaces, including upside down on ceilings, without needing to make a check.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "climb_speed",
+      "params": {
+        "equal_to_walk": true,
+        "free_climb": true
+      }
+    },
+    "art": {
+      "front": "assets/cards/cavern.png",
+      "prompt": "Tarot card: a figure climbing a sheer stone wall with bare hands and feet, grip natural and certain, the stone welcoming them as if the rock recognizes one of its own, deep cavern environment lit by bioluminescent fungi below — vertical mastery made permanent. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "celestial",
+    "number": 8,
+    "name": "Celestial",
+    "set": "expansion",
+    "rules": {
+      "summary": "Sprout luminescent wings; gain 30 ft flying speed.",
+      "full": "Luminescent wings sprout from your back, granting you a flying speed of 30 feet. The wings shed a soft light in a 10-foot radius.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "flight",
+      "params": {
+        "speed_ft": 30,
+        "emits_light_radius_ft": 10
+      }
+    },
+    "art": {
+      "front": "assets/cards/celestial.png",
+      "prompt": "Tarot card: a figure with large white feathered wings fully extended, rising upward on a column of dawn light, the wings luminous and perfect as if borrowed from a seraph, joy and altitude in equal measure — ascension made physical. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "comet",
+    "number": 9,
+    "name": "Comet",
+    "set": "classic",
+    "rules": {
+      "summary": "If you solo-defeat the next hostile creature(s) you encounter, gain 1 level.",
+      "full": "If you single-handedly defeat the next hostile creature or group of creatures you encounter, you gain enough experience to advance one level. Otherwise, this card has no effect.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "solo_kill_level_up",
+      "params": {
+        "levels": 1
+      }
+    },
+    "art": {
+      "front": "assets/cards/comet.png",
+      "prompt": "Tarot card: a blazing comet of pure white-gold light arcing across a deep indigo night sky, its tail fragmenting into smaller motes that descend like potential toward a single figure silhouetted below with arms raised, vast and hopeful. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "construct",
+    "number": 10,
+    "name": "Construct",
+    "set": "expansion",
+    "rules": {
+      "summary": "A homunculus appears and treats you as its creator.",
+      "full": "A homunculus appears in an unoccupied space within 30 feet of you. It treats you as its creator and is loyal to you for as long as it lives.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "spawn_homunculus",
+      "params": {}
+    },
+    "art": {
+      "front": "assets/cards/construct.png",
+      "prompt": "Tarot card: a small homunculus — slightly uncanny, intelligent eyes, mismatched proportions — standing at the feet of a tall figure and gazing upward with complete devotion, the creator-creature bond shown in the homunculus's posture of absolute loyalty. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "corpse",
+    "number": 11,
+    "name": "Corpse",
+    "set": "expansion",
+    "rules": {
+      "summary": "You drop to 0 HP, unconscious; death saves required; only Wish can resurrect.",
+      "full": "You immediately drop to 0 hit points and fall unconscious, requiring death saving throws (PF2e: enter Dying 1). If you die from this effect, only a Wish spell (or equivalent divine miracle) can bring you back.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "drop_to_zero_hp",
+      "params": {
+        "only_wish_resurrects": true
+      }
+    },
+    "art": {
+      "front": "assets/cards/corpse.png",
+      "prompt": "Tarot card: a figure falling backward, eyes closing, not in battle but simply dropping — sudden unconsciousness with no visible cause, the only indication of the card's power the faint wisps of life-force leaving them, a warning rather than a wound. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "crossroads",
+    "number": 12,
+    "name": "Crossroads",
+    "set": "expansion",
+    "rules": {
+      "summary": "Roll d20: even = age 1d10 years older; odd = 1d10 years younger.",
+      "full": "Roll a d20. On an even result, you age 1d10 years. On an odd result, you become 1d10 years younger (minimum 1 year old). The change is instantaneous and permanent.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "age_shift",
+      "params": {
+        "years_formula": "1d10",
+        "direction": "coin_flip_d20_parity"
+      }
+    },
+    "art": {
+      "front": "assets/cards/crossroads.png",
+      "prompt": "Tarot card: an hourglass at a literal crossroads, time flowing in both directions simultaneously — upward and downward — a figure at the center aging and un-aging in a split image, the coin-flip of years rendered as two overlapping silhouettes of different ages. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "donjon",
+    "number": 13,
+    "name": "Donjon",
+    "set": "classic",
+    "rules": {
+      "summary": "Entombed in an extradimensional sphere; you draw no more cards.",
+      "full": "You disappear and become entombed in a state of suspended animation in an extradimensional sphere. Everything you were wearing and carrying stays behind in the space you occupied. You remain there until you are found and removed. You draw no more cards.",
+      "draw_terminating": true
+    },
+    "mechanics": {
+      "kind": "trap_extraplanar",
+      "params": {
+        "location": "sphere"
+      }
+    },
+    "art": {
+      "front": "assets/cards/donjon.png",
+      "prompt": "Tarot card: a solitary tower of black iron suspended in an empty grey void, no ground below it, no sky above, a single barred window with pale spectral light behind it, chains wrapped around the tower's base trailing into nothing, absolute isolation. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "door",
+    "number": 14,
+    "name": "Door",
+    "set": "expansion",
+    "rules": {
+      "summary": "Cast Gate 1d4 times without material components.",
+      "full": "You can cast the Gate spell (or PF2e Gate) 1d4 times without expending a spell slot or material components. The GM tracks the number of uses.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "cast_gate_n",
+      "params": {
+        "count_dice": "1d4"
+      }
+    },
+    "art": {
+      "front": "assets/cards/door.png",
+      "prompt": "Tarot card: an ornate arched doorway standing freestanding in empty space, through its frame a swirling portal to elsewhere — another plane, another world — the door glowing with Gate-magic, keys floating untethered beside it, passage freely given. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "dragon",
+    "number": 15,
+    "name": "Dragon",
+    "set": "expansion",
+    "rules": {
+      "summary": "A dragon wyrmling hatches nearby; it views you as its parent and is loyal.",
+      "full": "A dragon wyrmling of a type chosen by the GM appears in an unoccupied space within 30 feet of you. The wyrmling views you as its parent and is loyal to you for as long as you both live.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "spawn_wyrmling",
+      "params": {}
+    },
+    "art": {
+      "front": "assets/cards/dragon.png",
+      "prompt": "Tarot card: a newly hatched dragon wyrmling breaking free of a cracked egg, scales gleaming, tiny wings spread for the first time, ancient intelligence already present in very young eyes — the wyrmling looking up at a looming shadow above it as if seeing its parent. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "elemental",
+    "number": 16,
+    "name": "Elemental",
+    "set": "expansion",
+    "rules": {
+      "summary": "Become immune to one of: acid, cold, fire, lightning, or thunder (choice).",
+      "full": "You choose one damage type: acid, cold, fire, lightning, or thunder. You become permanently immune to damage of the chosen type.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "element_immunity",
+      "params": {
+        "choices": [
+          "acid",
+          "cold",
+          "fire",
+          "lightning",
+          "thunder"
+        ]
+      }
+    },
+    "art": {
+      "front": "assets/cards/elemental.png",
+      "prompt": "Tarot card: a figure at the center of a convergence of all five elemental forces — fire, ice, lightning, acid, thunder rendered as visible energy streams — the figure absorbing one element while the others break apart and scatter, immunity made visible as a force. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "euryale",
+    "number": 17,
+    "name": "Euryale",
+    "set": "classic",
+    "rules": {
+      "summary": "You suffer a −2 penalty on saving throws until removed by divine intervention.",
+      "full": "The card's medusa-like visage curses you. You suffer a −2 penalty on all saving throws. Only a god or the magic of the Fates card (or equivalent divine intervention) can end this curse.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "save_penalty",
+      "params": {
+        "value": -2,
+        "scope": "all_saves"
+      }
+    },
+    "art": {
+      "front": "assets/cards/euryale.png",
+      "prompt": "Tarot card: a female figure with writhing serpents for hair, her gaze averted to spare the viewer, her expression not monstrous but sorrowful, elaborate robes of deep green, one hand extended forward with a faint dark curse-light emanating from her palm. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "expert",
+    "number": 18,
+    "name": "Expert",
+    "set": "expansion",
+    "rules": {
+      "summary": "Your Dexterity score increases by 2 (max 22).",
+      "full": "Your Dexterity score increases by 2, to a maximum of 22 (5e cap). In PF2e translation, this becomes a +1 to your Dexterity modifier, capped at the PF2e mod ceiling.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "stat_bump",
+      "params": {
+        "ability": "dex",
+        "delta_5e": 2,
+        "cap_5e": 22,
+        "delta_pf2e_mod": 1
+      }
+    },
+    "art": {
+      "front": "assets/cards/expert.png",
+      "prompt": "Tarot card: a figure in mid-motion blur — reflexes visible as afterimages, hands already positioned before a threat arrives, the body moving faster than thought — dexterity as something close to precognition, the sharpened edge of physical mastery. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "fates",
+    "number": 19,
+    "name": "Fates",
+    "set": "classic",
+    "rules": {
+      "summary": "Erase one event as if it never happened; usable anytime before your death.",
+      "full": "Reality's fabric unravels and reshapes itself, allowing you to avoid or erase one event as if it never happened. You can use the card's magic as soon as you draw the card or at any other time before your death.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "erase_event",
+      "params": {
+        "uses": 1
+      }
+    },
+    "art": {
+      "front": "assets/cards/fates.png",
+      "prompt": "Tarot card: three robed women at a cosmic loom, threads of gold light stretched between their fingers, one thread visibly severed mid-air — time paused at the cut — stars and nebulae visible through the loom's frame as if the fabric of reality is what they are weaving. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "fey",
+    "number": 20,
+    "name": "Fey",
+    "set": "expansion",
+    "rules": {
+      "summary": "You are pulled into the Feywild through a fey crossing; you draw no more cards.",
+      "full": "You are pulled through a spontaneously opened fey crossing and deposited into the Feywild. You must find your own way back. You draw no more cards.",
+      "draw_terminating": true
+    },
+    "mechanics": {
+      "kind": "feywild_transport",
+      "params": {}
+    },
+    "art": {
+      "front": "assets/cards/fey.png",
+      "prompt": "Tarot card: a shimmering archway of twisted silver-bark trees opening into the Feywild beyond — impossible saturated color, floating lights, a world more vivid than reality — a figure stepping through, the arch closing behind them, no return indicated. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "fiend",
+    "number": 21,
+    "name": "Fiend",
+    "set": "expansion",
+    "rules": {
+      "summary": "A powerful fiend offers a deal (task in exchange for reward). Indifferent and keeps its bargains.",
+      "full": "A powerful fiend (chosen by the GM) appears and offers you a deal — a task in exchange for a reward. The fiend is indifferent to you and honors its bargains, though it interprets them literally.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "fiend_deal",
+      "params": {}
+    },
+    "art": {
+      "front": "assets/cards/fiend.png",
+      "prompt": "Tarot card: a composed fiend in ornate dark clothing seated across a table from an unseen figure, a contract of glowing red script between them, the fiend's expression patient and satisfied — a negotiation rather than a fight, the terms already written, only the signature needed. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "flames",
+    "number": 22,
+    "name": "Flames",
+    "set": "classic",
+    "rules": {
+      "summary": "A powerful devil becomes your permanent enemy, seeking your ruin and death.",
+      "full": "A powerful devil (chosen by the GM) becomes your enemy. The devil seeks your ruin and plagues your life, savoring your suffering before attempting to slay you. This enmity lasts until either you or the devil dies.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "permanent_enemy",
+      "params": {
+        "creature_type": "devil"
+      }
+    },
+    "art": {
+      "front": "assets/cards/flames.png",
+      "prompt": "Tarot card: a horned devil figure cloaked in dark robes and hellfire, staring directly at the viewer with eyes of cold amber intelligence, one clawed hand raised with a single pointing finger — an unmistakable declaration of intent, infernal architecture visible behind it. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "fool",
+    "number": 23,
+    "name": "Fool",
+    "set": "classic",
+    "rules": {
+      "summary": "Lose 10,000 XP, discard this card, and draw two more (counts as one declared draw).",
+      "full": "You lose 10,000 XP, discard this card, and draw two more cards beyond your declared draws. In PF2e terms, this is a loss of experience toward your next level (or a level drain if it exceeds your current XP).",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "xp_loss",
+      "params": {
+        "xp": 10000,
+        "additional_draws": 2,
+        "counts_as_one": true
+      }
+    },
+    "art": {
+      "front": "assets/cards/fool.png",
+      "prompt": "Tarot card: a court jester mid-tumble over a cliff edge, bells on his cap still ringing, his expression frozen between laughter and panic, scattered gold coins raining upward around him defying gravity, a deck of cards spilling from his hands as he falls. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "gem",
+    "number": 24,
+    "name": "Gem",
+    "set": "classic",
+    "rules": {
+      "summary": "25 pieces of jewelry (2,000 gp each) OR 50 gems (1,000 gp each) appear at your feet.",
+      "full": "Twenty-five pieces of jewelry worth 2,000 gp each, or fifty gems worth 1,000 gp each, appear at your feet. Choose one option.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "wealth_grant",
+      "params": {
+        "choice": [
+          {
+            "kind": "jewelry",
+            "count": 25,
+            "value_each_gp": 2000
+          },
+          {
+            "kind": "gems",
+            "count": 50,
+            "value_each_gp": 1000
+          }
+        ]
+      }
+    },
+    "art": {
+      "front": "assets/cards/gem.png",
+      "prompt": "Tarot card: a cascade of luminous jewels and ornate jewelry pieces tumbling through dark air, each gem catching interior light — rubies, sapphires, emeralds — their facets throwing colored light in every direction, abundance overflowing from the top of the frame. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "giant",
+    "number": 25,
+    "name": "Giant",
+    "set": "expansion",
+    "rules": {
+      "summary": "You grow 2d10 inches; your HP maximum and current HP increase by 20.",
+      "full": "You grow 2d10 inches taller, and your hit point maximum and current hit points each increase by 20.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "size_grow",
+      "params": {
+        "grow_inches_formula": "2d10",
+        "hp_bump": 20
+      }
+    },
+    "art": {
+      "front": "assets/cards/giant.png",
+      "prompt": "Tarot card: a figure visibly taller than they were — the frame too small to contain them now, the ceiling brushing their head, their presence expanding to fill more space — giant-growth rendered as a quiet transformation, the floor further away than it used to be. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "humanoid",
+    "number": 26,
+    "name": "Humanoid",
+    "set": "expansion",
+    "rules": {
+      "summary": "You may stop drawing regardless of the declared number.",
+      "full": "You can choose to stop drawing cards regardless of how many you originally declared. The remaining declared draws are forfeited.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "stop_drawing_optional",
+      "params": {}
+    },
+    "art": {
+      "front": "assets/cards/humanoid.png",
+      "prompt": "Tarot card: a figure standing at a crossroads with multiple glowing card-paths stretching outward, one hand raised palm-forward in a command to stop, the choice to walk away made visible as a warm light emanating from their chest — the Deck obeying a mortal's decision. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "jester",
+    "number": 27,
+    "name": "Jester",
+    "set": "classic",
+    "rules": {
+      "summary": "Gain 10,000 XP OR draw two additional cards beyond your declared draws.",
+      "full": "You gain 10,000 XP, or you can choose to draw two additional cards beyond your declared draws.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "bonus_draws",
+      "params": {
+        "xp_alternative": 10000,
+        "additional_draws": 2,
+        "choice": true
+      }
+    },
+    "art": {
+      "front": "assets/cards/jester.png",
+      "prompt": "Tarot card: a grinning jester holding a forking road in one hand — two paths made literal as tiny glowing lines — and a sheaf of blank cards in the other, his motley coat shifting between shadow and gold, the choice between experience and more chances embodied in his knowing smirk. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "key",
+    "number": 28,
+    "name": "Key",
+    "set": "classic",
+    "rules": {
+      "summary": "A rare or rarer magic weapon appears in your hands, and you are proficient with it.",
+      "full": "A rare or rarer magic weapon with which you are proficient suddenly appears in your hands. In PF2e translation, an uncommon+ magic weapon of appropriate level appears, and you gain the proficiency needed to wield it if you lacked it.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "magic_weapon_grant",
+      "params": {
+        "rarity_5e": "rare_plus",
+        "pf2e_rarity_min": "uncommon"
+      }
+    },
+    "art": {
+      "front": "assets/cards/key.png",
+      "prompt": "Tarot card: an ornate skeletal key of antique gold hovering point-down in empty space, glowing softly with amber inner light, its bow formed from interlocking stars, elaborate wards along its blade suggesting it opens something extraordinary rather than mundane. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "knight",
+    "number": 29,
+    "name": "Knight",
+    "set": "classic",
+    "rules": {
+      "summary": "A 4th-level fighter of the same race as you appears; loyal until death.",
+      "full": "You gain the service of a 4th-level fighter (PF2e: 4th-level warrior NPC) who appears in a space you choose within 30 feet. The fighter is of the same race as you and serves you loyally until death.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "spawn_ally_npc",
+      "params": {
+        "class_5e": "fighter",
+        "level": 4,
+        "same_race": true
+      }
+    },
+    "art": {
+      "front": "assets/cards/knight.png",
+      "prompt": "Tarot card: a fully armored knight in gleaming silver plate kneeling in a posture of sworn fealty, sword point-down before them, visor raised to show earnest eyes, a faint halo of protective light behind the helmet suggesting honor made manifest. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "lance",
+    "number": 30,
+    "name": "Lance",
+    "set": "expansion",
+    "rules": {
+      "summary": "All your ability scores increase by 1 (max 20).",
+      "full": "Each of your ability scores increases by 1, to a maximum of 20 (5e cap). In PF2e, each ability modifier gains a +1 boost, capped at PF2e's mod ceiling.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "all_stats_bump",
+      "params": {
+        "delta_5e": 1,
+        "cap_5e": 20,
+        "delta_pf2e_mod": 1
+      }
+    },
+    "art": {
+      "front": "assets/cards/lance.png",
+      "prompt": "Tarot card: a full-body figure with every limb and feature outlined in faint golden enhancement-light, each ability score shown as a glowing line slightly above its old position — mind, body, speed, presence all lifting simultaneously, a total elevation. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "mage",
+    "number": 31,
+    "name": "Mage",
+    "set": "expansion",
+    "rules": {
+      "summary": "Your Intelligence score increases by 2 (max 22).",
+      "full": "Your Intelligence score increases by 2, to a maximum of 22 (5e cap). PF2e translation: +1 to Intelligence modifier, capped at the PF2e mod ceiling.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "stat_bump",
+      "params": {
+        "ability": "int",
+        "delta_5e": 2,
+        "cap_5e": 22,
+        "delta_pf2e_mod": 1
+      }
+    },
+    "art": {
+      "front": "assets/cards/mage.png",
+      "prompt": "Tarot card: a scholar surrounded by floating equations and arcane diagrams that have suddenly snapped into perfect clarity, the figure's eyes lit from within with intellectual fire, connections visible as golden threads between previously separate ideas — the mind expanded. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "map",
+    "number": 32,
+    "name": "Map",
+    "set": "expansion",
+    "rules": {
+      "summary": "Within 1 year, mentally name an object or person to learn its location, distance, and condition.",
+      "full": "At any time within the next year, you can mentally name a specific object or person you have seen and instantly learn its current location, distance from you, and general condition. The card's magic is expended after one use.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "map_query",
+      "params": {
+        "validity_days": 365,
+        "uses": 1
+      }
+    },
+    "art": {
+      "front": "assets/cards/map.png",
+      "prompt": "Tarot card: an ancient map unfurling in empty space, one location burning with golden light while the rest fades — the single point that matters made brilliant and unmistakable, knowledge of a specific place made absolute, a trail of light from viewer to destination. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "maze",
+    "number": 33,
+    "name": "Maze",
+    "set": "expansion",
+    "rules": {
+      "summary": "You gain 1d3 levels of exhaustion.",
+      "full": "You gain 1d3 levels of exhaustion. In PF2e translation, this becomes Fatigued (for 1 level) plus Drained equal to the remaining levels (2 or 3).",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "exhaustion",
+      "params": {
+        "levels_formula": "1d3",
+        "pf2e_map": {
+          "1": [
+            "fatigued"
+          ],
+          "2": [
+            "fatigued",
+            "drained_1"
+          ],
+          "3": [
+            "fatigued",
+            "drained_2"
+          ]
+        }
+      }
+    },
+    "art": {
+      "front": "assets/cards/maze.png",
+      "prompt": "Tarot card: an overhead view of an impossible labyrinth with no exit, a tiny figure at its center looking up with exhausted eyes, the walls too high to climb, the paths looping back — not a dungeon but a mind-maze, exhaustion and confusion made architectural. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "mine",
+    "number": 34,
+    "name": "Mine",
+    "set": "expansion",
+    "rules": {
+      "summary": "2d6 gems (5,000 gp each) plus 1d10 ore chunks (2,500 gp each) appear.",
+      "full": "2d6 gems worth 5,000 gp each and 1d10 chunks of precious ore worth 2,500 gp each appear at your feet.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "wealth_grant",
+      "params": {
+        "gems_formula": "2d6",
+        "gem_value_gp": 5000,
+        "ore_formula": "1d10",
+        "ore_value_gp": 2500
+      }
+    },
+    "art": {
+      "front": "assets/cards/mine.png",
+      "prompt": "Tarot card: an underground vein of brilliant gemstones cracking open in real time, jewels of every color tumbling outward from the exposed rock face, chunks of ore gleaming in torchlight, abundance pulled from the earth by the Deck's command. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "monstrosity",
+    "number": 35,
+    "name": "Monstrosity",
+    "set": "expansion",
+    "rules": {
+      "summary": "A Large or larger monstrosity of CR 10 or lower appears, hostile, and attacks immediately.",
+      "full": "A Large or larger monstrosity of challenge rating 10 or lower (GM's choice) appears in an unoccupied space within 60 feet of you. The creature is hostile and attacks you immediately.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "spawn_hostile",
+      "params": {
+        "size_min": "large",
+        "cr_max_5e": 10,
+        "type_5e": "monstrosity"
+      }
+    },
+    "art": {
+      "front": "assets/cards/monstrosity.png",
+      "prompt": "Tarot card: a massive creature of nightmare proportions tearing through a rift in reality, hostile and immediate, its attention fixed directly on the viewer — no buildup, no introduction, just the monster already here, already lunging. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "moon",
+    "number": 36,
+    "name": "Moon",
+    "set": "classic",
+    "rules": {
+      "summary": "Cast Wish 1d3 times.",
+      "full": "You gain the ability to cast the Wish spell (or an equivalent divine miracle in PF2e, where Wish does not exist) 1d3 times.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "wish",
+      "params": {
+        "count_dice": "1d3"
+      }
+    },
+    "art": {
+      "front": "assets/cards/moon.png",
+      "prompt": "Tarot card: a vast full moon dominating the night sky, its face expressionless but watching, three luminous spheres orbiting it like possibilities waiting to be granted, silver light flooding downward over dark water below, the boundary between magic and reality thinned to nothing. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "ooze",
+    "number": 37,
+    "name": "Ooze",
+    "set": "expansion",
+    "rules": {
+      "summary": "A gelatinous cube appears in your space and engulfs you (hostile).",
+      "full": "A gelatinous cube appears in your space and immediately attempts to engulf you. The cube is hostile and will pursue you if you escape.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "spawn_ooze",
+      "params": {
+        "creature": "gelatinous_cube",
+        "in_own_space": true
+      }
+    },
+    "art": {
+      "front": "assets/cards/ooze.png",
+      "prompt": "Tarot card: a translucent gelatinous mass already surrounding a figure from all sides, the figure visible as a silhouette inside the ooze, unable to move — engulfment rendered not as horror but as eerie cold inevitability, the cube simply absorbing. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "path",
+    "number": 38,
+    "name": "Path",
+    "set": "expansion",
+    "rules": {
+      "summary": "Your walking speed increases by 10 feet.",
+      "full": "Your walking speed permanently increases by 10 feet.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "speed_bonus",
+      "params": {
+        "walk_ft": 10
+      }
+    },
+    "art": {
+      "front": "assets/cards/path.png",
+      "prompt": "Tarot card: a golden road stretching to the horizon, visibly shorter than it used to be — distances compressed by permanent swiftness, the world leaning closer, a figure mid-stride whose legs cover more ground than before without effort. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "pit",
+    "number": 39,
+    "name": "Pit",
+    "set": "expansion",
+    "rules": {
+      "summary": "You fall 3d6×10 feet, taking falling damage; you land prone.",
+      "full": "The ground beneath you opens into a chasm. You fall 3d6 × 10 feet, taking falling damage on landing, and end prone.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "fall",
+      "params": {
+        "distance_ft_formula": "(3d6)*10",
+        "leaves_prone": true
+      }
+    },
+    "art": {
+      "front": "assets/cards/pit.png",
+      "prompt": "Tarot card: a figure in freefall through empty air, the stone floor that was there one moment simply gone, the drop below them vast and dark, wind tearing at their clothing, the ground rushing upward to meet them — pure sudden falling. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "plant",
+    "number": 40,
+    "name": "Plant",
+    "set": "expansion",
+    "rules": {
+      "summary": "You can cast Speak with Plants without a slot (once per long rest).",
+      "full": "You can cast Speak with Plants (or the PF2e equivalent, Speak with Plants) once per long rest without expending a spell slot.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "spellcast_slotless",
+      "params": {
+        "spell_5e": "speak_with_plants",
+        "pf2e_spell": "speak-with-plants",
+        "per_long_rest": 1
+      }
+    },
+    "art": {
+      "front": "assets/cards/plant.png",
+      "prompt": "Tarot card: a figure kneeling with both hands pressed to the soil, plants and roots responding — bending toward them, communicating in the slow language of growth — ancient green speech made visible as faint luminous tracery between human hands and living roots. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "priest",
+    "number": 41,
+    "name": "Priest",
+    "set": "expansion",
+    "rules": {
+      "summary": "Your Wisdom score increases by 2 (max 22).",
+      "full": "Your Wisdom score increases by 2, to a maximum of 22 (5e cap). PF2e translation: +1 to Wisdom modifier, capped at the PF2e mod ceiling.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "stat_bump",
+      "params": {
+        "ability": "wis",
+        "delta_5e": 2,
+        "cap_5e": 22,
+        "delta_pf2e_mod": 1
+      }
+    },
+    "art": {
+      "front": "assets/cards/priest.png",
+      "prompt": "Tarot card: a figure in meditation, eyes closed, the sapflow-light of divine connection visible as golden currents flowing through their body from below — wisdom deepening not through study but through attunement, the Tree's currents running stronger. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "prisoner",
+    "number": 42,
+    "name": "Prisoner",
+    "set": "expansion",
+    "rules": {
+      "summary": "Magical force chains restrain you; you cannot cast spells; you draw no more cards.",
+      "full": "Chains of magical force wrap around you, restraining you. You cannot cast spells while restrained by these chains, and you draw no more cards. The chains persist until dispelled or removed by powerful magic.",
+      "draw_terminating": true
+    },
+    "mechanics": {
+      "kind": "restrain_no_spellcast",
+      "params": {}
+    },
+    "art": {
+      "front": "assets/cards/prisoner.png",
+      "prompt": "Tarot card: a figure wrapped in invisible force — the air around them warped and shimmering with magical restraint, wrists bound by nothing visible but absolutely held, mouth slightly open but producing no words, a cage of pure arcane will. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "puzzle",
+    "number": 43,
+    "name": "Puzzle",
+    "set": "classic",
+    "rules": {
+      "summary": "Your Intelligence score decreases by 1d4+1 (min 1); draw one additional card.",
+      "full": "Your Intelligence score decreases by 1d4+1 (minimum 1). You must also draw one additional card beyond your declared draws.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "stat_debuff",
+      "params": {
+        "ability": "int",
+        "delta_5e_formula": "-(1d4+1)",
+        "min_5e": 1,
+        "additional_draws": 1
+      }
+    },
+    "art": {
+      "front": "assets/cards/puzzle.png",
+      "prompt": "Tarot card: a human head in profile, the skull open at the top, puzzle pieces inside scattering outward and floating away in different directions — some already gone, the mind visibly diminishing, the figure's expression calm and confused in equal measure. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "ring",
+    "number": 44,
+    "name": "Ring",
+    "set": "expansion",
+    "rules": {
+      "summary": "A rare or rarer magic ring appears and auto-attunes if you have slots available.",
+      "full": "A rare or rarer magic ring appears on your finger. If you have an available attunement slot (5e) or ring-slot (PF2e), it attunes to you automatically.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "ring_grant",
+      "params": {
+        "rarity_5e": "rare_plus",
+        "pf2e_rarity_min": "uncommon",
+        "auto_attune": true
+      }
+    },
+    "art": {
+      "front": "assets/cards/ring.png",
+      "prompt": "Tarot card: a single ornate ring descending from above onto an outstretched finger, the ring glowing with contained magic, its setting elaborate and clearly rare, already sized for this hand — a gift arriving with precise intentionality. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "rogue",
+    "number": 45,
+    "name": "Rogue",
+    "set": "classic",
+    "rules": {
+      "summary": "A random NPC known to you becomes a hostile enemy; only Wish or divine intervention ends it.",
+      "full": "A nonplayer character of the GM's choice becomes hostile toward you. The identity of your new enemy is not known until they or someone else reveals it. Nothing less than a Wish spell (or divine intervention) can end their hostility.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "random_hostile_npc",
+      "params": {}
+    },
+    "art": {
+      "front": "assets/cards/rogue.png",
+      "prompt": "Tarot card: a shadowed figure standing very close behind someone who does not know they are there, one gloved hand reaching toward the lit figure's back with a dagger concealed in the other hand, the foreground figure's face obscured, representing trusted betrayal. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "ruin",
+    "number": 46,
+    "name": "Ruin",
+    "set": "classic",
+    "rules": {
+      "summary": "All non-magical wealth you own is lost; property and ownership documentation disappear.",
+      "full": "All forms of non-magical wealth you carry or own vanish. Portable property is reduced to dust; documents that establish your ownership also disappear, along with the deeds and titles.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "wealth_wipe",
+      "params": {
+        "targets": [
+          "carried_gp",
+          "non_magical_valuables",
+          "property_deeds"
+        ]
+      }
+    },
+    "art": {
+      "front": "assets/cards/ruin.png",
+      "prompt": "Tarot card: a grand estate crumbling at the moment of collapse, coins and papers flying in every direction, treasure chests bursting open only to find their contents vanishing into smoke, a single figure standing at the center untouched but watching everything they owned disappear. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "sage",
+    "number": 47,
+    "name": "Sage",
+    "set": "classic",
+    "rules": {
+      "summary": "Within 1 year, ask one question in meditation and receive a truthful answer with attendant wisdom.",
+      "full": "At any time within the next year, you can meditate for one hour and ask a single question. You receive a truthful answer and gain any additional wisdom the answer entails. The card's magic is expended after one use.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "sage_query",
+      "params": {
+        "validity_days": 365,
+        "uses": 1
+      }
+    },
+    "art": {
+      "front": "assets/cards/sage.png",
+      "prompt": "Tarot card: an ancient scholar seated before a single floating orb of absolute white light — the answer to any question compressed into light — their expression tranquil, one hand extended toward it but not yet touching, the knowledge available but not yet claimed. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "shield",
+    "number": 48,
+    "name": "Shield",
+    "set": "expansion",
+    "rules": {
+      "summary": "A rare or rarer magic armor appears; if you lack armor proficiency, your unarmored AC becomes 12 + DEX.",
+      "full": "A rare or rarer suit of magic armor appears on your body. If you are not proficient with the armor, your unarmored AC becomes 12 + your Dexterity modifier while the armor is present. PF2e translation grants an uncommon+ armor of appropriate level and applies a similar unarmored fallback.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "armor_grant",
+      "params": {
+        "rarity_5e": "rare_plus",
+        "pf2e_rarity_min": "uncommon",
+        "unarmored_fallback_5e": "12+dex"
+      }
+    },
+    "art": {
+      "front": "assets/cards/shield.png",
+      "prompt": "Tarot card: a suit of armor assembling itself around a figure piece by piece without hands to place it, each piece glowing briefly as it locks into position, the armor clearly rare and clearly alive with protective purpose — fitting itself to its new wearer. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "ship",
+    "number": 49,
+    "name": "Ship",
+    "set": "expansion",
+    "rules": {
+      "summary": "Gain proficiency in three skills (GM chooses).",
+      "full": "You gain proficiency in three skills chosen by the GM. In PF2e translation, you become Trained in three skills of the GM's choice (or advanced one step if already Trained).",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "skill_proficiencies",
+      "params": {
+        "count": 3,
+        "dm_chooses": true
+      }
+    },
+    "art": {
+      "front": "assets/cards/ship.png",
+      "prompt": "Tarot card: a figure at a ship's wheel in a storm, impossibly confident, every rope and sail obeying without thought — seamanship and navigation rendered as three distinct glowing threads around their hands representing newly acquired proficiencies. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "skull",
+    "number": 50,
+    "name": "Skull",
+    "set": "classic",
+    "rules": {
+      "summary": "An avatar of death appears; it attacks you; any it kills cannot be resurrected.",
+      "full": "You summon an avatar of death — a ghostly humanoid skeleton clad in a tattered black robe. It appears in an unoccupied space of the GM's choice within 10 feet of you and attacks you, warning all others that you must win the battle alone. Creatures it slays cannot be restored to life by any means short of a Wish.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "avatar_of_death",
+      "params": {
+        "no_resurrection_for_victims": true
+      }
+    },
+    "art": {
+      "front": "assets/cards/skull.png",
+      "prompt": "Tarot card: a skeletal avatar of death in dark flowing robes, scythe raised and gleaming with silver-black finality, standing in an empty void, facing directly forward, no mercy in the empty eye sockets, death personified as a duel with only one possible shape. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "staff",
+    "number": 51,
+    "name": "Staff",
+    "set": "expansion",
+    "rules": {
+      "summary": "A rare or rarer magic rod, staff, or wand appears.",
+      "full": "A rare or rarer magic rod, staff, or wand (GM's choice) appears in your hands. PF2e translation grants an uncommon+ magical implement (staff/wand/rod) of appropriate level.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "rod_or_staff_grant",
+      "params": {
+        "rarity_5e": "rare_plus",
+        "pf2e_rarity_min": "uncommon"
+      }
+    },
+    "art": {
+      "front": "assets/cards/staff.png",
+      "prompt": "Tarot card: an ornate magical staff, rod, or wand floating vertically at center, thrumming with visible stored power — arcane runes crawling along its length, its tip glowing — clearly waiting for a hand, a gift of magical implement already pointed at its recipient. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "stairway",
+    "number": 52,
+    "name": "Stairway",
+    "set": "expansion",
+    "rules": {
+      "summary": "Reduce your remaining declared draws by 2 OR receive a rare+ wondrous item (choice).",
+      "full": "You may choose to reduce the number of cards you have yet to draw by 2 (to a minimum of zero), or you may receive a rare or rarer wondrous item that appears in your possession.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "wondrous_grant",
+      "params": {
+        "rarity_5e": "rare_plus",
+        "pf2e_rarity_min": "uncommon",
+        "alternative_reduce_draws": 2,
+        "choice": true
+      }
+    },
+    "art": {
+      "front": "assets/cards/stairway.png",
+      "prompt": "Tarot card: a stone staircase descending rather than ascending, a warm light at the bottom suggesting safety — the wise path going down instead of up — a wondrous item visible glowing on the last step, the Deck offering mercy to those who take the humble door. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "star",
+    "number": 53,
+    "name": "Star",
+    "set": "classic",
+    "rules": {
+      "summary": "+2 to one ability score of your choice (max 24).",
+      "full": "Increase one of your ability scores by 2, to a maximum of 24 (5e cap). PF2e translation: +1 to a chosen ability modifier, capped at the PF2e mod ceiling.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "stat_bump",
+      "params": {
+        "ability": "any",
+        "delta_5e": 2,
+        "cap_5e": 24,
+        "delta_pf2e_mod": 1
+      }
+    },
+    "art": {
+      "front": "assets/cards/star.png",
+      "prompt": "Tarot card: a human silhouette dissolving upward into a field of stars, the figure's outline becoming indistinguishable from constellation lines, cosmic energy pouring downward into them like starlight choosing a vessel, glory and transformation made luminous. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "statue",
+    "number": 54,
+    "name": "Statue",
+    "set": "expansion",
+    "rules": {
+      "summary": "You are petrified; freed by Greater Restoration or similar magic.",
+      "full": "You are turned to stone (Petrified condition). You remain petrified until freed by Greater Restoration, Wish, or comparable magic.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "petrify",
+      "params": {
+        "cure_options_5e": [
+          "greater_restoration",
+          "wish"
+        ],
+        "cure_options_pf2e": [
+          "remove-petrification",
+          "wish-tier_ritual"
+        ]
+      }
+    },
+    "art": {
+      "front": "assets/cards/statue.png",
+      "prompt": "Tarot card: a figure frozen mid-gesture as grey marble stone creeps from their feet upward, the face still wearing the last human expression before petrification locked it in place — not dead, not sleeping, exactly preserved at the moment of transformation. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "sun",
+    "number": 55,
+    "name": "Sun",
+    "set": "classic",
+    "rules": {
+      "summary": "Gain 50,000 XP; a random rare+ wondrous item appears.",
+      "full": "You gain 50,000 XP, and a random wondrous item (of rare rarity or greater) appears in your possession. PF2e translation: gain XP appropriate for your level (GM may convert) and an uncommon+ wondrous item.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "xp_gain",
+      "params": {
+        "xp_5e": 50000,
+        "wondrous_item": true,
+        "rarity_5e": "rare_plus",
+        "pf2e_rarity_min": "uncommon"
+      }
+    },
+    "art": {
+      "front": "assets/cards/sun.png",
+      "prompt": "Tarot card: a blinding solar disc at center, rays of pure gold light flooding the entire card frame, a small figure at the bottom with arms wide receiving the radiance, a single ornate wondrous item visible in the brilliance above them — the universe giving freely. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "talons",
+    "number": 56,
+    "name": "Talons",
+    "set": "classic",
+    "rules": {
+      "summary": "All your magic items disintegrate; artifacts vanish but survive.",
+      "full": "Every magic item you wear or carry disintegrates. Artifacts in your possession are not destroyed but vanish to another location.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "destroy_magic_items",
+      "params": {
+        "artifacts_vanish_not_destroyed": true
+      }
+    },
+    "art": {
+      "front": "assets/cards/talons.png",
+      "prompt": "Tarot card: enormous dark claws of pure void energy shredding through a collection of glowing magical items, artifacts dissolving into smoke and ash as the talons unmake them, not stealing but erasing — each item winking out of existence rather than falling to the floor. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "tavern",
+    "number": 57,
+    "name": "Tavern",
+    "set": "expansion",
+    "rules": {
+      "summary": "Your Charisma score increases by 2 (max 22).",
+      "full": "Your Charisma score increases by 2, to a maximum of 22 (5e cap). PF2e translation: +1 to Charisma modifier, capped at the PF2e mod ceiling.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "stat_bump",
+      "params": {
+        "ability": "cha",
+        "delta_5e": 2,
+        "cap_5e": 22,
+        "delta_pf2e_mod": 1
+      }
+    },
+    "art": {
+      "front": "assets/cards/tavern.png",
+      "prompt": "Tarot card: a warm tavern common room, a charismatic figure at its center around whom the whole room naturally orients — conversations drawing closer, faces turning toward them, a golden warmth of presence visible as a soft light — charm elevated to something close to magnetism. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "temple",
+    "number": 58,
+    "name": "Temple",
+    "set": "expansion",
+    "rules": {
+      "summary": "A deity is bound to aid you once via divine intervention or Resurrection.",
+      "full": "A deity of the GM's choice is bound to aid you once, either through divine intervention or by a Resurrection spell cast on your behalf. The debt is honored once and then expended.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "resurrection_grant",
+      "params": {
+        "count": 1,
+        "form": "divine_intervention_or_resurrect"
+      }
+    },
+    "art": {
+      "front": "assets/cards/temple.png",
+      "prompt": "Tarot card: a vast divine eye opening above a temple, its gaze turning to fall on a single small figure below — the full weight of godhood's attention, a debt acknowledged, divine intervention available once and held in trust, the eye waiting for the call. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "throne",
+    "number": 59,
+    "name": "Throne",
+    "set": "classic",
+    "rules": {
+      "summary": "Gain Persuasion proficiency with doubled bonus; rightful ownership of a monster-occupied keep.",
+      "full": "You gain proficiency in the Persuasion skill (PF2e: Diplomacy), and your proficiency bonus is doubled on checks made with it. You also become the rightful owner of a small keep in a distant land; however, the keep is currently occupied by monsters that you must clear out before you can claim it.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "throne_persuasion",
+      "params": {
+        "skill_5e": "persuasion",
+        "pf2e_skill": "diplomacy",
+        "prof_doubled": true,
+        "keep": true
+      }
+    },
+    "art": {
+      "front": "assets/cards/throne.png",
+      "prompt": "Tarot card: an ornate stone throne in a great hall, the seat glowing with subtle charisma-light, a rolled deed and a lord's seal resting on the armrest, the hall behind it suggesting subjects and lands awaiting, power offered rather than taken. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "tomb",
+    "number": 60,
+    "name": "Tomb",
+    "set": "expansion",
+    "rules": {
+      "summary": "Within 1 year, cast True Resurrection once without slot or components.",
+      "full": "At any time within the next year, you can cast True Resurrection (PF2e equivalent: Resurrect at high heightened level) once, without expending a spell slot or material components. After that use, the card's magic is expended.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "resurrection_grant",
+      "params": {
+        "count": 1,
+        "form": "true_resurrection",
+        "validity_days": 365,
+        "pf2e_spell": "resurrect"
+      }
+    },
+    "art": {
+      "front": "assets/cards/tomb.png",
+      "prompt": "Tarot card: a figure at a grave, hands extended, light flowing from their palms into the earth — the dead responding, rising in silhouette against the light, True Resurrection rendered as a slow reversal of loss, one death undone, the power held for when it truly matters. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "tower",
+    "number": 61,
+    "name": "Tower",
+    "set": "expansion",
+    "rules": {
+      "summary": "Draw 2 additional cards; keep one and return the other to the deck.",
+      "full": "You immediately draw two additional cards. Choose one of the two to keep as if you had drawn it normally, and return the other to the deck.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "draw_two_keep_one",
+      "params": {}
+    },
+    "art": {
+      "front": "assets/cards/tower.png",
+      "prompt": "Tarot card: two glowing cards hanging suspended side by side — one bright, one shadowed — a hand reaching toward them, choosing; the unchosen card already beginning to fade back into the deck, the moment of decision held before it resolves. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "tree",
+    "number": 62,
+    "name": "Tree",
+    "set": "expansion",
+    "rules": {
+      "summary": "While unarmored, your AC = 15 + DEX; vulnerable to fire; undoable only by Wish.",
+      "full": "Your skin toughens like bark. While unarmored, your Armor Class becomes 15 + your Dexterity modifier. You also become vulnerable to fire damage. Only a Wish can end this effect.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "unarmored_defense",
+      "params": {
+        "ac_formula_5e": "15+dex",
+        "vulnerability": "fire",
+        "undo_only_wish": true
+      }
+    },
+    "art": {
+      "front": "assets/cards/tree.png",
+      "prompt": "Tarot card: a figure whose skin is becoming bark in real time — grey-brown textured plates spreading across their arms, their silhouette gaining solidity — a torch in one corner burning closer, the figure aware of the new vulnerability, strength and fragility arriving together. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "undead",
+    "number": 63,
+    "name": "Undead",
+    "set": "expansion",
+    "rules": {
+      "summary": "A revenant blames you and hunts you for 1 year (or until your death, or a Wish).",
+      "full": "A revenant (PF2e: revenant undead) rises with the singular purpose of destroying you. It hunts you for one year or until you die. A Wish spell ends the pursuit.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "revenant_hunter",
+      "params": {
+        "duration_days": 365
+      }
+    },
+    "art": {
+      "front": "assets/cards/undead.png",
+      "prompt": "Tarot card: a revenant rising from a grave, its gaze already fixed on a distant point — hunting, purposeful, the eyes burning with singular intent — not mindless undead but a creature of targeted vengeance, one year of pursuit condensed into one moment of awakening. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "void",
+    "number": 64,
+    "name": "Void",
+    "set": "classic",
+    "rules": {
+      "summary": "Your soul is trapped in an object; your body is incapacitated; Wish reveals the location; you draw no more.",
+      "full": "Your soul is drawn from your body and imprisoned in an object at a distant, secret location. Your body is incapacitated. A Wish spell can reveal the object's location; recovering your soul requires physical retrieval. You draw no more cards.",
+      "draw_terminating": true
+    },
+    "mechanics": {
+      "kind": "soul_trap",
+      "params": {
+        "wish_reveals_location": true
+      }
+    },
+    "art": {
+      "front": "assets/cards/void.png",
+      "prompt": "Tarot card: a body standing hollow and empty, the chest a literal window of darkness through which stars are visible, no soul present — only the physical shell left behind, hands hanging open, eyes vacant, a gem-shaped void where the heart should be. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "warrior",
+    "number": 65,
+    "name": "Warrior",
+    "set": "expansion",
+    "rules": {
+      "summary": "Your Strength score increases by 2 (max 22).",
+      "full": "Your Strength score increases by 2, to a maximum of 22 (5e cap). PF2e translation: +1 to Strength modifier, capped at the PF2e mod ceiling.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "stat_bump",
+      "params": {
+        "ability": "str",
+        "delta_5e": 2,
+        "cap_5e": 22,
+        "delta_pf2e_mod": 1
+      }
+    },
+    "art": {
+      "front": "assets/cards/warrior.png",
+      "prompt": "Tarot card: a figure lifting something heavier than they should be able to, the effort visible but less than expected — new strength in the arms and shoulders, the body recalibrated upward, power that wasn't there before settling in like a natural state. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  },
+  {
+    "id": "well",
+    "number": 66,
+    "name": "Well",
+    "set": "expansion",
+    "rules": {
+      "summary": "Learn three cantrips of your choice from any spell list.",
+      "full": "You learn three cantrips of your choice from any spell list. PF2e translation: you learn three cantrips of your choice from any tradition; the GM adjudicates casting statistics.",
+      "draw_terminating": false
+    },
+    "mechanics": {
+      "kind": "three_cantrips",
+      "params": {
+        "count": 3,
+        "any_list": true
+      }
+    },
+    "art": {
+      "front": "assets/cards/well.png",
+      "prompt": "Tarot card: a stone well at night, moonlight falling into it revealing the water far below alive with magical light, a figure leaning over its edge and drawing something upward — three small glowing spheres rising on the bucket's rope, cantrips given freely from deep water. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+    },
+    "divination": {
+      "person": {
+        "upright": "",
+        "reversed": ""
+      },
+      "creature_or_trap": {
+        "upright": "",
+        "reversed": ""
+      },
+      "place": {
+        "upright": "",
+        "reversed": ""
+      },
+      "treasure": {
+        "upright": "",
+        "reversed": ""
+      },
+      "situation": {
+        "upright": "",
+        "reversed": ""
+      }
+    }
+  }
+]
