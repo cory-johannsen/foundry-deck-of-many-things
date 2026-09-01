@@ -34,20 +34,67 @@ const LAYOUT = {
 
 const DEAL_DELAY_MS = 600;
 
-export async function ensureDivinationScene() {
-  const existing = game.scenes.find((s) => s.getFlag(MODULE_ID, 'role') === SCENE_ROLE);
-  if (existing) return existing;
-  const scene = await Scene.create({
+const CLOTH_PATH = `modules/${MODULE_ID}/assets/cloth.png`;
+
+/**
+ * The Foundry v14 Scene document stores the background image inside a
+ * per-level structure: `scene.levels[0].background.src`. Older Foundry
+ * versions (v11–v13) accept a top-level `background: { src }` field. We
+ * include both so the create call works across versions.
+ */
+function buildSceneCreateData() {
+  return {
     name: 'Celtic Cross — Divination Table',
-    background: { src: `modules/${MODULE_ID}/assets/cloth.png` },
+    background: { src: CLOTH_PATH, tint: '#ffffff' },
     width: SCENE_WIDTH,
     height: SCENE_HEIGHT,
     padding: 0,
     grid: { type: 0, size: 100, alpha: 0, distance: 5, units: 'ft' },
     tokenVision: false,
     fogExploration: false,
-    flags: { [MODULE_ID]: { role: SCENE_ROLE } }
-  });
+    initial: { x: SCENE_WIDTH / 2, y: SCENE_HEIGHT / 2, scale: 0.6 },
+    levels: [{
+      _id: 'defaultLevel0000',
+      name: 'Level',
+      elevation: { bottom: 0, top: 20 },
+      background: { src: CLOTH_PATH, tint: '#ffffff', alphaThreshold: 0.75 },
+      foreground: { src: null, tint: '#ffffff', alphaThreshold: 0.75 },
+      sort: 0
+    }],
+    flags: { [MODULE_ID]: { role: SCENE_ROLE, backgroundVersion: 2 } }
+  };
+}
+
+async function migrateExistingScene(scene) {
+  const alreadyOk = scene.getFlag(MODULE_ID, 'backgroundVersion') >= 2;
+  if (alreadyOk) return scene;
+  const levels = scene.levels?.contents ?? scene.levels ?? [];
+  const defaultLevel = levels[0];
+  const needsBackground = !defaultLevel?.background?.src;
+  if (!needsBackground && alreadyOk) return scene;
+  try {
+    await scene.update({
+      background: { src: CLOTH_PATH, tint: '#ffffff' },
+      levels: [{
+        _id: defaultLevel?._id ?? defaultLevel?.id ?? 'defaultLevel0000',
+        name: defaultLevel?.name ?? 'Level',
+        elevation: defaultLevel?.elevation ?? { bottom: 0, top: 20 },
+        background: { src: CLOTH_PATH, tint: '#ffffff', alphaThreshold: 0.75 },
+        foreground: defaultLevel?.foreground ?? { src: null, tint: '#ffffff', alphaThreshold: 0.75 },
+        sort: defaultLevel?.sort ?? 0
+      }],
+      flags: { [MODULE_ID]: { role: SCENE_ROLE, backgroundVersion: 2 } }
+    });
+  } catch (e) {
+    console.warn(`${MODULE_ID} | migrateExistingScene failed`, e);
+  }
+  return scene;
+}
+
+export async function ensureDivinationScene() {
+  const existing = game.scenes.find((s) => s.getFlag(MODULE_ID, 'role') === SCENE_ROLE);
+  if (existing) return migrateExistingScene(existing);
+  const scene = await Scene.create(buildSceneCreateData());
   return scene;
 }
 
