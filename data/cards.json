@@ -402,7 +402,7 @@
     },
     "art": {
       "front": "assets/cards/construct.png",
-      "prompt": "Tarot card: (a tiny knee-high homunculus creature:1.5) standing on a wooden workshop floor in the foreground, oversized bald head, mismatched clay and copper limbs stitched together, glowing intelligent yellow eyes, gazing upward with adoration; (a robed alchemist wizard behind it:1.2) visible from waist up in the upper portion of the frame, one hand extended downward in blessing, arcane glassware and candles on wooden shelves in the background, warm amber lighting, two distinct figures at very different scales, tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "prompt": "Tarot card: a formal portrait of a small homunculus creature standing at the exact center of an ornate golden frame, mismatched clay and copper stitched limbs, oversized bald head, glowing intelligent yellow eyes, small arcane crest on its brow, arms slightly outstretched in greeting, a phial in one hand, small alchemical tools arranged around its feet, aged parchment background, symmetrical tarot composition, subject fills the vertical frame. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
     },
     "divination": {
       "person": {
