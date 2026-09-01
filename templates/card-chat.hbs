@@ -1,0 +1,22 @@
+<div class="dommt-chat">
+  <header class="dommt-chat__header">
+    <h3>{{card.name}}</h3>
+    {{#if actor}}<div class="dommt-chat__actor">{{localize "DOMMT.Chat.DrawnBy" actor=actor.name}}</div>{{/if}}
+  </header>
+  <img class="dommt-card dommt-chat__art" src="modules/deck-of-many-more-things/{{card.art.front}}" alt="{{card.name}}" />
+  <div class="dommt-chat__summary">{{card.rules.summary}}</div>
+  {{#if isGmCard}}
+    <div class="dommt-chat__gm">
+      <strong>{{localize "DOMMT.Chat.GMAction.Header"}}</strong>
+      <div>{{result.log}}</div>
+    </div>
+  {{else}}
+    <div class="dommt-chat__auto">
+      <em>{{result.log}}</em>
+    </div>
+  {{/if}}
+  <details class="dommt-chat__full">
+    <summary>{{localize "DOMMT.Chat.RulesFullToggle"}}</summary>
+    <p>{{card.rules.full}}</p>
+  </details>
+</div>

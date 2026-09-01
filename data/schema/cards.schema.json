@@ -1,0 +1,134 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Deck of Many More Things — cards.json",
+  "type": "array",
+  "minItems": 66,
+  "maxItems": 66,
+  "items": { "$ref": "#/definitions/card" },
+  "definitions": {
+    "card": {
+      "type": "object",
+      "required": ["id", "number", "name", "set", "rules", "mechanics", "art", "divination"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "number": { "type": "integer", "minimum": 1, "maximum": 66 },
+        "name": { "type": "string", "minLength": 1 },
+        "set": { "enum": ["classic", "expansion"] },
+        "rules": {
+          "type": "object",
+          "required": ["summary", "full", "draw_terminating"],
+          "additionalProperties": false,
+          "properties": {
+            "summary": { "type": "string", "minLength": 1 },
+            "full": { "type": "string", "minLength": 1 },
+            "draw_terminating": { "type": "boolean" }
+          }
+        },
+        "mechanics": {
+          "type": "object",
+          "required": ["kind"],
+          "additionalProperties": true,
+          "properties": {
+            "kind": {
+              "enum": [
+                "grant_telepathy",
+                "alignment_flip",
+                "beast_form",
+                "learn_languages",
+                "cast_time_stop_n",
+                "cast_gate_n",
+                "long_rest",
+                "climb_speed",
+                "flight",
+                "xp_gain",
+                "xp_loss",
+                "spawn_homunculus",
+                "drop_to_zero_hp",
+                "age_shift",
+                "trap_extraplanar",
+                "element_immunity",
+                "save_penalty",
+                "stat_bump",
+                "erase_event",
+                "feywild_transport",
+                "fiend_deal",
+                "permanent_enemy",
+                "bonus_draws",
+                "wealth_grant",
+                "size_grow",
+                "stop_drawing_optional",
+                "magic_weapon_grant",
+                "spawn_ally_npc",
+                "all_stats_bump",
+                "map_query",
+                "exhaustion",
+                "spawn_hostile",
+                "wish",
+                "spawn_ooze",
+                "speed_bonus",
+                "fall",
+                "spellcast_slotless",
+                "restrain_no_spellcast",
+                "stat_debuff",
+                "random_hostile_npc",
+                "wealth_wipe",
+                "sage_query",
+                "armor_grant",
+                "skill_proficiencies",
+                "avatar_of_death",
+                "keep_grant",
+                "resurrection_grant",
+                "draw_two_keep_one",
+                "unarmored_defense",
+                "revenant_hunter",
+                "soul_trap",
+                "three_cantrips",
+                "spawn_wyrmling",
+                "petrify",
+                "hp_bump",
+                "wondrous_grant",
+                "ring_grant",
+                "rod_or_staff_grant",
+                "throne_persuasion",
+                "destroy_magic_items",
+                "solo_kill_level_up"
+              ]
+            },
+            "params": { "type": "object" }
+          }
+        },
+        "art": {
+          "type": "object",
+          "required": ["front", "prompt"],
+          "additionalProperties": false,
+          "properties": {
+            "front": { "type": "string", "pattern": "^assets/cards/[a-z0-9_]+\\.(webp|png|jpg|jpeg)$" },
+            "prompt": { "type": "string", "minLength": 20 }
+          }
+        },
+        "divination": {
+          "type": "object",
+          "required": ["person", "creature_or_trap", "place", "treasure", "situation"],
+          "additionalProperties": false,
+          "properties": {
+            "person": { "$ref": "#/definitions/orientationPair" },
+            "creature_or_trap": { "$ref": "#/definitions/orientationPair" },
+            "place": { "$ref": "#/definitions/orientationPair" },
+            "treasure": { "$ref": "#/definitions/orientationPair" },
+            "situation": { "$ref": "#/definitions/orientationPair" }
+          }
+        }
+      }
+    },
+    "orientationPair": {
+      "type": "object",
+      "required": ["upright", "reversed"],
+      "additionalProperties": false,
+      "properties": {
+        "upright": { "type": "string" },
+        "reversed": { "type": "string" }
+      }
+    }
+  }
+}

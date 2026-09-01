@@ -1,0 +1,18 @@
+<div class="dommt-cross">
+  <h4>Reading — {{reading.category}}</h4>
+  <div class="dommt-cross__grid">
+    {{#each reading.positions}}
+      <div class="dommt-cross__slot dommt-cross__slot--{{position}}">
+        <div class="dommt-cross__position">
+          <span class="dommt-cross__num">{{order}}</span>
+          <span class="dommt-cross__label">{{position}}</span>
+        </div>
+        <img class="dommt-card {{#if (eq orientation 'reversed')}}dommt-card--reversed{{/if}}"
+             src="modules/deck-of-many-more-things/{{card.art}}"
+             alt="{{card.name}}" />
+        <div class="dommt-cross__card-name">{{card.name}} <em>({{orientationLabel}})</em></div>
+        <div class="dommt-cross__text {{#if empty}}dommt-cross__text--empty{{/if}}">{{displayText}}</div>
+      </div>
+    {{/each}}
+  </div>
+</div>

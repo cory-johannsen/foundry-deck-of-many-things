@@ -1,0 +1,10 @@
+{
+  "_id": "macroresetxxxxxx",
+  "name": "DOMMT: Reset Play Deck (GM)",
+  "type": "script",
+  "scope": "global",
+  "author": null,
+  "img": "icons/svg/regen.svg",
+  "command": "if (!game.user.isGM) return ui.notifications.warn('GM only'); await game.modules.get('deck-of-many-more-things').api.resetDeck(); ui.notifications.info('Deck reset');",
+  "flags": {}
+}

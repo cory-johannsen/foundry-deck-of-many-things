@@ -1,0 +1,18 @@
+<form class="dommt-divination">
+  <fieldset>
+    <legend>{{localize "DOMMT.Divination.CategoryLabel"}}</legend>
+    <select name="category">
+      {{#each categories}}
+        <option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+      {{/each}}
+    </select>
+    <button type="button" data-action="deal">{{localize "DOMMT.Divination.DealButton"}}</button>
+    {{#if hasReading}}
+      <button type="button" data-action="broadcast">Send to chat</button>
+    {{/if}}
+  </fieldset>
+
+  {{#if hasReading}}
+    {{> "modules/deck-of-many-more-things/templates/celtic-cross.hbs"}}
+  {{/if}}
+</form>

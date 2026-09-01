@@ -1,0 +1,23 @@
+<form class="dommt-deck">
+  <p>{{localize "DOMMT.Play.RemainingLabel" n=remaining}} <small>/ {{total}}</small></p>
+  <label>
+    {{localize "DOMMT.Play.DeclareLabel"}}
+    <input type="number" name="n" min="1" max="10" value="{{declaredDefault}}" />
+  </label>
+  <label>
+    Actor
+    <select name="actorId">
+      <option value="">— none —</option>
+      {{#each game.actors as |a|}}
+        <option value="{{a.id}}">{{a.name}}</option>
+      {{/each}}
+    </select>
+  </label>
+  <p class="hint">{{localize "DOMMT.Play.DeclareHint"}}</p>
+  <footer>
+    <button type="button" data-action="draw">{{localize "DOMMT.Play.DrawButton"}}</button>
+    {{#if isGM}}
+      <button type="button" data-action="reset">{{localize "DOMMT.Play.ResetButton"}}</button>
+    {{/if}}
+  </footer>
+</form>
