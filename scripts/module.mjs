@@ -5,6 +5,11 @@ import { drawFromPlay, freshPlayDeckState, makeCardsById } from './deck.mjs';
 import { applyCardEffect } from './card-effects.mjs';
 import { makeFoundryApi } from './foundry-api.mjs';
 import { postDrawCard } from './ui/card-message.mjs';
+import {
+  ensureDivinationScene,
+  performDivinationOnTable,
+  clearDivinationTable
+} from './scene-divination.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 
@@ -36,7 +41,10 @@ Hooks.once('ready', async () => {
   const module = game.modules.get(MODULE_ID);
   module.api = {
     openDeck: () => new DeckApp().render(true),
-    openDivination: () => new DivinationApp().render(true),
+    openDivinationPanel: () => new DivinationApp().render(true),
+    openDivination: () => performDivinationOnTable(),
+    divineOnTable: () => performDivinationOnTable(),
+    clearTable: () => clearDivinationTable(),
     drawForced: drawForced,
     resetDeck: async () => {
       const cards = await loadCards();
@@ -44,9 +52,14 @@ Hooks.once('ready', async () => {
       const state = freshPlayDeckState(cards, seed);
       await game.settings.set(MODULE_ID, 'worldSeed', seed);
       await game.settings.set(MODULE_ID, 'playDeck', state);
-    }
+    },
+    installMacros: () => ensureWorldMacros({ force: true }),
+    installDivinationScene: () => ensureDivinationScene()
   };
-  if (game.user.isGM) await ensureWorldMacros();
+  if (game.user.isGM) {
+    try { await ensureWorldMacros(); } catch (e) { console.error(`${MODULE_ID} | ensureWorldMacros failed`, e); }
+    try { await ensureDivinationScene(); } catch (e) { console.error(`${MODULE_ID} | ensureDivinationScene failed`, e); }
+  }
   console.log(`${MODULE_ID} | ready — api attached to game.modules.get('${MODULE_ID}').api`);
 });
 
@@ -68,10 +81,16 @@ const MACRO_DEFS = [
   }
 ];
 
-async function ensureWorldMacros() {
+async function ensureWorldMacros({ force = false } = {}) {
   const toCreate = [];
+  const toUpdate = [];
   for (const def of MACRO_DEFS) {
-    if (!game.macros.find((m) => m.name === def.name)) {
+    const existing = game.macros.find((m) => m.name === def.name);
+    if (existing) {
+      if (force || existing.command !== def.command) {
+        toUpdate.push({ _id: existing.id, command: def.command, img: def.img });
+      }
+    } else {
       toCreate.push({
         name: def.name,
         type: 'script',
@@ -82,10 +101,12 @@ async function ensureWorldMacros() {
       });
     }
   }
-  if (toCreate.length) {
-    await Macro.createDocuments(toCreate);
-    ui.notifications?.info(`Deck of Many More Things: created ${toCreate.length} macro(s) in your Macro Directory.`);
-  }
+  if (toCreate.length) await Macro.createDocuments(toCreate);
+  if (toUpdate.length) await Macro.updateDocuments(toUpdate);
+  const msg = `Deck of Many More Things: ${toCreate.length} macro(s) created, ${toUpdate.length} updated.`;
+  ui.notifications?.info(msg);
+  console.log(`${MODULE_ID} | ${msg}`);
+  return { created: toCreate.length, updated: toUpdate.length };
 }
 
 Hooks.on('getSceneControlButtons', (controls) => {
