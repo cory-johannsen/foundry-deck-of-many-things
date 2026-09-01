@@ -20,6 +20,6 @@ packs/*/*.ldb
 tools/.comfyui-cache/
 
 # Hardcopy photos + OCR transcription — scratch input for the one-time
-# divination import (tools/import-divination.mjs). data/cards.json is the
-# source of truth for that text.
+# divination text import, completed in v0.2.0. data/cards.json is the source
+# of truth for that text. Kept so re-shot pages never land in a commit.
 card-text-images/
