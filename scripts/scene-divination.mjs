@@ -13,23 +13,59 @@ const TILE_KIND = 'divination-card';
 const SCENE_WIDTH = 1536;
 const SCENE_HEIGHT = 864;
 
+// Foundry defaults an unset scene background to #999999. The reading cloth is
+// dark, so anything visible around it must be black, not grey.
+const SCENE_BACKGROUND_COLOR = '#000000';
+
+// Bumped whenever buildSceneCreateData() changes in a way an already-created
+// scene needs applied to it. migrateExistingScene() replays the full set.
+const SCENE_DATA_VERSION = 3;
+
 const CARD_W = 140;
 const CARD_H = 205;
 
-// (cx, cy) is the CENTER of the card on the scene canvas.
+// Fraction of the scene the spread may occupy. Overlapping the cloth's woven
+// border is fine; this only keeps the outer cards from reaching the very edge
+// of the image.
+const SPREAD_MARGIN = 0.94;
+
+// Centre-to-centre spacing. Anything above CARD_H leaves a visible gap between
+// neighbours; at or below it the cards overlap.
+const STAFF_SPACING = 230;   // 205 card + 25 gap, for positions 7-10
+const CROSS_SPACING = 220;   // Crown / Significator / Foundation
+
+// Vertical centre shared by both the cross and the staff, so the two columns
+// line up with each other rather than the staff hanging lower.
+const SPREAD_CY = 450;
+
+// Horizontal geometry. The staff (7-10) is placed relative to Near Future (6),
+// the cross's rightmost card, so the clear space between the two columns stays
+// exactly STAFF_GAP however the cross is sized or moved.
+const CROSS_CX = 500;
+const CROSS_ARM = 200;                       // Recent Past / Near Future offset
+const STAFF_GAP = CARD_W;                    // one card width of clear cloth
+const STAFF_CX = CROSS_CX + CROSS_ARM + CARD_W + STAFF_GAP;
+
+// (cx, cy) is the CENTER of the card within the LAYOUT's own design space.
+// These are NOT canvas coordinates: placeTiles() measures the bounding box of
+// the whole spread and centres it inside the scene rect, so the numbers below
+// only need to be correct relative to each other.
 // `rotation` is the base rotation for the position (Challenge lies across the Significator at 90°).
 // `sort` controls z-order for the crossing card so it sits above the Significator.
+// The staff (7-10) reads bottom to top: Self lowest, Outcome highest.
+const staffCy = (fromBottom) => SPREAD_CY + (1.5 - fromBottom) * STAFF_SPACING;
+
 const LAYOUT = {
-  significator: { cx:  500, cy: 400, rotation:  0, sort:  0 },
-  challenge:    { cx:  500, cy: 400, rotation: 90, sort: 10 },
-  foundation:   { cx:  500, cy: 620, rotation:  0, sort:  0 },
-  recent_past:  { cx:  300, cy: 400, rotation:  0, sort:  0 },
-  crown:        { cx:  500, cy: 180, rotation:  0, sort:  0 },
-  near_future:  { cx:  700, cy: 400, rotation:  0, sort:  0 },
-  self:         { cx: 1300, cy: 720, rotation:  0, sort:  0 },
-  environment:  { cx: 1300, cy: 540, rotation:  0, sort:  0 },
-  hopes_fears:  { cx: 1300, cy: 360, rotation:  0, sort:  0 },
-  outcome:      { cx: 1300, cy: 180, rotation:  0, sort:  0 }
+  significator: { cx: CROSS_CX,              cy: SPREAD_CY,                 rotation:  0, sort:  0 },
+  challenge:    { cx: CROSS_CX,              cy: SPREAD_CY,                 rotation: 90, sort: 10 },
+  foundation:   { cx: CROSS_CX,              cy: SPREAD_CY + CROSS_SPACING, rotation:  0, sort:  0 },
+  recent_past:  { cx: CROSS_CX - CROSS_ARM,  cy: SPREAD_CY,                 rotation:  0, sort:  0 },
+  crown:        { cx: CROSS_CX,              cy: SPREAD_CY - CROSS_SPACING, rotation:  0, sort:  0 },
+  near_future:  { cx: CROSS_CX + CROSS_ARM,  cy: SPREAD_CY,                 rotation:  0, sort:  0 },
+  self:         { cx: STAFF_CX,              cy: staffCy(0),                rotation:  0, sort:  0 },
+  environment:  { cx: STAFF_CX,              cy: staffCy(1),                rotation:  0, sort:  0 },
+  hopes_fears:  { cx: STAFF_CX,              cy: staffCy(2),                rotation:  0, sort:  0 },
+  outcome:      { cx: STAFF_CX,              cy: staffCy(3),                rotation:  0, sort:  0 }
 };
 
 const DEAL_DELAY_MS = 600;
@@ -46,8 +82,11 @@ function buildSceneCreateData() {
   return {
     name: 'Celtic Cross — Divination Table',
     background: { src: CLOTH_PATH, tint: '#ffffff' },
+    backgroundColor: SCENE_BACKGROUND_COLOR,
     width: SCENE_WIDTH,
     height: SCENE_HEIGHT,
+    // Must stay 0: the cloth is sized to the scene rect exactly, so any padding
+    // shows as a band of backgroundColor around it.
     padding: 0,
     grid: { type: 0, size: 100, alpha: 0, distance: 5, units: 'ft' },
     tokenVision: false,
@@ -57,38 +96,114 @@ function buildSceneCreateData() {
       _id: 'defaultLevel0000',
       name: 'Level',
       elevation: { bottom: 0, top: 20 },
-      background: { src: CLOTH_PATH, tint: '#ffffff', alphaThreshold: 0.75 },
+      background: {
+        src: CLOTH_PATH,
+        // v14 reads the canvas fill from levels[0].background.color; the
+        // top-level backgroundColor above is the v13 spelling. Set both.
+        color: SCENE_BACKGROUND_COLOR,
+        tint: '#ffffff',
+        alphaThreshold: 0.75
+      },
       foreground: { src: null, tint: '#ffffff', alphaThreshold: 0.75 },
       sort: 0
     }],
-    flags: { [MODULE_ID]: { role: SCENE_ROLE, backgroundVersion: 2 } }
+    flags: { [MODULE_ID]: { role: SCENE_ROLE, backgroundVersion: SCENE_DATA_VERSION } }
   };
 }
 
+/**
+ * Bring an already-created scene up to SCENE_DATA_VERSION.
+ *
+ * Earlier versions only replayed the background, which left `padding` at
+ * whatever the scene was created with. A scene still carrying Foundry's default
+ * 0.25 padding renders the cloth inset from the canvas origin, so every tile
+ * placed in canvas coordinates lands high and to the left of the cloth, with a
+ * grey band around it. Replay the full geometry, not just the background.
+ */
 async function migrateExistingScene(scene) {
-  const alreadyOk = scene.getFlag(MODULE_ID, 'backgroundVersion') >= 2;
-  if (alreadyOk) return scene;
+  if (scene.getFlag(MODULE_ID, 'backgroundVersion') >= SCENE_DATA_VERSION) return scene;
   const levels = scene.levels?.contents ?? scene.levels ?? [];
   const defaultLevel = levels[0];
-  const needsBackground = !defaultLevel?.background?.src;
-  if (!needsBackground && alreadyOk) return scene;
   try {
     await scene.update({
       background: { src: CLOTH_PATH, tint: '#ffffff' },
+      backgroundColor: SCENE_BACKGROUND_COLOR,
+      width: SCENE_WIDTH,
+      height: SCENE_HEIGHT,
+      padding: 0,
       levels: [{
         _id: defaultLevel?._id ?? defaultLevel?.id ?? 'defaultLevel0000',
         name: defaultLevel?.name ?? 'Level',
         elevation: defaultLevel?.elevation ?? { bottom: 0, top: 20 },
-        background: { src: CLOTH_PATH, tint: '#ffffff', alphaThreshold: 0.75 },
+        background: {
+          src: CLOTH_PATH,
+          color: SCENE_BACKGROUND_COLOR,
+          tint: '#ffffff',
+          alphaThreshold: 0.75
+        },
         foreground: defaultLevel?.foreground ?? { src: null, tint: '#ffffff', alphaThreshold: 0.75 },
         sort: defaultLevel?.sort ?? 0
       }],
-      flags: { [MODULE_ID]: { role: SCENE_ROLE, backgroundVersion: 2 } }
+      flags: { [MODULE_ID]: { role: SCENE_ROLE, backgroundVersion: SCENE_DATA_VERSION } }
     });
   } catch (e) {
     console.warn(`${MODULE_ID} | migrateExistingScene failed`, e);
   }
   return scene;
+}
+
+/**
+ * Fit the LAYOUT design space onto the cloth's inner field.
+ *
+ * Two things this has to get right:
+ *
+ * 1. Scale. The authored layout is taller than the scene, so scale the whole
+ *    spread uniformly to fit within SPREAD_MARGIN of the scene rect. Cards may
+ *    overlap the cloth's woven border; they just must not reach the image edge.
+ * 2. Origin. Tile x/y are canvas coordinates, which include the scene's padding
+ *    offset, whereas the background is drawn from the scene rect origin. Read
+ *    sceneX/sceneY rather than assuming zero padding.
+ *
+ * Returns the scale factor plus a transform from design space to canvas space.
+ */
+function layoutTransform(scene) {
+  const dim = scene.dimensions ?? {};
+  const originX = dim.sceneX ?? 0;
+  const originY = dim.sceneY ?? 0;
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const slot of Object.values(LAYOUT)) {
+    // A card rotated 90° swaps its footprint; 180° (reversed) does not.
+    const quarterTurned = Math.abs(slot.rotation % 180) === 90;
+    const halfW = (quarterTurned ? CARD_H : CARD_W) / 2;
+    const halfH = (quarterTurned ? CARD_W : CARD_H) / 2;
+    minX = Math.min(minX, slot.cx - halfW);
+    maxX = Math.max(maxX, slot.cx + halfW);
+    minY = Math.min(minY, slot.cy - halfH);
+    maxY = Math.max(maxY, slot.cy + halfH);
+  }
+  const spreadW = maxX - minX;
+  const spreadH = maxY - minY;
+
+  const rectW = dim.sceneWidth ?? SCENE_WIDTH;
+  const rectH = dim.sceneHeight ?? SCENE_HEIGHT;
+
+  // Never scale up: a spread that already fits keeps its authored size.
+  const scale = Math.min(1, rectW / spreadW, rectH / spreadH) * SPREAD_MARGIN;
+
+  // Centre the scaled spread on the scene rect, then offset into canvas space.
+  const fieldCx = rectW / 2;
+  const fieldCy = rectH / 2;
+  const spreadCx = (minX + maxX) / 2;
+  const spreadCy = (minY + maxY) / 2;
+
+  return {
+    scale,
+    cardW: CARD_W * scale,
+    cardH: CARD_H * scale,
+    toCanvasX: (cx) => originX + fieldCx + (cx - spreadCx) * scale,
+    toCanvasY: (cy) => originY + fieldCy + (cy - spreadCy) * scale
+  };
 }
 
 export async function ensureDivinationScene() {
@@ -168,8 +283,14 @@ export async function performDivinationOnTable() {
 
   const scene = await ensureDivinationScene();
   await clearReadingTiles(scene);
-  await scene.view();
+  // activate(), not view(): view() only moves this client, leaving players on
+  // whatever scene they were already on. activate() makes it the active scene
+  // and pulls everyone, and views it for the GM as well.
+  if (!scene.active) await scene.activate();
+  else await scene.view();
   await new Promise((r) => setTimeout(r, 400));
+
+  const fit = layoutTransform(scene);
 
   const cards = await loadCards();
   const byId = makeCardsById(cards);
@@ -189,10 +310,14 @@ export async function performDivinationOnTable() {
     const tileRotation = layout.rotation + (isReversed ? 180 : 0);
     await scene.createEmbeddedDocuments('Tile', [{
       texture: { src: `modules/${MODULE_ID}/${card.art.front}` },
-      x: layout.cx - CARD_W / 2,
-      y: layout.cy - CARD_H / 2,
-      width: CARD_W,
-      height: CARD_H,
+      // Foundry v14 anchors a Tile on its CENTRE, not its top-left corner:
+      // placeable.bounds.y comes back as document.y - height/2. Pass the centre
+      // straight through. Subtracting half the size here (the v13 convention)
+      // renders every card half a card high and half a card left.
+      x: fit.toCanvasX(layout.cx),
+      y: fit.toCanvasY(layout.cy),
+      width: fit.cardW,
+      height: fit.cardH,
       rotation: tileRotation,
       sort: layout.sort,
       flags: { [MODULE_ID]: { kind: TILE_KIND, position: slot.position, orientation: slot.orientation, cardId: card.id } }
