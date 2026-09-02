@@ -1,12 +1,12 @@
 [
-  { "id": "significator",  "order": 1,  "label": "Significator",        "meaning": "The present situation or the querent themselves." },
-  { "id": "challenge",     "order": 2,  "label": "The Crossing",        "meaning": "The immediate obstacle or opposing force. Read regardless of orientation." },
-  { "id": "foundation",    "order": 3,  "label": "The Foundation",      "meaning": "The root of the matter; deep context beneath the situation." },
-  { "id": "recent_past",   "order": 4,  "label": "Recent Past",         "meaning": "Events or influences receding from the situation." },
-  { "id": "crown",         "order": 5,  "label": "The Crown",           "meaning": "The best possible outcome or the querent's conscious goal." },
-  { "id": "near_future",   "order": 6,  "label": "Near Future",         "meaning": "What is approaching in the immediate future." },
-  { "id": "self",          "order": 7,  "label": "The Self",            "meaning": "The querent's inner state, attitude, or disposition." },
-  { "id": "environment",   "order": 8,  "label": "The Environment",     "meaning": "External influences: allies, opponents, circumstances beyond the querent." },
-  { "id": "hopes_fears",   "order": 9,  "label": "Hopes and Fears",     "meaning": "What the querent hopes for and fears — often the same thing." },
-  { "id": "outcome",       "order": 10, "label": "The Outcome",         "meaning": "The likely resolution if current trajectory holds." }
+  { "id": "heart",         "order": 1,  "label": "The Heart of the Matter", "meaning": "The querent's present situation — the heart of the matter." },
+  { "id": "challenge",     "order": 2,  "label": "The Crossing",            "meaning": "Laid sideways across the first card: the immediate obstacle or opposing force. Read regardless of orientation." },
+  { "id": "crown",         "order": 3,  "label": "The Crown",               "meaning": "What is conscious: the querent's goal, or what stands above the situation." },
+  { "id": "foundation",    "order": 4,  "label": "The Foundation",          "meaning": "The root cause; the unconscious basis beneath the situation." },
+  { "id": "recent_past",   "order": 5,  "label": "The Past",                "meaning": "An influence that is receding." },
+  { "id": "near_future",   "order": 6,  "label": "The Future",              "meaning": "An influence that is approaching." },
+  { "id": "self",          "order": 7,  "label": "The Querent",             "meaning": "The querent's own attitude or self-image." },
+  { "id": "environment",   "order": 8,  "label": "The Environment",         "meaning": "Other people and external conditions." },
+  { "id": "hopes_fears",   "order": 9,  "label": "Hopes and Fears",         "meaning": "What the querent hopes for and fears — often the same card serves both." },
+  { "id": "outcome",       "order": 10, "label": "The Outcome",             "meaning": "Where it all tends." }
 ]

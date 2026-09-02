@@ -23,3 +23,9 @@ tools/.comfyui-cache/
 # divination text import, completed in v0.2.0. data/cards.json is the source
 # of truth for that text. Kept so re-shot pages never land in a commit.
 card-text-images/
+
+# Previous card art kept automatically before each --force regeneration
+assets/.card-history/
+
+# Review contact sheet - regenerate with tools/contact_sheet.py
+docs/card-contact-sheet.html

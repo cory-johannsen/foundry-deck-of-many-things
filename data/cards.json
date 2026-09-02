@@ -17,8 +17,10 @@
       }
     },
     "art": {
-      "front": "assets/cards/aberration.png",
-      "prompt": "Tarot card: a humanoid figure with alien eyes — too many, in wrong places — telepathic waves rendered as visible ripples emanating outward, thoughts of nearby creatures visible as ghostly impressions floating around them, strange and powerful and not quite human anymore. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/aberration.png",
+      "prompt": "A cluttered alchemical laboratory, glassware and instruments strewn across the benches; hovering above them floats a single enormous eyeball creature — one huge central eye set in a round fleshy orb, a wide fanged mouth beneath it, and many long thin stalks rising from its crown each tipped with its own small eye; faint concentric ripples of thought spread outward through the air, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(two eyes:1.4), (pair of eyes:1.4), (human face:1.3), (humanoid body:1.3)",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -59,8 +61,10 @@
       "params": {}
     },
     "art": {
-      "front": "assets/cards/balance.png",
-      "prompt": "Tarot card: a set of ornate golden scales perfectly balanced, each pan holding abstract glowing symbols representing opposing moral forces — light on one side, shadow on the other — suspended in void, the scales at exact equilibrium, cosmic energy crackling at the fulcrum. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/balance.png",
+      "prompt": "A tall ornate set of golden balance scales standing on a carved stone pedestal, the metalwork richly engraved with fine filigree and worn detail; in the left pan rests a small blazing golden sun, in the right pan a silver crescent moon lying in a pool of night; the beam hangs level and the two lights face each other across it, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(simplistic:1.4), (flat design:1.4), (minimalist:1.4), (vector art:1.4), (icon:1.4), (clip art:1.4)",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -104,8 +108,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/beast.png",
-      "prompt": "Tarot card: a human figure mid-transformation into a large animal, the body caught between forms, clothing tearing as limbs reshape, the face frozen in the last moment before animal instinct takes over — humanity visible behind animal eyes in a disorienting split. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/beast.png",
+      "prompt": "A snarling wolf-like predator at the centre of a dark wood, hackles raised and teeth bared, its eyes uncomfortably human; behind it hangs the faint overlaid silhouette of the person it was, caught mid-change, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -148,8 +153,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/book.png",
-      "prompt": "Tarot card: a large open tome radiating dozens of glowing scripts simultaneously — elvish, draconic, celestial, ancient sigil-languages — each script drifting upward as light and entering an open mind from above, the languages of the world freely given. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/book.png",
+      "prompt": "An enormous leather-bound book lying open among scattered scrolls and loose parchment, a quill and ink pot at its edge; the visible pages carry layered scripts of many different alphabets, each lifting faintly off the page as coloured light, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -193,8 +199,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/bridge.png",
-      "prompt": "Tarot card: a figure standing perfectly still at the center of a frozen tableau — every other person around them locked motionless mid-step, mid-word, mid-blink — time visibly stopped, the figure the only point of motion in a world held in amber. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/bridge.png",
+      "prompt": "A weathered stone bridge arcing across dark water, a shadowed shape crouched beneath its span with only two gleaming eyes visible; the water is frozen mid-ripple and a falling leaf hangs motionless in the air, time held still, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -235,8 +242,9 @@
       "params": {}
     },
     "art": {
-      "front": "assets/cards/campfire.png",
-      "prompt": "Tarot card: a warm campfire burning cheerfully in the center of the card, deep night around it, a bedroll and pack visible at the fire's edge suggesting a traveler resting, the flames gold and amber and deeply comforting — rest made tangible, fatigue visibly lifting. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/campfire.png",
+      "prompt": "A large campfire burning steadily in deep night, a bedroll and travelling pack set at its edge, warm light pushing back a wide circle of darkness; the surrounding night is utterly quiet and safe, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -280,8 +288,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/cavern.png",
-      "prompt": "Tarot card: a figure climbing a sheer stone wall with bare hands and feet, grip natural and certain, the stone welcoming them as if the rock recognizes one of its own, deep cavern environment lit by bioluminescent fungi below — vertical mastery made permanent. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/cavern.png",
+      "prompt": "A vast underground cavern lit by clusters of glowing fungi, striking stone columns and flowstone formations rising through the dark; far across the chamber a small figure ascends a sheer wall, moving up the bare rock with unnatural ease, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -325,8 +334,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/celestial.png",
-      "prompt": "Tarot card: a figure with large white feathered wings fully extended, rising upward on a column of dawn light, the wings luminous and perfect as if borrowed from a seraph, joy and altitude in equal measure — ascension made physical. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/celestial.png",
+      "prompt": "A beautiful feathered serpent, a couatl with rainbow plumage, twining in a slow coil through sunlit cloudbanks high above the world; the air beneath it glows with lift and the whole scene feels weightless, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -369,8 +379,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/comet.png",
-      "prompt": "Tarot card: a blazing comet of pure white-gold light arcing across a deep indigo night sky, its tail fragmenting into smaller motes that descend like potential toward a single figure silhouetted below with arms raised, vast and hopeful. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/comet.png",
+      "prompt": "A comet with an enormous blazing tail tearing across a winter night sky, outshining every star around it; far below on a moonlit snowfield a single small figure stands alone over a great fallen shape, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -411,8 +422,10 @@
       "params": {}
     },
     "art": {
-      "front": "assets/cards/construct.png",
-      "prompt": "Tarot card: a formal portrait of a small homunculus creature standing at the exact center of an ornate golden frame, mismatched clay and copper stitched limbs, oversized bald head, glowing intelligent yellow eyes, small arcane crest on its brow, arms slightly outstretched in greeting, a phial in one hand, small alchemical tools arranged around its feet, aged parchment background, symmetrical tarot composition, subject fills the vertical frame. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/construct.png",
+      "prompt": "A rigidly geometric clockwork automaton — a perfect cube of brass and enamel with a single large round eye on its front face and small jointed mechanical arms and legs — gripping a wrench inside the interior of a vast clockwork machine, gears and turning shafts receding in every direction; on the bench beside it a small half-built artificial creature of stitched clay and copper with little leathery wings has just begun to stir, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(humanoid robot:1.3), (android:1.3), (organic creature:1.3)",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -455,8 +468,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/corpse.png",
-      "prompt": "Tarot card: a figure falling backward, eyes closing, not in battle but simply dropping — sudden unconsciousness with no visible cause, the only indication of the card's power the faint wisps of life-force leaving them, a warning rather than a wound. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/corpse.png",
+      "prompt": "An adventurer lying dead in a narrow dungeon hallway, pierced by several arrows, their pack spilled across the flagstones; the corridor is cold and utterly still, the moment of collapse only just past, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -500,8 +514,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/crossroads.png",
-      "prompt": "Tarot card: an hourglass at a literal crossroads, time flowing in both directions simultaneously — upward and downward — a figure at the center aging and un-aging in a split image, the coin-flip of years rendered as two overlapping silhouettes of different ages. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/crossroads.png",
+      "prompt": "A weathered wooden signpost at a lonely crossroads, its arms pointing many directions at once; the roads leading away age differently, one green with spring growth and another buried under dead leaves, time running at a different rate down each, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -544,8 +559,11 @@
       }
     },
     "art": {
-      "front": "assets/cards/donjon.png",
-      "prompt": "Tarot card: a solitary tower of black iron suspended in an empty grey void, no ground below it, no sky above, a single barred window with pale spectral light behind it, chains wrapped around the tower's base trailing into nothing, absolute isolation. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/donjon.png",
+      "prompt": "A dim underground stone chamber with rough-hewn stone walls rising on both the left and the right, and a short flight of worn stone steps in the foreground descending away from the viewer down to the bottom of the chamber, where a heavy locked iron gate of thick vertical iron bars is set into a stone archway in the far wall; guttering torchlight on the stone walls; through the gaps between the iron bars there is no cell but an empty grey void with no floor and no sky, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(metal staircase:1.4), (ladder:1.3), (spiral staircase:1.2)",
+      "version": 2,
+      "pinned": true
     },
     "divination": {
       "person": {
@@ -588,8 +606,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/door.png",
-      "prompt": "Tarot card: an ornate arched doorway standing freestanding in empty space, through its frame a swirling portal to elsewhere — another plane, another world — the door glowing with Gate-magic, keys floating untethered beside it, passage freely given. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/door.png",
+      "prompt": "A large iron-banded wooden door barring a stone passage, set solid in the surrounding stonework; a thin seam of otherworldly light leaks around its edges, another place pressing against it from the far side, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -630,8 +649,9 @@
       "params": {}
     },
     "art": {
-      "front": "assets/cards/dragon.png",
-      "prompt": "Tarot card: a newly hatched dragon wyrmling breaking free of a cracked egg, scales gleaming, tiny wings spread for the first time, ancient intelligence already present in very young eyes — the wyrmling looking up at a looming shadow above it as if seeing its parent. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/dragon.png",
+      "prompt": "A menacing red dragon perched atop a vast heaped hoard of gold and treasure deep inside a cave, wings mantled and eyes burning; among the coins near its claws lies a single cracked egg, something small and newly hatched uncurling from it, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -680,8 +700,10 @@
       }
     },
     "art": {
-      "front": "assets/cards/elemental.png",
-      "prompt": "Tarot card: a figure at the center of a convergence of all five elemental forces — fire, ice, lightning, acid, thunder rendered as visible energy streams — the figure absorbing one element while the others break apart and scatter, immunity made visible as a force. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/elemental.png",
+      "prompt": "A squat radially symmetrical rock creature with three thick stubby legs, three long arms spaced evenly around its barrel-shaped stone body, three large eyes on its sides and a wide mouth on the top of its head, its hide rough grey mineral, feeding on a vein of raw ore in a cramped underground cavern; the stone parts around its body like water and ribbons of fire, frost and lightning wash over its hide without leaving a mark, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(bipedal humanoid:1.4), (two arms:1.3), (human face:1.3)",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -725,8 +747,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/euryale.png",
-      "prompt": "Tarot card: a female figure with writhing serpents for hair, her gaze averted to spare the viewer, her expression not monstrous but sorrowful, elaborate robes of deep green, one hand extended forward with a faint dark curse-light emanating from her palm. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/euryale.png",
+      "prompt": "A medusa with a long serpentine tail in place of legs, coiled among growing flowers and herbs, her hair a mass of small snakes; her gaze falls just past the viewer, and the plants nearest her have gone grey and stiff, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -772,8 +795,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/expert.png",
-      "prompt": "Tarot card: a figure in mid-motion blur — reflexes visible as afterimages, hands already positioned before a threat arrives, the body moving faster than thought — dexterity as something close to precognition, the sharpened edge of physical mastery. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/expert.png",
+      "prompt": "A bard playing a stringed instrument with complete absorption, fingers exact on the strings, a small attentive audience half-lit around them; the air about the instrument glows faintly, practised skill made visible, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -816,8 +840,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/fates.png",
-      "prompt": "Tarot card: three robed women at a cosmic loom, threads of gold light stretched between their fingers, one thread visibly severed mid-air — time paused at the cut — stars and nebulae visible through the loom's frame as if the fabric of reality is what they are weaving. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/fates.png",
+      "prompt": "A trio of exactly three robed sisters, three women only, seated together at one great wooden loom: the first weaving, the second measuring a thread against a rod, the third holding open a pair of shears; a single cut thread drifts loose and unravels backwards into nothing, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -858,8 +883,11 @@
       "params": {}
     },
     "art": {
-      "front": "assets/cards/fey.png",
-      "prompt": "Tarot card: a shimmering archway of twisted silver-bark trees opening into the Feywild beyond — impossible saturated color, floating lights, a world more vivid than reality — a figure stepping through, the arch closing behind them, no return indicated. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/fey.png",
+      "prompt": "A lean wolf-like dog with a tawny golden-brown coat and large upright ears leaping through wild undergrowth, its head and forelegs solid and sharply painted while its hindquarters and tail break apart into a streaming trail of drifting blue-white sparks and glowing motes that scatter into the air behind it, the animal vanishing mid-leap; the forest ahead of it shifts into impossible saturated colour through the gap it leaves behind, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(wolf pack:1.2), (fully solid animal:1.3), (intact hindquarters:1.3)",
+      "version": 2,
+      "pinned": true
     },
     "divination": {
       "person": {
@@ -900,8 +928,10 @@
       "params": {}
     },
     "art": {
-      "front": "assets/cards/fiend.png",
-      "prompt": "Tarot card: a composed fiend in ornate dark clothing seated across a table from an unseen figure, a contract of glowing red script between them, the fiend's expression patient and satisfied — a negotiation rather than a fight, the terms already written, only the signature needed. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/fiend.png",
+      "prompt": "An enormous winged demon with deep red skin and vast leathery bat wings, a horned bull-like head, wreathed in flame and shadow, a burning sword in one hand and a many-tailed flaming whip in the other, striking upward out of an abyssal chasm; a thin scroll of glowing red script hangs in the air before it, a bargain offered mid-violence, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(small imp:1.3), (humanoid man:1.3)",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -944,8 +974,10 @@
       }
     },
     "art": {
-      "front": "assets/cards/flames.png",
-      "prompt": "Tarot card: a horned devil figure cloaked in dark robes and hellfire, staring directly at the viewer with eyes of cold amber intelligence, one clawed hand raised with a single pointing finger — an unmistakable declaration of intent, infernal architecture visible behind it. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/flames.png",
+      "prompt": "A gaunt humanoid devil whose body is wrapped and pierced by animated barbed iron chains that coil and lash outward on their own, hooks and blades at their ends, wreathed in fire and glaring directly out of the scene with fixed personal hatred; the flames behind it suggest the shape of a face it will not forget, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(plain man:1.3), (no chains:1.3)",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -990,8 +1022,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/fool.png",
-      "prompt": "Tarot card: a court jester mid-tumble over a cliff edge, bells on his cap still ringing, his expression frozen between laughter and panic, scattered gold coins raining upward around him defying gravity, a deck of cards spilling from his hands as he falls. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/fool.png",
+      "prompt": "A cheerful traveller strolling down a country path with their gaze on the horizon, unaware of the coins and small possessions falling one by one from an open pack behind them; the dropped things dim as they land, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -1045,8 +1078,10 @@
       }
     },
     "art": {
-      "front": "assets/cards/gem.png",
-      "prompt": "Tarot card: a cascade of luminous jewels and ornate jewelry pieces tumbling through dark air, each gem catching interior light — rubies, sapphires, emeralds — their facets throwing colored light in every direction, abundance overflowing from the top of the frame. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/gem.png",
+      "prompt": "A painted illustration with visible brushwork of a single huge faceted gemstone cradled in an intricate gold filigree setting, sitting among worn carved stonework in a dim vaulted chamber, lit from deep within so its coloured light spills across the carvings and shadows around it; the glow it throws is far richer than the stone alone should give, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(photograph:1.6), (photorealistic:1.6), (jewellery photography:1.5), (product photo:1.5), (studio lighting:1.5), (macro photography:1.5), (catalogue photo:1.4), (velvet display:1.4), (bokeh:1.3)",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -1090,8 +1125,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/giant.png",
-      "prompt": "Tarot card: a figure visibly taller than they were — the frame too small to contain them now, the ceiling brushing their head, their presence expanding to fill more space — giant-growth rendered as a quiet transformation, the floor further away than it used to be. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/giant.png",
+      "prompt": "A hungry troll hunched in a forest clearing, long-limbed and gaunt, sniffing the air; it is already too large for the clearing, branches bending around its shoulders as its scale visibly increases, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -1132,8 +1168,9 @@
       "params": {}
     },
     "art": {
-      "front": "assets/cards/humanoid.png",
-      "prompt": "Tarot card: a figure standing at a crossroads with multiple glowing card-paths stretching outward, one hand raised palm-forward in a command to stop, the choice to walk away made visible as a warm light emanating from their chest — the Deck obeying a mortal's decision. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/humanoid.png",
+      "prompt": "A pack of small kobolds working together to set an elaborate deadfall trap in their cramped cave lair, one holding a lantern while another ties off the trigger cord; one looks up and raises a flat hand in warning, go no further, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -1178,8 +1215,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/jester.png",
-      "prompt": "Tarot card: a grinning jester holding a forking road in one hand — two paths made literal as tiny glowing lines — and a sheaf of blank cards in the other, his motley coat shifting between shadow and gold, the choice between experience and more chances embodied in his knowing smirk. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/jester.png",
+      "prompt": "A grinning figure in jester’s motley resting one boot on a bare skull, a belled staff in the crook of an arm; a fan of face-down cards is spread in the other hand, more of them than there ought to be, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -1223,8 +1261,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/key.png",
-      "prompt": "Tarot card: an ornate skeletal key of antique gold hovering point-down in empty space, glowing softly with amber inner light, its bow formed from interlocking stars, elaborate wards along its blade suggesting it opens something extraordinary rather than mundane. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/key.png",
+      "prompt": "A large antique metal key of bizarrely elaborate construction hanging point-down in still air, its bow a knot of interlocking wards and its bit a maze of teeth; its edge catches the light like a blade, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -1269,8 +1308,11 @@
       }
     },
     "art": {
-      "front": "assets/cards/knight.png",
-      "prompt": "Tarot card: a fully armored knight in gleaming silver plate kneeling in a posture of sworn fealty, sword point-down before them, visor raised to show earnest eyes, a faint halo of protective light behind the helmet suggesting honor made manifest. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/knight.png",
+      "prompt": "A painted fantasy illustration with visible brushwork, showing a life-size knight figure built entirely from hundreds of ornate playing cards folded and layered over each other like armour plates, every card showing gilt edges and rich printed colour patterning so the whole figure gleams with jewel-toned card faces rather than plain paper; it stands steady in a posture of offered service, holding out one single sword also built from layered cards, resting flat across both of its open hands, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(monogram:1.5), (initials:1.5), (heraldic lettering:1.4), (two swords:1.5), (double-ended blade:1.5), (two hilts:1.5), (photograph:1.5), (photorealistic:1.5), (construction paper:1.5), (plain cardboard:1.5), (steel plate armour:1.4), (simplistic:1.4)",
+      "version": 2,
+      "pinned": true
     },
     "divination": {
       "person": {
@@ -1315,8 +1357,11 @@
       }
     },
     "art": {
-      "front": "assets/cards/lance.png",
-      "prompt": "Tarot card: a full-body figure with every limb and feature outlined in faint golden enhancement-light, each ability score shown as a glowing line slightly above its old position — mind, body, speed, presence all lifting simultaneously, a total elevation. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/lance.png",
+      "prompt": "A painted fantasy illustration of one single long cavalry lance leaning at an angle into a simple plain wooden weapon stand on a stone floor against a bare wall. The lance is a long straight tapering wooden shaft, taller than a person, with a sharp narrow steel point at its upper end and a wide conical steel hand guard near the lower grip, the shaft banded with plain silver rings; it gives off a soft magical glow that lights the wooden stand and the wall behind it. The lance and its wooden stand are the only objects in the picture and nobody is present, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(person:1.5), (human figure:1.5), (man:1.5), (knight:1.5), (dragonborn:1.5), (dragon:1.4), (scales:1.4), (armour:1.4), (multiple weapons:1.4), (weapon collection:1.4), (sceptre:1.5), (magic wand:1.5), (jewelled encrusted:1.4), (sword:1.4)",
+      "version": 3,
+      "pinned": true
     },
     "divination": {
       "person": {
@@ -1362,8 +1407,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/mage.png",
-      "prompt": "Tarot card: a scholar surrounded by floating equations and arcane diagrams that have suddenly snapped into perfect clarity, the figure's eyes lit from within with intellectual fire, connections visible as golden threads between previously separate ideas — the mind expanded. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/mage.png",
+      "prompt": "A warlock holding a staff of black crystal upright, robes still, expression composed and inward; the crystal’s interior is lit with slow-moving light and faint diagrams resolve in the air about their head, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -1407,8 +1453,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/map.png",
-      "prompt": "Tarot card: an ancient map unfurling in empty space, one location burning with golden light while the rest fades — the single point that matters made brilliant and unmistakable, knowledge of a specific place made absolute, a trail of light from viewer to destination. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/map.png",
+      "prompt": "An elaborate hand-drawn treasure map unrolled and weighted at its corners, coastlines and mountains inked in fine detail; a single marked cross burns with warm golden light while the rest of the parchment dims, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -1464,8 +1511,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/maze.png",
-      "prompt": "Tarot card: an overhead view of an impossible labyrinth with no exit, a tiny figure at its center looking up with exhausted eyes, the walls too high to climb, the paths looping back — not a dungeon but a mind-maze, exhaustion and confusion made architectural. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/maze.png",
+      "prompt": "A vast impossible labyrinth seen from high above, its towering walls built entirely from hundreds of enormous playing cards standing on edge, winding corridors folding back on themselves with no exit anywhere; tiny weary figures far below wander between the card walls with their heads down, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -1511,8 +1559,11 @@
       }
     },
     "art": {
-      "front": "assets/cards/mine.png",
-      "prompt": "Tarot card: an underground vein of brilliant gemstones cracking open in real time, jewels of every color tumbling outward from the exposed rock face, chunks of ore gleaming in torchlight, abundance pulled from the earth by the Deck's command. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/mine.png",
+      "prompt": "A painted fantasy illustration of a single heavy iron pickaxe with a worn wooden handle, propped alone against rough rock at the mouth of a dark cave tunnel, the pickaxe large and central and the only object in the picture; behind it the tunnel recedes into darkness, and a faint warm gleam of raw gemstones and veins of metal ore embedded in the cave wall lights the rock around it; nobody present, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(person:1.5), (human figure:1.5), (miner:1.5), (man:1.5), (face:1.4), (mining helmet:1.4), (hard hat:1.4), (lantern:1.4), (oil lamp:1.4), (cartoon:1.4)",
+      "version": 2,
+      "pinned": true
     },
     "divination": {
       "person": {
@@ -1557,8 +1608,11 @@
       }
     },
     "art": {
-      "front": "assets/cards/monstrosity.png",
-      "prompt": "Tarot card: a massive creature of nightmare proportions tearing through a rift in reality, hostile and immediate, its attention fixed directly on the viewer — no buildup, no introduction, just the monster already here, already lunging. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/monstrosity.png",
+      "prompt": "A painted fantasy illustration of one huge heavy four-legged beast sitting upright in a sunlit forest glade. Its body is squat, bulky and hunched, broad and barrel-chested with massive sloping shoulders, covered all over in thick shaggy brown fur, standing on four short powerful limbs that end in wide flat paws with long curved claws; it has a very short thick neck so the head sits low against the shoulders, and only a short stubby tail. Its face is not furred at all: the whole front of its head is (one large hard hooked beak of pale horn:1.5), curving downward to a sharp point like a bird of prey, and this beak takes the place of any muzzle — there is no nose and no mouth on this creature, only the beak. Around and behind the beak the head is covered in dense layered feathers with two very large round forward-facing yellow eyes and tufted feather ridges above them, and those head feathers blend down into the shoulder fur. Richly detailed painterly fur and feather texture, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(muzzle:1.6), (snout:1.6), (nose:1.5), (mouth:1.5), (furred face:1.6), (whiskers:1.5), (wings:1.5), (talons:1.4), (feathered torso:1.5), (two-legged:1.4), (long neck:1.5), (long tail:1.5), (mane:1.5), (lion:1.5), (simplistic:1.4)",
+      "version": 5,
+      "pinned": true
     },
     "divination": {
       "person": {
@@ -1601,8 +1655,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/moon.png",
-      "prompt": "Tarot card: a vast full moon dominating the night sky, its face expressionless but watching, three luminous spheres orbiting it like possibilities waiting to be granted, silver light flooding downward over dark water below, the boundary between magic and reality thinned to nothing. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/moon.png",
+      "prompt": "An enormous crescent moon low in an autumn night sky, filling the scene above bare trees; the dark of its inner curve holds a faint second glow, something withheld and waiting to be asked for, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -1646,8 +1701,11 @@
       }
     },
     "art": {
-      "front": "assets/cards/ooze.png",
-      "prompt": "Tarot card: a translucent gelatinous mass already surrounding a figure from all sides, the figure visible as a silhouette inside the ooze, unable to move — engulfment rendered not as horror but as eerie cold inevitability, the cube simply absorbing. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/ooze.png",
+      "prompt": "A painted fantasy illustration of an enormous living jelly monster in (the shape of one perfect cube:1.5), with flat square faces, straight sharp edges and square corners like a giant block of quivering translucent green glass, completely filling a vaulted stone sewer passage from wall to wall and floor to ceiling and sliding slowly forward along the wet flagstones; half-dissolved coins, bones and a rusted helm are trapped and digesting inside the jelly, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(aquarium:1.5), (fish tank:1.5), (glass tank:1.5), (terrarium:1.5), (display case:1.5), (amorphous blob:1.5), (round blob:1.5), (formless puddle:1.5), (slime puddle:1.4), (floating in air:1.4), (stone cube:1.4)",
+      "version": 2,
+      "pinned": true
     },
     "divination": {
       "person": {
@@ -1690,8 +1748,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/path.png",
-      "prompt": "Tarot card: a golden road stretching to the horizon, visibly shorter than it used to be — distances compressed by permanent swiftness, the world leaning closer, a figure mid-stride whose legs cover more ground than before without effort. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/path.png",
+      "prompt": "A well-worn dirt path twisting away through dense wilderness, shapes and watchful eyes half-hidden in the shadows to either side; the path itself runs bright and clear ahead, inviting speed, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -1735,8 +1794,10 @@
       }
     },
     "art": {
-      "front": "assets/cards/pit.png",
-      "prompt": "Tarot card: a figure in freefall through empty air, the stone floor that was there one moment simply gone, the drop below them vast and dark, wind tearing at their clothing, the ground rushing upward to meet them — pure sudden falling. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/pit.png",
+      "prompt": "Looking down into a deep pit gaping open in a stone floor, iron spikes jutting upward from the darkness far below, the broken edge of the floor visible all around the rim where the ground gave way; seen from directly above the opening, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(tower:1.5), (spire:1.4), (cave entrance:1.4), (mountain:1.3)",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -1781,8 +1842,10 @@
       }
     },
     "art": {
-      "front": "assets/cards/plant.png",
-      "prompt": "Tarot card: a figure kneeling with both hands pressed to the soil, plants and roots responding — bending toward them, communicating in the slow language of growth — ancient green speech made visible as faint luminous tracery between human hands and living roots. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/plant.png",
+      "prompt": "A walking humanoid mushroom the height of a person, a broad domed fungal cap for a head atop a thick pale stalk-like body with short knobbly limbs, standing among damp cave growth and releasing a slow billowing cloud of luminous spores from its cap; the drifting spores arrange themselves into faint sigil shapes as they rise, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(ordinary mushroom:1.4), (small fungus:1.4), (no limbs:1.2)",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -1828,8 +1891,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/priest.png",
-      "prompt": "Tarot card: a figure in meditation, eyes closed, the sapflow-light of divine connection visible as golden currents flowing through their body from below — wisdom deepening not through study but through attunement, the Tree's currents running stronger. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/priest.png",
+      "prompt": "A cleric in vestments holding a heavy flanged mace head-down before them, calm and certain, a holy symbol at the breast; a soft column of divine light falls from above and pools at their feet, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -1870,8 +1934,9 @@
       "params": {}
     },
     "art": {
-      "front": "assets/cards/prisoner.png",
-      "prompt": "Tarot card: a figure wrapped in invisible force — the air around them warped and shimmering with magical restraint, wrists bound by nothing visible but absolutely held, mouth slightly open but producing no words, a cage of pure arcane will. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/prisoner.png",
+      "prompt": "A rogue pressed against the bars of a dank prison cell, hands outstretched through the gap in appeal, damp straw and stone underfoot; the air about their wrists shimmers with unseen binding, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -1917,8 +1982,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/puzzle.png",
-      "prompt": "Tarot card: a human head in profile, the skull open at the top, puzzle pieces inside scattering outward and floating away in different directions — some already gone, the mind visibly diminishing, the figure's expression calm and confused in equal measure. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/puzzle.png",
+      "prompt": "An elaborate wooden puzzle box hanging in mid-air, its interlocking panels partly shifted and light spilling from the seams; one piece has slid free and drifts away, the mechanism left incomplete, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -1963,8 +2029,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/ring.png",
-      "prompt": "Tarot card: a single ornate ring descending from above onto an outstretched finger, the ring glowing with contained magic, its setting elaborate and clearly rare, already sized for this hand — a gift arriving with precise intentionality. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/ring.png",
+      "prompt": "An emerald ring resting in a lined decorative jewellery box with the lid raised, the stone lit from within and throwing green light across the velvet; the band is worked with fine sigils, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -2005,8 +2072,10 @@
       "params": {}
     },
     "art": {
-      "front": "assets/cards/rogue.png",
-      "prompt": "Tarot card: a shadowed figure standing very close behind someone who does not know they are there, one gloved hand reaching toward the lit figure's back with a dagger concealed in the other hand, the foreground figure's face obscured, representing trusted betrayal. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/rogue.png",
+      "prompt": "A kenku in dark clothing lurking in deep shadow with a dagger held low and ready, beaked head tilted, eyes catching the light; an unsuspecting lit figure passes just beyond its reach, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "pinned": true,
+      "version": 1
     },
     "divination": {
       "person": {
@@ -2053,8 +2122,10 @@
       }
     },
     "art": {
-      "front": "assets/cards/ruin.png",
-      "prompt": "Tarot card: a grand estate crumbling at the moment of collapse, coins and papers flying in every direction, treasure chests bursting open only to find their contents vanishing into smoke, a single figure standing at the center untouched but watching everything they owned disappear. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/ruin.png",
+      "prompt": "An elegant longsword and a fine golden crown both crumbling into swirling eddies of grey ash in mid-air, the metal disintegrating from the edges inward, half of each object already gone to drifting dust with nothing solid left beneath them, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(intact sword:1.3), (solid undamaged metal:1.3)",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -2098,8 +2169,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/sage.png",
-      "prompt": "Tarot card: an ancient scholar seated before a single floating orb of absolute white light — the answer to any question compressed into light — their expression tranquil, one hand extended toward it but not yet touching, the knowledge available but not yet claimed. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/sage.png",
+      "prompt": "An ancient scholar seated among towering stacks of books and unrolled scrolls, eyes closed in recollection; above their head hangs a single clear orb of white light, one exact answer drawn out of all that study, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -2144,8 +2216,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/shield.png",
-      "prompt": "Tarot card: a suit of armor assembling itself around a figure piece by piece without hands to place it, each piece glowing briefly as it locks into position, the armor clearly rare and clearly alive with protective purpose — fitting itself to its new wearer. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/shield.png",
+      "prompt": "A round steel shield propped ready against a bunk in a spare military barracks, its straps worn from use, a helm and mail laid beside it; a faint protective sheen runs across its face, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -2189,8 +2262,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/ship.png",
-      "prompt": "Tarot card: a figure at a ship's wheel in a storm, impossibly confident, every rope and sail obeying without thought — seamanship and navigation rendered as three distinct glowing threads around their hands representing newly acquired proficiencies. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/ship.png",
+      "prompt": "A three-masted sailing ship under full canvas crossing the open sea, at its prow a carved wooden figurehead of a winged feathered serpent; the crew work the rigging with practised certainty, every rope and sail exactly where it should be, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -2233,8 +2307,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/skull.png",
-      "prompt": "Tarot card: a skeletal avatar of death in dark flowing robes, scythe raised and gleaming with silver-black finality, standing in an empty void, facing directly forward, no mercy in the empty eye sockets, death personified as a duel with only one possible shape. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/skull.png",
+      "prompt": "A skeletal figure shrouded in a swirling dark robe, the fabric moving as though in wind, the bare skull clearly visible within the hood; it stands alone facing the viewer, patient and final, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -2278,8 +2353,11 @@
       }
     },
     "art": {
-      "front": "assets/cards/staff.png",
-      "prompt": "Tarot card: an ornate magical staff, rod, or wand floating vertically at center, thrumming with visible stored power — arcane runes crawling along its length, its tip glowing — clearly waiting for a hand, a gift of magical implement already pointed at its recipient. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/staff.png",
+      "prompt": "A painted fantasy illustration of one single slim polished black wooden shaft, perfectly straight along its whole length from end to end with no handle, no hook, no knob and no curve of any kind, exactly the same thickness at the top as at the bottom, smooth and lacquered, only about as thick as a thumb and about as tall as a person, propped at an angle against the inside corner of a small bare stone room indoors; faint pale glowing runes are inlaid flush into its smooth polished surface; the slender straight shaft is the only object in the entire picture and the small stone room is completely empty otherwise, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(person:1.5), (human figure:1.5), (people:1.5), (hands:1.5), (sword:1.5), (blade:1.5), (spear:1.5), (weapon:1.4), (curved handle:1.6), (hooked top:1.6), (crook:1.6), (walking stick:1.5), (umbrella:1.5), (knob:1.4), (tree:1.5), (bark:1.5), (outdoors:1.5), (forest:1.5), (support beam:1.5), (column:1.5)",
+      "version": 6,
+      "pinned": true
     },
     "divination": {
       "person": {
@@ -2325,8 +2403,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/stairway.png",
-      "prompt": "Tarot card: a stone staircase descending rather than ascending, a warm light at the bottom suggesting safety — the wise path going down instead of up — a wondrous item visible glowing on the last step, the Deck offering mercy to those who take the humble door. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/stairway.png",
+      "prompt": "A stone spiral stairway seen from its landing, one flight climbing into clean light above and the other descending into clutter and shadow below; something ornate and valuable glints part way down the dark steps, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -2372,8 +2451,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/star.png",
-      "prompt": "Tarot card: a human silhouette dissolving upward into a field of stars, the figure's outline becoming indistinguishable from constellation lines, cosmic energy pouring downward into them like starlight choosing a vessel, glory and transformation made luminous. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/star.png",
+      "prompt": "A single brilliant star burning in a clear spring twilight sky above a dark horizon, far brighter than the others just emerging around it; its light falls in a thin steady beam onto the land below, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -2402,7 +2482,7 @@
     "id": "statue",
     "number": 54,
     "name": "Statue",
-    "flavor": "A statue depicts the god Istus offering the original Deck of Many Things as a gift. The Statue card is a reminder of the past.",
+    "flavor": "A statue depicts the goddess Pharasma offering the original Deck of Many Things as a gift. The Statue card is a reminder of the past.",
     "set": "expansion",
     "rules": {
       "summary": "You are petrified; freed by Greater Restoration or similar magic.",
@@ -2423,8 +2503,11 @@
       }
     },
     "art": {
-      "front": "assets/cards/statue.png",
-      "prompt": "Tarot card: a figure frozen mid-gesture as grey marble stone creeps from their feet upward, the face still wearing the last human expression before petrification locked it in place — not dead, not sleeping, exactly preserved at the moment of transformation. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/statue.png",
+      "prompt": "A painted fantasy illustration with visible brushwork, showing a weathered grey stone statue carved in the western medieval European cathedral tradition: a tall robed woman standing on a stone plinth, severe and still, her gown carved in deep gothic folds, a simple spiral emblem cut into the stone at her breast, pale lichen in the crevices; she holds out in both hands a wide fanned spread of five large golden cards, each card turned so its ornate patterned gold back faces the viewer, the fan of cards prominent and central, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(photograph:1.6), (photorealistic:1.6), (hyperrealistic:1.5), (museum photograph:1.4), (buddha:1.5), (buddhist statue:1.5), (hindu statue:1.5), (asian sculpture:1.5), (bronze idol:1.4), (seated figure:1.3), (hearts spades clubs diamonds:1.4), (poker cards:1.3)",
+      "version": 2,
+      "pinned": true
     },
     "divination": {
       "person": {
@@ -2470,8 +2553,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/sun.png",
-      "prompt": "Tarot card: a blinding solar disc at center, rays of pure gold light flooding the entire card frame, a small figure at the bottom with arms wide receiving the radiance, a single ornate wondrous item visible in the brilliance above them — the universe giving freely. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/sun.png",
+      "prompt": "A blazing summer sun high in a clear sky, its rays flooding the whole scene with gold and bright fields below; the light is generous and expanding, everything beneath it lifted, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -2514,8 +2598,10 @@
       }
     },
     "art": {
-      "front": "assets/cards/talons.png",
-      "prompt": "Tarot card: enormous dark claws of pure void energy shredding through a collection of glowing magical items, artifacts dissolving into smoke and ash as the talons unmake them, not stealing but erasing — each item winking out of existence rather than falling to the floor. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/talons.png",
+      "prompt": "A great scaled clawed hand reaching through empty air toward an emerald ring that floats separately in front of it, the claw not touching and not wearing it; the ring is already crumbling to smoke at the claw's approach, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(ring on finger:1.5), (wearing a ring:1.5), (worn jewellery:1.4)",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -2561,8 +2647,10 @@
       }
     },
     "art": {
-      "front": "assets/cards/tavern.png",
-      "prompt": "Tarot card: a warm tavern common room, a charismatic figure at its center around whom the whole room naturally orients — conversations drawing closer, faces turning toward them, a golden warmth of presence visible as a soft light — charm elevated to something close to magnetism. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/tavern.png",
+      "prompt": "An adventuring party crowded around a heavy table in a busy tavern, eating and laughing together, tankards raised and firelight on their faces; the whole warm room leans toward their corner, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(cartoon:1.5), (cartoonish:1.5), (comic book:1.4), (caricature:1.4), (flat colours:1.3)",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -2606,8 +2694,11 @@
       }
     },
     "art": {
-      "front": "assets/cards/temple.png",
-      "prompt": "Tarot card: a vast divine eye opening above a temple, its gaze turning to fall on a single small figure below — the full weight of godhood's attention, a debt acknowledged, divine intervention available once and held in trust, the eye waiting for the call. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/temple.png",
+      "prompt": "A painted fantasy illustration with visible brushwork, seen from the ground outside at dusk looking up a wide flight of worn stone steps toward the tall open doorway of an ancient stone sanctuary; massive weathered stone columns carved with unfamiliar runes and spiral sigils flank a great arched opening, iron braziers burn low on the steps to either side, and the viewer stands outside on the ground facing the building; the whole interior beyond the open doorway is filled with bright warm welcoming golden light, brilliantly lit from within, and that light floods out through the doorway and spills down the steps toward the viewer with thin pale smoke drifting out in it, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(interior view:1.4), (seen from inside:1.4), (church:1.5), (cathedral:1.5), (christian:1.5), (crucifix:1.5), (stained glass window:1.4), (buddhist temple:1.5), (pagoda:1.5), (east asian architecture:1.5), (dark interior:1.5), (black doorway:1.5), (shadowy entrance:1.4), (photograph:1.5)",
+      "version": 3,
+      "pinned": true
     },
     "divination": {
       "person": {
@@ -2653,8 +2744,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/throne.png",
-      "prompt": "Tarot card: an ornate stone throne in a great hall, the seat glowing with subtle charisma-light, a rolled deed and a lord's seal resting on the armrest, the hall behind it suggesting subjects and lands awaiting, power offered rather than taken. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/throne.png",
+      "prompt": "An ostentatious carved throne standing empty on a raised dais, a jewelled crown resting on its seat and a ceremonial sword leaning against one armrest; the hall around it is arranged so every sightline ends at that chair, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -2700,8 +2792,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/tomb.png",
-      "prompt": "Tarot card: a figure at a grave, hands extended, light flowing from their palms into the earth — the dead responding, rising in silhouette against the light, True Resurrection rendered as a slow reversal of loss, one death undone, the power held for when it truly matters. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/tomb.png",
+      "prompt": "A quiet underground burial chamber holding a single plain stone casket, dust thick on its lid and carved walls dim around it; a thin thread of pale light has begun to seep from the seam beneath the lid, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -2742,8 +2835,9 @@
       "params": {}
     },
     "art": {
-      "front": "assets/cards/tower.png",
-      "prompt": "Tarot card: two glowing cards hanging suspended side by side — one bright, one shadowed — a hand reaching toward them, choosing; the unchosen card already beginning to fade back into the deck, the moment of decision held before it resolves. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/tower.png",
+      "prompt": "A tall ornate tower of black stone looming over a desolate windswept landscape, no road leading to it and no light in its high windows; two faint paths diverge from its base into the waste, one pale and one dark, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -2788,8 +2882,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/tree.png",
-      "prompt": "Tarot card: a figure whose skin is becoming bark in real time — grey-brown textured plates spreading across their arms, their silhouette gaining solidity — a torch in one corner burning closer, the figure aware of the new vulnerability, strength and fragility arriving together. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/tree.png",
+      "prompt": "A great tree that has broken through a fortress wall and reclaimed part of the keep, roots gripping fallen masonry and branches filling the breach; its bark is thick and plated where the stone failed, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -2832,8 +2927,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/undead.png",
-      "prompt": "Tarot card: a revenant rising from a grave, its gaze already fixed on a distant point — hunting, purposeful, the eyes burning with singular intent — not mindless undead but a creature of targeted vengeance, one year of pursuit condensed into one moment of awakening. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/undead.png",
+      "prompt": "A gaunt lich in tattered finery raising one hand to beckon, pale souls streaming toward it out of the dark; one risen figure at the front does not look at the lich at all, its burning gaze fixed past the viewer, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -2876,8 +2972,10 @@
       }
     },
     "art": {
-      "front": "assets/cards/void.png",
-      "prompt": "Tarot card: a body standing hollow and empty, the chest a literal window of darkness through which stars are visible, no soul present — only the physical shell left behind, hands hanging open, eyes vacant, a gem-shaped void where the heart should be. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/void.png",
+      "prompt": "An immense whirlpool of deep indigo and violet nothingness spiralling inward, its arms streaked with cold teal and dying gold starlight and drifting broken debris, turning slowly toward a central absolute darkness that devours everything drawn into it; faint human shapes are strung out along the spiral arms, stretched and thinning as they are pulled inward, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(monochrome:1.5), (greyscale:1.5), (empty composition:1.3), (minimalist:1.4), (plain background:1.3)",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -2923,8 +3021,10 @@
       }
     },
     "art": {
-      "front": "assets/cards/warrior.png",
-      "prompt": "Tarot card: a figure lifting something heavier than they should be able to, the effort visible but less than expected — new strength in the arms and shoulders, the body recalibrated upward, power that wasn't there before settling in like a natural state. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/warrior.png",
+      "prompt": "A barbarian in furs with scarred arms, standing centred in the middle of the picture with generous empty space around all four edges, the whole figure and the full length of the heavy greataxe well inside the picture and not touching any edge, braced and certain; the weapon looks light in their grip, more strength behind it than their build suggests, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "negative": "(comic book art:1.5), (cartoon:1.5), (cel shading:1.4), (bold outlines:1.3), (cropped:1.4), (close-up:1.3)",
+      "version": 1
     },
     "divination": {
       "person": {
@@ -2968,8 +3068,9 @@
       }
     },
     "art": {
-      "front": "assets/cards/well.png",
-      "prompt": "Tarot card: a stone well at night, moonlight falling into it revealing the water far below alive with magical light, a figure leaning over its edge and drawing something upward — three small glowing spheres rising on the bucket's rope, cantrips given freely from deep water. tarot card illustration, dark fantasy, ornate gold border, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation"
+      "front": "assets/cards-labeled/well.png",
+      "prompt": "A round stone well standing in a peaceful sunlit meadow thick with wildflowers, its bucket and rope at the rim; three small motes of coloured light drift up out of the shaft and hang above the opening, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
+      "version": 1
     },
     "divination": {
       "person": {

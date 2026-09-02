@@ -32,7 +32,7 @@ const SPREAD_MARGIN = 0.94;
 // Centre-to-centre spacing. Anything above CARD_H leaves a visible gap between
 // neighbours; at or below it the cards overlap.
 const STAFF_SPACING = 230;   // 205 card + 25 gap, for positions 7-10
-const CROSS_SPACING = 220;   // Crown / Significator / Foundation
+const CROSS_SPACING = 220;   // Crown / Heart / Foundation
 
 // Vertical centre shared by both the cross and the staff, so the two columns
 // line up with each other rather than the staff hanging lower.
@@ -50,13 +50,13 @@ const STAFF_CX = CROSS_CX + CROSS_ARM + CARD_W + STAFF_GAP;
 // These are NOT canvas coordinates: placeTiles() measures the bounding box of
 // the whole spread and centres it inside the scene rect, so the numbers below
 // only need to be correct relative to each other.
-// `rotation` is the base rotation for the position (Challenge lies across the Significator at 90°).
-// `sort` controls z-order for the crossing card so it sits above the Significator.
+// `rotation` is the base rotation for the position (Challenge lies across the Heart card at 90°).
+// `sort` controls z-order for the crossing card so it sits above the Heart card.
 // The staff (7-10) reads bottom to top: Self lowest, Outcome highest.
 const staffCy = (fromBottom) => SPREAD_CY + (1.5 - fromBottom) * STAFF_SPACING;
 
 const LAYOUT = {
-  significator: { cx: CROSS_CX,              cy: SPREAD_CY,                 rotation:  0, sort:  0 },
+  heart: { cx: CROSS_CX,              cy: SPREAD_CY,                 rotation:  0, sort:  0 },
   challenge:    { cx: CROSS_CX,              cy: SPREAD_CY,                 rotation: 90, sort: 10 },
   foundation:   { cx: CROSS_CX,              cy: SPREAD_CY + CROSS_SPACING, rotation:  0, sort:  0 },
   recent_past:  { cx: CROSS_CX - CROSS_ARM,  cy: SPREAD_CY,                 rotation:  0, sort:  0 },
