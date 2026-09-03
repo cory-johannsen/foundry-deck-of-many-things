@@ -1,16 +1,23 @@
 import { loadCards } from '../data-loader.mjs';
-import {
-  freshPlayDeckState,
-  drawFromPlay,
-  makeCardsById
-} from '../deck.mjs';
-import { applyCardEffect } from '../card-effects.mjs';
-import { playCardSound } from '../card-sound.mjs';
-import { makeFoundryApi } from '../foundry-api.mjs';
-import { postDrawCard } from './card-message.mjs';
+import { freshPlayDeckState } from '../deck.mjs';
 import { resolveDrawActor } from '../draw-target.mjs';
+import { runDraws } from '../draw-run.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
+
+/**
+ * Extra draws a card grants simply by being drawn.
+ *
+ * Jester is excluded: its two draws are one side of a choice the player has
+ * not made yet when the card lands, so they are granted at resolution instead.
+ */
+export function extraDrawsFor(card) {
+  // Jester's two draws are one side of a choice not yet made, and Tower turns
+  // its cards over itself so the player can pick between them — neither is a
+  // plain addition to the budget.
+  if (['bonus_draws', 'draw_two_keep_one'].includes(card?.mechanics?.kind)) return 0;
+  return card?.mechanics?.params?.additional_draws ?? 0;
+}
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 export class DeckApp extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -40,18 +47,10 @@ export class DeckApp extends HandlebarsApplicationMixin(ApplicationV2) {
     };
   }
 
-  static async #onDraw(event) {
+  static async #onDraw() {
     const form = this.element.querySelector('form');
     const n = Math.max(1, parseInt(form?.querySelector('[name="n"]')?.value ?? '1', 10));
-    const cards = await loadCards();
-    const byId = makeCardsById(cards);
-    let state = game.settings.get(MODULE_ID, 'playDeck');
-    if (!state.remaining?.length) {
-      state = freshPlayDeckState(cards, game.settings.get(MODULE_ID, 'worldSeed') || String(Date.now()));
-      await game.settings.set(MODULE_ID, 'playDeck', state);
-    }
-    const api = makeFoundryApi();
-    const autoApply = game.settings.get(MODULE_ID, 'autoApplyEffects');
+
     // Who the card lands on follows from who is drawing — see draw-target.mjs.
     // No actor here is not an error: the card posts pending and the GM is asked
     // to pick one when they apply it.
@@ -60,25 +59,7 @@ export class DeckApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (actor) ui.notifications.info(game.i18n.format('DOMMT.Play.UsingActor', { actor: actor.name }));
     else if (game.user.isGM) ui.notifications.info(game.i18n.localize('DOMMT.Play.NoActorSelected'));
 
-    for (let i = 0; i < n; i++) {
-      const step = drawFromPlay(state, { actorId: actor?.id ?? null });
-      if (step.reason === 'empty') {
-        ui.notifications.warn(game.i18n.localize('DOMMT.Play.EmptyDeck'));
-        break;
-      }
-      state = step.state;
-      const card = byId.get(step.card);
-      const result = await applyCardEffect({ card, actor, api, autoApplyEnabled: autoApply });
-      // A card that still needs the GM has not landed yet, so it stays quiet
-      // until they apply it.
-      if (result.mode === 'auto') playCardSound(card);
-      await postDrawCard({ card, actor, result });
-      if (card.rules.draw_terminating) {
-        ui.notifications.info(game.i18n.format('DOMMT.Play.TerminatorHit', { card: card.name }));
-        break;
-      }
-    }
-    await game.settings.set(MODULE_ID, 'playDeck', state);
+    await runDraws({ count: n, actor });
     this.render();
   }
 

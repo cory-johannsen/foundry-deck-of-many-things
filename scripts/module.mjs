@@ -6,6 +6,7 @@ import { applyCardEffect } from './card-effects.mjs';
 import { playCardSound } from './card-sound.mjs';
 import { registerChoiceSocket } from './player-choice.mjs';
 import { registerChargeSound } from './charge-sound.mjs';
+import { runDraws } from './draw-run.mjs';
 import { makeFoundryApi } from './foundry-api.mjs';
 import { resolveDrawActor } from './draw-target.mjs';
 import { resolvePendingDraw, markMessageResolved } from './gm-resolution.mjs';
@@ -139,7 +140,13 @@ function bindPendingDrawButton(message, html) {
     button.disabled = true;
     try {
       const outcome = await resolvePendingDraw(message);
-      if (outcome) await markMessageResolved(message, outcome);
+      if (outcome) {
+        await markMessageResolved(message, outcome);
+        // A card whose resolution grants draws takes them now.
+        if (outcome.extraDraws > 0) {
+          await runDraws({ count: outcome.extraDraws, actor: game.actors.get(outcome.actorId) });
+        }
+      }
       else button.disabled = false;   // dismissed — leave it actionable
     } catch (e) {
       console.error(`${MODULE_ID} | resolving pending draw failed`, e);

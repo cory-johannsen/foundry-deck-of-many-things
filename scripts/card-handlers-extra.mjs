@@ -119,17 +119,14 @@ export async function applySoloKillLevelUp({ actor, params, api, card }) {
 // ---------------------------------------------------------------------------
 
 export async function applyWealthGrant({ actor, params, api, card, rng }) {
-  // Gem offers a choice between two piles of identical total value.
+  // Gem offers two piles of identical total value, so which one appears is
+  // flavour rather than a decision — the hoard is rolled instead of asked
+  // about. An explicit `chosen` still wins, for a GM who wants to pick.
   if (Array.isArray(params.choice)) {
-    if (!params.chosen) {
-      const options = params.choice.map((c, i) => ({
-        value: String(i),
-        label: `${c.count} ${c.kind} worth ${c.value_each_gp} gp each `
-          + `(${(c.count * c.value_each_gp).toLocaleString()} gp)`
-      }));
-      return needsChoice(card, 'chosen', options, `${card.name}: choose which hoard appears.`);
-    }
-    const pick = params.choice[Number(params.chosen)] ?? params.choice[0];
+    const index = params.chosen != null
+      ? Number(params.chosen)
+      : Math.floor(rng() * params.choice.length);
+    const pick = params.choice[index] ?? params.choice[0];
     const gp = pick.count * pick.value_each_gp;
     await api.addCoins(actor.id, { gp });
     return { mode: 'auto', log: `${card.name}: ${pick.count} ${pick.kind} — ${gp.toLocaleString()} gp` };
@@ -470,23 +467,32 @@ export async function applyBonusDraws({ actor, params, api, card }) {
     });
   }
   const extra = params.additional_draws ?? 2;
-  await api.updateActor(actor.id, { [`flags.${MODULE_ID}.pendingExtraDraws`]: extra });
-  return { mode: 'auto', log: `${card.name}: ${extra} additional draws granted` };
-}
-
-export async function applyStopDrawing({ actor, api, card }) {
-  await api.updateActor(actor.id, { [`flags.${MODULE_ID}.mayStopDrawing`]: true });
+  // Nothing is written to the actor: the draws are the deck's business, and
+  // the caller takes them once this resolves.
   return {
     mode: 'auto',
-    log: `${card.name}: you may stop drawing now, even with draws declared`
+    log: `${card.name}: ${extra} additional draws`,
+    meta: { extraDraws: extra }
   };
 }
 
-export async function applyDrawTwoKeepOne({ actor, api, card }) {
-  await api.updateActor(actor.id, { [`flags.${MODULE_ID}.drawTwoKeepOne`]: true });
+export async function applyStopDrawing({ card }) {
+  // Nothing to write. Whether the player stops is theirs to say, and the deck
+  // app cannot un-declare draws already in flight — the old flag recorded an
+  // intention that nothing ever read.
   return {
     mode: 'auto',
-    log: `${card.name}: draw two more cards and keep only one of them`
+    log: `${card.name}: you may stop drawing now, even with draws still declared`
+  };
+}
+
+export async function applyDrawTwoKeepOne({ card }) {
+  // Two draws are granted; which one is kept is a decision made at the table,
+  // and the module has no way to un-draw the other.
+  return {
+    mode: 'auto',
+    log: `${card.name}: draw two more cards and keep only one of them`,
+    meta: { extraDraws: 2 }
   };
 }
 

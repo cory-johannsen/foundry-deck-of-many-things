@@ -229,12 +229,49 @@ async function autoApplySavePenalty({ actor, params, api, card }) {
   return { mode: 'auto', log: `${card.name}: −${Math.abs(value)} status penalty to all saves (Curse of Euryale)` };
 }
 
+/**
+ * Book: 1d6+2 languages, chosen by whoever is getting them.
+ *
+ * It used to roll the number and then post a chat card telling the GM to sort
+ * it out. The count is rolled once and carried in `persist`, so re-planning
+ * after the choice does not roll a different number than the one the question
+ * was asked about, and the languages are picked in a single dialog — which for
+ * a player-owned character opens on the player's own screen.
+ */
 async function autoApplyLearnLanguages({ actor, params, api, card, rng }) {
-  const count = rollFormula(params.count_formula ?? '1d6+2', rng);
+  const count = params.count ?? rollFormula(params.count_formula ?? '1d6+2', rng);
+  const picked = params.languages;
+
+  if (!Array.isArray(picked) || !picked.length) {
+    const available = await api.listLanguages(actor.id);
+    if (!available.length) {
+      return {
+        mode: 'gm',
+        log: `${card.name}: no languages left to learn.`,
+        meta: { kind: 'gm_only' }
+      };
+    }
+    return {
+      mode: 'gm',
+      log: `${card.name}: choose ${count} language${count === 1 ? '' : 's'} to learn.`,
+      meta: {
+        kind: 'choose_many',
+        requires: 'choose_many',
+        paramKey: 'languages',
+        count: Math.min(count, available.length),
+        options: available,
+        persist: { count }
+      }
+    };
+  }
+
+  const known = deepGet(actor, 'system.details.languages.value') ?? [];
+  const next = Array.from(new Set([...known, ...picked]));
+  await api.updateActor(actor.id, { 'system.details.languages.value': next });
   return {
-    mode: 'gm',
-    log: `${card.name}: learn ${count} languages of the player's choice.`,
-    meta: { kind: 'learn_languages', count }
+    mode: 'auto',
+    log: `${card.name}: learned ${picked.length} language(s) — ${picked.join(', ')}`,
+    meta: { languages: picked }
   };
 }
 
@@ -244,14 +281,36 @@ async function autoApplyLongRest({ actor, api, card }) {
   return { mode: 'auto', log: `${card.name}: HP restored to ${max}; daily preparations reset` };
 }
 
+/**
+ * Ruin: mundane wealth vanishes.
+ *
+ * It used to stamp a timestamp on the actor and ask the GM to empty the
+ * inventory by hand, which is to say it did nothing. Coins and non-magical
+ * valuables are now actually taken.
+ *
+ * Deliberately limited to coin and treasure. "Non-magical wealth" could be
+ * read to include a mundane sword, but stripping someone's gear on a card that
+ * reads as losing your money would be a nasty surprise; deeds and titles stay
+ * narrative because there is nothing on a sheet to remove.
+ */
 async function autoApplyWealthWipe({ actor, api, card }) {
-  await api.updateActor(actor.id, {
-    'flags.deck-of-many-more-things.wealth_wiped_at': Date.now()
-  });
+  const coins = await api.getCoins(actor.id);
+  const valuables = await api.listItems(actor.id, { types: ['treasure'], magical: 'exclude' });
+  const coinTotal = Object.entries(coins ?? {})
+    .map(([d, n]) => `${n} ${d}`).filter((s) => !s.startsWith('0 '));
+
+  if (coinTotal.length) await api.removeCoins(actor.id, coins);
+  if (valuables.length) await api.removeItems(actor.id, valuables.map((v) => v.id));
+
+  if (!coinTotal.length && !valuables.length) {
+    return { mode: 'auto', log: `${card.name}: nothing mundane left to lose` };
+  }
+  const parts = [];
+  if (coinTotal.length) parts.push(coinTotal.join(', '));
+  if (valuables.length) parts.push(`${valuables.length} valuable(s): ${valuables.map((v) => v.name).join(', ')}`);
   return {
-    mode: 'gm',
-    log: `${card.name}: all non-magical wealth, portable property, and ownership documents disappear. GM should remove valuables from the inventory manually.`,
-    meta: { kind: 'wealth_wipe' }
+    mode: 'auto',
+    log: `${card.name}: lost ${parts.join('; ')}. Deeds and titles are gone too — those are yours to narrate.`
   };
 }
 
@@ -337,15 +396,15 @@ const HANDLERS = {
  * about to appear — before anything is written. Gains apply silently, because
  * nobody needs protecting from being handed a magic sword.
  *
- * The six that were already automated (drop_to_zero_hp and friends) are in
- * here too. They were applying silently before this list existed, which was an
- * oversight rather than a decision: a card that drops a character to 0 HP with
- * no prompt is exactly what this gate is for.
+ * The line has been drawn by play rather than by category. Corpse, Maze,
+ * Prisoner, Ruin and Euryale all do something unpleasant, but each does one
+ * definite thing with nothing for a GM to decide, so confirming them was only
+ * a click between drawing a card and seeing it land. What remains gated either
+ * removes something irreplaceable, takes the character out of the player's
+ * hands, or puts a creature on the map.
  */
 export const REQUIRES_CONFIRMATION = new Set([
-  'xp_loss', 'fall', 'petrify', 'soul_trap', 'destroy_magic_items', 'beast_form',
-  'drop_to_zero_hp', 'stat_debuff', 'save_penalty', 'exhaustion',
-  'restrain_no_spellcast', 'wealth_wipe',
+  'xp_loss', 'fall', 'petrify', 'destroy_magic_items',
   'trap_extraplanar', 'feywild_transport', 'age_shift', 'moral_inversion', 'permanent_enemy',
   'fiend_deal',   // indifferent, but it still puts a creature on the map
   'spawn_hostile', 'spawn_ooze', 'random_hostile_npc',

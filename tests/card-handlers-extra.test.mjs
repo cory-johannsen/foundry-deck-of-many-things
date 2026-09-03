@@ -17,8 +17,8 @@ const actorOf = (over = {}) => ({
 });
 
 /** Records writes, answers reads from fixtures. */
-const makeApi = ({ items = [], creatures = [], carried = [], worldActors = [] } = {}) => {
-  const spy = { updates: [], conditions: [], effects: [], coins: [], granted: [], removed: [], spawned: [] };
+const makeApi = ({ items = [], creatures = [], carried = [], worldActors = [], languages = [], coins = {} } = {}) => {
+  const spy = { updates: [], conditions: [], effects: [], coins: [], granted: [], removed: [], spawned: [], innate: [], coinsRemoved: [] };
   return {
     spy,
     updateActor: async (_id, u) => { spy.updates.push(u); },
@@ -29,6 +29,10 @@ const makeApi = ({ items = [], creatures = [], carried = [], worldActors = [] } 
     grantItems: async (_id, e) => { spy.granted.push(...e); },
     removeItems: async (_id, ids) => { spy.removed.push(...ids); },
     spawnCreatures: async (e, o) => { spy.spawned.push({ e, o }); },
+    grantInnateSpells: async (_i, e, o) => { spy.innate.push({ e, o }); },
+    listLanguages: async () => languages,
+    getCoins: async () => coins,
+    removeCoins: async (_i, c) => { spy.coinsRemoved.push(c); },
     findItems: async () => items,
     findCreatures: async () => creatures,
     listItems: async () => carried,
@@ -92,12 +96,16 @@ describe('experience', () => {
 });
 
 describe('choices', () => {
-  it('asks before granting a hoard rather than picking for the GM', async () => {
+  it('rolls the hoard instead of asking — both piles are worth the same', async () => {
     const { r, api } = await run('gem');
-    expect(r.mode).toBe('gm');
-    expect(r.meta.requires).toBe('choose_option');
-    expect(r.meta.options).toHaveLength(2);
-    expect(api.spy.coins).toHaveLength(0);      // nothing granted while asking
+    expect(r.mode).toBe('auto');
+    expect(api.spy.coins[0]).toEqual({ gp: 50000 });
+  });
+
+  it('still honours an explicit choice, for a GM who wants to pick', async () => {
+    const params = { ...BY_ID.get('gem').mechanics.params, chosen: '0' };
+    const { r } = await run('gem', { params });
+    expect(r.log).toMatch(/jewelry/);
   });
 
   it('grants the chosen hoard once the choice is made', async () => {
@@ -270,12 +278,11 @@ describe('beast form', () => {
       .toMatchObject({ value: days, unit: 'days' });
   });
 
-  it('is held for confirmation, since it replaces the character for weeks', async () => {
+  it('applies without asking', async () => {
     const res = await applyCardEffect({
       card: BY_ID.get('beast'), actor: actorOf(), api: makeApi({ items: forms })
     });
-    expect(res.mode).toBe('gm');
-    expect(res.meta.kind).toBe('needs_confirm');
+    expect(res.mode).toBe('auto');
   });
 
   it('falls back to the GM when no form is installed', async () => {
@@ -431,5 +438,76 @@ describe('Rogue turns an existing NPC against you', () => {
     const r = await applyCardEffect({ card: BY_ID.get('rogue'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
     expect(r.mode).toBe('gm');
     expect(spy.effects).toHaveLength(0);
+  });
+});
+
+describe('Ruin actually takes the wealth', () => {
+  // It used to stamp a timestamp on the actor and ask the GM to do it by hand.
+  const carried = [
+    { id: 't1', name: 'Emerald', type: 'treasure' },
+    { id: 't2', name: 'Ivory', type: 'treasure' }
+  ];
+  const api = ({ coins = {}, items = [] } = {}) => {
+    const spy = { removedItems: [], removedCoins: [] };
+    return [{
+      ...makeApi(),
+      getCoins: async () => coins,
+      removeCoins: async (_i, c) => { spy.removedCoins.push(c); },
+      listItems: async () => items,
+      removeItems: async (_i, ids) => { spy.removedItems.push(...ids); }
+    }, spy];
+  };
+
+  it('takes the coins', async () => {
+    const [a, spy] = api({ coins: { gp: 100, sp: 5 } });
+    const r = await applyCardEffect({ card: BY_ID.get('ruin'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
+    expect(spy.removedCoins[0]).toEqual({ gp: 100, sp: 5 });
+    expect(r.log).toContain('100 gp');
+  });
+
+  it('takes the mundane valuables', async () => {
+    const [a, spy] = api({ items: carried });
+    const r = await applyCardEffect({ card: BY_ID.get('ruin'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
+    expect(spy.removedItems).toEqual(['t1', 't2']);
+    expect(r.log).toContain('Emerald, Ivory');
+  });
+
+  it('asks only for non-magical treasure, never the enchanted gear', async () => {
+    let asked = null;
+    const [a] = api();
+    a.listItems = async (_i, opts) => { asked = opts; return []; };
+    await applyCardEffect({ card: BY_ID.get('ruin'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
+    expect(asked).toEqual({ types: ['treasure'], magical: 'exclude' });
+  });
+
+  it('says so plainly when there is nothing mundane to lose', async () => {
+    const [a, spy] = api({ coins: { gp: 0 }, items: [] });
+    const r = await applyCardEffect({ card: BY_ID.get('ruin'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
+    expect(spy.removedCoins).toHaveLength(0);
+    expect(spy.removedItems).toHaveLength(0);
+    expect(r.log).toContain('nothing mundane left to lose');
+  });
+
+  it('applies without asking — it does one definite thing', async () => {
+    const [a, spy] = api({ coins: { gp: 100 }, items: carried });
+    const r = await applyCardEffect({ card: BY_ID.get('ruin'), actor: actorOf(), api: a });
+    expect(r.mode).toBe('auto');
+    expect(spy.removedCoins).toHaveLength(1);
+  });
+});
+
+describe('Ruin does not take the same money twice', () => {
+  it('leaves coin items to the coin api', async () => {
+    // PF2e keeps coins as treasure items: "Gold Pieces" sits in the same list
+    // as a gemstone, so listing treasure naively removes coin a second time.
+    const { makeFoundryApi } = await import('../scripts/foundry-api.mjs');
+    const items = [
+      { id: 'c1', name: 'Gold Pieces', type: 'treasure', isCoinage: true, system: { stackGroup: 'coins', traits: {} } },
+      { id: 'g1', name: 'Hematite', type: 'treasure', isCoinage: false, system: { stackGroup: 'gems', traits: {} } }
+    ];
+    globalThis.game = { actors: { get: () => ({ items, inventory: {} }) } };
+    const listed = await makeFoundryApi().listItems('a1', { types: ['treasure'], magical: 'exclude' });
+    expect(listed.map((i) => i.name)).toEqual(['Hematite']);
+    delete globalThis.game;
   });
 });

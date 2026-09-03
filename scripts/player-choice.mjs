@@ -1,4 +1,4 @@
-import { promptChooseAbility, promptChooseOption } from './choice-prompts.mjs';
+import { promptChooseAbility, promptChooseOption, promptChooseMany } from './choice-prompts.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 export const SOCKET = `module.${MODULE_ID}`;
@@ -20,7 +20,7 @@ const DEFAULT_TIMEOUT_MS = 120_000;
 const pending = new Map();
 
 /** GM side: ask `user` and wait. Resolves to the choice, or null to fall back. */
-export function askPlayer({ user, card, kind, prompt, options = [], delta = 1,
+export function askPlayer({ user, card, kind, prompt, options = [], delta = 1, count = 1,
                             timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
   if (!user?.id) return Promise.resolve(null);
   const id = foundry.utils.randomID();
@@ -44,7 +44,7 @@ export function askPlayer({ user, card, kind, prompt, options = [], delta = 1,
       userId: user.id,
       cardName: card.name,
       rulesText: card.rules?.summary ?? '',
-      kind, prompt, options, delta
+      kind, prompt, options, delta, count
     });
     ui.notifications.info(game.i18n.format('DOMMT.Choice.Waiting',
       { user: user.name, card: card.name }));
@@ -64,14 +64,17 @@ export function registerChoiceSocket() {
     if (msg?.type !== 'choice-request' || msg.userId !== game.user.id) return;
 
     const card = { name: msg.cardName, rules: { summary: msg.rulesText } };
-    const choice = msg.kind === 'choose_ability'
-      ? await promptChooseAbility(card, msg.delta)
-      : await promptChooseOption(card, msg.prompt, msg.options);
+    let choice;
+    if (msg.kind === 'choose_ability') choice = await promptChooseAbility(card, msg.delta);
+    else if (msg.kind === 'choose_many') {
+      choice = await promptChooseMany(card, msg.prompt, msg.options, msg.count);
+    } else choice = await promptChooseOption(card, msg.prompt, msg.options);
 
     game.socket.emit(SOCKET, {
       type: 'choice-response',
       id: msg.id,
-      choice: !choice || choice === 'cancel' ? null : choice
+      choice: !choice || choice === 'cancel'
+        || (Array.isArray(choice) && !choice.length) ? null : choice
     });
   });
 }
