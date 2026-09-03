@@ -56,7 +56,7 @@ const STAFF_CX = CROSS_CX + CROSS_ARM + CARD_W + STAFF_GAP;
 const staffCy = (fromBottom) => SPREAD_CY + (1.5 - fromBottom) * STAFF_SPACING;
 
 const LAYOUT = {
-  heart: { cx: CROSS_CX,              cy: SPREAD_CY,                 rotation:  0, sort:  0 },
+  heart:        { cx: CROSS_CX,              cy: SPREAD_CY,                 rotation:  0, sort:  0 },
   challenge:    { cx: CROSS_CX,              cy: SPREAD_CY,                 rotation: 90, sort: 10 },
   foundation:   { cx: CROSS_CX,              cy: SPREAD_CY + CROSS_SPACING, rotation:  0, sort:  0 },
   recent_past:  { cx: CROSS_CX - CROSS_ARM,  cy: SPREAD_CY,                 rotation:  0, sort:  0 },
@@ -69,6 +69,30 @@ const LAYOUT = {
 };
 
 const DEAL_DELAY_MS = 600;
+
+const SOUNDS = {
+  // Played once as the table comes up.
+  open: `modules/${MODULE_ID}/assets/sounds/card-fan-1.ogg`,
+  // Played as each card lands.
+  place: `modules/${MODULE_ID}/assets/sounds/card-place-1.ogg`
+};
+const SOUND_VOLUME = 0.7;
+
+/**
+ * Fire-and-forget so audio can never stall or break a reading — a missing file
+ * or a browser autoplay block should cost the sound, not the deal. The `true`
+ * broadcasts to every connected client so the whole table hears it, not just
+ * the GM running the macro.
+ */
+function playSound(src) {
+  try {
+    const played = foundry.audio.AudioHelper.play(
+      { src, volume: SOUND_VOLUME, autoplay: true, loop: false }, true);
+    if (played?.catch) played.catch((e) => console.warn(`${MODULE_ID} | sound failed: ${src}`, e));
+  } catch (e) {
+    console.warn(`${MODULE_ID} | sound failed: ${src}`, e);
+  }
+}
 
 const CLOTH_PATH = `modules/${MODULE_ID}/assets/cloth.png`;
 
@@ -288,6 +312,7 @@ export async function performDivinationOnTable() {
   // and pulls everyone, and views it for the GM as well.
   if (!scene.active) await scene.activate();
   else await scene.view();
+  playSound(SOUNDS.open);
   await new Promise((r) => setTimeout(r, 400));
 
   const fit = layoutTransform(scene);
@@ -327,6 +352,7 @@ export async function performDivinationOnTable() {
       sort: layout.sort,
       flags: { [MODULE_ID]: { kind: TILE_KIND, position: slot.position, orientation: slot.orientation, cardId: card.id } }
     }]);
+    playSound(SOUNDS.place);
     await new Promise((r) => setTimeout(r, DEAL_DELAY_MS));
 
     const orientationLabel = game.i18n.localize(`DOMMT.Divination.Orientation.${displayOrientation}`);
