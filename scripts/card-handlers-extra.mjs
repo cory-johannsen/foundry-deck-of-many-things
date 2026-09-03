@@ -180,7 +180,7 @@ export async function applySoulTrap({ actor, api, card }) {
   await api.createEffect(actor.id, {
     type: 'effect',
     name: 'Trapped Soul (Void)',
-    img: 'icons/magic/unholy/orb-swirling-purple.webp',
+    img: 'icons/magic/unholy/strike-body-life-soul-purple.webp',
     system: {
       description: { value: 'The body is soulless and inert. Only a wish reveals the gem\'s location.' },
       duration: { unit: 'unlimited' },
@@ -238,7 +238,7 @@ export async function applyUnarmoredDefense({ actor, params, api, card }) {
   await api.createEffect(actor.id, {
     type: 'effect',
     name: 'Barkskin (Tree)',
-    img: 'icons/magic/nature/tree-oak-brown-green.webp',
+    img: 'icons/magic/nature/leaf-armor-scale-green.webp',
     system: {
       description: { value: 'Bark-like skin toughens you, but burns readily.' },
       duration: { unit: 'unlimited' },

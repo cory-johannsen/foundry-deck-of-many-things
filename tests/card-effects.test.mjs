@@ -19,7 +19,7 @@ function makeActor(overrides = {}) {
       },
       attributes: {
         hp: { value: 30, max: 40 },
-        speed: { value: 25, otherSpeeds: [] }
+        speed: { value: 25, otherSpeeds: [] }   // legacy shape, kept for other tests
       },
       traits: { size: { value: 'med' } },
       details: { xp: { value: 300 }, languages: { value: ['common'] } }
@@ -128,27 +128,37 @@ describe('drop_to_zero_hp (Corpse)', () => {
 });
 
 describe('speed_bonus (Path)', () => {
-  it('adds walking speed', async () => {
+  // PF2e derives movement, so a direct write is discarded. These now assert
+  // the rule element that actually moves the sheet.
+  it('grants a land-speed modifier rather than writing the speed', async () => {
     const actor = makeActor();
+    // A real character keeps movement here, derived from ancestry and items.
+    actor.system.movement = { speeds: { land: { value: 25 }, climb: null, fly: null } };
     const api = makeApi(actor);
-    const path = BY_ID.get('path');
-    await applyCardEffect({ card: path, actor, api });
-    expect(actor.system.attributes.speed.value).toBe(35);
+    const res = await applyCardEffect({ card: BY_ID.get('path'), actor, api });
+    expect(api._spy.effects[0].system.rules[0]).toEqual(
+      { key: 'FlatModifier', selector: 'land-speed', type: 'status', value: 10 });
+    // The stored speed is untouched; PF2e recomputes it from the rule.
+    expect(actor.system.movement.speeds.land.value).toBe(25);
+    expect(res.log).toBe('Path: land Speed 25 → 35 ft');
   });
 });
 
 describe('flight (Celestial) / climb_speed (Cavern)', () => {
-  it('adds a fly speed to otherSpeeds', async () => {
+  it('grants a fly Speed with a BaseSpeed rule', async () => {
     const actor = makeActor();
     const api = makeApi(actor);
     await applyCardEffect({ card: BY_ID.get('celestial'), actor, api });
-    expect(actor.system.attributes.speed.otherSpeeds).toContainEqual({ type: 'fly', value: 30 });
+    expect(api._spy.effects[0].system.rules[0])
+      .toEqual({ key: 'BaseSpeed', selector: 'fly', value: 30 });
   });
   it('adds climb equal to walk', async () => {
     const actor = makeActor();
     const api = makeApi(actor);
     await applyCardEffect({ card: BY_ID.get('cavern'), actor, api });
-    expect(actor.system.attributes.speed.otherSpeeds).toContainEqual({ type: 'climb', value: 25 });
+    // BaseSpeed takes `selector`, not `type` — with `type` it silently does nothing.
+    expect(api._spy.effects[0].system.rules[0])
+      .toEqual({ key: 'BaseSpeed', selector: 'climb', value: 25 });
   });
 });
 
