@@ -7,6 +7,7 @@ import {
 import { applyCardEffect } from '../card-effects.mjs';
 import { makeFoundryApi } from '../foundry-api.mjs';
 import { postDrawCard } from './card-message.mjs';
+import { resolveDrawActor } from '../draw-target.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -41,7 +42,6 @@ export class DeckApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #onDraw(event) {
     const form = this.element.querySelector('form');
     const n = Math.max(1, parseInt(form?.querySelector('[name="n"]')?.value ?? '1', 10));
-    const actorId = form?.querySelector('[name="actorId"]')?.value ?? null;
     const cards = await loadCards();
     const byId = makeCardsById(cards);
     let state = game.settings.get(MODULE_ID, 'playDeck');
@@ -51,10 +51,16 @@ export class DeckApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     const api = makeFoundryApi();
     const autoApply = game.settings.get(MODULE_ID, 'autoApplyEffects');
-    const actor = actorId ? game.actors.get(actorId) : null;
+    // Who the card lands on follows from who is drawing — see draw-target.mjs.
+    // No actor here is not an error: the card posts pending and the GM is asked
+    // to pick one when they apply it.
+    const { actor, ambiguous } = resolveDrawActor();
+    if (ambiguous) ui.notifications.warn(game.i18n.localize('DOMMT.Play.MultipleTokens'));
+    if (actor) ui.notifications.info(game.i18n.format('DOMMT.Play.UsingActor', { actor: actor.name }));
+    else if (game.user.isGM) ui.notifications.info(game.i18n.localize('DOMMT.Play.NoActorSelected'));
 
     for (let i = 0; i < n; i++) {
-      const step = drawFromPlay(state, { actorId });
+      const step = drawFromPlay(state, { actorId: actor?.id ?? null });
       if (step.reason === 'empty') {
         ui.notifications.warn(game.i18n.localize('DOMMT.Play.EmptyDeck'));
         break;

@@ -34,5 +34,21 @@
   "DOMMT.Chat.RulesFullToggle": "Show full rules text",
   "DOMMT.Effects.Euryale.Label": "Curse of Euryale (−2 to saves)",
   "DOMMT.Effects.Void.Label": "Soul trapped (Void)",
-  "DOMMT.Effects.Prisoner.Label": "Restrained (Prisoner)"
+  "DOMMT.Effects.Prisoner.Label": "Restrained (Prisoner)",
+  "DOMMT.GM.ApplyEffect": "Apply effect (GM)",
+  "DOMMT.GM.Apply": "Apply",
+  "DOMMT.GM.Skip": "Skip",
+  "DOMMT.GM.MarkResolved": "Mark resolved",
+  "DOMMT.GM.ResolvedByGM": "Resolved by the GM.",
+  "DOMMT.GM.ResolveFailed": "Could not resolve that card — see the console.",
+  "DOMMT.GM.NoActor": "No actor is bound to that draw, so there is nothing to apply to.",
+  "DOMMT.GM.AcknowledgeHint": "This card has no automatic effect. Resolve it at the table, then mark it resolved.",
+  "DOMMT.GM.ChooseAbility.Prompt": "Choose the ability score to boost by +{delta}.",
+  "DOMMT.GM.ChooseAbility.Label": "Ability",
+  "DOMMT.Play.MultipleTokens": "Several tokens are selected — using the first.",
+  "DOMMT.Play.UsingActor": "Drawing for {actor}.",
+  "DOMMT.Play.NoActorSelected": "No actor selected — you will be asked who this applies to.",
+  "DOMMT.GM.SelectActor.Prompt": "This card was drawn without an actor. Choose who it applies to.",
+  "DOMMT.GM.SelectActor.Label": "Actor",
+  "DOMMT.GM.NoActorsInWorld": "There are no actors in this world to apply the card to."
 }

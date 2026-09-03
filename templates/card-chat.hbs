@@ -10,6 +10,14 @@
       <strong>{{localize "DOMMT.Chat.GMAction.Header"}}</strong>
       <div>{{result.log}}</div>
     </div>
+    {{#if pending}}
+      {{!-- Rendered for everyone; module.mjs only binds and shows it for a GM. --}}
+      <div class="dommt-chat__gm-actions">
+        <button type="button" data-action="dommt-resolve">
+          {{localize "DOMMT.GM.ApplyEffect"}}
+        </button>
+      </div>
+    {{/if}}
   {{else}}
     <div class="dommt-chat__auto">
       <em>{{result.log}}</em>
