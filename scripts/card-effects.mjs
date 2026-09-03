@@ -4,8 +4,12 @@ import {
   applyWealthGrant, applyPetrify, applyFall, applySoulTrap,
   applyElementImmunity, applyGrantTelepathy, applyUnarmoredDefense,
   applyItemGrant, applyDestroyMagicItems, applySpawn,
-  applyBonusDraws, applyStopDrawing, applyDrawTwoKeepOne
+  applyBonusDraws, applyStopDrawing, applyDrawTwoKeepOne, applyBeastForm
 } from './card-handlers-extra.mjs';
+import {
+  applyTrackedUses, applySpellGrant, applySkillProficiencies, applyThronePersuasion,
+  applyExile, applyNamedAdversary, applyAgeShift, applyAlignmentFlip
+} from './card-handlers-narrative.mjs';
 
 /**
  * Every mechanics.kind maps to a handler here.
@@ -222,18 +226,18 @@ const HANDLERS = {
   wealth_wipe: autoApplyWealthWipe,
 
   grant_telepathy: applyGrantTelepathy,
-  alignment_flip: gmCard(),
-  beast_form: gmCard(),
-  cast_time_stop_n: gmCard(),
-  cast_gate_n: gmCard(),
+  alignment_flip: applyAlignmentFlip,
+  beast_form: applyBeastForm,
+  cast_time_stop_n: applyTrackedUses,
+  cast_gate_n: applyTrackedUses,
   spawn_homunculus: applySpawn,
-  age_shift: gmCard(),
-  trap_extraplanar: gmCard(),
+  age_shift: applyAgeShift,
+  trap_extraplanar: applyExile,
   element_immunity: applyElementImmunity,
-  erase_event: gmCard(),
-  feywild_transport: gmCard(),
-  fiend_deal: gmCard(),
-  permanent_enemy: gmCard(),
+  erase_event: applyTrackedUses,
+  feywild_transport: applyExile,
+  fiend_deal: applyNamedAdversary,
+  permanent_enemy: applyNamedAdversary,
   bonus_draws: applyBonusDraws,
   xp_loss: applyXpLoss,
   xp_gain: applyXpGainWithItem,
@@ -244,29 +248,29 @@ const HANDLERS = {
   spawn_hostile: applySpawn,
   spawn_ooze: applySpawn,
   fall: applyFall,
-  spellcast_slotless: gmCard(),
+  spellcast_slotless: applySpellGrant,
   random_hostile_npc: applySpawn,
-  sage_query: gmCard(),
-  map_query: gmCard(),
+  sage_query: applyTrackedUses,
+  map_query: applyTrackedUses,
   armor_grant: applyItemGrant,
-  skill_proficiencies: gmCard(),
+  skill_proficiencies: applySkillProficiencies,
   avatar_of_death: applySpawn,
   keep_grant: gmCard(),
-  resurrection_grant: gmCard(),
+  resurrection_grant: applyTrackedUses,
   draw_two_keep_one: applyDrawTwoKeepOne,
   unarmored_defense: applyUnarmoredDefense,
   revenant_hunter: applySpawn,
   soul_trap: applySoulTrap,
-  three_cantrips: gmCard(),
+  three_cantrips: applySpellGrant,
   petrify: applyPetrify,
   wondrous_grant: applyItemGrant,
   ring_grant: applyItemGrant,
   magic_weapon_grant: applyItemGrant,
   rod_or_staff_grant: applyItemGrant,
-  throne_persuasion: gmCard(),
+  throne_persuasion: applyThronePersuasion,
   destroy_magic_items: applyDestroyMagicItems,
   solo_kill_level_up: applySoloKillLevelUp,
-  wish: gmCard(),
+  wish: applyTrackedUses,
   moon: gmCard()
 };
 
@@ -284,9 +288,11 @@ const HANDLERS = {
  * no prompt is exactly what this gate is for.
  */
 export const REQUIRES_CONFIRMATION = new Set([
-  'xp_loss', 'fall', 'petrify', 'soul_trap', 'destroy_magic_items',
+  'xp_loss', 'fall', 'petrify', 'soul_trap', 'destroy_magic_items', 'beast_form',
   'drop_to_zero_hp', 'stat_debuff', 'save_penalty', 'exhaustion',
   'restrain_no_spellcast', 'wealth_wipe',
+  'trap_extraplanar', 'feywild_transport', 'age_shift', 'alignment_flip', 'permanent_enemy',
+  'fiend_deal',   // indifferent, but it still puts a creature on the map
   'spawn_hostile', 'spawn_ooze', 'random_hostile_npc',
   'revenant_hunter', 'avatar_of_death'
 ]);

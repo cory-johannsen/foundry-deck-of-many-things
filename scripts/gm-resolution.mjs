@@ -228,10 +228,13 @@ export async function resolvePendingDraw(message) {
   const confirmed = await promptConfirm(card, actor, plan);
   if (!confirmed || confirmed === 'cancel') return null;
 
-  if (plan.calls.length) {
-    await replayPlan(plan.calls, api);
-    playCardSound(card);
-  }
+  if (plan.calls.length) await replayPlan(plan.calls, api);
+
+  // Outside the write check on purpose. A narrative card — a wish, a fiend's
+  // bargain, Beast's transformation — resolves with nothing to write, but it
+  // still happened at the table and should still be heard. Tying the sound to
+  // whether the actor was touched left all nineteen GM-only cards silent.
+  playCardSound(card);
   return {
     applied: plan.calls.length > 0,
     log: plan.calls.length

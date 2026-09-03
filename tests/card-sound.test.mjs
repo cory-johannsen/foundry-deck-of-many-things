@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import {
   SOUND_GROUPS, GROUP_BY_KIND, FALLBACK_GROUP, groupForCard, resolveCardSound
 } from '../scripts/card-sound.mjs';
@@ -54,5 +54,28 @@ describe('resolveCardSound', () => {
     const c = card({ mechanics: { kind: 'not_a_real_kind' } });
     expect(groupForCard(c)).toBe(FALLBACK_GROUP);
     expect(resolveCardSound(c)).toContain(SOUND_GROUPS[FALLBACK_GROUP]);
+  });
+});
+
+describe('the files actually exist', () => {
+  // resolveCardSound returns a module-relative path; strip the prefix to reach
+  // it on disk. A card mapped to a filename nobody ever added is still silent.
+  const onDisk = (p) => new URL('../' + p.replace('modules/deck-of-many-more-things/', ''),
+                                import.meta.url);
+
+  it('has a real file behind every card, including the GM-only ones', () => {
+    const missing = cards
+      .map((c) => ({ name: c.name, path: resolveCardSound(c) }))
+      .filter((x) => !existsSync(onDisk(x.path)));
+    expect(missing).toEqual([]);
+  });
+
+  it('covers the narrative cards that resolve without touching the actor', () => {
+    // These apply no changes at all, so nothing about their sound can depend
+    // on a write having happened.
+    for (const id of ['beast', 'moon', 'sage', 'fiend', 'fates']) {
+      const card = cards.find((c) => c.id === id);
+      expect(existsSync(onDisk(resolveCardSound(card))), id).toBe(true);
+    }
   });
 });
