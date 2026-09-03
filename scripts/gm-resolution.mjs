@@ -142,12 +142,17 @@ async function promptConfirm(card, actor, plan) {
   const detail = writes
     ? `<p>${esc(plan.result.log)}</p>`
     : `<p>${esc(plan.result.log)}</p><p class="hint">${game.i18n.localize('DOMMT.GM.AcknowledgeHint')}</p>`;
+  // Shown to the GM at the moment of deciding, and deliberately not carried
+  // into the chat card: Rogue's new enemy is a secret from the players.
+  const gmOnly = plan.result.gmNote
+    ? `<p class="hint"><strong>GM:</strong> ${esc(plan.result.gmNote)}</p>` : '';
   return DialogV2.wait({
     window: { title: card.name },
     content: `
       <div>
         <p>${game.i18n.format('DOMMT.GM.Confirm.Prompt', { actor: esc(actor.name) })}</p>
         ${detail}
+        ${gmOnly}
         <hr/>
         <p>${card.rules.full}</p>
       </div>`,

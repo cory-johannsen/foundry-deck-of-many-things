@@ -15,7 +15,7 @@ export const WRITE_METHODS = [
   'addCoins', 'grantItems', 'removeItems', 'spawnCreatures'
 ];
 
-export const READ_METHODS = ['findItems', 'findCreatures', 'listItems'];
+export const READ_METHODS = ['findItems', 'findCreatures', 'listItems', 'findWorldActors'];
 
 /** PF2e rarities in ascending order, for "uncommon or better" style filters. */
 const RARITY_ORDER = ['common', 'uncommon', 'rare', 'unique'];
@@ -99,6 +99,33 @@ export function makeFoundryApi() {
       return found;
     },
 
+    /**
+     * NPCs that already exist in this world, as opposed to compendium entries.
+     * Rogue turns "a non-player character" against you — someone the party may
+     * already know — which is a different thing from summoning a stranger out
+     * of a bestiary.
+     */
+    async findWorldActors({ types = ['npc'], traits = [], minLevel = null, maxLevel = null,
+                            excludeIds = [], withArtOnly = false } = {}) {
+      const skip = new Set(excludeIds);
+      const isDefaultArt = (src) => !src || /mystery-man|default-icons|\.svg$/i.test(src);
+      return game.actors
+        .filter((a) => types.includes(a.type) && !skip.has(a.id) && a.name?.trim())
+        .filter((a) => !traits.length
+          || traits.some((t) => (a.system?.traits?.value ?? []).includes(t)))
+        .filter((a) => {
+          const lvl = a.system?.details?.level?.value ?? 0;
+          return (minLevel == null || lvl >= minLevel) && (maxLevel == null || lvl <= maxLevel);
+        })
+        .filter((a) => !withArtOnly || !isDefaultArt(a.prototypeToken?.texture?.src))
+        .map((a) => ({
+          id: a.id, name: a.name,
+          level: a.system?.details?.level?.value ?? 0,
+          folder: a.folder?.name ?? null,
+          hasArt: !isDefaultArt(a.prototypeToken?.texture?.src)
+        }));
+    },
+
     /** An actor's carried items, for cards that take things away. */
     async listItems(actorId, { types = null, magicalOnly = false } = {}) {
       const actor = getActor(actorId);
@@ -179,26 +206,47 @@ export function makeFoundryApi() {
       const originX = focus?.document?.x ?? (scene.width ?? grid * 10) / 2;
       const originY = focus?.document?.y ?? (scene.height ?? grid * 10) / 2;
 
+      // PF2e derives a token's disposition from the actor's alliance and wins
+      // over anything set on the token — a summoned ally created straight from
+      // a bestiary entry came out hostile, because every bestiary NPC is
+      // `opposition`. So the alliance is set on the actor first.
+      const alliance = disposition > 0 ? 'party' : disposition < 0 ? 'opposition' : null;
+
       const created = [];
-      for (const [i, { pack, id }] of entries.entries()) {
-        const doc = await game.packs.get(pack)?.getDocument(id);
+      for (const [i, entry] of entries.entries()) {
+        // An entry is either a compendium reference or a world actor to copy.
+        // World actors are preferred by callers because the SRD bestiaries ship
+        // no token art, while a world's own NPCs almost always have it.
+        const doc = entry.actorId
+          ? game.actors.get(entry.actorId)
+          : await game.packs.get(entry.pack)?.getDocument(entry.id);
         if (!doc) continue;
         const [actor] = await Actor.createDocuments([
-          foundry.utils.mergeObject(doc.toObject(), { 'ownership.default': 0 })
+          foundry.utils.mergeObject(doc.toObject(), {
+            'ownership.default': 0,
+            'system.details.alliance': alliance,
+            'prototypeToken.disposition': disposition
+          })
         ]);
         const td = await actor.getTokenDocument({
           x: originX + grid * (i + 1),
           y: originY,
           disposition
         });
-        await scene.createEmbeddedDocuments('Token', [td.toObject()]);
+        const obj = td.toObject();
+        obj.disposition = disposition;
+        await scene.createEmbeddedDocuments('Token', [obj]);
         created.push(actor.name);
       }
       return created;
     },
 
     async postChatCard(payload) {
-      return ChatMessage.create(payload);
+      // whisperGM lets a handler tell the GM something the players must not
+      // read — Rogue's new enemy is secret until someone reveals them.
+      const { whisperGM, ...rest } = payload;
+      if (whisperGM) rest.whisper = ChatMessage.getWhisperRecipients('GM').map((u) => u.id);
+      return ChatMessage.create(rest);
     }
   };
 }

@@ -17,7 +17,7 @@ const actorOf = (over = {}) => ({
 });
 
 /** Records writes, answers reads from fixtures. */
-const makeApi = ({ items = [], creatures = [], carried = [] } = {}) => {
+const makeApi = ({ items = [], creatures = [], carried = [], worldActors = [] } = {}) => {
   const spy = { updates: [], conditions: [], effects: [], coins: [], granted: [], removed: [], spawned: [] };
   return {
     spy,
@@ -31,7 +31,8 @@ const makeApi = ({ items = [], creatures = [], carried = [] } = {}) => {
     spawnCreatures: async (e, o) => { spy.spawned.push({ e, o }); },
     findItems: async () => items,
     findCreatures: async () => creatures,
-    listItems: async () => carried
+    listItems: async () => carried,
+    findWorldActors: async () => worldActors,
   };
 };
 
@@ -141,8 +142,8 @@ describe('damage and conditions', () => {
 
 describe('item grants', () => {
   const items = [
-    { pack: 'p', id: '1', name: 'Flaming Sword', type: 'weapon', level: 8, rarity: 'uncommon' },
-    { pack: 'p', id: '2', name: 'Dull Blade', type: 'weapon', level: 2, rarity: 'uncommon' }
+    { pack: 'p', id: '1', name: 'Flaming Sword', type: 'weapon', level: 5, rarity: 'uncommon', traits: ['magical'] },
+    { pack: 'p', id: '2', name: 'Dull Blade', type: 'weapon', level: 2, rarity: 'uncommon', traits: ['magical'] }
   ];
 
   it('grants a real item and names it in the log', async () => {
@@ -155,6 +156,32 @@ describe('item grants', () => {
     const { r, api } = await run('key', { api: makeApi({ items: [] }) });
     expect(r.mode).toBe('gm');
     expect(api.spy.granted).toHaveLength(0);
+  });
+
+  it('refuses a merely uncommon weapon that is not magical', async () => {
+    // Key asked for a magic weapon and was handed a level 0 Thundermace:
+    // uncommon, but mundane. Rarity is not magic.
+    const mundane = [{ pack: 'p', id: 'x', name: 'Thundermace', type: 'weapon',
+                       level: 0, rarity: 'uncommon', traits: [] }];
+    const { r, api } = await run('key', { api: makeApi({ items: mundane }) });
+    expect(api.spy.granted).toHaveLength(0);
+    expect(r.mode).toBe('gm');
+    expect(r.log).toContain('no magical');
+  });
+
+  it('prefers items the character could actually use', async () => {
+    const spread = [
+      { pack: 'p', id: 'low', name: 'Handy Blade', type: 'weapon', level: 4, rarity: 'uncommon', traits: ['magical'] },
+      { pack: 'p', id: 'high', name: 'Staff of Ruin', type: 'weapon', level: 19, rarity: 'rare', traits: ['magical'] }
+    ];
+    // findItems honours maxLevel, as the real one does.
+    const api = { ...makeApi({ items: spread }),
+      findItems: async ({ maxLevel = null } = {}) =>
+        spread.filter((i) => maxLevel == null || i.level <= maxLevel) };
+    const seen = [];
+    api.grantItems = async (_i, e) => { seen.push(...e); };
+    await applyCardEffect({ card: BY_ID.get('key'), actor: actorOf(), api, rng: () => 0.999, confirmGate: false });
+    expect(seen[0].id).toBe('low');    // level 5 actor: 19 is out of band
   });
 
   it('destroys only what the actor actually carries', async () => {
@@ -193,7 +220,7 @@ describe('spawning', () => {
 
 describe('planning covers the new handlers too', () => {
   it('names the item in the plan and grants that same item on replay', async () => {
-    const items = [{ pack: 'p', id: '1', name: 'Flaming Sword', type: 'weapon', level: 8, rarity: 'uncommon' }];
+    const items = [{ pack: 'p', id: '1', name: 'Flaming Sword', type: 'weapon', level: 5, rarity: 'uncommon', traits: ['magical'] }];
     const real = makeApi({ items });
     const plan = await planCardEffect({ card: BY_ID.get('key'), actor: actorOf(), api: real });
 
@@ -319,5 +346,90 @@ describe('spawning asks for the right kind of creature', () => {
     });
     expect(seen[0].e[0].id).toBe('wight');
     expect(res.log).toContain('outside the usual level');
+  });
+});
+
+describe('spawning prefers the world over the compendium', () => {
+  // The SRD bestiaries ship no token art, so a compendium summon arrives as
+  // the default silhouette. Fiend produced an artless Hellwasp Swarm.
+  const worldNpc = { id: 'w1', name: 'Aller Rosk', level: 5, hasArt: true, folder: 'Otari' };
+  const packNpc = { pack: 'b', id: 'c1', name: 'Generic Thug', level: 5, traits: ['humanoid'] };
+
+  const api = ({ world = [], pack = [] } = {}) => {
+    const spawned = [];
+    return [{
+      ...makeApi(),
+      findWorldActors: async () => world,
+      findCreatures: async () => pack,
+      spawnCreatures: async (e, o) => { spawned.push({ e, o }); }
+    }, spawned];
+  };
+
+  it('takes a world NPC when one fits, and spawns it by actor id', async () => {
+    const [a, spawned] = api({ world: [worldNpc], pack: [packNpc] });
+    const r = await applyCardEffect({ card: BY_ID.get('knight'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
+    expect(spawned[0].e[0]).toEqual({ actorId: 'w1' });
+    expect(r.meta.source).toBe('world');
+    expect(r.log).toContain('Aller Rosk');
+  });
+
+  it('falls back to the compendium when the world has nobody suitable', async () => {
+    const [a, spawned] = api({ world: [], pack: [packNpc] });
+    const r = await applyCardEffect({ card: BY_ID.get('knight'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
+    expect(spawned[0].e[0]).toEqual({ pack: 'b', id: 'c1' });
+    expect(r.meta.source).toBe('compendium');
+  });
+
+  it('gives up rather than spawning the wrong kind, world or not', async () => {
+    const [a, spawned] = api({ world: [], pack: [] });
+    const r = await applyCardEffect({ card: BY_ID.get('undead'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
+    expect(spawned).toHaveLength(0);
+    expect(r.mode).toBe('gm');
+  });
+});
+
+describe('Rogue turns an existing NPC against you', () => {
+  const world = [
+    { id: 'n1', name: 'Aller Rosk', level: 5, folder: 'Otari', hasArt: true },
+    { id: 'n2', name: 'Augrael', level: 3, folder: 'Otari', hasArt: true }
+  ];
+  const api = (worldActors) => {
+    const spy = { effects: [], chat: [], spawned: [] };
+    return [{
+      ...makeApi(),
+      findWorldActors: async () => worldActors,
+      createEffect: async (_i, e) => { spy.effects.push(e); },
+      postChatCard: async (p) => { spy.chat.push(p); },
+      spawnCreatures: async (e, o) => { spy.spawned.push({ e, o }); }
+    }, spy];
+  };
+
+  it('picks from the world and places no token', async () => {
+    const [a, spy] = api(world);
+    const r = await applyCardEffect({ card: BY_ID.get('rogue'), actor: actorOf(), api: a, rng: () => 0, confirmGate: false });
+    expect(spy.spawned).toHaveLength(0);
+    expect(r.meta.enemyId).toBe('n1');
+  });
+
+  it('keeps the identity out of the public log and the effect', async () => {
+    const [a, spy] = api(world);
+    const r = await applyCardEffect({ card: BY_ID.get('rogue'), actor: actorOf(), api: a, rng: () => 0, confirmGate: false });
+    expect(r.log).not.toContain('Aller Rosk');
+    expect(JSON.stringify(spy.effects)).not.toContain('Aller Rosk');
+  });
+
+  it('tells the GM who, in a whisper', async () => {
+    const [a, spy] = api(world);
+    const r = await applyCardEffect({ card: BY_ID.get('rogue'), actor: actorOf(), api: a, rng: () => 0, confirmGate: false });
+    expect(spy.chat[0].whisperGM).toBe(true);
+    expect(spy.chat[0].content).toContain('Aller Rosk');
+    expect(r.gmNote).toContain('Aller Rosk');
+  });
+
+  it('asks the GM when the world has no NPCs at all', async () => {
+    const [a, spy] = api([]);
+    const r = await applyCardEffect({ card: BY_ID.get('rogue'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
+    expect(r.mode).toBe('gm');
+    expect(spy.effects).toHaveLength(0);
   });
 });

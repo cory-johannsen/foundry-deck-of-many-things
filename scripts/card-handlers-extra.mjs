@@ -275,37 +275,57 @@ const NAME_HINT = {
 /**
  * Pick one item of the right shape out of the equipment compendium.
  *
+ * Rarity alone does not mean magic. Of 644 uncommon-or-better weapons in the
+ * SRD, only 258 carry the `magical` trait; the rest are mundane exotics —
+ * which is how Key, asked for a magic weapon, granted a level 0 Thundermace.
+ * The magical trait is therefore required, never traded away.
+ *
+ * Level is scaled to the recipient. Without it the pool runs from level 0 to
+ * 20 and a 5th-level character is as likely to be handed a 19th-level staff as
+ * anything they could use. The band widens before the card gives up, but the
+ * magical requirement does not.
+ *
  * PF2e has no "ring" or "rod" item type — they are all `equipment` — so those
- * cards fall back to matching the name, which is what actually distinguishes
- * them. If the filter finds nothing the card degrades to a GM decision rather
- * than granting something arbitrary.
+ * cards match on name as well, which is what actually distinguishes them.
  */
 export async function applyItemGrant({ actor, params, api, card, rng }) {
   const kind = card.mechanics.kind;
   const types = ITEM_TYPES[kind] ?? ['equipment'];
   const minRarity = params.rarity_min ?? 'uncommon';
-  let pool = await api.findItems({ types, minRarity });
-
+  const level = deepGet(actor, 'system.details.level.value') ?? 1;
   const hint = NAME_HINT[kind];
-  if (hint) {
-    const re = new RegExp(hint, 'i');
-    const narrowed = pool.filter((i) => re.test(i.name));
-    if (narrowed.length) pool = narrowed;
+  const re = hint ? new RegExp(hint, 'i') : null;
+
+  const narrow = (pool) => {
+    if (!re) return pool;
+    const hit = pool.filter((i) => re.test(i.name));
+    return hit.length ? hit : pool;
+  };
+  const magicalOnly = (pool) => pool.filter((i) => (i.traits ?? []).includes('magical'));
+
+  // Items the character could plausibly use, then anything of the right kind.
+  let pool = magicalOnly(narrow(await api.findItems({ types, minRarity, maxLevel: level + 3 })));
+  let widened = false;
+  if (!pool.length) {
+    pool = magicalOnly(narrow(await api.findItems({ types, minRarity })));
+    widened = pool.length > 0;
   }
 
   if (!pool.length) {
     return {
       mode: 'gm',
-      log: `${card.name}: no ${types.join('/')} of ${minRarity}+ rarity found in the compendium — grant one by hand.`,
+      log: `${card.name}: no magical ${types.join('/')} of ${minRarity}+ rarity in the compendium `
+        + `— grant one by hand.`,
       meta: { kind: 'gm_only' }
     };
   }
 
   const chosen = pool[Math.floor(rng() * pool.length)];
   await api.grantItems(actor.id, [{ pack: chosen.pack, id: chosen.id }]);
+  const note = widened ? ', above your level' : '';
   return {
     mode: 'auto',
-    log: `${card.name}: granted ${chosen.name} (level ${chosen.level} ${chosen.rarity})`,
+    log: `${card.name}: granted ${chosen.name} (level ${chosen.level} ${chosen.rarity}${note})`,
     meta: { granted: chosen.name }
   };
 }
@@ -360,20 +380,24 @@ const SPAWN_SPECS = {
   spawn_wyrmling:     { traits: ['dragon'], level: [1, 6],    friendly: true },
   spawn_ooze:         { traits: ['ooze'], level: [0, 12],     friendly: false },
   spawn_hostile:      { traits: ['beast', 'aberration'], level: [5, 12], friendly: false },
-  random_hostile_npc: { traits: ['humanoid'], level: [1, 8],  friendly: false },
   revenant_hunter:    { traits: ['undead'], level: [3, 10],   friendly: false },
   avatar_of_death:    { traits: ['undead'], level: [8, 16],   friendly: false }
 };
 
 /**
- * Place a creature from the bestiary.
+ * Place a creature.
  *
- * The level band is negotiable; the traits are not. If nothing of the right
- * kind sits in the band the band is dropped, but the card will never reach for
- * a creature of another kind — an earlier version fell back to "anything in
+ * The world's own NPCs come first, and the compendium is the fallback — the
+ * reverse of the obvious order, for a practical reason: the SRD bestiaries
+ * ship no token art at all, so a creature summoned from one arrives as the
+ * default mystery-man silhouette. A world populated by an adventure module has
+ * art on essentially every NPC. Fiend summoned a Hellwasp Swarm with no
+ * artwork, which is what prompted the change.
+ *
+ * The level band is negotiable and is dropped if nothing of the right kind sits
+ * inside it. The traits never are: an earlier version fell back to "anything in
  * the level range" and answered Undead's revenant hunter with a giant mantis.
- * A card that cannot find its creature says so and leaves it to the GM, which
- * is a far smaller problem than quietly summoning the wrong thing.
+ * A card that cannot find its creature says so and leaves it to the GM.
  */
 export async function applySpawn({ actor, api, card, rng }) {
   const spec = SPAWN_SPECS[card.mechanics.kind];
@@ -381,34 +405,46 @@ export async function applySpawn({ actor, api, card, rng }) {
     return { mode: 'gm', log: `${card.name}: no spawn rule for this card.`, meta: { kind: 'gm_only' } };
   }
   const [minLevel, maxLevel] = spec.level;
+  const traits = spec.traits;
+  const exclude = [actor.id];
 
-  let pool = await api.findCreatures({ minLevel, maxLevel, traits: spec.traits });
-  let widened = false;
-  if (!pool.length) {
-    pool = await api.findCreatures({ traits: spec.traits });
-    widened = pool.length > 0;
-  }
+  // In order of preference: a world NPC in band, any world NPC of the kind,
+  // then the compendium on the same two terms.
+  const attempts = [
+    () => api.findWorldActors({ types: ['npc'], traits, minLevel, maxLevel, excludeIds: exclude, withArtOnly: true }),
+    () => api.findWorldActors({ types: ['npc'], traits, excludeIds: exclude, withArtOnly: true }),
+    () => api.findWorldActors({ types: ['npc'], traits, excludeIds: exclude }),
+    () => api.findCreatures({ minLevel, maxLevel, traits }),
+    () => api.findCreatures({ traits })
+  ];
+
+  let pool = [];
+  let attempt = 0;
+  for (; attempt < attempts.length && !pool.length; attempt += 1) pool = await attempts[attempt]();
 
   if (!pool.length) {
     return {
       mode: 'gm',
-      log: `${card.name}: no ${spec.traits.join(' or ')} creature in the installed bestiaries `
-        + `— place one yourself.`,
-      meta: { kind: 'gm_only', traits: spec.traits }
+      log: `${card.name}: no ${traits.join(' or ')} creature in this world or the installed `
+        + `bestiaries — place one yourself.`,
+      meta: { kind: 'gm_only', traits }
     };
   }
 
   const chosen = pool[Math.floor(rng() * pool.length)];
-  await api.spawnCreatures([{ pack: chosen.pack, id: chosen.id }], {
-    nearActorId: actor.id,
-    disposition: spec.friendly ? 1 : -1
-  });
-  const note = widened ? ` (outside the usual level ${minLevel}–${maxLevel} band)` : '';
+  const fromWorld = chosen.id != null && chosen.pack == null;
+  await api.spawnCreatures(
+    [fromWorld ? { actorId: chosen.id } : { pack: chosen.pack, id: chosen.id }],
+    { nearActorId: actor.id, disposition: spec.friendly ? 1 : -1 }
+  );
+
+  const outOfBand = attempt === 3 || attempt === 5;
+  const note = outOfBand ? ' (outside the usual level band)' : '';
   return {
     mode: 'auto',
     log: `${card.name}: ${spec.friendly ? 'summoned' : 'unleashed'} ${chosen.name} `
       + `(level ${chosen.level})${note} onto the scene`,
-    meta: { spawned: chosen.name, traits: spec.traits }
+    meta: { spawned: chosen.name, traits, source: fromWorld ? 'world' : 'compendium' }
   };
 }
 
@@ -504,5 +540,61 @@ export async function applyBeastForm({ actor, params, api, card, rng }) {
     log: `${card.name}: transformed into a ${beast.toLowerCase()} for ${days} days `
       + `— statistics replaced by the battle form`,
     meta: { form: beast, days }
+  };
+}
+
+/**
+ * Rogue: an existing NPC turns against you.
+ *
+ * Routed through the spawner at first, which was wrong twice. It drew from a
+ * bestiary compendium, so the new enemy was a stranger rather than someone the
+ * party might know, and it dropped a token on the map — announcing an enemy
+ * whose "identity is not known until they or someone else reveals it".
+ *
+ * So it picks from the NPCs already in the world, places nothing, and keeps
+ * the name away from the players: the effect on the character says only that
+ * someone wishes them harm, and the GM is told who in a whisper.
+ */
+export async function applyRandomHostileNpc({ actor, api, card, rng }) {
+  // "Non-player character" means a person, so humanoids first; a world with
+  // only monsters still gets an answer rather than nothing.
+  let pool = await api.findWorldActors({ types: ['npc'], traits: ['humanoid'], excludeIds: [actor.id] });
+  if (!pool.length) pool = await api.findWorldActors({ types: ['npc'], excludeIds: [actor.id] });
+
+  if (!pool.length) {
+    return {
+      mode: 'gm',
+      log: `${card.name}: this world has no NPCs to turn against you — choose one yourself.`,
+      meta: { kind: 'gm_only' }
+    };
+  }
+
+  const enemy = pool[Math.floor(rng() * pool.length)];
+  await api.createEffect(actor.id, {
+    type: 'effect',
+    name: 'Someone Wishes You Harm',
+    img: 'icons/skills/social/intimidation-impressing.webp',
+    system: {
+      description: { value: 'Someone you may already know has become your enemy. Their identity '
+        + 'is unknown to you until they or someone else reveals it. Nothing short of a wish-tier '
+        + 'divine miracle will end their hostility.' },
+      duration: { unit: 'unlimited' },
+      rules: []
+    }
+  });
+  await api.postChatCard({
+    whisperGM: true,
+    content: `<p><strong>${card.name}</strong> — <em>${enemy.name}</em>`
+      + `${enemy.level ? ` (level ${enemy.level})` : ''} is now hostile toward `
+      + `${actor.name}, and they do not know it.</p>`
+  });
+
+  return {
+    mode: 'auto',
+    // Public. Naming the enemy here would defeat the card.
+    log: `${card.name}: someone has become your enemy — you do not know who`,
+    gmNote: `${enemy.name}${enemy.level ? ` (level ${enemy.level})` : ''}`
+      + `${enemy.folder ? ` from ${enemy.folder}` : ''} now hates ${actor.name}.`,
+    meta: { enemyId: enemy.id }
   };
 }
