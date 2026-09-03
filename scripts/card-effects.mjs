@@ -389,27 +389,20 @@ const HANDLERS = {
 };
 
 /**
- * Cards that take something away, or put something hostile on the table.
+ * Cards held back from applying on the draw.
  *
- * These never apply on the draw itself. They post pending, and the GM sees the
- * concrete outcome — the damage rolled, the items about to burn, the creature
- * about to appear — before anything is written. Gains apply silently, because
- * nobody needs protecting from being handed a magic sword.
+ * Empty, by decision: every card applies as it is turned over. The gate was
+ * added on the reasoning that a destructive card should be seen before it
+ * lands, and then emptied one card at a time in play, which is the better
+ * evidence — each of them does one definite thing, so the prompt only ever sat
+ * between drawing a card and seeing it work.
  *
- * The line has been drawn by play rather than by category. Corpse, Maze,
- * Prisoner, Ruin and Euryale all do something unpleasant, but each does one
- * definite thing with nothing for a GM to decide, so confirming them was only
- * a click between drawing a card and seeing it land. What remains gated either
- * removes something irreplaceable, takes the character out of the player's
- * hands, or puts a creature on the map.
+ * The mechanism is kept rather than deleted. Adding a kind here is all it
+ * takes to hold one back again, and the rest of the resolution flow — binding
+ * an actor, asking a question, confirming before writing — is unaffected and
+ * still runs for the cards that need it.
  */
-export const REQUIRES_CONFIRMATION = new Set([
-  'xp_loss', 'fall', 'petrify', 'destroy_magic_items',
-  'trap_extraplanar', 'feywild_transport', 'age_shift', 'moral_inversion', 'permanent_enemy',
-  'fiend_deal',   // indifferent, but it still puts a creature on the map
-  'spawn_hostile', 'spawn_ooze', 'random_hostile_npc',
-  'revenant_hunter', 'avatar_of_death'
-]);
+export const REQUIRES_CONFIRMATION = new Set([]);
 
 export function requiresConfirmation(kind) {
   return REQUIRES_CONFIRMATION.has(kind);

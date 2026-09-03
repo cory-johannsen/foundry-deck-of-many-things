@@ -253,10 +253,10 @@ describe('every card is now handled', () => {
     expect(stubs).toEqual([]);
   });
 
-  it('gates everything that removes, ages, rewrites or sets an enemy on the character', () => {
+  it('gates nothing — every card applies as it is drawn', () => {
     for (const kind of ['trap_extraplanar', 'feywild_transport', 'age_shift',
                         'moral_inversion', 'permanent_enemy', 'fiend_deal']) {
-      expect(requiresConfirmation(kind), kind).toBe(true);
+      expect(requiresConfirmation(kind), kind).toBe(false);
     }
     for (const kind of ['wish', 'sage_query', 'resurrection_grant', 'save_penalty',
                         'three_cantrips', 'skill_proficiencies', 'throne_persuasion',
