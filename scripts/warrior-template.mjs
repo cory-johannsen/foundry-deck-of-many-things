@@ -62,6 +62,44 @@ export function benchmarkFor(level) {
 }
 
 /**
+ * Base walking speed by ancestry, read off pf2e.ancestries.
+ *
+ * Kept here so the template stays a pure function that can be tested without a
+ * live Foundry; the handler looks the value up from the compendium when it can
+ * and falls back to this. Most ancestries walk 25 feet, so anything unlisted
+ * takes that.
+ */
+export const ANCESTRY_SPEED = {
+  anadi: 25, android: 25, athamaru: 20, automaton: 25, 'awakened animal': 5,
+  azarketi: 20, catfolk: 25, centaur: 30, conrasu: 25, dragonet: 20, dwarf: 20,
+  elf: 30, fetchling: 25, fleshwarp: 25, ghoran: 25, gnome: 25, goblin: 25,
+  goloma: 30, halfling: 25, hobgoblin: 25, human: 25, jotunborn: 25,
+  kashrishi: 25, kholo: 25, kitsune: 25, kobold: 25, leshy: 25, lizardfolk: 25,
+  merfolk: 5, minotaur: 25, nagaji: 25, orc: 25, poppet: 25, ratfolk: 25,
+  samsaran: 25, sarangay: 25, shisk: 25, shoony: 25, skeleton: 25, sprite: 20,
+  strix: 25, surki: 25, tanuki: 25, tengu: 25, tripkee: 25, vanara: 25,
+  vishkanya: 25, wayang: 25, yaksha: 25, yaoguai: 25
+};
+
+export const DEFAULT_SPEED = 25;
+/** Plate is heavy: PF2e docks 5 feet for it. */
+export const PLATE_PENALTY = 5;
+/** Nobody is left unable to move — Merfolk and Awakened Animals walk 5 to begin with. */
+export const MIN_SPEED = 5;
+
+/**
+ * The warrior's speed: their ancestry's stride, less the cost of plate.
+ *
+ * A dwarf in plate is genuinely slower than a human in plate, and an elf
+ * faster, which is the point of matching the ancestry at all. `base` lets the
+ * caller supply a speed looked up live, for an ancestry newer than this table.
+ */
+export function speedFor(ancestryName, base = null) {
+  const known = base ?? ANCESTRY_SPEED[String(ancestryName ?? '').toLowerCase()] ?? DEFAULT_SPEED;
+  return Math.max(MIN_SPEED, known - PLATE_PENALTY);
+}
+
+/**
  * The ancestry the warrior shares with whoever drew the card.
  *
  * The card says they share your ancestry. A character whose sheet does not say
@@ -82,7 +120,8 @@ export function ancestryOf(actor) {
  * Build the NPC. Returns document data ready to create, with no art — the
  * caller supplies that, since the compendium has none to offer either.
  */
-export function buildWarrior({ actor, level, ancestry = null, img = null } = {}) {
+export function buildWarrior({ actor, level, ancestry = null, img = null,
+                              baseSpeed = null } = {}) {
   const b = benchmarkFor(level ?? actor?.system?.details?.level?.value ?? 1);
   const anc = ancestry ?? ancestryOf(actor);
   const dmg = damageBonus(b.level);
@@ -137,7 +176,7 @@ export function buildWarrior({ actor, level, ancestry = null, img = null } = {})
       attributes: {
         ac: { value: b.ac, details: 'plate armor' },
         hp: { value: b.hp, max: b.hp, temp: 0, details: '' },
-        speed: { value: 20, otherSpeeds: [] }   // plate slows them
+        speed: { value: speedFor(anc.name, baseSpeed), otherSpeeds: [], details: 'plate armor' }
       },
       perception: { mod: b.per, senses: [], vision: true, details: '' },
       saves: {

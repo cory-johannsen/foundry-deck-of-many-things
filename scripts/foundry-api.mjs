@@ -17,7 +17,7 @@ export const WRITE_METHODS = [
 ];
 
 export const READ_METHODS = ['findItems', 'findCreatures', 'listItems', 'findWorldActors',
-                             'listLanguages', 'getCoins', 'listGear'];
+                             'listLanguages', 'getCoins', 'listGear', 'ancestrySpeed'];
 
 /**
  * PF2e's size codes, smallest first, with the words a card is likely to use.
@@ -218,6 +218,21 @@ export function makeFoundryApi() {
             || i.system?.equipped?.inSlot === true,
           propertyRunes: [...(i.system?.runes?.property ?? [])]
         }));
+    },
+
+    /**
+     * An ancestry's base walking speed, from the compendium rather than a
+     * table that would age. Null when the ancestry is not found, which lets
+     * the caller fall back to its own figures.
+     */
+    async ancestrySpeed(name) {
+      if (!name) return null;
+      const pack = game.packs.get('pf2e.ancestries');
+      if (!pack) return null;
+      const index = await pack.getIndex({ fields: ['type', 'system.speed'] });
+      const hit = [...index].find((e) => e.type === 'ancestry'
+        && e.name.toLowerCase() === String(name).toLowerCase());
+      return hit?.system?.speed ?? null;
     },
 
     /** What the actor is carrying in coin. */

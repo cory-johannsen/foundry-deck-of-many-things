@@ -677,14 +677,18 @@ export async function applySpawnAlly({ actor, api, card }) {
   const { buildWarrior, benchmarkFor, ancestryOf } = await import('./warrior-template.mjs');
   const level = actor?.system?.details?.level?.value ?? 1;
   const anc = ancestryOf(actor);
-  const npc = buildWarrior({ actor, level, ancestry: anc });
+  // The live compendium wins over the embedded table, so an ancestry added
+  // after this was written still gets its own stride.
+  const baseSpeed = await api.ancestrySpeed?.(anc.name) ?? null;
+  const npc = buildWarrior({ actor, level, ancestry: anc, baseSpeed });
 
   await api.spawnBuiltCreature(npc, { nearActorId: actor.id, disposition: 1 });
   const b = benchmarkFor(level);
   return {
     mode: 'auto',
     log: `${card.name}: a level ${b.level} ${anc.name.toLowerCase()} warrior appears — `
-      + `AC ${b.ac}, ${b.hp} HP — and serves you until death`
+      + `AC ${b.ac}, ${b.hp} HP, Speed ${npc.system.attributes.speed.value} ft — `
+      + `and serves you until death`
       + (anc.matched ? '' : ' (no ancestry on your sheet, so a human knight in plate)'),
     meta: { level: b.level, ancestry: anc.name }
   };

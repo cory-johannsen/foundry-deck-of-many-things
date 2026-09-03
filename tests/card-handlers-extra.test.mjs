@@ -33,6 +33,7 @@ const makeApi = ({ items = [], creatures = [], carried = [], worldActors = [], l
     listLanguages: async () => languages,
     getCoins: async () => coins,
     listGear: async () => gear,
+    ancestrySpeed: async () => null,
     etchRune: async (_i, id, slug) => { spy.etched.push({ id, slug }); },
     spawnBuiltCreature: async (d, o) => { spy.built.push({ d, o }); },
     removeCoins: async (_i, c) => { spy.coinsRemoved.push(c); },
@@ -456,6 +457,7 @@ describe('Ruin actually takes the wealth', () => {
       ...makeApi(),
       getCoins: async () => coins,
     listGear: async () => gear,
+    ancestrySpeed: async () => null,
     etchRune: async (_i, id, slug) => { spy.etched.push({ id, slug }); },
     spawnBuiltCreature: async (d, o) => { spy.built.push({ d, o }); },
       removeCoins: async (_i, c) => { spy.removedCoins.push(c); },
@@ -534,6 +536,7 @@ describe('runes go onto what the character wields', () => {
       ...makeApi(),
       findItems: async () => items,
       listGear: async () => gear,
+    ancestrySpeed: async () => null,
       grantItems: async (_i, e) => { spy.granted.push(...e); },
       etchRune: async (_i, id, slug) => { spy.etched.push({ id, slug }); }
     }, spy];
@@ -861,5 +864,49 @@ describe('Knight builds a warrior to match the character', () => {
     const [api, built] = spy();
     await draw(drawer(25, 'Human'), api);
     expect(built[0].d.system.details.level.value).toBe(20);
+  });
+});
+
+describe('the warrior strides like its ancestry, in plate', () => {
+  it('docks five feet for the armour', async () => {
+    const { speedFor } = await import('../scripts/warrior-template.mjs');
+    expect(speedFor('Human')).toBe(20);      // 25 base
+  });
+
+  it('makes a dwarf slower and an elf faster than a human', async () => {
+    // The point of matching the ancestry at all.
+    const { speedFor } = await import('../scripts/warrior-template.mjs');
+    expect(speedFor('Dwarf')).toBe(15);      // 20 base
+    expect(speedFor('Elf')).toBe(25);        // 30 base
+  });
+
+  it('never leaves one unable to move', async () => {
+    // Merfolk and Awakened Animals walk 5 feet before any armour.
+    const { speedFor } = await import('../scripts/warrior-template.mjs');
+    expect(speedFor('Merfolk')).toBe(5);
+    expect(speedFor('Awakened Animal')).toBe(5);
+  });
+
+  it('assumes the common stride for an ancestry it does not know', async () => {
+    const { speedFor } = await import('../scripts/warrior-template.mjs');
+    expect(speedFor('Something New')).toBe(20);
+    expect(speedFor(null)).toBe(20);
+  });
+
+  it('prefers a speed looked up live over its own table', async () => {
+    // So an ancestry added after this was written still gets its own stride.
+    const { speedFor } = await import('../scripts/warrior-template.mjs');
+    expect(speedFor('Dwarf', 40)).toBe(35);
+  });
+
+  it('carries the speed onto the built warrior', async () => {
+    const built = [];
+    const api = { ...makeApi(), spawnBuiltCreature: async (d) => { built.push(d); },
+                  ancestrySpeed: async () => null };
+    const actor = { id: 'a1', system: { details: { level: { value: 7 },
+      ancestry: { name: 'Dwarf', trait: 'dwarf' } } } };
+    const r = await applyCardEffect({ card: BY_ID.get('knight'), actor, api, rng: () => 0.5, confirmGate: false });
+    expect(built[0].system.attributes.speed.value).toBe(15);
+    expect(r.log).toContain('Speed 15 ft');
   });
 });

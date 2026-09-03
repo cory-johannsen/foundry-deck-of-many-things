@@ -66,7 +66,7 @@ describe('every charge-bearing card is traceable back to itself', () => {
         grantItems: async () => {}, removeItems: async () => {},
         spawnCreatures: async () => {}, spawnBuiltCreature: async () => {}, grantInnateSpells: async () => {},
         listLanguages: async () => [], getCoins: async () => ({}),
-        listGear: async () => [], etchRune: async () => {},
+        listGear: async () => [], ancestrySpeed: async () => null, etchRune: async () => {},
         removeCoins: async () => {},
         findItems: async () => [{ pack: 'p', id: 'i', name: 'Spell', type: 'spell', level: 1, rarity: 'common', traits: ['magical'] }],
         findCreatures: async () => [], findWorldActors: async () => [], listItems: async () => []
