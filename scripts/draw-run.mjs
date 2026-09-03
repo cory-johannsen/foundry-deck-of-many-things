@@ -56,6 +56,12 @@ export async function runDraws({ count = 1, actor = null, notify = true } = {}) 
     return result;
   };
 
+  // Persist after every card, not once at the end. A card that blocks on a
+  // dialog, or a handler that throws, would otherwise leave the deck believing
+  // nothing had been drawn — and every card already turned over could come up
+  // again.
+  const persist = () => game.settings.set(MODULE_ID, 'playDeck', state);
+
   const drawn = [];
   let budget = count;
   for (let i = 0; i < budget; i += 1) {
@@ -65,6 +71,7 @@ export async function runDraws({ count = 1, actor = null, notify = true } = {}) 
       break;
     }
     state = step.state;
+    await persist();
     const card = byId.get(step.card);
     drawn.push(card.id);
     await applyAndPost(card);
@@ -79,6 +86,7 @@ export async function runDraws({ count = 1, actor = null, notify = true } = {}) 
     if (card.mechanics.kind === 'draw_two_keep_one') {
       const outcome = await drawTwoKeepOne({ state, byId, actor, applyAndPost });
       state = outcome.state;
+      await persist();
       if (outcome.kept) drawn.push(outcome.kept);
       continue;
     }
@@ -93,6 +101,6 @@ export async function runDraws({ count = 1, actor = null, notify = true } = {}) 
     }
   }
 
-  await game.settings.set(MODULE_ID, 'playDeck', state);
+  await persist();
   return { drawn, state };
 }

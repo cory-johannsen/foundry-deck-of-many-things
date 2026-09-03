@@ -1,28 +1,42 @@
+{{!--
+  What the table sees when a card is drawn.
+
+  One statement of what happened, not three. The card used to show its summary,
+  then the result log, then the full rules in a details block — the same effect
+  described three ways — with a "GM adjudication required" header that every
+  player could read.
+
+  The outcome is now the body of the card, phrased as what happened to the
+  character. The rules text stays, collapsed, for anyone who wants the wording.
+  Nothing GM-facing is rendered: the Apply button is stripped for non-GMs in
+  module.mjs, and anything only the GM should know travels in a whisper.
+--}}
 <div class="dommt-chat">
   <header class="dommt-chat__header">
     <h3>{{card.name}}</h3>
-    {{#if actor}}<div class="dommt-chat__actor">{{localize "DOMMT.Chat.DrawnBy" actor=actor.name}}</div>{{/if}}
+    {{#if actor}}<div class="dommt-chat__actor">{{actor.name}}</div>{{/if}}
   </header>
-  <img class="dommt-card dommt-chat__art" src="modules/deck-of-many-more-things/{{card.art.front}}" alt="{{card.name}}" />
-  <div class="dommt-chat__summary">{{card.rules.summary}}</div>
-  {{#if isGmCard}}
-    <div class="dommt-chat__gm">
-      <strong>{{localize "DOMMT.Chat.GMAction.Header"}}</strong>
-      <div>{{result.log}}</div>
-    </div>
+
+  <img class="dommt-card dommt-chat__art"
+       src="modules/deck-of-many-more-things/{{card.art.front}}" alt="{{card.name}}" />
+
+  <div class="dommt-chat__outcome" data-outcome>
     {{#if pending}}
-      {{!-- Rendered for everyone; module.mjs only binds and shows it for a GM. --}}
-      <div class="dommt-chat__gm-actions">
-        <button type="button" data-action="dommt-resolve">
-          {{localize "DOMMT.GM.ApplyEffect"}}
-        </button>
-      </div>
+      <em>{{localize "DOMMT.Chat.Awaiting"}}</em>
+    {{else}}
+      {{result.log}}
     {{/if}}
-  {{else}}
-    <div class="dommt-chat__auto">
-      <em>{{result.log}}</em>
+  </div>
+
+  {{#if pending}}
+    {{!-- Rendered for everyone; module.mjs removes it for anyone but a GM. --}}
+    <div class="dommt-chat__gm-actions">
+      <button type="button" data-action="dommt-resolve">
+        {{localize "DOMMT.GM.ApplyEffect"}}
+      </button>
     </div>
   {{/if}}
+
   <details class="dommt-chat__full">
     <summary>{{localize "DOMMT.Chat.RulesFullToggle"}}</summary>
     <p>{{card.rules.full}}</p>

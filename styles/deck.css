@@ -14,18 +14,13 @@
 .dommt-chat__header h3 { margin: 0; }
 .dommt-chat__actor { font-size: 0.85em; opacity: 0.75; }
 .dommt-chat__art { max-height: 300px; width: auto; margin: 0 auto; }
-.dommt-chat__summary { font-weight: 600; }
-.dommt-chat__gm {
-  border-left: 3px solid #b8860b;
-  padding: 0.4rem 0.6rem;
-  background: rgba(184, 134, 11, 0.08);
-}
-.dommt-chat__auto {
-  border-left: 3px solid #4b8b3b;
-  padding: 0.4rem 0.6rem;
-  background: rgba(75, 139, 59, 0.08);
+.dommt-chat__outcome {
+  padding: 0.35rem 0.5rem;
+  border-left: 3px solid var(--color-border-highlight, #7a7971);
+  background: rgba(0, 0, 0, 0.06);
 }
 .dommt-chat__full { margin-top: 0.4rem; }
+.dommt-chat__full summary { cursor: pointer; opacity: 0.8; font-size: 0.9em; }
 
 /* ----- Deck app ----- */
 .dommt-deck { display: flex; flex-direction: column; gap: 0.6rem; padding: 0.5rem; }
