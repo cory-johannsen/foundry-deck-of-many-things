@@ -30,17 +30,17 @@ import {
 const PF2E_MOD_CAP = 7;
 
 async function autoApplyStatBump({ actor, params, api, card }) {
-  const { ability, delta_pf2e_mod = 1 } = params;
+  const { ability, delta_mod = 1 } = params;
   if (ability === 'any') {
     return {
       mode: 'gm',
-      log: `${card.name}: choose one ability score to boost (+${delta_pf2e_mod}).`,
-      meta: { kind: 'stat_bump', requires: 'choose_ability', delta: delta_pf2e_mod }
+      log: `${card.name}: choose one ability score to boost (+${delta_mod}).`,
+      meta: { kind: 'stat_bump', requires: 'choose_ability', delta: delta_mod }
     };
   }
   const path = `system.abilities.${ability}.mod`;
   const current = deepGet(actor, path) ?? 0;
-  const next = Math.min(current + delta_pf2e_mod, PF2E_MOD_CAP);
+  const next = Math.min(current + delta_mod, PF2E_MOD_CAP);
   await api.updateActor(actor.id, { [path]: next });
   return {
     mode: 'auto',
@@ -50,23 +50,23 @@ async function autoApplyStatBump({ actor, params, api, card }) {
 }
 
 async function autoApplyAllStatsBump({ actor, params, api, card }) {
-  const { delta_pf2e_mod = 1 } = params;
+  const { delta_mod = 1 } = params;
   const updates = {};
   const mutations = [];
   for (const a of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
     const path = `system.abilities.${a}.mod`;
     const current = deepGet(actor, path) ?? 0;
-    const next = Math.min(current + delta_pf2e_mod, PF2E_MOD_CAP);
+    const next = Math.min(current + delta_mod, PF2E_MOD_CAP);
     updates[path] = next;
     mutations.push({ path, from: current, to: next });
   }
   await api.updateActor(actor.id, updates);
-  return { mode: 'auto', log: `${card.name}: +${delta_pf2e_mod} to every ability mod`, mutations };
+  return { mode: 'auto', log: `${card.name}: +${delta_mod} to every ability mod`, mutations };
 }
 
 async function autoApplyStatDebuff({ actor, params, api, card, rng }) {
-  const { ability, delta_5e_formula } = params;
-  const rolled = rollFormula(delta_5e_formula, rng);
+  const { ability, delta_formula } = params;
+  const rolled = rollFormula(delta_formula, rng);
   const deltaMod = Math.max(-PF2E_MOD_CAP, Math.floor(rolled / 2));
   const path = `system.abilities.${ability}.mod`;
   const current = deepGet(actor, path) ?? 0;
@@ -133,7 +133,7 @@ async function autoApplyFlight({ actor, params, api, card }) {
 
 async function autoApplyExhaustion({ actor, params, api, card, rng }) {
   const levels = rollFormula(params.levels_formula ?? '1d3', rng);
-  const conditions = params.pf2e_map?.[levels] ?? ['fatigued'];
+  const conditions = params.condition_map?.[levels] ?? ['fatigued'];
   for (const cond of conditions) {
     if (cond.startsWith('drained_')) {
       const n = parseInt(cond.split('_')[1], 10);

@@ -113,7 +113,7 @@ export async function applySpellGrant({ actor, params, api, card, rng }) {
     ? await api.findItems({ types: ['spell'], traits: ['cantrip'], packs: ['pf2e.spells-srd'] })
     : await api.findItems({
         types: ['spell'], packs: ['pf2e.spells-srd'],
-        namePattern: `^${(params.pf2e_spell ?? '').replace(/-/g, '[ -]')}$`
+        namePattern: `^${(params.spell ?? '').replace(/-/g, '[ -]')}$`
       });
 
   if (!pool.length) {
@@ -187,7 +187,7 @@ export async function applySkillProficiencies({ actor, params, api, card }) {
  * grants proficiency outright to someone who may have none.
  */
 export async function applyThronePersuasion({ actor, params, api, card }) {
-  const slug = params.pf2e_skill ?? 'diplomacy';
+  const slug = params.skill ?? 'diplomacy';
   const rank = deepGet(actor, `system.skills.${slug}.rank`) ?? 0;
   const next = Math.max(Math.min(rank + 1, 4), 2);
   await api.updateActor(actor.id, { [`system.skills.${slug}.rank`]: next });

@@ -59,7 +59,7 @@ describe('experience', () => {
   });
 
   it('does not claim a level-up when the grant does not earn one', async () => {
-    const card = { ...BY_ID.get('sun'), mechanics: { kind: 'xp_gain', params: { xp_pf2e: 100 } } };
+    const card = { ...BY_ID.get('sun'), mechanics: { kind: 'xp_gain', params: { xp: 100 } } };
     const r = await applyCardEffect({
       card, actor: actorOf(), api: makeApi(), rng: () => 0.5, confirmGate: false
     });
