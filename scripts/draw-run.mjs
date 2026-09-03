@@ -52,7 +52,7 @@ export async function runDraws({ count = 1, actor = null, notify = true } = {}) 
   const applyAndPost = async (card) => {
     const result = await applyCardEffect({ card, actor, api, autoApplyEnabled: autoApply });
     // A card that has not landed yet stays quiet until it does.
-    if (result.mode === 'auto') playCardSound(card);
+    if (result.mode === 'auto') playCardSound(card, actor);
     const message = await postDrawCard({ card, actor, result });
 
     // A card that asks a question asks it now, of whoever should answer —

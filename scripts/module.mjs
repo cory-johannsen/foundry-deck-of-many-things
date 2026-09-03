@@ -203,7 +203,7 @@ async function drawForced(cardId, { actorId = null } = {}) {
   const api = makeFoundryApi();
   const autoApply = game.settings.get(MODULE_ID, 'autoApplyEffects');
   const result = await applyCardEffect({ card, actor, api, autoApplyEnabled: autoApply });
-  if (result.mode === 'auto') playCardSound(card);
+  if (result.mode === 'auto') playCardSound(card, actor);
   await postDrawCard({ card, actor, result });
   return result;
 }

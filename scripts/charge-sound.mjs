@@ -57,7 +57,9 @@ export async function onChargeSpent(item, changes, _options, userId) {
   if (!cardId) return;
 
   const card = await soundFor(cardId);
-  if (card) playCardSound(card);
+  // The effect knows whose sheet it sits on, so a card with voice variants
+  // sounds right when its charge is spent too.
+  if (card) playCardSound(card, item.actor ?? null);
 }
 
 export function registerChargeSound() {

@@ -19,6 +19,21 @@ export const WRITE_METHODS = [
 export const READ_METHODS = ['findItems', 'findCreatures', 'listItems', 'findWorldActors',
                              'listLanguages', 'getCoins', 'listGear'];
 
+/**
+ * PF2e's size codes, smallest first, with the words a card is likely to use.
+ * A card asking for "large" means the code "lg".
+ */
+export const SIZE_ORDER = ['tiny', 'sm', 'med', 'lg', 'huge', 'grg'];
+const SIZE_WORDS = { tiny: 'tiny', small: 'sm', sm: 'sm', medium: 'med', med: 'med',
+                     large: 'lg', lg: 'lg', huge: 'huge', gargantuan: 'grg', grg: 'grg' };
+
+export function sizeAtLeast(size, min) {
+  if (!min) return true;
+  const want = SIZE_ORDER.indexOf(SIZE_WORDS[String(min).toLowerCase()] ?? min);
+  if (want < 0) return true;
+  return SIZE_ORDER.indexOf(size ?? 'med') >= want;
+}
+
 /** Grades that a rune's name carries at the end and its key carries at the front. */
 const RUNE_GRADES = ['lesser', 'moderate', 'greater', 'major', 'true', 'supreme'];
 
@@ -107,7 +122,7 @@ export function makeFoundryApi() {
      * `ooze` the difference is between a handful of candidates and none.
      */
     async findCreatures({ minLevel = null, maxLevel = null, traits = [], namePattern = null,
-                          packs = null } = {}) {
+                          minSize = null, packs = null } = {}) {
       packs ??= game.packs
         .filter((p) => p.documentName === 'Actor' && /bestiary/i.test(p.collection))
         .map((p) => p.collection);
@@ -117,7 +132,8 @@ export function makeFoundryApi() {
         const pack = game.packs.get(id);
         if (!pack) continue;
         const index = await pack.getIndex({
-          fields: ['type', 'system.details.level.value', 'system.traits.value']
+          fields: ['type', 'system.details.level.value', 'system.traits.value',
+                   'system.traits.size.value']
         });
         for (const e of index) {
           if (e.type !== 'npc') continue;
@@ -127,7 +143,9 @@ export function makeFoundryApi() {
           const has = e.system?.traits?.value ?? [];
           if (traits.length && !traits.some((t) => has.includes(t))) continue;
           if (re && !re.test(e.name)) continue;
-          found.push({ pack: id, id: e._id, name: e.name, level, traits: has });
+          const size = e.system?.traits?.size?.value ?? 'med';
+          if (!sizeAtLeast(size, minSize)) continue;
+          found.push({ pack: id, id: e._id, name: e.name, level, traits: has, size });
         }
       }
       return found;
@@ -140,7 +158,7 @@ export function makeFoundryApi() {
      * of a bestiary.
      */
     async findWorldActors({ types = ['npc'], traits = [], minLevel = null, maxLevel = null,
-                            excludeIds = [], withArtOnly = false } = {}) {
+                            minSize = null, excludeIds = [], withArtOnly = false } = {}) {
       const skip = new Set(excludeIds);
       const isDefaultArt = (src) => !src || /mystery-man|default-icons|\.svg$/i.test(src);
       return game.actors
@@ -152,9 +170,11 @@ export function makeFoundryApi() {
           return (minLevel == null || lvl >= minLevel) && (maxLevel == null || lvl <= maxLevel);
         })
         .filter((a) => !withArtOnly || !isDefaultArt(a.prototypeToken?.texture?.src))
+        .filter((a) => sizeAtLeast(a.system?.traits?.size?.value, minSize))
         .map((a) => ({
           id: a.id, name: a.name,
           level: a.system?.details?.level?.value ?? 0,
+          size: a.system?.traits?.size?.value ?? 'med',
           folder: a.folder?.name ?? null,
           hasArt: !isDefaultArt(a.prototypeToken?.texture?.src)
         }));

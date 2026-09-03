@@ -513,6 +513,10 @@
         "upright": "An organization or institution overwhelmed by corruption.",
         "reversed": "An attempt to corrupt a respected and noble organization."
       }
+    },
+    "sound": {
+      "default": "corpse-male.ogg",
+      "female": "corpse-female.ogg"
     }
   },
   {

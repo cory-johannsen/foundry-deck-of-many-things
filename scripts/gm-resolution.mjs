@@ -213,7 +213,7 @@ export async function resolvePendingDraw(message) {
   // bargain, Beast's transformation — resolves with nothing to write, but it
   // still happened at the table and should still be heard. Tying the sound to
   // whether the actor was touched left all nineteen GM-only cards silent.
-  playCardSound(card);
+  playCardSound(card, actor);
   return {
     applied: plan.calls.length > 0,
     log: plan.calls.length
