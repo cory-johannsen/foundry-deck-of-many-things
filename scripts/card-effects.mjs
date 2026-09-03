@@ -310,24 +310,47 @@ async function autoApplyLongRest({ actor, api, card }) {
  * reads as losing your money would be a nasty surprise; deeds and titles stay
  * narrative because there is nothing on a sheet to remove.
  */
+/**
+ * Ruin: mundane wealth vanishes.
+ *
+ * It used to stamp a timestamp on the actor and ask the GM to empty the
+ * inventory by hand, which is to say it did nothing. Coins and non-magical
+ * valuables are now actually taken.
+ *
+ * The card also destroys "documents that establish your ownership", which is
+ * not an inventory matter: Throne hands out a deed to a keep as an effect, and
+ * a character who draws Throne and then Ruin should lose it. Effects the
+ * module marked as ownership documents are removed alongside the coin. The
+ * deed is recognised by that mark rather than by its name, so renaming it does
+ * not quietly break this.
+ *
+ * Deliberately limited otherwise. "Non-magical wealth" could be read to
+ * include a mundane sword, but stripping someone's gear on a card that reads
+ * as losing your money would be a nasty surprise.
+ */
 async function autoApplyWealthWipe({ actor, api, card }) {
   const coins = await api.getCoins(actor.id);
   const valuables = await api.listItems(actor.id, { types: ['treasure'], magical: 'exclude' });
+  const deeds = (await api.listItems(actor.id, { types: ['effect'] }))
+    .filter((i) => i.dommt?.kind === 'deed');
   const coinTotal = Object.entries(coins ?? {})
     .map(([d, n]) => `${n} ${d}`).filter((s) => !s.startsWith('0 '));
 
   if (coinTotal.length) await api.removeCoins(actor.id, coins);
-  if (valuables.length) await api.removeItems(actor.id, valuables.map((v) => v.id));
+  const doomed = [...valuables, ...deeds];
+  if (doomed.length) await api.removeItems(actor.id, doomed.map((i) => i.id));
 
-  if (!coinTotal.length && !valuables.length) {
+  if (!coinTotal.length && !doomed.length) {
     return { mode: 'auto', log: `${card.name}: nothing mundane left to lose` };
   }
   const parts = [];
   if (coinTotal.length) parts.push(coinTotal.join(', '));
-  if (valuables.length) parts.push(`${valuables.length} valuable(s): ${valuables.map((v) => v.name).join(', ')}`);
+  if (valuables.length) parts.push(`${valuables.length} valuable(s): ${valuables.map((i) => i.name).join(', ')}`);
+  for (const deed of deeds) parts.push(`${deed.name}, torn up`);
   return {
     mode: 'auto',
-    log: `${card.name}: lost ${parts.join('; ')}. Deeds and titles are gone too — those are yours to narrate.`
+    log: `${card.name}: lost ${parts.join('; ')}.`
+      + (deeds.length ? '' : ' Deeds and titles are gone too — those are yours to narrate.')
   };
 }
 

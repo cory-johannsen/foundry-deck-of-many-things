@@ -243,7 +243,10 @@ export function makeFoundryApi() {
         .filter((i) => includeCoinage || !isCoinage(i))
         .filter((i) => mode === null
           || (mode === 'only' ? isMagical(i) : !isMagical(i)))
-        .map((i) => ({ id: i.id, name: i.name, type: i.type }));
+        // The module's own flags come along so a card can recognise what an
+        // earlier card left behind.
+        .map((i) => ({ id: i.id, name: i.name, type: i.type,
+                       dommt: i.flags?.['deck-of-many-more-things'] ?? null }));
     },
 
     // ---- writes ------------------------------------------------------------

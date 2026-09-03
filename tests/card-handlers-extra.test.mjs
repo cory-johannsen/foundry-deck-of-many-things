@@ -477,11 +477,11 @@ describe('Ruin actually takes the wealth', () => {
   });
 
   it('asks only for non-magical treasure, never the enchanted gear', async () => {
-    let asked = null;
+    const asked = [];
     const [a] = api();
-    a.listItems = async (_i, opts) => { asked = opts; return []; };
+    a.listItems = async (_i, opts) => { asked.push(opts); return []; };
     await applyCardEffect({ card: BY_ID.get('ruin'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
-    expect(asked).toEqual({ types: ['treasure'], magical: 'exclude' });
+    expect(asked).toContainEqual({ types: ['treasure'], magical: 'exclude' });
   });
 
   it('says so plainly when there is nothing mundane to lose', async () => {
@@ -731,5 +731,63 @@ describe('a summoning brings one creature, not a formation', () => {
     await applyCardEffect({ card: BY_ID.get('flames'), actor: actorOf(), api, rng: () => 0.999, confirmGate: false });
     expect(effects[0].name).toContain('Barbazu');
     expect(effects[0].name).not.toContain('Squad');
+  });
+});
+
+describe('Ruin destroys a deed Throne handed out', () => {
+  // Throne grants the deed to a keep as an effect; Ruin destroys the documents
+  // that establish ownership. Drawing one then the other should cost it.
+  const deed = { id: 'd1', name: 'Deed to a Keep', type: 'effect',
+                 dommt: { cardId: 'throne', kind: 'deed' } };
+  const other = { id: 'e1', name: 'Wish (2 remaining)', type: 'effect',
+                  dommt: { cardId: 'moon' } };
+
+  const api = ({ effects = [], treasure = [], coins = {} } = {}) => {
+    const spy = { removed: [], removedCoins: [] };
+    return [{
+      ...makeApi(),
+      getCoins: async () => coins,
+      removeCoins: async (_i, c) => { spy.removedCoins.push(c); },
+      listItems: async (_i, { types } = {}) =>
+        (types?.includes('effect') ? effects : treasure),
+      removeItems: async (_i, ids) => { spy.removed.push(...ids); }
+    }, spy];
+  };
+  const draw = (a) => applyCardEffect({
+    card: BY_ID.get('ruin'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
+
+  it('tears up the deed', async () => {
+    const [a, spy] = api({ effects: [deed] });
+    const r = await draw(a);
+    expect(spy.removed).toContain('d1');
+    expect(r.log).toContain('Deed to a Keep, torn up');
+  });
+
+  it('leaves the other effects alone', async () => {
+    // A wish owed is not an ownership document.
+    const [a, spy] = api({ effects: [deed, other] });
+    await draw(a);
+    expect(spy.removed).toContain('d1');
+    expect(spy.removed).not.toContain('e1');
+  });
+
+  it('recognises a deed by its mark, not its name', async () => {
+    const renamed = { ...deed, name: 'Title to a Manor' };
+    const [a, spy] = api({ effects: [renamed] });
+    await draw(a);
+    expect(spy.removed).toContain('d1');
+  });
+
+  it('ignores an effect from elsewhere that merely looks like one', async () => {
+    const foreign = { id: 'x1', name: 'Deed to a Keep', type: 'effect', dommt: null };
+    const [a, spy] = api({ effects: [foreign] });
+    await draw(a);
+    expect(spy.removed).not.toContain('x1');
+  });
+
+  it('still says deeds are gone when the character never had one', async () => {
+    const [a] = api({ coins: { gp: 10 } });
+    const r = await draw(a);
+    expect(r.log).toContain('yours to narrate');
   });
 });

@@ -24,7 +24,7 @@ const YEAR = 365;
  * An effect with a counter badge: the sheet shows "3" and the player clicks it
  * down as they spend uses. This is the whole trick behind most of these cards.
  */
-function usesEffect({ name, uses, days = null, description, cardId = null,
+function usesEffect({ name, uses, days = null, description, cardId = null, kind = null,
                       img = 'icons/magic/light/explosion-star-glow-blue.webp' }) {
   return {
     type: 'effect',
@@ -32,7 +32,10 @@ function usesEffect({ name, uses, days = null, description, cardId = null,
     img,
     // The card is recorded so spending a charge can replay that card's sound;
     // an effect on a sheet otherwise has no way back to where it came from.
-    flags: cardId ? { [MODULE_ID]: { cardId } } : {},
+    // `kind` says what sort of thing the effect is, so a later card can act on
+    // it — Ruin destroys ownership documents, and needs to recognise a deed as
+    // a deed rather than by matching its name.
+    flags: (cardId || kind) ? { [MODULE_ID]: { ...(cardId ? { cardId } : {}), ...(kind ? { kind } : {}) } } : {},
     system: {
       description: { value: description },
       duration: days
@@ -230,7 +233,8 @@ export async function applyThronePersuasion({ actor, params, api, card }) {
     description: 'You are the rightful owner of a small keep in a distant land — '
       + 'currently held by monsters you must clear out before you can claim it.',
     img: 'icons/environment/settlement/watchtower-cliff.webp',
-    cardId: card.id
+    cardId: card.id,
+    kind: 'deed'
   }));
   return {
     mode: 'auto',
