@@ -1,0 +1,200 @@
+import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { applyCardEffect } from '../scripts/card-effects.mjs';
+import { planCardEffect, replayPlan } from '../scripts/effect-plan.mjs';
+
+const cards = JSON.parse(readFileSync(new URL('../data/cards.json', import.meta.url)));
+const BY_ID = new Map(cards.map((c) => [c.id, c]));
+
+const actorOf = (over = {}) => ({
+  id: 'a1',
+  name: 'Target',
+  system: {
+    details: { xp: { value: 200, max: 1000 }, level: { value: 5 } },
+    attributes: { hp: { value: 40, max: 40 } },
+    ...over
+  }
+});
+
+/** Records writes, answers reads from fixtures. */
+const makeApi = ({ items = [], creatures = [], carried = [] } = {}) => {
+  const spy = { updates: [], conditions: [], effects: [], coins: [], granted: [], removed: [], spawned: [] };
+  return {
+    spy,
+    updateActor: async (_id, u) => { spy.updates.push(u); },
+    increaseCondition: async (_id, c, v) => { spy.conditions.push({ c, v }); },
+    createEffect: async (_id, e) => { spy.effects.push(e); },
+    postChatCard: async () => {},
+    addCoins: async (_id, c) => { spy.coins.push(c); },
+    grantItems: async (_id, e) => { spy.granted.push(...e); },
+    removeItems: async (_id, ids) => { spy.removed.push(...ids); },
+    spawnCreatures: async (e, o) => { spy.spawned.push({ e, o }); },
+    findItems: async () => items,
+    findCreatures: async () => creatures,
+    listItems: async () => carried
+  };
+};
+
+const run = (id, { actor = actorOf(), api = makeApi(), rng = () => 0.5, params = null } = {}) => {
+  const card = params
+    ? { ...BY_ID.get(id), mechanics: { ...BY_ID.get(id).mechanics, params } }
+    : BY_ID.get(id);
+  return applyCardEffect({ card, actor, api, rng, confirmGate: false }).then((r) => ({ r, api }));
+};
+
+describe('experience', () => {
+  it('rolls the level over when a grant crosses the threshold', async () => {
+    // Sun grants 2,000 XP: two levels, not 2,000 sitting on the sheet.
+    const { r, api } = await run('sun', { api: makeApi({ items: [] }) });
+    const u = api.spy.updates[0];
+    expect(u['system.details.level.value']).toBe(7);
+    expect(u['system.details.xp.value']).toBe(200);
+    expect(r.log).toContain('level 5 → 7');
+  });
+
+  it('drains a level when the loss exceeds progress', async () => {
+    const { r, api } = await run('fool');   // 1,000 XP from 200/1000 at level 5
+    const u = api.spy.updates[0];
+    expect(u['system.details.level.value']).toBe(4);
+    expect(u['system.details.xp.value']).toBe(200);
+    expect(r.log).toContain('level 5 → 4');
+  });
+
+  it('never drains below level 1', async () => {
+    const actor = actorOf({ details: { xp: { value: 10, max: 1000 }, level: { value: 1 } } });
+    const { api } = await run('fool', { actor });
+    const u = api.spy.updates[0];
+    expect(u['system.details.level.value']).toBe(1);
+    expect(u['system.details.xp.value']).toBe(0);
+  });
+
+  it('caps a grant at level 20', async () => {
+    const actor = actorOf({ details: { xp: { value: 0, max: 1000 }, level: { value: 19 } } });
+    const { api } = await run('sun', { actor });
+    expect(api.spy.updates[0]['system.details.level.value']).toBe(20);
+  });
+});
+
+describe('choices', () => {
+  it('asks before granting a hoard rather than picking for the GM', async () => {
+    const { r, api } = await run('gem');
+    expect(r.mode).toBe('gm');
+    expect(r.meta.requires).toBe('choose_option');
+    expect(r.meta.options).toHaveLength(2);
+    expect(api.spy.coins).toHaveLength(0);      // nothing granted while asking
+  });
+
+  it('grants the chosen hoard once the choice is made', async () => {
+    const params = { ...BY_ID.get('gem').mechanics.params, chosen: '1' };
+    const { api } = await run('gem', { params });
+    expect(api.spy.coins[0]).toEqual({ gp: 50000 });
+  });
+
+  it('asks which element before granting immunity', async () => {
+    const { r } = await run('elemental');
+    expect(r.meta.requires).toBe('choose_option');
+    expect(r.meta.paramKey).toBe('element');
+  });
+
+  it('writes an Immunity rule for the chosen element', async () => {
+    const { api } = await run('elemental', { params: { element: 'fire' } });
+    expect(api.spy.effects[0].system.rules[0]).toEqual({ key: 'Immunity', type: 'fire' });
+  });
+});
+
+describe('damage and conditions', () => {
+  it('converts the fall to PF2e damage and knocks the target prone', async () => {
+    // rng 0.5 on (3d6)*10 -> deterministic; damage is half the distance, capped 75.
+    const { r, api } = await run('pit');
+    const hp = api.spy.updates[0]['system.attributes.hp.value'];
+    const feet = Number(/fell (\d+) ft/.exec(r.log)[1]);
+    // HP floors at 0 rather than going negative.
+    expect(hp).toBe(Math.max(40 - Math.min(Math.floor(feet / 2), 75), 0));
+    expect(api.spy.conditions).toContainEqual({ c: 'prone', v: 1 });
+  });
+
+  it('caps fall damage at 75', async () => {
+    const { api } = await run('pit', { params: { distance_ft_formula: '1000' } });
+    expect(api.spy.updates[0]['system.attributes.hp.value']).toBe(0);
+  });
+
+  it('petrifies rather than describing petrification', async () => {
+    const { api } = await run('statue');
+    expect(api.spy.conditions).toContainEqual({ c: 'petrified', v: 1 });
+  });
+});
+
+describe('item grants', () => {
+  const items = [
+    { pack: 'p', id: '1', name: 'Flaming Sword', type: 'weapon', level: 8, rarity: 'uncommon' },
+    { pack: 'p', id: '2', name: 'Dull Blade', type: 'weapon', level: 2, rarity: 'uncommon' }
+  ];
+
+  it('grants a real item and names it in the log', async () => {
+    const { r, api } = await run('key', { api: makeApi({ items }), rng: () => 0 });
+    expect(api.spy.granted).toEqual([{ pack: 'p', id: '1' }]);
+    expect(r.log).toContain('Flaming Sword');
+  });
+
+  it('falls back to the GM when the compendium has nothing suitable', async () => {
+    const { r, api } = await run('key', { api: makeApi({ items: [] }) });
+    expect(r.mode).toBe('gm');
+    expect(api.spy.granted).toHaveLength(0);
+  });
+
+  it('destroys only what the actor actually carries', async () => {
+    const carried = [{ id: 'i1', name: 'Wand' }, { id: 'i2', name: 'Cloak' }];
+    const { r, api } = await run('talons', { api: makeApi({ carried }) });
+    expect(api.spy.removed).toEqual(['i1', 'i2']);
+    expect(r.log).toContain('Wand, Cloak');
+  });
+
+  it('says so plainly when there is nothing to destroy', async () => {
+    const { r, api } = await run('talons', { api: makeApi({ carried: [] }) });
+    expect(api.spy.removed).toHaveLength(0);
+    expect(r.log).toContain('nothing to destroy');
+  });
+});
+
+describe('spawning', () => {
+  const creatures = [{ pack: 'b', id: 'c1', name: 'Gelatinous Cube', level: 3 }];
+
+  it('places a hostile with hostile disposition', async () => {
+    const { api } = await run('ooze', { api: makeApi({ creatures }) });
+    expect(api.spy.spawned[0].o.disposition).toBe(-1);
+    expect(api.spy.spawned[0].o.nearActorId).toBe('a1');
+  });
+
+  it('places an ally as friendly', async () => {
+    const { api } = await run('knight', { api: makeApi({ creatures }) });
+    expect(api.spy.spawned[0].o.disposition).toBe(1);
+  });
+
+  it('defers to the GM when the bestiary yields nothing', async () => {
+    const { r } = await run('monstrosity', { api: makeApi({ creatures: [] }) });
+    expect(r.mode).toBe('gm');
+  });
+});
+
+describe('planning covers the new handlers too', () => {
+  it('names the item in the plan and grants that same item on replay', async () => {
+    const items = [{ pack: 'p', id: '1', name: 'Flaming Sword', type: 'weapon', level: 8, rarity: 'uncommon' }];
+    const real = makeApi({ items });
+    const plan = await planCardEffect({ card: BY_ID.get('key'), actor: actorOf(), api: real });
+
+    expect(plan.result.log).toContain('Flaming Sword');
+    expect(real.spy.granted).toHaveLength(0);      // planning wrote nothing
+
+    await replayPlan(plan.calls, real);
+    expect(real.spy.granted).toEqual([{ pack: 'p', id: '1' }]);
+  });
+
+  it('reads compendia during planning even though writes are held', async () => {
+    let reads = 0;
+    const real = { ...makeApi(), findCreatures: async () => { reads += 1; return [{ pack: 'b', id: 'c1', name: 'Wraith', level: 6 }]; } };
+    const plan = await planCardEffect({ card: BY_ID.get('undead'), actor: actorOf(), api: real });
+    expect(reads).toBeGreaterThan(0);
+    expect(plan.result.log).toContain('Wraith');
+    expect(plan.calls.map((c) => c.method)).toContain('spawnCreatures');
+  });
+});

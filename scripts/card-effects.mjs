@@ -1,4 +1,11 @@
 import { rollFormula } from './dice.mjs';
+import {
+  applyXpGain, applyXpLoss, applyXpGainWithItem, applySoloKillLevelUp,
+  applyWealthGrant, applyPetrify, applyFall, applySoulTrap,
+  applyElementImmunity, applyGrantTelepathy, applyUnarmoredDefense,
+  applyItemGrant, applyDestroyMagicItems, applySpawn,
+  applyBonusDraws, applyStopDrawing, applyDrawTwoKeepOne
+} from './card-handlers-extra.mjs';
 
 /**
  * Every mechanics.kind maps to a handler here.
@@ -214,62 +221,102 @@ const HANDLERS = {
   long_rest: autoApplyLongRest,
   wealth_wipe: autoApplyWealthWipe,
 
-  grant_telepathy: gmCard(),
+  grant_telepathy: applyGrantTelepathy,
   alignment_flip: gmCard(),
   beast_form: gmCard(),
   cast_time_stop_n: gmCard(),
   cast_gate_n: gmCard(),
-  spawn_homunculus: gmCard(),
+  spawn_homunculus: applySpawn,
   age_shift: gmCard(),
   trap_extraplanar: gmCard(),
-  element_immunity: gmCard(),
+  element_immunity: applyElementImmunity,
   erase_event: gmCard(),
   feywild_transport: gmCard(),
   fiend_deal: gmCard(),
   permanent_enemy: gmCard(),
-  bonus_draws: gmCard(),
-  xp_loss: gmCard(),
-  xp_gain: gmCard(),
-  wealth_grant: gmCard(),
-  stop_drawing_optional: gmCard(),
-  spawn_ally_npc: gmCard(),
-  spawn_wyrmling: gmCard(),
-  spawn_hostile: gmCard(),
-  spawn_ooze: gmCard(),
-  fall: gmCard(),
+  bonus_draws: applyBonusDraws,
+  xp_loss: applyXpLoss,
+  xp_gain: applyXpGainWithItem,
+  wealth_grant: applyWealthGrant,
+  stop_drawing_optional: applyStopDrawing,
+  spawn_ally_npc: applySpawn,
+  spawn_wyrmling: applySpawn,
+  spawn_hostile: applySpawn,
+  spawn_ooze: applySpawn,
+  fall: applyFall,
   spellcast_slotless: gmCard(),
-  random_hostile_npc: gmCard(),
+  random_hostile_npc: applySpawn,
   sage_query: gmCard(),
   map_query: gmCard(),
-  armor_grant: gmCard(),
+  armor_grant: applyItemGrant,
   skill_proficiencies: gmCard(),
-  avatar_of_death: gmCard(),
+  avatar_of_death: applySpawn,
   keep_grant: gmCard(),
   resurrection_grant: gmCard(),
-  draw_two_keep_one: gmCard(),
-  unarmored_defense: gmCard(),
-  revenant_hunter: gmCard(),
-  soul_trap: gmCard(),
+  draw_two_keep_one: applyDrawTwoKeepOne,
+  unarmored_defense: applyUnarmoredDefense,
+  revenant_hunter: applySpawn,
+  soul_trap: applySoulTrap,
   three_cantrips: gmCard(),
-  petrify: gmCard(),
-  wondrous_grant: gmCard(),
-  ring_grant: gmCard(),
-  magic_weapon_grant: gmCard(),
-  rod_or_staff_grant: gmCard(),
+  petrify: applyPetrify,
+  wondrous_grant: applyItemGrant,
+  ring_grant: applyItemGrant,
+  magic_weapon_grant: applyItemGrant,
+  rod_or_staff_grant: applyItemGrant,
   throne_persuasion: gmCard(),
-  destroy_magic_items: gmCard(),
-  solo_kill_level_up: gmCard(),
+  destroy_magic_items: applyDestroyMagicItems,
+  solo_kill_level_up: applySoloKillLevelUp,
   wish: gmCard(),
   moon: gmCard()
 };
 
-export async function applyCardEffect({ card, actor, api, rng = Math.random, autoApplyEnabled = true }) {
+/**
+ * Cards that take something away, or put something hostile on the table.
+ *
+ * These never apply on the draw itself. They post pending, and the GM sees the
+ * concrete outcome — the damage rolled, the items about to burn, the creature
+ * about to appear — before anything is written. Gains apply silently, because
+ * nobody needs protecting from being handed a magic sword.
+ *
+ * The six that were already automated (drop_to_zero_hp and friends) are in
+ * here too. They were applying silently before this list existed, which was an
+ * oversight rather than a decision: a card that drops a character to 0 HP with
+ * no prompt is exactly what this gate is for.
+ */
+export const REQUIRES_CONFIRMATION = new Set([
+  'xp_loss', 'fall', 'petrify', 'soul_trap', 'destroy_magic_items',
+  'drop_to_zero_hp', 'stat_debuff', 'save_penalty', 'exhaustion',
+  'restrain_no_spellcast', 'wealth_wipe',
+  'spawn_hostile', 'spawn_ooze', 'random_hostile_npc',
+  'revenant_hunter', 'avatar_of_death'
+]);
+
+export function requiresConfirmation(kind) {
+  return REQUIRES_CONFIRMATION.has(kind);
+}
+
+/**
+ * `confirmGate` is what separates drawing from resolving. The draw path leaves
+ * it on, so a destructive card stops at "pending" without its handler ever
+ * running. The planner turns it off, because by then the GM has clicked Apply
+ * and is being shown what the handler would do.
+ */
+export async function applyCardEffect({
+  card, actor, api, rng = Math.random, autoApplyEnabled = true, confirmGate = true
+}) {
   const handler = HANDLERS[card.mechanics.kind];
   if (!handler) {
     throw new Error(`No handler for mechanics.kind=${card.mechanics.kind} (card=${card.id})`);
   }
   if (!actor || !autoApplyEnabled) {
     return { mode: 'gm', log: `${card.name}: manual resolution (no actor bound or auto-apply disabled).`, meta: { kind: 'manual' } };
+  }
+  if (confirmGate && requiresConfirmation(card.mechanics.kind)) {
+    return {
+      mode: 'gm',
+      log: `${card.name}: needs GM confirmation before it is applied.`,
+      meta: { kind: 'needs_confirm' }
+    };
   }
   return handler({ actor, params: card.mechanics.params ?? {}, api, rng, card });
 }

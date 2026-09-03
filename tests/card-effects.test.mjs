@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { applyCardEffect, hasHandler } from '../scripts/card-effects.mjs';
+import { applyCardEffect, requiresConfirmation, hasHandler } from '../scripts/card-effects.mjs';
 import { makeCardsById } from '../scripts/deck.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -107,7 +107,7 @@ describe('exhaustion (Maze)', () => {
     const api = makeApi(actor);
     const maze = BY_ID.get('maze');
     const rng = seededRng([0.66]); // 1d3 → floor(0.66*3)+1 = 2
-    const res = await applyCardEffect({ card: maze, actor, api, rng });
+    const res = await applyCardEffect({ card: maze, actor, api, rng, confirmGate: false });
     expect(res.mode).toBe('auto');
     expect(api._spy.conditions).toEqual([
       { cond: 'fatigued', value: 1 },
@@ -121,7 +121,7 @@ describe('drop_to_zero_hp (Corpse)', () => {
     const actor = makeActor();
     const api = makeApi(actor);
     const corpse = BY_ID.get('corpse');
-    await applyCardEffect({ card: corpse, actor, api });
+    await applyCardEffect({ card: corpse, actor, api, confirmGate: false });
     expect(actor.system.attributes.hp.value).toBe(0);
     expect(api._spy.conditions).toEqual([{ cond: 'dying', value: 1 }]);
   });
@@ -156,7 +156,7 @@ describe('save_penalty (Euryale)', () => {
   it('creates a persistent status-penalty effect', async () => {
     const actor = makeActor();
     const api = makeApi(actor);
-    await applyCardEffect({ card: BY_ID.get('euryale'), actor, api });
+    await applyCardEffect({ card: BY_ID.get('euryale'), actor, api, confirmGate: false });
     expect(api._spy.effects).toHaveLength(1);
     expect(api._spy.effects[0].system.rules[0]).toMatchObject({
       key: 'FlatModifier', selector: 'saving-throw', value: -2
@@ -207,5 +207,52 @@ describe('autoApplyEnabled=false', () => {
     const res = await applyCardEffect({ card: BY_ID.get('warrior'), actor, api, autoApplyEnabled: false });
     expect(res.mode).toBe('gm');
     expect(actor.system.abilities.str.mod).toBe(2);
+  });
+});
+
+describe('the confirmation gate', () => {
+  // Handler behaviour is asserted elsewhere; this is about what a *draw* does.
+  const actor = () => ({ id: 'a1', system: { attributes: { hp: { value: 30, max: 30 } } } });
+  const api = () => ({
+    updateActor: async () => {}, increaseCondition: async () => {},
+    createEffect: async () => {}, postChatCard: async () => {},
+    addCoins: async () => {}, grantItems: async () => {},
+    removeItems: async () => {}, spawnCreatures: async () => {}
+  });
+
+  it('holds a destructive card at pending instead of applying it', async () => {
+    const res = await applyCardEffect({ card: BY_ID.get('corpse'), actor: actor(), api: api() });
+    expect(res.mode).toBe('gm');
+    expect(res.meta.kind).toBe('needs_confirm');
+  });
+
+  it('writes nothing while the card is held', async () => {
+    let wrote = false;
+    const spy = { ...api(), updateActor: async () => { wrote = true; } };
+    await applyCardEffect({ card: BY_ID.get('corpse'), actor: actor(), api: spy });
+    expect(wrote).toBe(false);
+  });
+
+  it('lets a gain apply straight away', async () => {
+    const res = await applyCardEffect({ card: BY_ID.get('campfire'), actor: actor(), api: api() });
+    expect(res.mode).toBe('auto');
+  });
+
+  it('opens the gate for the planner, which runs after the GM has clicked Apply', async () => {
+    const res = await applyCardEffect({
+      card: BY_ID.get('corpse'), actor: actor(), api: api(), confirmGate: false
+    });
+    expect(res.mode).toBe('auto');
+  });
+
+  it('gates every card that takes something away or spawns a hostile', () => {
+    for (const kind of ['xp_loss', 'fall', 'petrify', 'soul_trap', 'destroy_magic_items',
+                        'spawn_hostile', 'avatar_of_death', 'wealth_wipe']) {
+      expect(requiresConfirmation(kind), kind).toBe(true);
+    }
+    for (const kind of ['xp_gain', 'wealth_grant', 'long_rest', 'stat_bump',
+                        'magic_weapon_grant', 'spawn_ally_npc']) {
+      expect(requiresConfirmation(kind), kind).toBe(false);
+    }
   });
 });

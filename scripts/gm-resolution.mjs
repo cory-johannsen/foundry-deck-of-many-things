@@ -29,6 +29,7 @@ const ABILITIES = [
 /** Which gm-mode results carry a decision this module can actually act on. */
 export function pendingKind(meta) {
   if (meta?.requires === 'choose_ability') return 'choose_ability';
+  if (meta?.requires === 'choose_option') return 'choose_option';
   return 'acknowledge';
 }
 
@@ -91,6 +92,37 @@ async function promptChooseAbility(card, delta) {
         label: game.i18n.localize('DOMMT.GM.Apply'),
         default: true,
         callback: (_e, _b, dialog) => dialog.element.querySelector('[name="ability"]').value
+      },
+      { action: 'cancel', label: game.i18n.localize('DOMMT.GM.Cancel') }
+    ],
+    rejectClose: false
+  });
+}
+
+/**
+ * A card that says "choose one" — which element, which hoard, XP or draws.
+ * The options come from the handler, so a new choice needs no new dialog.
+ */
+async function promptChooseOption(card, prompt, options) {
+  const { DialogV2 } = foundry.applications.api;
+  const esc = (s) => foundry.utils.escapeHTML?.(String(s)) ?? String(s);
+  const html = options
+    .map((o) => `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join('');
+  return DialogV2.wait({
+    window: { title: card.name },
+    content: `
+      <form>
+        <p>${esc(prompt)}</p>
+        <div class="form-group">
+          <select name="choice" style="width:100%;">${html}</select>
+        </div>
+      </form>`,
+    buttons: [
+      {
+        action: 'pick',
+        label: game.i18n.localize('DOMMT.GM.Apply'),
+        default: true,
+        callback: (_e, _b, dialog) => dialog.element.querySelector('[name="choice"]').value
       },
       { action: 'cancel', label: game.i18n.localize('DOMMT.GM.Cancel') }
     ],
@@ -166,16 +198,30 @@ export async function resolvePendingDraw(message) {
     if (!actor) return null;
   }
 
-  // Stage 2 — work out what would happen, writing nothing.
-  let plan = await planCardEffect({ card, actor });
+  // Stage 2 — work out what would happen, writing nothing. The real api is
+  // passed so the planner can still read compendia while its writes are held.
+  const api = makeFoundryApi();
+  let plan = await planCardEffect({ card, actor, api });
 
-  // Stage 3 — a decision the module cannot make on its own.
-  if (pendingKind(plan.result.meta) === 'choose_ability') {
-    const choice = await promptChooseAbility(card, plan.result.meta?.delta ?? 1);
-    if (!choice || choice === 'cancel') return null;
+  // Stage 3 — decisions the module cannot make on its own. A handler may ask
+  // for one, so this loops rather than asking exactly once: choosing "extra
+  // draws" on one card can surface a further choice on the next pass.
+  for (let guard = 0; guard < 4; guard += 1) {
+    const kind = pendingKind(plan.result.meta);
+    if (kind === 'acknowledge') break;
+
     const concrete = foundry.utils.deepClone(card);
-    concrete.mechanics.params = { ...concrete.mechanics.params, ability: choice };
-    plan = await planCardEffect({ card: concrete, actor });
+    if (kind === 'choose_ability') {
+      const choice = await promptChooseAbility(card, plan.result.meta?.delta ?? 1);
+      if (!choice || choice === 'cancel') return null;
+      concrete.mechanics.params = { ...concrete.mechanics.params, ability: choice };
+    } else {
+      const meta = plan.result.meta;
+      const choice = await promptChooseOption(card, plan.result.log, meta.options ?? []);
+      if (!choice || choice === 'cancel') return null;
+      concrete.mechanics.params = { ...concrete.mechanics.params, [meta.paramKey]: choice };
+    }
+    plan = await planCardEffect({ card: concrete, actor, api });
   }
 
   // Stage 4 — confirm, and only now write.
@@ -183,7 +229,7 @@ export async function resolvePendingDraw(message) {
   if (!confirmed || confirmed === 'cancel') return null;
 
   if (plan.calls.length) {
-    await replayPlan(plan.calls, makeFoundryApi());
+    await replayPlan(plan.calls, api);
     playCardSound(card);
   }
   return {
