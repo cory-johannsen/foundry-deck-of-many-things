@@ -51,7 +51,8 @@
           "required": [
             "summary",
             "full",
-            "draw_terminating"
+            "draw_terminating",
+            "narration"
           ],
           "additionalProperties": false,
           "properties": {
@@ -65,6 +66,11 @@
             },
             "draw_terminating": {
               "type": "boolean"
+            },
+            "narration": {
+              "type": "string",
+              "minLength": 10,
+              "description": "One line of narration describing what the card does to the character, shown on the chat card alongside the mechanical outcome. Distinct from the top-level `flavor`, which describes the card's imagery for divination."
             }
           }
         },

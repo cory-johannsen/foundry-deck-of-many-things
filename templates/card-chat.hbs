@@ -20,6 +20,10 @@
   <img class="dommt-card dommt-chat__art"
        src="modules/deck-of-many-more-things/{{card.art.front}}" alt="{{card.name}}" />
 
+  {{#if card.rules.narration}}
+    <div class="dommt-chat__narration">{{card.rules.narration}}</div>
+  {{/if}}
+
   <div class="dommt-chat__outcome" data-outcome>
     {{#if pending}}
       <em>{{localize "DOMMT.Chat.Awaiting"}}</em>

@@ -13,11 +13,33 @@
 export const WRITE_METHODS = [
   'updateActor', 'increaseCondition', 'createEffect', 'postChatCard',
   'addCoins', 'grantItems', 'removeItems', 'spawnCreatures', 'grantInnateSpells',
-  'removeCoins'
+  'removeCoins', 'etchRune'
 ];
 
 export const READ_METHODS = ['findItems', 'findCreatures', 'listItems', 'findWorldActors',
-                             'listLanguages', 'getCoins'];
+                             'listLanguages', 'getCoins', 'listGear'];
+
+/** Grades that a rune's name carries at the end and its key carries at the front. */
+const RUNE_GRADES = ['lesser', 'moderate', 'greater', 'major', 'true', 'supreme'];
+
+/**
+ * The key a weapon's property array wants, from the slug the compendium uses.
+ *
+ * These disagree, and PF2e says nothing when they do: it stores whatever slug
+ * it is given and applies no rune. "giant-killing" has to become
+ * "giantKilling", and a graded variant moves its grade to the front —
+ * "giant-killing-greater" becomes "greaterGiantKilling". Both were checked
+ * against a real weapon, which renames itself when the rune takes.
+ */
+export function runeKey(slug) {
+  const parts = String(slug ?? '').split('-').filter(Boolean);
+  if (!parts.length) return '';
+  const grade = RUNE_GRADES.includes(parts.at(-1)) ? parts.pop() : null;
+  const ordered = grade ? [grade, ...parts] : parts;
+  return ordered
+    .map((p, i) => (i === 0 ? p : p[0].toUpperCase() + p.slice(1)))
+    .join('');
+}
 
 /** PF2e rarities in ascending order, for "uncommon or better" style filters. */
 const RARITY_ORDER = ['common', 'uncommon', 'rare', 'unique'];
@@ -51,9 +73,10 @@ export function makeFoundryApi() {
         const index = await pack.getIndex({
           // A spell's tradition is not among its traits — it lives in its own
           // array, so it has to be asked for explicitly or spells arrive
-          // looking traditionless.
+          // looking traditionless. Usage distinguishes a rune from a thing.
           fields: ['type', 'system.level.value', 'system.traits.rarity',
-                   'system.traits.value', 'system.traits.traditions']
+                   'system.traits.value', 'system.traits.traditions',
+                   'system.usage.value', 'system.slug']
         });
         for (const e of index) {
           if (types.length && !types.includes(e.type)) continue;
@@ -65,7 +88,11 @@ export function makeFoundryApi() {
           if (traits.length && !traits.every((t) => has.includes(t))) continue;
           if (re && !re.test(e.name)) continue;
           found.push({ pack: id, id: e._id, name: e.name, type: e.type, level, rarity,
-                       traits: has, traditions: e.system?.traits?.traditions ?? [] });
+                       traits: has, traditions: e.system?.traits?.traditions ?? [],
+                       // Runes are plain `equipment` with no distinguishing trait;
+                       // only their usage says they are etched onto something else.
+                       usage: e.system?.usage?.value ?? null,
+                       slug: e.system?.slug ?? null });
         }
       }
       return found;
@@ -145,6 +172,24 @@ export function makeFoundryApi() {
         .filter(([slug]) => !known.has(slug))
         .map(([slug, label]) => ({ value: slug, label: game.i18n.localize(label) }))
         .sort((a, b) => a.label.localeCompare(b.label));
+    },
+
+    /**
+     * Weapons and armour the actor has, and whether they are actually using
+     * them — needed by anything that wants to modify what someone wields
+     * rather than hand them another object.
+     */
+    async listGear(actorId, { types = ['weapon', 'armor'] } = {}) {
+      const actor = getActor(actorId);
+      return actor.items
+        .filter((i) => types.includes(i.type))
+        .map((i) => ({
+          id: i.id, name: i.name, type: i.type,
+          wielded: (i.system?.equipped?.handsHeld ?? 0) > 0
+            || i.system?.equipped?.carryType === 'held'
+            || i.system?.equipped?.inSlot === true,
+          propertyRunes: [...(i.system?.runes?.property ?? [])]
+        }));
     },
 
     /** What the actor is carrying in coin. */
@@ -270,6 +315,27 @@ export function makeFoundryApi() {
       }
       if (!sources.length) return null;
       return actor.createEmbeddedDocuments('Item', sources);
+    },
+
+    /**
+     * Etch a property rune onto something the actor already owns.
+     *
+     * A rune granted as a loose item is inert — it is not a thing you carry,
+     * it is a property of a weapon. Adding its slug to the weapon's property
+     * runes is what actually gives the character the benefit.
+     */
+    async etchRune(actorId, itemId, slug) {
+      const item = getActor(actorId).items.get(itemId);
+      if (!item) throw new Error(`No item ${itemId} to etch`);
+      const key = runeKey(slug);
+      const runes = item.system?.runes ?? {};
+      const current = runes.property ?? [];
+      if (current.includes(key)) return null;
+      const updates = { 'system.runes.property': [...current, key] };
+      // A property rune needs a potency rune to sit on. Without one PF2e drops
+      // the property array entirely, and the etching silently does nothing.
+      if (!(runes.potency > 0)) updates['system.runes.potency'] = 1;
+      return item.update(updates);
     },
 
     async removeCoins(actorId, coins) {

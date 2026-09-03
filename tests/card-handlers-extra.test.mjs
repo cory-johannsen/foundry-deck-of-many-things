@@ -17,8 +17,8 @@ const actorOf = (over = {}) => ({
 });
 
 /** Records writes, answers reads from fixtures. */
-const makeApi = ({ items = [], creatures = [], carried = [], worldActors = [], languages = [], coins = {} } = {}) => {
-  const spy = { updates: [], conditions: [], effects: [], coins: [], granted: [], removed: [], spawned: [], innate: [], coinsRemoved: [] };
+const makeApi = ({ items = [], creatures = [], carried = [], worldActors = [], languages = [], coins = {}, gear = [] } = {}) => {
+  const spy = { updates: [], conditions: [], effects: [], coins: [], granted: [], removed: [], spawned: [], innate: [], coinsRemoved: [], etched: [] };
   return {
     spy,
     updateActor: async (_id, u) => { spy.updates.push(u); },
@@ -32,6 +32,8 @@ const makeApi = ({ items = [], creatures = [], carried = [], worldActors = [], l
     grantInnateSpells: async (_i, e, o) => { spy.innate.push({ e, o }); },
     listLanguages: async () => languages,
     getCoins: async () => coins,
+    listGear: async () => gear,
+    etchRune: async (_i, id, slug) => { spy.etched.push({ id, slug }); },
     removeCoins: async (_i, c) => { spy.coinsRemoved.push(c); },
     findItems: async () => items,
     findCreatures: async () => creatures,
@@ -452,6 +454,8 @@ describe('Ruin actually takes the wealth', () => {
     return [{
       ...makeApi(),
       getCoins: async () => coins,
+    listGear: async () => gear,
+    etchRune: async (_i, id, slug) => { spy.etched.push({ id, slug }); },
       removeCoins: async (_i, c) => { spy.removedCoins.push(c); },
       listItems: async () => items,
       removeItems: async (_i, ids) => { spy.removedItems.push(...ids); }
@@ -509,5 +513,101 @@ describe('Ruin does not take the same money twice', () => {
     const listed = await makeFoundryApi().listItems('a1', { types: ['treasure'], magical: 'exclude' });
     expect(listed.map((i) => i.name)).toEqual(['Hematite']);
     delete globalThis.game;
+  });
+});
+
+describe('runes go onto what the character wields', () => {
+  // Stairway granted "Giant-Killing", which is a weapon property rune, not an
+  // object. PF2e models it as plain `equipment` with only a `magical` trait —
+  // nothing marks it as a rune except its usage.
+  const rune = { pack: 'p', id: 'r1', name: 'Giant-Killing', type: 'equipment', level: 8,
+                 rarity: 'rare', traits: ['magical'], usage: 'etched-onto-a-weapon',
+                 slug: 'giant-killing' };
+  const thing = { pack: 'p', id: 't1', name: 'Cloak of Elvenkind', type: 'equipment', level: 7,
+                  rarity: 'uncommon', traits: ['magical'], usage: 'worncloak', slug: 'cloak' };
+
+  const withGear = (items, gear) => {
+    const spy = { granted: [], etched: [] };
+    return [{
+      ...makeApi(),
+      findItems: async () => items,
+      listGear: async () => gear,
+      grantItems: async (_i, e) => { spy.granted.push(...e); },
+      etchRune: async (_i, id, slug) => { spy.etched.push({ id, slug }); }
+    }, spy];
+  };
+  const axe = { id: 'w1', name: 'Battle Axe', type: 'weapon', wielded: true, propertyRunes: [] };
+  const spare = { id: 'w2', name: 'Spare Dagger', type: 'weapon', wielded: false, propertyRunes: [] };
+
+  const draw = (api) => applyCardEffect({
+    card: BY_ID.get('stairway'), actor: actorOf(), api, rng: () => 0, confirmGate: false });
+
+  it('etches the rune onto the weapon rather than handing it over loose', async () => {
+    const [api, spy] = withGear([rune], [axe]);
+    const r = await draw(api);
+    expect(spy.etched).toEqual([{ id: 'w1', slug: 'giant-killing' }]);
+    expect(spy.granted).toHaveLength(0);
+    expect(r.log).toContain('etched onto your Battle Axe');
+  });
+
+  it('prefers the weapon actually in hand', async () => {
+    const [api, spy] = withGear([rune], [spare, axe]);
+    await draw(api);
+    expect(spy.etched[0].id).toBe('w1');
+  });
+
+  it('uses a carried weapon when none is wielded', async () => {
+    const [api, spy] = withGear([rune], [spare]);
+    await draw(api);
+    expect(spy.etched[0].id).toBe('w2');
+  });
+
+  it('picks something else when there is nothing to etch onto', async () => {
+    // A rune granted to someone with no weapon is an inert object.
+    const [api, spy] = withGear([rune, thing], []);
+    const r = await draw(api);
+    expect(spy.etched).toHaveLength(0);
+    expect(spy.granted).toEqual([{ pack: 'p', id: 't1' }]);
+    expect(r.log).toContain('Cloak of Elvenkind');
+  });
+
+  it('still grants ordinary items as objects', async () => {
+    const [api, spy] = withGear([thing], [axe]);
+    await draw(api);
+    expect(spy.granted).toEqual([{ pack: 'p', id: 't1' }]);
+    expect(spy.etched).toHaveLength(0);
+  });
+});
+
+describe('rune keys and fundamentals', () => {
+  it('converts a compendium slug into the key a weapon expects', async () => {
+    // PF2e stores whatever slug it is handed and applies nothing when the two
+    // disagree, so a wrong key looks exactly like a working one.
+    const { runeKey } = await import('../scripts/foundry-api.mjs');
+    expect(runeKey('giant-killing')).toBe('giantKilling');
+    expect(runeKey('hauling')).toBe('hauling');
+  });
+
+  it('moves a grade to the front, as the system keys it', async () => {
+    const { runeKey } = await import('../scripts/foundry-api.mjs');
+    expect(runeKey('giant-killing-greater')).toBe('greaterGiantKilling');
+    expect(runeKey('corrosive-major')).toBe('majorCorrosive');
+    expect(runeKey('flaming-lesser')).toBe('lesserFlaming');
+  });
+
+  it('copes with an empty or missing slug', async () => {
+    const { runeKey } = await import('../scripts/foundry-api.mjs');
+    expect(runeKey('')).toBe('');
+    expect(runeKey(null)).toBe('');
+  });
+
+  it('never offers a fundamental rune as a wondrous item', async () => {
+    const { isFundamentalRune } = await import('../scripts/card-handlers-extra.mjs');
+    // These live in their own fields; etching one as a property does nothing.
+    for (const slug of ['mythic-striking', 'mythic-weapon-potency', 'resilient-greater']) {
+      expect(isFundamentalRune({ usage: 'etched-onto-a-weapon', slug }), slug).toBe(true);
+    }
+    expect(isFundamentalRune({ usage: 'etched-onto-a-weapon', slug: 'giant-killing' })).toBe(false);
+    expect(isFundamentalRune({ usage: 'worncloak', slug: 'cloak' })).toBe(false);
   });
 });

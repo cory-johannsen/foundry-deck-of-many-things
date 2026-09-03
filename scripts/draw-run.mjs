@@ -5,6 +5,7 @@ import { makeFoundryApi } from './foundry-api.mjs';
 import { playCardSound } from './card-sound.mjs';
 import { postDrawCard } from './ui/card-message.mjs';
 import { drawTwoKeepOne } from './keep-one.mjs';
+import { pendingKind, resolvePendingDraw, markMessageResolved } from './gm-resolution.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 
@@ -47,12 +48,27 @@ export async function runDraws({ count = 1, actor = null, notify = true } = {}) 
     state = freshPlayDeckState(cards, game.settings.get(MODULE_ID, 'worldSeed') || String(Date.now()));
   }
 
+  let budget = count;
   const applyAndPost = async (card) => {
     const result = await applyCardEffect({ card, actor, api, autoApplyEnabled: autoApply });
-    // A card that still needs the GM has not landed yet, so it stays quiet
-    // until they apply it.
+    // A card that has not landed yet stays quiet until it does.
     if (result.mode === 'auto') playCardSound(card);
-    await postDrawCard({ card, actor, result });
+    const message = await postDrawCard({ card, actor, result });
+
+    // A card that asks a question asks it now, of whoever should answer —
+    // the player when the character is theirs, the GM otherwise. Waiting
+    // behind an Apply button only added a click before the same prompt.
+    //
+    // A card with no actor bound is left pending on purpose: the GM picks who
+    // it lands on when they are ready, rather than being interrupted partway
+    // through a batch of draws.
+    if (result.mode === 'gm' && actor && pendingKind(result.meta) !== 'acknowledge') {
+      const outcome = await resolvePendingDraw(message);
+      if (outcome) {
+        await markMessageResolved(message, outcome);
+        if (outcome.extraDraws > 0) budget += outcome.extraDraws;
+      }
+    }
     return result;
   };
 
@@ -63,7 +79,6 @@ export async function runDraws({ count = 1, actor = null, notify = true } = {}) 
   const persist = () => game.settings.set(MODULE_ID, 'playDeck', state);
 
   const drawn = [];
-  let budget = count;
   for (let i = 0; i < budget; i += 1) {
     const step = drawFromPlay(state, { actorId: actor?.id ?? null });
     if (step.reason === 'empty') {

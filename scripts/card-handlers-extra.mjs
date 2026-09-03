@@ -269,6 +269,26 @@ const NAME_HINT = {
   rod_or_staff_grant: '(rod|staff|wand)'
 };
 
+/** What a rune is etched onto, by the usage PF2e records on it. */
+const ETCH_TARGET = {
+  'etched-onto-a-weapon': 'weapon',
+  'etched-onto-a-melee-weapon': 'weapon',
+  'etched-onto-a-thrown-weapon': 'weapon',
+  'etched-onto-armor': 'armor',
+  'etched-onto-a-shield': 'shield'
+};
+
+export const runeTargetOf = (item) => ETCH_TARGET[item?.usage] ?? null;
+
+/**
+ * Potency, striking and resilient are fundamental runes: they live in their own
+ * fields, not in the property list, so etching one as a property does nothing.
+ * They are also not wondrous items by any reading, so they leave the pool.
+ */
+const FUNDAMENTAL_RUNE = /potency|striking|resilient/i;
+export const isFundamentalRune = (item) =>
+  !!runeTargetOf(item) && FUNDAMENTAL_RUNE.test(item?.slug ?? '');
+
 /**
  * Pick one item of the right shape out of the equipment compendium.
  *
@@ -277,10 +297,16 @@ const NAME_HINT = {
  * which is how Key, asked for a magic weapon, granted a level 0 Thundermace.
  * The magical trait is therefore required, never traded away.
  *
+ * Runes are the other trap. Giant-Killing is a property rune, but PF2e models
+ * it as plain `equipment` with no trait to tell it apart — only its usage,
+ * "etched-onto-a-weapon", gives it away. Granted as an object it is inert,
+ * because it is not a thing you carry; it is a property of a weapon. So a rune
+ * is etched onto what the character is actually wielding, and if they are
+ * wielding nothing it can go on, the card picks something else instead.
+ *
  * Level is scaled to the recipient. Without it the pool runs from level 0 to
  * 20 and a 5th-level character is as likely to be handed a 19th-level staff as
- * anything they could use. The band widens before the card gives up, but the
- * magical requirement does not.
+ * anything they could use.
  *
  * PF2e has no "ring" or "rod" item type — they are all `equipment` — so those
  * cards match on name as well, which is what actually distinguishes them.
@@ -300,13 +326,24 @@ export async function applyItemGrant({ actor, params, api, card, rng }) {
   };
   const magicalOnly = (pool) => pool.filter((i) => (i.traits ?? []).includes('magical'));
 
-  // Items the character could plausibly use, then anything of the right kind.
   let pool = magicalOnly(narrow(await api.findItems({ types, minRarity, maxLevel: level + 3 })));
   let widened = false;
   if (!pool.length) {
     pool = magicalOnly(narrow(await api.findItems({ types, minRarity })));
     widened = pool.length > 0;
   }
+
+  // A rune is only worth granting if there is something to put it on, and a
+  // fundamental rune cannot be a property rune at all.
+  const gear = await api.listGear(actor.id);
+  const canEtch = (item) => {
+    const target = runeTargetOf(item);
+    if (!target) return true;                       // not a rune: always fine
+    if (isFundamentalRune(item)) return false;
+    return gear.some((g) => g.type === (target === 'shield' ? 'armor' : target));
+  };
+  const usable = pool.filter(canEtch);
+  if (usable.length) pool = usable;
 
   if (!pool.length) {
     return {
@@ -318,6 +355,22 @@ export async function applyItemGrant({ actor, params, api, card, rng }) {
   }
 
   const chosen = pool[Math.floor(rng() * pool.length)];
+  const target = runeTargetOf(chosen);
+
+  if (target) {
+    const wanted = target === 'shield' ? 'armor' : target;
+    const candidates = gear.filter((g) => g.type === wanted);
+    const onto = candidates.find((g) => g.wielded) ?? candidates[0];
+    if (onto) {
+      await api.etchRune(actor.id, onto.id, chosen.slug ?? chosen.name);
+      return {
+        mode: 'auto',
+        log: `${card.name}: ${chosen.name} etched onto your ${onto.name}`,
+        meta: { granted: chosen.name, etchedOnto: onto.name }
+      };
+    }
+  }
+
   await api.grantItems(actor.id, [{ pack: chosen.pack, id: chosen.id }]);
   const note = widened ? ', above your level' : '';
   return {
