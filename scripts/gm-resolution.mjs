@@ -211,7 +211,10 @@ export async function resolvePendingDraw(message) {
     log: plan.calls.length
       ? plan.result.log
       : game.i18n.localize('DOMMT.GM.ResolvedByGM'),
-    actorId: actor.id
+    actorId: actor.id,
+    // Jester's extra draws hang on a choice made here, after the card was
+    // posted, so they are taken by the caller once this returns.
+    extraDraws: plan.result.meta?.extraDraws ?? 0
   };
 }
 

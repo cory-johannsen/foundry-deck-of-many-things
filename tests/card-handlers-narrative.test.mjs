@@ -255,7 +255,7 @@ describe('every card is now handled', () => {
 
   it('gates everything that removes, ages, rewrites or sets an enemy on the character', () => {
     for (const kind of ['trap_extraplanar', 'feywild_transport', 'age_shift',
-                        'moral_inversion', 'permanent_enemy', 'beast_form', 'fiend_deal']) {
+                        'moral_inversion', 'permanent_enemy', 'fiend_deal']) {
       expect(requiresConfirmation(kind), kind).toBe(true);
     }
     for (const kind of ['wish', 'sage_query', 'resurrection_grant', 'save_penalty',

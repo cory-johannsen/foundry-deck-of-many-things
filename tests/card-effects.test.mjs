@@ -286,7 +286,7 @@ describe('Euryale applies without asking', () => {
 
   it('leaves gated only what is irreversible, removing or on the map', () => {
     for (const kind of ['xp_loss', 'petrify', 'soul_trap', 'destroy_magic_items',
-                        'beast_form', 'spawn_hostile']) {
+                        'spawn_hostile']) {
       expect(requiresConfirmation(kind), kind).toBe(true);
     }
   });

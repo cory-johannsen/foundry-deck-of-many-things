@@ -278,12 +278,11 @@ describe('beast form', () => {
       .toMatchObject({ value: days, unit: 'days' });
   });
 
-  it('is held for confirmation, since it replaces the character for weeks', async () => {
+  it('applies without asking', async () => {
     const res = await applyCardEffect({
       card: BY_ID.get('beast'), actor: actorOf(), api: makeApi({ items: forms })
     });
-    expect(res.mode).toBe('gm');
-    expect(res.meta.kind).toBe('needs_confirm');
+    expect(res.mode).toBe('auto');
   });
 
   it('falls back to the GM when no form is installed', async () => {

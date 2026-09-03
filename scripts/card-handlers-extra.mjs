@@ -467,23 +467,32 @@ export async function applyBonusDraws({ actor, params, api, card }) {
     });
   }
   const extra = params.additional_draws ?? 2;
-  await api.updateActor(actor.id, { [`flags.${MODULE_ID}.pendingExtraDraws`]: extra });
-  return { mode: 'auto', log: `${card.name}: ${extra} additional draws granted` };
-}
-
-export async function applyStopDrawing({ actor, api, card }) {
-  await api.updateActor(actor.id, { [`flags.${MODULE_ID}.mayStopDrawing`]: true });
+  // Nothing is written to the actor: the draws are the deck's business, and
+  // the caller takes them once this resolves.
   return {
     mode: 'auto',
-    log: `${card.name}: you may stop drawing now, even with draws declared`
+    log: `${card.name}: ${extra} additional draws`,
+    meta: { extraDraws: extra }
   };
 }
 
-export async function applyDrawTwoKeepOne({ actor, api, card }) {
-  await api.updateActor(actor.id, { [`flags.${MODULE_ID}.drawTwoKeepOne`]: true });
+export async function applyStopDrawing({ card }) {
+  // Nothing to write. Whether the player stops is theirs to say, and the deck
+  // app cannot un-declare draws already in flight — the old flag recorded an
+  // intention that nothing ever read.
   return {
     mode: 'auto',
-    log: `${card.name}: draw two more cards and keep only one of them`
+    log: `${card.name}: you may stop drawing now, even with draws still declared`
+  };
+}
+
+export async function applyDrawTwoKeepOne({ card }) {
+  // Two draws are granted; which one is kept is a decision made at the table,
+  // and the module has no way to un-draw the other.
+  return {
+    mode: 'auto',
+    log: `${card.name}: draw two more cards and keep only one of them`,
+    meta: { extraDraws: 2 }
   };
 }
 
