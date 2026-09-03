@@ -122,7 +122,8 @@ export function makeFoundryApi() {
      * `ooze` the difference is between a handful of candidates and none.
      */
     async findCreatures({ minLevel = null, maxLevel = null, traits = [], namePattern = null,
-                          minSize = null, excludeTraits = [], packs = null } = {}) {
+                          minSize = null, excludeTraits = [], speaksLanguage = false,
+                          packs = null } = {}) {
       packs ??= game.packs
         .filter((p) => p.documentName === 'Actor' && /bestiary/i.test(p.collection))
         .map((p) => p.collection);
@@ -133,7 +134,7 @@ export function makeFoundryApi() {
         if (!pack) continue;
         const index = await pack.getIndex({
           fields: ['type', 'system.details.level.value', 'system.traits.value',
-                   'system.traits.size.value']
+                   'system.traits.size.value', 'system.details.languages.value']
         });
         for (const e of index) {
           if (e.type !== 'npc') continue;
@@ -146,7 +147,9 @@ export function makeFoundryApi() {
           if (re && !re.test(e.name)) continue;
           const size = e.system?.traits?.size?.value ?? 'med';
           if (!sizeAtLeast(size, minSize)) continue;
-          found.push({ pack: id, id: e._id, name: e.name, level, traits: has, size });
+          const languages = e.system?.details?.languages?.value ?? [];
+          if (speaksLanguage && !languages.length) continue;
+          found.push({ pack: id, id: e._id, name: e.name, level, traits: has, size, languages });
         }
       }
       return found;
@@ -160,7 +163,7 @@ export function makeFoundryApi() {
      */
     async findWorldActors({ types = ['npc'], traits = [], minLevel = null, maxLevel = null,
                             minSize = null, excludeTraits = [], excludeIds = [],
-                            withArtOnly = false } = {}) {
+                            speaksLanguage = false, withArtOnly = false } = {}) {
       const skip = new Set(excludeIds);
       const isDefaultArt = (src) => !src || /mystery-man|default-icons|\.svg$/i.test(src);
       return game.actors
@@ -174,10 +177,12 @@ export function makeFoundryApi() {
         })
         .filter((a) => !withArtOnly || !isDefaultArt(a.prototypeToken?.texture?.src))
         .filter((a) => sizeAtLeast(a.system?.traits?.size?.value, minSize))
+        .filter((a) => !speaksLanguage || (a.system?.details?.languages?.value ?? []).length > 0)
         .map((a) => ({
           id: a.id, name: a.name,
           level: a.system?.details?.level?.value ?? 0,
           size: a.system?.traits?.size?.value ?? 'med',
+          languages: a.system?.details?.languages?.value ?? [],
           folder: a.folder?.name ?? null,
           hasArt: !isDefaultArt(a.prototypeToken?.texture?.src)
         }));

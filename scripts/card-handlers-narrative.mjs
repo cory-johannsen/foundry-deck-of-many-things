@@ -322,8 +322,13 @@ export async function applyNamedAdversary({ actor, params, api, card, rng }) {
   // A troop is a formation standing in for many creatures; these cards each
   // describe one.
   const excludeTraits = ['troop'];
-  let pool = await api.findCreatures({ traits: [trait], excludeTraits });
-  if (!pool.length) pool = await api.findCreatures({ traits: ['fiend'], excludeTraits });
+  // Fiend arrives to strike a bargain, which takes a creature that can hold a
+  // conversation. Twenty-one of the compendium's fiends have no language at
+  // all — fiendish lizards, wolves and mantises, which cannot offer terms.
+  // Flames only needs an enemy, so it asks for nothing of the sort.
+  const speaksLanguage = !wantsDevil;
+  let pool = await api.findCreatures({ traits: [trait], excludeTraits, speaksLanguage });
+  if (!pool.length) pool = await api.findCreatures({ traits: ['fiend'], excludeTraits, speaksLanguage });
 
   if (!pool.length) {
     return {
@@ -349,9 +354,13 @@ export async function applyNamedAdversary({ actor, params, api, card, rng }) {
   await api.spawnCreatures([{ pack: chosen.pack, id: chosen.id }], {
     nearActorId: actor.id, disposition: 0
   });
+  const tongues = (chosen.languages ?? []).length
+    ? `, speaking ${chosen.languages.slice(0, 3).join(', ')}`
+    : '';
   return {
     mode: 'auto',
-    log: `${card.name}: ${chosen.name} (level ${chosen.level}) appears, indifferent, with a bargain to offer`
+    log: `${card.name}: ${chosen.name} (level ${chosen.level}) appears, indifferent, `
+      + `with a bargain to offer${tongues}`
   };
 }
 

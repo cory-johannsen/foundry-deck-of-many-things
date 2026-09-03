@@ -442,3 +442,51 @@ describe('Undead marks the character rather than summoning', () => {
     expect(api.spy.effects[0].system.duration.value).toBe(30);
   });
 });
+
+describe('Fiend arrives able to bargain', () => {
+  // The card says it offers a deal. Twenty-one of the compendium's fiends have
+  // no language at all — fiendish lizards, wolves and mantises.
+  const pool = [
+    { pack: 'b', id: 'mute', name: 'Fiendish Mantis', level: 11, traits: ['fiend'], languages: [] },
+    { pack: 'b', id: 'talker', name: 'Barbazu', level: 5, traits: ['devil', 'fiend'],
+      languages: ['common', 'diabolic'] }
+  ];
+  const honouring = (list) => async ({ speaksLanguage = false, traits = [] } = {}) => list
+    .filter((c) => !traits.length || traits.some((t) => c.traits.includes(t)))
+    .filter((c) => !speaksLanguage || (c.languages ?? []).length > 0);
+
+  it('never summons a fiend with no language', async () => {
+    const spawned = [];
+    const api = { ...makeApi(), findCreatures: honouring(pool),
+                  spawnCreatures: async (e, o) => { spawned.push({ e, o }); } };
+    for (const rng of [() => 0, () => 0.5, () => 0.999]) {
+      await applyCardEffect({ card: BY_ID.get('fiend'), actor: actorOf(), api, rng, confirmGate: false });
+    }
+    expect(spawned.map((s) => s.e[0].id)).not.toContain('mute');
+    expect(spawned.every((s) => s.e[0].id === 'talker')).toBe(true);
+  });
+
+  it('names the tongues it speaks, so the GM can play the scene', async () => {
+    const api = { ...makeApi(), findCreatures: honouring(pool) };
+    const r = await applyCardEffect({ card: BY_ID.get('fiend'), actor: actorOf(), api, rng: () => 0, confirmGate: false });
+    expect(r.log).toContain('speaking common, diabolic');
+  });
+
+  it('asks the GM when no fiend can hold a conversation', async () => {
+    const api = { ...makeApi(), findCreatures: honouring([pool[0]]) };
+    const r = await applyCardEffect({ card: BY_ID.get('fiend'), actor: actorOf(), api, rng: () => 0.5, confirmGate: false });
+    expect(r.mode).toBe('gm');
+  });
+
+  it('asks nothing of the sort for Flames, which only needs an enemy', async () => {
+    // A devil that hunts you does not have to negotiate.
+    const devils = [{ pack: 'b', id: 'd', name: 'Silent Devil', level: 6,
+                      traits: ['devil', 'fiend'], languages: [] }];
+    const effects = [];
+    const api = { ...makeApi(), findCreatures: honouring(devils),
+                  createEffect: async (_i, e) => { effects.push(e); } };
+    const r = await applyCardEffect({ card: BY_ID.get('flames'), actor: actorOf(), api, rng: () => 0, confirmGate: false });
+    expect(r.mode).toBe('auto');
+    expect(effects[0].name).toContain('Silent Devil');
+  });
+});
