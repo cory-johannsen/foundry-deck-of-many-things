@@ -1,6 +1,7 @@
 import { loadCards } from './data-loader.mjs';
 import { makeCardsById } from './deck.mjs';
 import { planCardEffect, replayPlan } from './effect-plan.mjs';
+import { requiresConfirmation } from './card-effects.mjs';
 import { makeFoundryApi } from './foundry-api.mjs';
 import { playCardSound } from './card-sound.mjs';
 import { promptChooseAbility, promptChooseOption, promptChooseMany } from './choice-prompts.mjs';
@@ -195,9 +196,16 @@ export async function resolvePendingDraw(message) {
     plan = await planCardEffect({ card: concrete, actor, api });
   }
 
-  // Stage 4 — confirm, and only now write.
-  const confirmed = await promptConfirm(card, actor, plan);
-  if (!confirmed || confirmed === 'cancel') return null;
+  // Stage 4 — confirm, for the cards that are held back for one.
+  //
+  // A card that asked a question has already had its answer, and one that
+  // simply needed an actor has just been given one; a further "are you sure"
+  // is a click for its own sake. Only a kind in REQUIRES_CONFIRMATION stops
+  // here, which is what that set is for.
+  if (requiresConfirmation(card.mechanics.kind)) {
+    const confirmed = await promptConfirm(card, actor, plan);
+    if (!confirmed || confirmed === 'cancel') return null;
+  }
 
   if (plan.calls.length) await replayPlan(plan.calls, api);
 
