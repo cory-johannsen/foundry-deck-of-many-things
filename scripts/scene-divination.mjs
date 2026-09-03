@@ -306,7 +306,12 @@ export async function performDivinationOnTable() {
     const layout = LAYOUT[slot.position];
     const card = byId.get(slot.card.id);
     const positionMeta = positionsById.get(slot.position);
-    const isReversed = slot.orientation === 'reversed';
+    // The Crossing is read upright however it was dealt — deck.mjs already does
+    // this for its text — so it must also be *shown* upright. Deriving this from
+    // the raw dealt orientation instead produced a dialog captioned "Upright"
+    // over a card rendered upside-down, and a tile rotated to match.
+    const displayOrientation = slot.position === 'challenge' ? 'upright' : slot.orientation;
+    const isReversed = displayOrientation === 'reversed';
     const tileRotation = layout.rotation + (isReversed ? 180 : 0);
     await scene.createEmbeddedDocuments('Tile', [{
       texture: { src: `modules/${MODULE_ID}/${card.art.front}` },
@@ -324,7 +329,6 @@ export async function performDivinationOnTable() {
     }]);
     await new Promise((r) => setTimeout(r, DEAL_DELAY_MS));
 
-    const displayOrientation = slot.position === 'challenge' ? 'upright' : slot.orientation;
     const orientationLabel = game.i18n.localize(`DOMMT.Divination.Orientation.${displayOrientation}`);
     const displayText = card.divination[category][displayOrientation];
     await showCardDialog({
