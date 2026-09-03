@@ -258,7 +258,7 @@ describe('every card is now handled', () => {
                         'moral_inversion', 'permanent_enemy', 'beast_form', 'fiend_deal']) {
       expect(requiresConfirmation(kind), kind).toBe(true);
     }
-    for (const kind of ['wish', 'sage_query', 'resurrection_grant',
+    for (const kind of ['wish', 'sage_query', 'resurrection_grant', 'save_penalty',
                         'three_cantrips', 'skill_proficiencies', 'throne_persuasion']) {
       expect(requiresConfirmation(kind), kind).toBe(false);
     }

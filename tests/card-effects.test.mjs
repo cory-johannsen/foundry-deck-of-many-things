@@ -166,7 +166,7 @@ describe('save_penalty (Euryale)', () => {
   it('creates a persistent status-penalty effect', async () => {
     const actor = makeActor();
     const api = makeApi(actor);
-    await applyCardEffect({ card: BY_ID.get('euryale'), actor, api, confirmGate: false });
+    await applyCardEffect({ card: BY_ID.get('euryale'), actor, api });
     expect(api._spy.effects).toHaveLength(1);
     expect(api._spy.effects[0].system.rules[0]).toMatchObject({
       key: 'FlatModifier', selector: 'saving-throw', value: -2
@@ -268,6 +268,25 @@ describe('the confirmation gate', () => {
     for (const kind of ['xp_gain', 'wealth_grant', 'long_rest', 'stat_bump',
                         'magic_weapon_grant', 'spawn_ally_npc']) {
       expect(requiresConfirmation(kind), kind).toBe(false);
+    }
+  });
+});
+
+describe('Euryale applies without asking', () => {
+  it('needs no GM approval — one flat penalty, nothing taken away', async () => {
+    const actor = makeActor();
+    const api = makeApi(actor);
+    const res = await applyCardEffect({ card: BY_ID.get('euryale'), actor, api });
+    expect(res.mode).toBe('auto');
+    expect(api._spy.effects[0].system.rules[0]).toMatchObject({
+      key: 'FlatModifier', selector: 'saving-throw', value: -2
+    });
+  });
+
+  it('leaves the cards that take something away still gated', () => {
+    for (const kind of ['drop_to_zero_hp', 'stat_debuff', 'exhaustion',
+                        'restrain_no_spellcast', 'wealth_wipe']) {
+      expect(requiresConfirmation(kind), kind).toBe(true);
     }
   });
 });

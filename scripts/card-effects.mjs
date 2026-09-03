@@ -396,14 +396,18 @@ const HANDLERS = {
  * about to appear — before anything is written. Gains apply silently, because
  * nobody needs protecting from being handed a magic sword.
  *
- * The six that were already automated (drop_to_zero_hp and friends) are in
- * here too. They were applying silently before this list existed, which was an
- * oversight rather than a decision: a card that drops a character to 0 HP with
- * no prompt is exactly what this gate is for.
+ * The already-automated destructive handlers are in here too. They were
+ * applying silently before this list existed, which was an oversight rather
+ * than a decision: a card that drops a character to 0 HP with no prompt is
+ * exactly what this gate is for.
+ *
+ * Euryale is the exception among them, and stays automatic. It applies one
+ * flat, visible, reversible penalty and takes nothing away — there is no
+ * judgement in it for a GM to make, so a prompt would only be a click.
  */
 export const REQUIRES_CONFIRMATION = new Set([
   'xp_loss', 'fall', 'petrify', 'soul_trap', 'destroy_magic_items', 'beast_form',
-  'drop_to_zero_hp', 'stat_debuff', 'save_penalty', 'exhaustion',
+  'drop_to_zero_hp', 'stat_debuff', 'exhaustion',
   'restrain_no_spellcast', 'wealth_wipe',
   'trap_extraplanar', 'feywild_transport', 'age_shift', 'moral_inversion', 'permanent_enemy',
   'fiend_deal',   // indifferent, but it still puts a creature on the map
