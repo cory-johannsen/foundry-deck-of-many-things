@@ -96,8 +96,8 @@
     "flavor": "The Beast card points to creatures of the animal kingdom and foul, cruel, or bad-tempered behavior in people.",
     "set": "expansion",
     "rules": {
-      "summary": "Transform into a random CR 5 or lower beast for 2d12 days.",
-      "full": "You are transformed into a random beast of challenge rating 5 or lower for 2d12 days. Your game statistics, including mental ability scores, are replaced by those of the beast. You retain your alignment and personality.",
+      "summary": "Transform into a random animal battle form for 2d12 days.",
+      "full": "You are transformed into a random animal for 2d12 days. Your statistics are replaced by those of the battle form. You retain your personality and your memories.",
       "draw_terminating": false
     },
     "mechanics": {
@@ -187,15 +187,15 @@
     "flavor": "A stone bridge arcs across a waterway. A shadowy figure lurks under the bridge, only its gleaming eyes clearly visible. This card reflects the effort required to overcome obstacles.",
     "set": "expansion",
     "rules": {
-      "summary": "Cast Time Stop 1d3 times.",
-      "full": "You can cast Time Stop (or its PF2e equivalent, Time Freeze) 1d3 times without expending a spell slot. In PF2e this becomes 1d3 free castings of Time Freeze; the GM tracks uses.",
+      "summary": "Cast Time Freeze 1d3 times without spending a spell slot.",
+      "full": "You can cast Time Freeze 1d3 times without expending a spell slot. The uses are tracked on your sheet and are spent as you use them.",
       "draw_terminating": false
     },
     "mechanics": {
       "kind": "cast_time_stop_n",
       "params": {
         "count_dice": "1d3",
-        "pf2e_spell": "time-freeze"
+        "spell": "time-freeze"
       }
     },
     "art": {
@@ -233,8 +233,8 @@
     "flavor": "A large campfire offers safety and comfort in the night. This card suggests a need for rest.",
     "set": "expansion",
     "rules": {
-      "summary": "Gain benefits of a long rest immediately.",
-      "full": "You immediately gain the benefits of a long rest — in PF2e, this restores you to full HP, resets focus points, and refreshes your daily preparations as if you had rested 8 hours.",
+      "summary": "Immediately gain the benefits of a full night's rest.",
+      "full": "You are immediately restored to full Hit Points, your focus points are refreshed, and your daily preparations are renewed as though you had rested for eight hours.",
       "draw_terminating": false
     },
     "mechanics": {
@@ -457,8 +457,8 @@
     "flavor": "An adventurer lies dead in a dungeon hallway, pierced by arrows. The Corpse card embodies decay and corruption.",
     "set": "expansion",
     "rules": {
-      "summary": "You drop to 0 HP, unconscious; death saves required; only Wish can resurrect.",
-      "full": "You immediately drop to 0 hit points and fall unconscious, requiring death saving throws (PF2e: enter Dying 1). If you die from this effect, only a Wish spell (or equivalent divine miracle) can bring you back.",
+      "summary": "You drop to 0 Hit Points and enter Dying 1; only a wish-tier miracle can restore you.",
+      "full": "You immediately drop to 0 Hit Points, fall unconscious and enter Dying 1. If you die from this effect, only a wish-tier divine miracle can bring you back.",
       "draw_terminating": false
     },
     "mechanics": {
@@ -595,8 +595,8 @@
     "flavor": "A large wooden door bars the path ahead. The Door card offers an opportunity to change.",
     "set": "expansion",
     "rules": {
-      "summary": "Cast Gate 1d4 times without material components.",
-      "full": "You can cast the Gate spell (or PF2e Gate) 1d4 times without expending a spell slot or material components. The GM tracks the number of uses.",
+      "summary": "Cast Gate 1d4 times without spending a spell slot or components.",
+      "full": "You can cast Gate 1d4 times without expending a spell slot or material components. The uses are tracked on your sheet.",
       "draw_terminating": false
     },
     "mechanics": {
@@ -781,17 +781,15 @@
     "flavor": "A bard plays a musical instrument. This card implies expertise, rightly or wrongly applied.",
     "set": "expansion",
     "rules": {
-      "summary": "Your Dexterity score increases by 2 (max 22).",
-      "full": "Your Dexterity score increases by 2, to a maximum of 22 (5e cap). In PF2e translation, this becomes a +1 to your Dexterity modifier, capped at the PF2e mod ceiling.",
+      "summary": "Your Dexterity modifier increases by 1, to a maximum of +7.",
+      "full": "Your Dexterity modifier increases by 1, to a maximum of +7. The boost is permanent.",
       "draw_terminating": false
     },
     "mechanics": {
       "kind": "stat_bump",
       "params": {
         "ability": "dex",
-        "delta_5e": 2,
-        "cap_5e": 22,
-        "delta_pf2e_mod": 1
+        "delta_mod": 1
       }
     },
     "art": {
@@ -1009,15 +1007,14 @@
     "flavor": "A person walks down a path, unwittingly dropping items along the way. The Fool card represents innocence.",
     "set": "classic",
     "rules": {
-      "summary": "Lose 1,000 XP (one level), discard this card, and draw two more (counts as one declared draw).",
-      "full": "You lose 1,000 XP, discard this card, and draw two more cards beyond your declared draws. PF2e translation: the original 10,000 XP is a 5e figure worth roughly one level at the tiers this deck is used at. PF2e levels every 1,000 XP regardless of level, so 1,000 XP is the equivalent — one level of drain, not ten. If that exceeds the XP you have earned toward your current level, it costs you a level.",
+      "summary": "Lose 1,000 XP, discard this card, and draw two more (counts as one declared draw).",
+      "full": "You lose 1,000 XP, discard this card, and draw two more cards beyond your declared draws. If the loss exceeds the experience you have earned toward your current level, it costs you a level.",
       "draw_terminating": false
     },
     "mechanics": {
       "kind": "xp_loss",
       "params": {
-        "xp_pf2e": 1000,
-        "xp_5e": 10000,
+        "xp": 1000,
         "additional_draws": 2,
         "counts_as_one": true
       }
@@ -1203,15 +1200,14 @@
     "flavor": "A person wearing jester's motley and holding a staff rests his foot on a skull. This card deals with the relationship between humor and misfortune.",
     "set": "classic",
     "rules": {
-      "summary": "Gain 1,000 XP (one full level) OR draw two additional cards beyond your declared draws.",
-      "full": "You gain 1,000 XP, or you can choose to draw two additional cards beyond your declared draws. PF2e translation: the original 10,000 XP is a 5e figure, worth roughly one level at the tiers where this deck is used. PF2e levels every 1,000 XP regardless of level, so 1,000 XP is the equivalent — one level, not ten.",
+      "summary": "Gain 1,000 XP, or draw two additional cards beyond your declared draws.",
+      "full": "You gain 1,000 XP — a full level's worth — or you can choose instead to draw two additional cards beyond your declared draws.",
       "draw_terminating": false
     },
     "mechanics": {
       "kind": "bonus_draws",
       "params": {
-        "xp_alternative_pf2e": 1000,
-        "xp_alternative_5e": 10000,
+        "xp_alternative": 1000,
         "additional_draws": 2,
         "choice": true
       }
@@ -1251,15 +1247,14 @@
     "flavor": "This large metal key is bizarrely complicated. The Key card represents the perfect solution to a problem or having the right tool for the job.",
     "set": "classic",
     "rules": {
-      "summary": "A rare or rarer magic weapon appears in your hands, and you are proficient with it.",
-      "full": "A rare or rarer magic weapon with which you are proficient suddenly appears in your hands. In PF2e translation, an uncommon+ magic weapon of appropriate level appears, and you gain the proficiency needed to wield it if you lacked it.",
+      "summary": "An uncommon or rarer magic weapon appears in your hands, and you can wield it.",
+      "full": "An uncommon or rarer magic weapon suddenly appears in your hands. You gain whatever proficiency you need to wield it, if you lacked it.",
       "draw_terminating": false
     },
     "mechanics": {
       "kind": "magic_weapon_grant",
       "params": {
-        "rarity_5e": "rare_plus",
-        "pf2e_rarity_min": "uncommon"
+        "rarity_min": "uncommon"
       }
     },
     "art": {
@@ -1297,14 +1292,13 @@
     "flavor": "A knight formed of folded cards offers a sword also made from cards. The Knight card signifies trust and loyalty.",
     "set": "classic",
     "rules": {
-      "summary": "A 4th-level fighter of the same race as you appears; loyal until death.",
-      "full": "You gain the service of a 4th-level fighter (PF2e: 4th-level warrior NPC) who appears in a space you choose within 30 feet. The fighter is of the same race as you and serves you loyally until death.",
+      "summary": "A 4th-level warrior appears and serves you loyally until death.",
+      "full": "You gain the service of a 4th-level warrior who appears in a space you choose within 30 feet. They share your ancestry and serve you loyally until death.",
       "draw_terminating": false
     },
     "mechanics": {
       "kind": "spawn_ally_npc",
       "params": {
-        "class_5e": "fighter",
         "level": 4,
         "same_race": true
       }
@@ -1346,16 +1340,14 @@
     "flavor": "An ornate dragonlance shines among more ordinary weapons on a rack. The Lance card warns that healing sometimes requires additional injury, as when infection must be cut away.",
     "set": "expansion",
     "rules": {
-      "summary": "All your ability scores increase by 1 (max 20).",
-      "full": "Each of your ability scores increases by 1, to a maximum of 20 (5e cap). In PF2e, each ability modifier gains a +1 boost, capped at PF2e's mod ceiling.",
+      "summary": "Every one of your ability modifiers increases by 1, to a maximum of +7.",
+      "full": "Each of your ability modifiers increases by 1, to a maximum of +7. The boost is permanent.",
       "draw_terminating": false
     },
     "mechanics": {
       "kind": "all_stats_bump",
       "params": {
-        "delta_5e": 1,
-        "cap_5e": 20,
-        "delta_pf2e_mod": 1
+        "delta_mod": 1
       }
     },
     "art": {
@@ -1395,17 +1387,15 @@
     "flavor": "A warlock holds a black crystalline staff. This card suggests both mental acuity and arcane magic.",
     "set": "expansion",
     "rules": {
-      "summary": "Your Intelligence score increases by 2 (max 22).",
-      "full": "Your Intelligence score increases by 2, to a maximum of 22 (5e cap). PF2e translation: +1 to Intelligence modifier, capped at the PF2e mod ceiling.",
+      "summary": "Your Intelligence modifier increases by 1, to a maximum of +7.",
+      "full": "Your Intelligence modifier increases by 1, to a maximum of +7. The boost is permanent.",
       "draw_terminating": false
     },
     "mechanics": {
       "kind": "stat_bump",
       "params": {
         "ability": "int",
-        "delta_5e": 2,
-        "cap_5e": 22,
-        "delta_pf2e_mod": 1
+        "delta_mod": 1
       }
     },
     "art": {
@@ -1489,15 +1479,15 @@
     "flavor": "Unfortunate souls are trapped in an elaborate and impossible maze of cards. Those who draw the Maze card are lost.",
     "set": "expansion",
     "rules": {
-      "summary": "You gain 1d3 levels of exhaustion.",
-      "full": "You gain 1d3 levels of exhaustion. In PF2e translation, this becomes Fatigued (for 1 level) plus Drained equal to the remaining levels (2 or 3).",
+      "summary": "You become Fatigued, and Drained 1 or 2 besides.",
+      "full": "Roll 1d3. You become Fatigued; on a 2 or 3 you are also Drained 1 or Drained 2 respectively. The conditions are removed by the usual means.",
       "draw_terminating": false
     },
     "mechanics": {
       "kind": "exhaustion",
       "params": {
         "levels_formula": "1d3",
-        "pf2e_map": {
+        "condition_map": {
           "1": [
             "fatigued"
           ],
@@ -1597,16 +1587,14 @@
     "flavor": "An owlbear sits in a sunny glade. This card represents something monstrous, including familiar things that turn strange and threatening.",
     "set": "expansion",
     "rules": {
-      "summary": "A Large or larger monstrosity of CR 10 or lower appears, hostile, and attacks immediately.",
-      "full": "A Large or larger monstrosity of challenge rating 10 or lower (GM's choice) appears in an unoccupied space within 60 feet of you. The creature is hostile and attacks you immediately.",
+      "summary": "A Large or larger creature of level 12 or lower appears, hostile, and attacks at once.",
+      "full": "A Large or larger creature of level 12 or lower appears in an unoccupied space within 60 feet of you. It is hostile and attacks you immediately.",
       "draw_terminating": false
     },
     "mechanics": {
       "kind": "spawn_hostile",
       "params": {
-        "size_min": "large",
-        "cr_max_5e": 10,
-        "type_5e": "monstrosity"
+        "size_min": "large"
       }
     },
     "art": {
@@ -1646,8 +1634,8 @@
     "flavor": "A crescent moon looms large in the autumn sky. The Moon card points to hidden potential.",
     "set": "classic",
     "rules": {
-      "summary": "Cast Wish 1d3 times.",
-      "full": "You gain the ability to cast the Wish spell (or an equivalent divine miracle in PF2e, where Wish does not exist) 1d3 times.",
+      "summary": "Call on a divine miracle 1d3 times.",
+      "full": "You gain the ability to call on a divine miracle 1d3 times. The GM adjudicates the scope of each; the uses are tracked on your sheet.",
       "draw_terminating": false
     },
     "mechanics": {
@@ -1832,15 +1820,14 @@
     "flavor": "A myconid emits a cloud of spores. The Plant card reflects growth and natural life.",
     "set": "expansion",
     "rules": {
-      "summary": "You can cast Speak with Plants without a slot (once per long rest).",
-      "full": "You can cast Speak with Plants (or the PF2e equivalent, Speak with Plants) once per long rest without expending a spell slot.",
+      "summary": "Cast Speak with Plants once per day without spending a spell slot.",
+      "full": "You can cast Speak with Plants once per day without expending a spell slot.",
       "draw_terminating": false
     },
     "mechanics": {
       "kind": "spellcast_slotless",
       "params": {
-        "spell_5e": "speak_with_plants",
-        "pf2e_spell": "speak-with-plants",
+        "spell": "speak-with-plants",
         "per_long_rest": 1
       }
     },
@@ -1880,17 +1867,15 @@
     "flavor": "A cleric holds a heavy mace. The Priest card represents wisdom, insight, closeness to the divine, and divine magic.",
     "set": "expansion",
     "rules": {
-      "summary": "Your Wisdom score increases by 2 (max 22).",
-      "full": "Your Wisdom score increases by 2, to a maximum of 22 (5e cap). PF2e translation: +1 to Wisdom modifier, capped at the PF2e mod ceiling.",
+      "summary": "Your Wisdom modifier increases by 1, to a maximum of +7.",
+      "full": "Your Wisdom modifier increases by 1, to a maximum of +7. The boost is permanent.",
       "draw_terminating": false
     },
     "mechanics": {
       "kind": "stat_bump",
       "params": {
         "ability": "wis",
-        "delta_5e": 2,
-        "cap_5e": 22,
-        "delta_pf2e_mod": 1
+        "delta_mod": 1
       }
     },
     "art": {
@@ -1979,8 +1964,7 @@
       "kind": "stat_debuff",
       "params": {
         "ability": "int",
-        "delta_5e_formula": "-(1d4+1)",
-        "min_5e": 1,
+        "delta_formula": "-(1d4+1)",
         "additional_draws": 1
       }
     },
@@ -2019,15 +2003,14 @@
     "flavor": "An emerald ring glows within a decorative jewelry box. The Ring card suggests both a promise and the honor involved in keeping it.",
     "set": "expansion",
     "rules": {
-      "summary": "A rare or rarer magic ring appears and auto-attunes if you have slots available.",
-      "full": "A rare or rarer magic ring appears on your finger. If you have an available attunement slot (5e) or ring-slot (PF2e), it attunes to you automatically.",
+      "summary": "An uncommon or rarer magic ring appears on your finger and is invested automatically.",
+      "full": "An uncommon or rarer magic ring appears on your finger. It is invested to you automatically, if you have an investiture available.",
       "draw_terminating": false
     },
     "mechanics": {
       "kind": "ring_grant",
       "params": {
-        "rarity_5e": "rare_plus",
-        "pf2e_rarity_min": "uncommon",
+        "rarity_min": "uncommon",
         "auto_attune": true
       }
     },
@@ -2067,7 +2050,7 @@
     "set": "classic",
     "rules": {
       "summary": "A random NPC known to you becomes a hostile enemy; only Wish or divine intervention ends it.",
-      "full": "A nonplayer character of the GM's choice becomes hostile toward you. The identity of your new enemy is not known until they or someone else reveals it. Nothing less than a Wish spell (or divine intervention) can end their hostility.",
+      "full": "A non-player character of the GM's choice becomes hostile toward you. The identity of your new enemy is not known until they or someone else reveals it. Nothing short of a wish-tier divine miracle can end their hostility.",
       "draw_terminating": false
     },
     "mechanics": {
@@ -2206,16 +2189,14 @@
     "flavor": "A circular shield is close at hand in a military barrack. The Shield card is a reminder of the need for protection.",
     "set": "expansion",
     "rules": {
-      "summary": "A rare or rarer magic armor appears; if you lack armor proficiency, your unarmored AC becomes 12 + DEX.",
-      "full": "A rare or rarer suit of magic armor appears on your body. If you are not proficient with the armor, your unarmored AC becomes 12 + your Dexterity modifier while the armor is present. PF2e translation grants an uncommon+ armor of appropriate level and applies a similar unarmored fallback.",
+      "summary": "An uncommon or rarer suit of magic armor appears on your body.",
+      "full": "An uncommon or rarer suit of magic armor appears on your body. If you lack the proficiency to wear it, you gain a +2 item bonus to AC from it regardless while it remains.",
       "draw_terminating": false
     },
     "mechanics": {
       "kind": "armor_grant",
       "params": {
-        "rarity_5e": "rare_plus",
-        "pf2e_rarity_min": "uncommon",
-        "unarmored_fallback_5e": "12+dex"
+        "rarity_min": "uncommon"
       }
     },
     "art": {
@@ -2253,8 +2234,8 @@
     "flavor": "A three-masted ship with a couatl figurehead sails across the open sea. The Ship card indicates a long journey, not necessarily by sea.",
     "set": "expansion",
     "rules": {
-      "summary": "Gain proficiency in three skills (GM chooses).",
-      "full": "You gain proficiency in three skills chosen by the GM. In PF2e translation, you become Trained in three skills of the GM's choice (or advanced one step if already Trained).",
+      "summary": "Become Trained in three skills of the GM's choice, or advance one step if already Trained.",
+      "full": "You become Trained in three skills chosen by the GM, or advance one proficiency step in them if you are already Trained.",
       "draw_terminating": false
     },
     "mechanics": {
@@ -2344,15 +2325,14 @@
     "flavor": "An elegant black staff leans against a wall, waiting for its owner to return. The Staff card represents support or assistance.",
     "set": "expansion",
     "rules": {
-      "summary": "A rare or rarer magic rod, staff, or wand appears.",
-      "full": "A rare or rarer magic rod, staff, or wand (GM's choice) appears in your hands. PF2e translation grants an uncommon+ magical implement (staff/wand/rod) of appropriate level.",
+      "summary": "An uncommon or rarer magic staff, wand, or rod appears in your hands.",
+      "full": "An uncommon or rarer magical implement — a staff, wand, or rod, at the GM's choice — appears in your hands.",
       "draw_terminating": false
     },
     "mechanics": {
       "kind": "rod_or_staff_grant",
       "params": {
-        "rarity_5e": "rare_plus",
-        "pf2e_rarity_min": "uncommon"
+        "rarity_min": "uncommon"
       }
     },
     "art": {
@@ -2399,8 +2379,7 @@
     "mechanics": {
       "kind": "wondrous_grant",
       "params": {
-        "rarity_5e": "rare_plus",
-        "pf2e_rarity_min": "uncommon",
+        "rarity_min": "uncommon",
         "alternative_reduce_draws": 2,
         "choice": true
       }
@@ -2440,17 +2419,15 @@
     "flavor": "A brilliant star shines in the spring sky at twilight. The Star card represents inherent ability and training working in concert—nature allied with nurture.",
     "set": "classic",
     "rules": {
-      "summary": "+2 to one ability score of your choice (max 24).",
-      "full": "Increase one of your ability scores by 2, to a maximum of 24 (5e cap). PF2e translation: +1 to a chosen ability modifier, capped at the PF2e mod ceiling.",
+      "summary": "Increase one ability modifier of your choice by 1, to a maximum of +7.",
+      "full": "Increase one ability modifier of your choice by 1, to a maximum of +7. You choose which ability when the card is applied.",
       "draw_terminating": false
     },
     "mechanics": {
       "kind": "stat_bump",
       "params": {
         "ability": "any",
-        "delta_5e": 2,
-        "cap_5e": 24,
-        "delta_pf2e_mod": 1
+        "delta_mod": 1
       }
     },
     "art": {
@@ -2473,7 +2450,7 @@
       },
       "treasure": {
         "upright": "An art object that reflects the skill of its creator, or a magic item that grants proficiency.",
-        "reversed": "Unrefined ore or uncut gems, or a magic item that improves an ability score."
+        "reversed": "Unrefined ore or uncut gems, or a magic item that raises an attribute modifier."
       },
       "situation": {
         "upright": "A situation that requires or rewards training and practice.",
@@ -2495,11 +2472,7 @@
     "mechanics": {
       "kind": "petrify",
       "params": {
-        "cure_options_5e": [
-          "greater_restoration",
-          "wish"
-        ],
-        "cure_options_pf2e": [
+        "cure_options": [
           "remove-petrification",
           "wish-tier_ritual"
         ]
@@ -2543,17 +2516,15 @@
     "set": "classic",
     "rules": {
       "summary": "Gain 2,000 XP (two levels); a random uncommon+ wondrous item appears.",
-      "full": "You gain 2,000 XP, and a random wondrous item of uncommon rarity or greater appears in your possession. PF2e translation: the original 50,000 XP is a 5e figure worth roughly two levels at the tiers this deck is used at. PF2e levels every 1,000 XP regardless of level, so 2,000 XP is the equivalent.",
+      "full": "You gain 2,000 XP, and a random wondrous item of uncommon rarity or greater appears in your possession.",
       "draw_terminating": false
     },
     "mechanics": {
       "kind": "xp_gain",
       "params": {
-        "xp_pf2e": 2000,
-        "xp_5e": 50000,
+        "xp": 2000,
         "wondrous_item": true,
-        "rarity_5e": "rare_plus",
-        "pf2e_rarity_min": "uncommon"
+        "rarity_min": "uncommon"
       }
     },
     "art": {
@@ -2637,17 +2608,15 @@
     "flavor": "An adventuring party eats and laughs in a busy tavern. The Tavern card points to the pleasure of spending time with friends.",
     "set": "expansion",
     "rules": {
-      "summary": "Your Charisma score increases by 2 (max 22).",
-      "full": "Your Charisma score increases by 2, to a maximum of 22 (5e cap). PF2e translation: +1 to Charisma modifier, capped at the PF2e mod ceiling.",
+      "summary": "Your Charisma modifier increases by 1, to a maximum of +7.",
+      "full": "Your Charisma modifier increases by 1, to a maximum of +7. The boost is permanent.",
       "draw_terminating": false
     },
     "mechanics": {
       "kind": "stat_bump",
       "params": {
         "ability": "cha",
-        "delta_5e": 2,
-        "cap_5e": 22,
-        "delta_pf2e_mod": 1
+        "delta_mod": 1
       }
     },
     "art": {
@@ -2734,15 +2703,14 @@
     "flavor": "An ostentatious throne stands on a dais, with a crown on the seat and a ceremonial sword leaning against one armrest. This card represents the authority of worldly rulers.",
     "set": "classic",
     "rules": {
-      "summary": "Gain Persuasion proficiency with doubled bonus; rightful ownership of a monster-occupied keep.",
-      "full": "You gain proficiency in the Persuasion skill (PF2e: Diplomacy), and your proficiency bonus is doubled on checks made with it. You also become the rightful owner of a small keep in a distant land; however, the keep is currently occupied by monsters that you must clear out before you can claim it.",
+      "summary": "Advance in Diplomacy, and gain the deed to a monster-held keep.",
+      "full": "You advance one proficiency step in Diplomacy, to Expert at the least. You also become the rightful owner of a small keep in a distant land — though it is currently held by monsters you must clear out before you can claim it.",
       "draw_terminating": false
     },
     "mechanics": {
       "kind": "throne_persuasion",
       "params": {
-        "skill_5e": "persuasion",
-        "pf2e_skill": "diplomacy",
+        "skill": "diplomacy",
         "prof_doubled": true,
         "keep": true
       }
@@ -2782,8 +2750,8 @@
     "flavor": "A burial chamber holds a plain stone casket. The Tomb card suggests buried secrets and things long forgotten.",
     "set": "expansion",
     "rules": {
-      "summary": "Within 1 year, cast True Resurrection once without slot or components.",
-      "full": "At any time within the next year, you can cast True Resurrection (PF2e equivalent: Resurrect at high heightened level) once, without expending a spell slot or material components. After that use, the card's magic is expended.",
+      "summary": "Within a year, cast Resurrect once without spending a spell slot or components.",
+      "full": "At any time within the next year you can cast Resurrect, heightened as far as your level allows, once without expending a spell slot or material components. After that use the card's magic is spent.",
       "draw_terminating": false
     },
     "mechanics": {
@@ -2792,7 +2760,7 @@
         "count": 1,
         "form": "true_resurrection",
         "validity_days": 365,
-        "pf2e_spell": "resurrect"
+        "spell": "resurrect"
       }
     },
     "art": {
@@ -2880,7 +2848,6 @@
     "mechanics": {
       "kind": "unarmored_defense",
       "params": {
-        "ac_formula_5e": "15+dex",
         "vulnerability": "fire",
         "undo_only_wish": true
       }
@@ -2920,8 +2887,8 @@
     "flavor": "A lich beckons souls of the dead. This card can point to anything that refuses to die, from old grudges and unresolved issues to Undead creatures.",
     "set": "expansion",
     "rules": {
-      "summary": "A revenant blames you and hunts you for 1 year (or until your death, or a Wish).",
-      "full": "A revenant (PF2e: revenant undead) rises with the singular purpose of destroying you. It hunts you for one year or until you die. A Wish spell ends the pursuit.",
+      "summary": "A revenant hunts you for a year, until your death, or until a miracle ends it.",
+      "full": "An undead revenant rises with the singular purpose of destroying you. It hunts you for one year or until you die. A wish-tier miracle ends the pursuit.",
       "draw_terminating": false
     },
     "mechanics": {
@@ -2966,7 +2933,7 @@
     "set": "classic",
     "rules": {
       "summary": "Your soul is trapped in an object; your body is incapacitated; Wish reveals the location; you draw no more.",
-      "full": "Your soul is drawn from your body and imprisoned in an object at a distant, secret location. Your body is incapacitated. A Wish spell can reveal the object's location; recovering your soul requires physical retrieval. You draw no more cards.",
+      "full": "Your soul is drawn from your body and imprisoned in an object at a distant, secret location. Your body is left incapacitated. A wish-tier divine miracle can reveal where the object lies; recovering your soul still requires going to get it. You draw no more cards.",
       "draw_terminating": true
     },
     "mechanics": {
@@ -3011,17 +2978,15 @@
     "flavor": "A barbarian holds a greataxe. The Warrior card embodies physical strength and fighting acumen.",
     "set": "expansion",
     "rules": {
-      "summary": "Your Strength score increases by 2 (max 22).",
-      "full": "Your Strength score increases by 2, to a maximum of 22 (5e cap). PF2e translation: +1 to Strength modifier, capped at the PF2e mod ceiling.",
+      "summary": "Your Strength modifier increases by 1, to a maximum of +7.",
+      "full": "Your Strength modifier increases by 1, to a maximum of +7. The boost is permanent.",
       "draw_terminating": false
     },
     "mechanics": {
       "kind": "stat_bump",
       "params": {
         "ability": "str",
-        "delta_5e": 2,
-        "cap_5e": 22,
-        "delta_pf2e_mod": 1
+        "delta_mod": 1
       }
     },
     "art": {
@@ -3060,8 +3025,8 @@
     "flavor": "A stone well stands in a peaceful meadow, surrounded by wildflowers. The Well card speaks of drawing resources from familiar places.",
     "set": "expansion",
     "rules": {
-      "summary": "Learn three cantrips of your choice from any spell list.",
-      "full": "You learn three cantrips of your choice from any spell list. PF2e translation: you learn three cantrips of your choice from any tradition; the GM adjudicates casting statistics.",
+      "summary": "Learn three cantrips of your choice from any tradition.",
+      "full": "You learn three cantrips of your choice from any magical tradition. The GM adjudicates your casting statistics for them.",
       "draw_terminating": false
     },
     "mechanics": {

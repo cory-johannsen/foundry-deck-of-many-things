@@ -44,7 +44,7 @@ describe('planCardEffect — decides without writing', () => {
 
   it('plans nothing for a card that needs a GM decision first', async () => {
     const plan = await planCardEffect({
-      card: cardOf('stat_bump', { ability: 'any', delta_pf2e_mod: 1 }), actor: actorOf({})
+      card: cardOf('stat_bump', { ability: 'any', delta_mod: 1 }), actor: actorOf({})
     });
     expect(plan.result.mode).toBe('gm');
     expect(plan.calls).toHaveLength(0);
@@ -80,7 +80,7 @@ describe('replayPlan — the only thing that writes', () => {
     const rng = () => { const v = rolls[Math.min(i, rolls.length - 1)] / 6; i += 1; return v - 1e-9; };
     const actor = actorOf({ abilities: { str: { mod: 3 } } });
     const plan = await planCardEffect({
-      card: cardOf('stat_debuff', { ability: 'str', delta_5e_formula: '1d6' }), actor, rng
+      card: cardOf('stat_debuff', { ability: 'str', delta_formula: '1d6' }), actor, rng
     });
     const shown = plan.calls[0].args[1]['system.abilities.str.mod'];
     const api = spyApi();

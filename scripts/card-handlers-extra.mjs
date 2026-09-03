@@ -61,7 +61,7 @@ const xpShape = (actor) => ({
  * character properly.
  */
 export async function applyXpGain({ actor, params, api, card }) {
-  const gain = params.xp_pf2e ?? params.xp ?? 0;
+  const gain = params.xp ?? 0;
   const { xp, level, per } = xpShape(actor);
   const total = xp + gain;
   const pending = Math.floor(total / per);
@@ -79,7 +79,7 @@ export async function applyXpGain({ actor, params, api, card }) {
 
 /** Losing XP drains levels downward, and cannot take a character below level 1. */
 export async function applyXpLoss({ actor, params, api, card }) {
-  const loss = params.xp_pf2e ?? params.xp ?? 0;
+  const loss = params.xp ?? 0;
   const { xp, level, per } = xpShape(actor);
   let remaining = xp - loss;
   let newLevel = level;
@@ -159,9 +159,8 @@ export async function applyPetrify({ api, actor, card }) {
 }
 
 /**
- * PF2e fall damage is half the distance fallen in bludgeoning, capped at 75,
- * and lands you prone. The card's 5e distance formula is kept as the source of
- * the distance, and only the damage conversion is PF2e's.
+ * Fall damage is half the distance fallen, as bludgeoning, capped at 75, and
+ * lands you prone. The card supplies the distance; the rest is the system's.
  */
 export async function applyFall({ actor, params, api, card, rng }) {
   const feet = rollFormula(params.distance_ft_formula ?? '(3d6)*10', rng);
@@ -231,9 +230,9 @@ export async function applyGrantTelepathy({ actor, params, api, card }) {
 }
 
 /**
- * The 5e card sets unarmoured AC to 15+dex and adds fire vulnerability. PF2e
- * has no equivalent AC-setting, so this grants a +2 item-equivalent bonus while
- * unarmoured alongside the vulnerability, and says so plainly in the log.
+ * Bark-like skin: a +2 item bonus to AC while unarmoured, paid for with a
+ * weakness to fire. There is no way to *set* an unarmoured AC outright, so the
+ * bonus is the closest equivalent, and the log says exactly what was applied.
  */
 export async function applyUnarmoredDefense({ actor, params, api, card }) {
   await api.createEffect(actor.id, {
@@ -284,7 +283,7 @@ const NAME_HINT = {
 export async function applyItemGrant({ actor, params, api, card, rng }) {
   const kind = card.mechanics.kind;
   const types = ITEM_TYPES[kind] ?? ['equipment'];
-  const minRarity = params.pf2e_rarity_min ?? 'uncommon';
+  const minRarity = params.rarity_min ?? 'uncommon';
   let pool = await api.findItems({ types, minRarity });
 
   const hint = NAME_HINT[kind];
@@ -424,14 +423,14 @@ export async function applySpawn({ actor, api, card, rng }) {
 export async function applyBonusDraws({ actor, params, api, card }) {
   if (!params.chosen) {
     return needsChoice(card, 'chosen', [
-      { value: 'xp', label: `Gain ${params.xp_alternative_pf2e ?? 1000} XP` },
+      { value: 'xp', label: `Gain ${params.xp_alternative ?? 1000} XP` },
       { value: 'draws', label: `Draw ${params.additional_draws ?? 2} additional cards` }
     ], `${card.name}: take the experience, or the extra draws?`);
   }
   if (params.chosen === 'xp') {
     return applyXpGain({
       actor, api, card,
-      params: { xp_pf2e: params.xp_alternative_pf2e ?? 1000 }
+      params: { xp: params.xp_alternative ?? 1000 }
     });
   }
   const extra = params.additional_draws ?? 2;
