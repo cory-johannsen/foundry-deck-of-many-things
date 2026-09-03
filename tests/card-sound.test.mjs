@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import {
-  SOUND_GROUPS, GROUP_BY_KIND, FALLBACK_GROUP, groupForCard, resolveCardSound
+  SOUND_GROUPS, GROUP_BY_KIND, FALLBACK_GROUP, groupForCard, resolveCardSound, voiceVariant
 } from '../scripts/card-sound.mjs';
 
 const cards = JSON.parse(readFileSync(new URL('../data/cards.json', import.meta.url)));
@@ -76,6 +76,55 @@ describe('the files actually exist', () => {
     for (const id of ['beast', 'moon', 'sage', 'fiend', 'fates']) {
       const card = cards.find((c) => c.id === id);
       expect(existsSync(onDisk(resolveCardSound(card))), id).toBe(true);
+    }
+  });
+});
+
+describe('a card whose sound depends on who drew it', () => {
+  const withGender = (value) => ({ system: { details: { gender: { value } } } });
+  const corpse = cards.find((c) => c.id === 'corpse');
+
+  it('reads feminine pronouns as the female voice', () => {
+    // PF2e's gender field is free text — a pronouns box, not a lookup.
+    for (const v of ['she/her', 'She/Her', 'her', 'female', 'a woman']) {
+      expect(voiceVariant(withGender(v)), v).toBe('female');
+    }
+  });
+
+  it('does not mistake "he/him" for a feminine reading', () => {
+    // "he" is a substring of "she"; only a word match will do.
+    for (const v of ['he/him', 'He/Him', 'male']) {
+      expect(voiceVariant(withGender(v)), v).toBe('default');
+    }
+  });
+
+  it('falls to the default when it cannot tell', () => {
+    for (const v of ['', 'they/them', 'xe/xem', 'unspecified']) {
+      expect(voiceVariant(withGender(v)), v).toBe('default');
+    }
+    expect(voiceVariant(null)).toBe('default');
+    expect(voiceVariant({})).toBe('default');
+  });
+
+  it('picks the matching voice for Corpse', () => {
+    expect(resolveCardSound(corpse, withGender('she/her'))).toContain('corpse-female.ogg');
+    expect(resolveCardSound(corpse, withGender('he/him'))).toContain('corpse-male.ogg');
+  });
+
+  it('uses the default voice with no actor at all', () => {
+    expect(resolveCardSound(corpse)).toContain('corpse-male.ogg');
+    expect(resolveCardSound(corpse, null)).toContain('corpse-male.ogg');
+  });
+
+  it('leaves single-file cards untouched by the actor', () => {
+    const pit = cards.find((c) => c.id === 'pit');
+    expect(resolveCardSound(pit, withGender('she/her'))).toBe(resolveCardSound(pit));
+  });
+
+  it('has every variant file on disk', () => {
+    for (const [variant, file] of Object.entries(corpse.sound)) {
+      const path = new URL('../assets/sounds/' + file, import.meta.url);
+      expect(existsSync(path), `${variant}: ${file}`).toBe(true);
     }
   });
 });

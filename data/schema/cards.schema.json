@@ -209,9 +209,23 @@
           }
         },
         "sound": {
-          "type": "string",
-          "description": "Optional sound played when this card's effect is applied. A bare filename resolves under assets/sounds/; a path containing a separator is used as-is, relative to the module root. Omitted cards fall back to their effect group's sound.",
-          "pattern": "^[A-Za-z0-9_./-]+\\.(ogg|mp3|wav|webm|m4a|flac)$"
+          "description": "Sound played when this card's effect is applied. Either a filename, or a map of voice variants ('default' plus e.g. 'female') for a card whose sound depends on the character it landed on. A bare filename resolves under assets/sounds/. Omitted cards fall back to their effect group's sound.",
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_./-]+\\.(ogg|mp3|wav|webm|m4a|flac)$"
+            },
+            {
+              "type": "object",
+              "required": [
+                "default"
+              ],
+              "additionalProperties": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_./-]+\\.(ogg|mp3|wav|webm|m4a|flac)$"
+              }
+            }
+          ]
         }
       }
     },

@@ -124,17 +124,39 @@ export function groupForCard(card) {
 }
 
 /**
+ * Which recorded voice suits the character, for the cards that use one.
+ *
+ * PF2e keeps gender as free text — it is a pronouns field, holding "he/him",
+ * "She/Her", "they/them" or nothing at all — so this reads it rather than
+ * looking it up. Only a feminine reading picks the second voice; everything
+ * else, including blank, unrecognised and non-binary pronouns, falls to the
+ * default, which is what a card should do when it cannot tell.
+ */
+export function voiceVariant(actor) {
+  const raw = actor?.system?.details?.gender?.value ?? '';
+  return /\bshe\b|\bher\b|\bhers\b|female|woman|girl/i.test(String(raw))
+    ? 'female'
+    : 'default';
+}
+
+/**
  * The path to play for a card. A per-card `sound` wins; otherwise the group's
  * file. Paths already carrying a directory separator are taken as-is so a card
  * can point anywhere in the module.
+ *
+ * `sound` may also be an object of variants keyed by voice, for a card whose
+ * sound depends on who drew it. An unmatched variant falls back to `default`.
  */
-export function resolveCardSound(card) {
-  const own = card?.sound;
+export function resolveCardSound(card, actor = null) {
+  let own = card?.sound;
+  if (own && typeof own === 'object') {
+    own = own[voiceVariant(actor)] ?? own.default ?? Object.values(own)[0];
+  }
   if (own) return own.includes('/') ? own : `${SOUND_DIR}/${own}`;
   return `${SOUND_DIR}/${SOUND_GROUPS[groupForCard(card)]}`;
 }
 
 /** Play a card's sound. Called only once an effect has actually been applied. */
-export function playCardSound(card) {
-  playSound(resolveCardSound(card));
+export function playCardSound(card, actor = null) {
+  playSound(resolveCardSound(card, actor));
 }
