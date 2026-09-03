@@ -43,13 +43,27 @@ const run = (id, { actor = actorOf(), api = makeApi(), rng = () => 0.5, params =
 };
 
 describe('experience', () => {
-  it('rolls the level over when a grant crosses the threshold', async () => {
-    // Sun grants 2,000 XP: two levels, not 2,000 sitting on the sheet.
+  it('banks the XP and leaves levelling to the sheet', async () => {
+    // Sun grants 2,000. Setting level.value directly would skip the feats and
+    // boosts a level carries, leaving a level 7 character with a level 5 build.
     const { r, api } = await run('sun', { api: makeApi({ items: [] }) });
     const u = api.spy.updates[0];
-    expect(u['system.details.level.value']).toBe(7);
-    expect(u['system.details.xp.value']).toBe(200);
-    expect(r.log).toContain('level 5 → 7');
+    expect(u['system.details.xp.value']).toBe(2200);
+    expect(u['system.details.level.value']).toBeUndefined();
+    expect(r.log).toContain('2200/1000');
+  });
+
+  it('says how many level-ups are owed, since the bar alone is easy to misread', async () => {
+    const { r } = await run('sun', { api: makeApi({ items: [] }) });
+    expect(r.log).toContain('level up 2 times');
+  });
+
+  it('does not claim a level-up when the grant does not earn one', async () => {
+    const card = { ...BY_ID.get('sun'), mechanics: { kind: 'xp_gain', params: { xp_pf2e: 100 } } };
+    const r = await applyCardEffect({
+      card, actor: actorOf(), api: makeApi(), rng: () => 0.5, confirmGate: false
+    });
+    expect(r.log).not.toContain('level up');
   });
 
   it('drains a level when the loss exceeds progress', async () => {
@@ -68,10 +82,11 @@ describe('experience', () => {
     expect(u['system.details.xp.value']).toBe(0);
   });
 
-  it('caps a grant at level 20', async () => {
-    const actor = actorOf({ details: { xp: { value: 0, max: 1000 }, level: { value: 19 } } });
-    const { api } = await run('sun', { actor });
-    expect(api.spy.updates[0]['system.details.level.value']).toBe(20);
+  it('still banks XP at level 20 without promising a level-up', async () => {
+    const actor = actorOf({ details: { xp: { value: 0, max: 1000 }, level: { value: 20 } } });
+    const { r, api } = await run('sun', { actor });
+    expect(api.spy.updates[0]['system.details.xp.value']).toBe(2000);
+    expect(r.log).not.toContain('level up');
   });
 });
 
