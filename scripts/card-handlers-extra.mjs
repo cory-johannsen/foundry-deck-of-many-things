@@ -448,7 +448,7 @@ const SPAWN_SPECS = {
  * the level range" and answered Undead's revenant hunter with a giant mantis.
  * A card that cannot find its creature says so and leaves it to the GM.
  */
-export async function applySpawn({ actor, api, card, rng }) {
+export async function applySpawn({ actor, params, api, card, rng }) {
   const spec = SPAWN_SPECS[card.mechanics.kind];
   if (!spec) {
     return { mode: 'gm', log: `${card.name}: no spawn rule for this card.`, meta: { kind: 'gm_only' } };
@@ -456,15 +456,19 @@ export async function applySpawn({ actor, api, card, rng }) {
   const [minLevel, maxLevel] = spec.level;
   const traits = spec.traits;
   const exclude = [actor.id];
+  // Monstrosity says "Large or larger" and carried size_min in its params all
+  // along, with nothing reading it — so it answered with a small aberration.
+  const minSize = params?.size_min ?? spec.minSize ?? null;
 
   // In order of preference: a world NPC in band, any world NPC of the kind,
   // then the compendium on the same two terms.
+  // The level band is negotiable; the traits and the size are not.
   const attempts = [
-    () => api.findWorldActors({ types: ['npc'], traits, minLevel, maxLevel, excludeIds: exclude, withArtOnly: true }),
-    () => api.findWorldActors({ types: ['npc'], traits, excludeIds: exclude, withArtOnly: true }),
-    () => api.findWorldActors({ types: ['npc'], traits, excludeIds: exclude }),
-    () => api.findCreatures({ minLevel, maxLevel, traits }),
-    () => api.findCreatures({ traits })
+    () => api.findWorldActors({ types: ['npc'], traits, minLevel, maxLevel, minSize, excludeIds: exclude, withArtOnly: true }),
+    () => api.findWorldActors({ types: ['npc'], traits, minSize, excludeIds: exclude, withArtOnly: true }),
+    () => api.findWorldActors({ types: ['npc'], traits, minSize, excludeIds: exclude }),
+    () => api.findCreatures({ minLevel, maxLevel, traits, minSize }),
+    () => api.findCreatures({ traits, minSize })
   ];
 
   let pool = [];
@@ -474,8 +478,9 @@ export async function applySpawn({ actor, api, card, rng }) {
   if (!pool.length) {
     return {
       mode: 'gm',
-      log: `${card.name}: no ${traits.join(' or ')} creature in this world or the installed `
-        + `bestiaries — place one yourself.`,
+      log: `${card.name}: no ${minSize ? `${minSize} or larger ` : ''}`
+        + `${traits.join(' or ')} creature in this world or the installed bestiaries `
+        + `— place one yourself.`,
       meta: { kind: 'gm_only', traits }
     };
   }

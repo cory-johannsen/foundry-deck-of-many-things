@@ -611,3 +611,80 @@ describe('rune keys and fundamentals', () => {
     expect(isFundamentalRune({ usage: 'worncloak', slug: 'cloak' })).toBe(false);
   });
 });
+
+describe('Monstrosity respects the size its card demands', () => {
+  // It summoned a Soul Feeder: an aberration of level 10, and Small. The trait
+  // and level filters passed it because nothing looked at size.
+  const world = [
+    { id: 'sf', name: 'Soul Feeder', level: 10, size: 'sm', hasArt: true },
+    { id: 'ch', name: 'Chuul', level: 7, size: 'lg', hasArt: true },
+    { id: 'fr', name: 'Froghemoth', level: 12, size: 'huge', hasArt: true }
+  ];
+
+  const api = (pool) => {
+    const spawned = [];
+    return [{
+      ...makeApi(),
+      // A stub that honours minSize, as the real lookup now does.
+      findWorldActors: async ({ minSize = null } = {}) => {
+        const order = ['tiny', 'sm', 'med', 'lg', 'huge', 'grg'];
+        const want = { large: 'lg' }[minSize] ?? minSize;
+        return pool.filter((c) => !want || order.indexOf(c.size) >= order.indexOf(want));
+      },
+      findCreatures: async () => [],
+      spawnCreatures: async (e, o) => { spawned.push({ e, o }); }
+    }, spawned];
+  };
+
+  const draw = (a, rng) => applyCardEffect({
+    card: BY_ID.get('monstrosity'), actor: actorOf(), api: a, rng, confirmGate: false });
+
+  it('never summons something Small, whatever the roll', async () => {
+    const [a, spawned] = api(world);
+    for (const rng of [() => 0, () => 0.5, () => 0.999]) await draw(a, rng);
+    expect(spawned.map((s) => s.e[0].actorId)).not.toContain('sf');
+  });
+
+  it('summons only Large or larger', async () => {
+    const [a, spawned] = api(world);
+    for (const rng of [() => 0, () => 0.999]) await draw(a, rng);
+    expect(spawned.every((s) => ['ch', 'fr'].includes(s.e[0].actorId))).toBe(true);
+  });
+
+  it('gives up rather than shrinking the requirement', async () => {
+    // Only a Small candidate exists; the card asks the GM instead.
+    const [a, spawned] = api([world[0]]);
+    const r = await draw(a, () => 0.5);
+    expect(spawned).toHaveLength(0);
+    expect(r.mode).toBe('gm');
+    expect(r.log).toContain('large or larger');
+  });
+
+  it('leaves cards with no size requirement alone', async () => {
+    const [a, spawned] = api(world);
+    await applyCardEffect({ card: BY_ID.get('knight'), actor: actorOf(), api: a, rng: () => 0, confirmGate: false });
+    expect(spawned).toHaveLength(1);   // Small is fine for an ally
+  });
+});
+
+describe('sizeAtLeast', () => {
+  it('reads the word a card uses as the code PF2e stores', async () => {
+    const { sizeAtLeast } = await import('../scripts/foundry-api.mjs');
+    expect(sizeAtLeast('lg', 'large')).toBe(true);
+    expect(sizeAtLeast('sm', 'large')).toBe(false);
+    expect(sizeAtLeast('huge', 'large')).toBe(true);
+    expect(sizeAtLeast('grg', 'large')).toBe(true);
+    expect(sizeAtLeast('med', 'large')).toBe(false);
+  });
+
+  it('treats a missing size as medium', async () => {
+    const { sizeAtLeast } = await import('../scripts/foundry-api.mjs');
+    expect(sizeAtLeast(undefined, 'large')).toBe(false);
+    expect(sizeAtLeast(undefined, 'med')).toBe(true);
+  });
+
+  it('imposes nothing when no minimum is asked for', async () => {
+    const { sizeAtLeast } = await import('../scripts/foundry-api.mjs');
+    expect(sizeAtLeast('tiny', null)).toBe(true);
+  });
+});
