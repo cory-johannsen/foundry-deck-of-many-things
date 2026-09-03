@@ -52,5 +52,7 @@
   "DOMMT.GM.SelectActor.Label": "Actor",
   "DOMMT.GM.NoActorsInWorld": "There are no actors in this world to apply the card to.",
   "DOMMT.GM.Confirm.Prompt": "Apply this card to {actor}?",
-  "DOMMT.GM.Cancel": "Cancel"
+  "DOMMT.GM.Cancel": "Cancel",
+  "DOMMT.Choice.Waiting": "Waiting for {user} to choose for {card}…",
+  "DOMMT.Choice.NoAnswer": "{user} did not answer in time — the choice falls to you."
 }

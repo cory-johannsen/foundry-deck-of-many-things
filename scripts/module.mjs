@@ -4,6 +4,7 @@ import { loadCards } from './data-loader.mjs';
 import { drawFromPlay, freshPlayDeckState, makeCardsById } from './deck.mjs';
 import { applyCardEffect } from './card-effects.mjs';
 import { playCardSound } from './card-sound.mjs';
+import { registerChoiceSocket } from './player-choice.mjs';
 import { makeFoundryApi } from './foundry-api.mjs';
 import { resolveDrawActor } from './draw-target.mjs';
 import { resolvePendingDraw, markMessageResolved } from './gm-resolution.mjs';
@@ -146,6 +147,8 @@ function bindPendingDrawButton(message, html) {
     }
   });
 }
+
+Hooks.once('ready', registerChoiceSocket);
 
 Hooks.on('renderChatMessageHTML', bindPendingDrawButton);
 

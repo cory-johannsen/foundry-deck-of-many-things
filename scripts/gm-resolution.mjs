@@ -3,6 +3,9 @@ import { makeCardsById } from './deck.mjs';
 import { planCardEffect, replayPlan } from './effect-plan.mjs';
 import { makeFoundryApi } from './foundry-api.mjs';
 import { playCardSound } from './card-sound.mjs';
+import { promptChooseAbility, promptChooseOption } from './choice-prompts.mjs';
+import { askPlayer } from './player-choice.mjs';
+import { whoDecides } from './choice-routing.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 
@@ -21,10 +24,6 @@ const MODULE_ID = 'deck-of-many-more-things';
  * GM happens to be offline.
  */
 
-const ABILITIES = [
-  ['str', 'Strength'], ['dex', 'Dexterity'], ['con', 'Constitution'],
-  ['int', 'Intelligence'], ['wis', 'Wisdom'], ['cha', 'Charisma']
-];
 
 /** Which gm-mode results carry a decision this module can actually act on. */
 export function pendingKind(meta) {
@@ -65,64 +64,6 @@ async function promptSelectActor(card) {
         label: game.i18n.localize('DOMMT.GM.Apply'),
         default: true,
         callback: (_e, _b, dialog) => dialog.element.querySelector('[name="actorId"]').value
-      },
-      { action: 'cancel', label: game.i18n.localize('DOMMT.GM.Cancel') }
-    ],
-    rejectClose: false
-  });
-}
-
-async function promptChooseAbility(card, delta) {
-  const { DialogV2 } = foundry.applications.api;
-  const options = ABILITIES
-    .map(([k, label]) => `<option value="${k}">${label}</option>`).join('');
-  return DialogV2.wait({
-    window: { title: card.name },
-    content: `
-      <form>
-        <p>${game.i18n.format('DOMMT.GM.ChooseAbility.Prompt', { delta })}</p>
-        <div class="form-group">
-          <label>${game.i18n.localize('DOMMT.GM.ChooseAbility.Label')}</label>
-          <select name="ability" style="width:100%;">${options}</select>
-        </div>
-      </form>`,
-    buttons: [
-      {
-        action: 'apply',
-        label: game.i18n.localize('DOMMT.GM.Apply'),
-        default: true,
-        callback: (_e, _b, dialog) => dialog.element.querySelector('[name="ability"]').value
-      },
-      { action: 'cancel', label: game.i18n.localize('DOMMT.GM.Cancel') }
-    ],
-    rejectClose: false
-  });
-}
-
-/**
- * A card that says "choose one" — which element, which hoard, XP or draws.
- * The options come from the handler, so a new choice needs no new dialog.
- */
-async function promptChooseOption(card, prompt, options) {
-  const { DialogV2 } = foundry.applications.api;
-  const esc = (s) => foundry.utils.escapeHTML?.(String(s)) ?? String(s);
-  const html = options
-    .map((o) => `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join('');
-  return DialogV2.wait({
-    window: { title: card.name },
-    content: `
-      <form>
-        <p>${esc(prompt)}</p>
-        <div class="form-group">
-          <select name="choice" style="width:100%;">${html}</select>
-        </div>
-      </form>`,
-    buttons: [
-      {
-        action: 'pick',
-        label: game.i18n.localize('DOMMT.GM.Apply'),
-        default: true,
-        callback: (_e, _b, dialog) => dialog.element.querySelector('[name="choice"]').value
       },
       { action: 'cancel', label: game.i18n.localize('DOMMT.GM.Cancel') }
     ],
@@ -216,16 +157,30 @@ export async function resolvePendingDraw(message) {
     if (kind === 'acknowledge') break;
 
     const concrete = foundry.utils.deepClone(card);
-    if (kind === 'choose_ability') {
-      const choice = await promptChooseAbility(card, plan.result.meta?.delta ?? 1);
-      if (!choice || choice === 'cancel') return null;
-      concrete.mechanics.params = { ...concrete.mechanics.params, ability: choice };
-    } else {
-      const meta = plan.result.meta;
-      const choice = await promptChooseOption(card, plan.result.log, meta.options ?? []);
-      if (!choice || choice === 'cancel') return null;
-      concrete.mechanics.params = { ...concrete.mechanics.params, [meta.paramKey]: choice };
+    const meta = plan.result.meta;
+    const paramKey = kind === 'choose_ability' ? 'ability' : meta.paramKey;
+
+    // The question belongs to whoever's character this is. It only comes back
+    // to the GM for an actor no player owns, or an owner who is not connected.
+    const { user } = whoDecides({ actor, users: Array.from(game.users) });
+    let choice = user
+      ? await askPlayer({
+          user, card, kind,
+          prompt: plan.result.log,
+          options: meta.options ?? [],
+          delta: meta.delta ?? 1
+        })
+      : null;
+
+    // No player, or they let it lapse: the GM answers, as before.
+    if (!choice) {
+      choice = kind === 'choose_ability'
+        ? await promptChooseAbility(card, meta.delta ?? 1)
+        : await promptChooseOption(card, plan.result.log, meta.options ?? []);
     }
+    if (!choice || choice === 'cancel') return null;
+
+    concrete.mechanics.params = { ...concrete.mechanics.params, [paramKey]: choice };
     plan = await planCardEffect({ card: concrete, actor, api });
   }
 
