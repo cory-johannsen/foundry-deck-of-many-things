@@ -64,7 +64,7 @@ describe('every charge-bearing card is traceable back to itself', () => {
         createEffect: async (_i, e) => { effects.push(e); },
         postChatCard: async () => {}, addCoins: async () => {},
         grantItems: async () => {}, removeItems: async () => {},
-        spawnCreatures: async () => {}, grantInnateSpells: async () => {},
+        spawnCreatures: async () => {}, spawnBuiltCreature: async () => {}, grantInnateSpells: async () => {},
         listLanguages: async () => [], getCoins: async () => ({}),
         listGear: async () => [], etchRune: async () => {},
         removeCoins: async () => {},

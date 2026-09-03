@@ -1,0 +1,156 @@
+const MODULE_ID = 'deck-of-many-more-things';
+
+/**
+ * A warrior built to match the character who drew the card.
+ *
+ * Knight used to take an actor out of the world, which meant conscripting a
+ * creature that already had a place and a purpose in the campaign, and it
+ * summoned a fixed 4th-level fighter regardless of who drew it. Neither is
+ * right: the summons should be a stranger, and it should match the character
+ * it serves.
+ *
+ * The statblock is built rather than picked because it cannot be picked. The
+ * generic NPC compendium holds only 25 martial creatures, with nothing above
+ * level 13 and nothing at all at 20 — precisely the levels most likely to be
+ * drawing.
+ *
+ * The benchmarks below were derived from roughly 160 of the system's own
+ * humanoid NPCs, level by level, rather than transcribed from the building
+ * tables. At level 7 they give AC 25 and +18, which is what the system's own
+ * Knight has.
+ */
+
+/** Median AC, HP, attack bonus, Perception and Fortitude by level. */
+export const BENCHMARK = {
+  1:  { ac: 16, hp: 21,  atk: 9,  per: 6,  fort: 7 },
+  2:  { ac: 17, hp: 38,  atk: 11, per: 9,  fort: 9 },
+  3:  { ac: 20, hp: 45,  atk: 10, per: 9,  fort: 8 },
+  4:  { ac: 21, hp: 60,  atk: 13, per: 11, fort: 10 },
+  5:  { ac: 22, hp: 75,  atk: 13, per: 13, fort: 11 },
+  6:  { ac: 24, hp: 95,  atk: 17, per: 15, fort: 13 },
+  7:  { ac: 25, hp: 120, atk: 18, per: 16, fort: 17 },
+  8:  { ac: 27, hp: 135, atk: 20, per: 16, fort: 17 },
+  9:  { ac: 28, hp: 155, atk: 20, per: 18, fort: 18 },
+  10: { ac: 30, hp: 180, atk: 22, per: 20, fort: 20 },
+  11: { ac: 31, hp: 195, atk: 24, per: 21, fort: 18 },
+  12: { ac: 32, hp: 230, atk: 25, per: 23, fort: 23 },
+  13: { ac: 34, hp: 240, atk: 27, per: 25, fort: 23 },
+  14: { ac: 36, hp: 255, atk: 28, per: 25, fort: 26 },
+  15: { ac: 36, hp: 280, atk: 30, per: 29, fort: 27 },
+  16: { ac: 39, hp: 300, atk: 32, per: 29, fort: 30 },
+  17: { ac: 41, hp: 330, atk: 34, per: 31, fort: 30 },
+  18: { ac: 42, hp: 350, atk: 35, per: 33, fort: 30 },
+  19: { ac: 43, hp: 355, atk: 36, per: 35, fort: 33 },
+  20: { ac: 45, hp: 375, atk: 38, per: 36, fort: 36 }
+};
+
+export const MIN_LEVEL = 1;
+export const MAX_LEVEL = 20;
+
+/**
+ * Damage is the one figure not taken from the data. The medians jumped about —
+ * 1d4 at level 9, 7d8 at 17 — because creatures carry different weapons, so
+ * the dice say more about the weapon than the level. Fixing the weapon and
+ * scaling the flat bonus is how PF2e builds these, and at level 7 it lands on
+ * 1d8+8 against the system Knight's 1d8+10.
+ */
+export const damageBonus = (level) => Math.round(level * 0.95 + 1.5);
+
+export function benchmarkFor(level) {
+  const clamped = Math.min(Math.max(Math.round(level ?? 1), MIN_LEVEL), MAX_LEVEL);
+  return { level: clamped, ...BENCHMARK[clamped] };
+}
+
+/**
+ * The ancestry the warrior shares with whoever drew the card.
+ *
+ * The card says they share your ancestry. A character whose sheet does not say
+ * gets a human knight in plate, which is the picture the card is drawing.
+ */
+export function ancestryOf(actor) {
+  const name = actor?.system?.details?.ancestry?.name
+    ?? actor?.itemTypes?.ancestry?.[0]?.name
+    ?? null;
+  const trait = actor?.system?.details?.ancestry?.trait
+    ?? (name ? name.toLowerCase() : null);
+  return name
+    ? { name, trait, matched: true }
+    : { name: 'Human', trait: 'human', matched: false };
+}
+
+/**
+ * Build the NPC. Returns document data ready to create, with no art — the
+ * caller supplies that, since the compendium has none to offer either.
+ */
+export function buildWarrior({ actor, level, ancestry = null, img = null } = {}) {
+  const b = benchmarkFor(level ?? actor?.system?.details?.level?.value ?? 1);
+  const anc = ancestry ?? ancestryOf(actor);
+  const dmg = damageBonus(b.level);
+  const name = `${anc.name} Warrior`;
+
+  // A local id generator: this module builds plain data and is tested without
+  // a live Foundry, so it cannot reach for foundry.utils.
+  let seq = 0;
+  const rollId = () => `dmg${(seq += 1)}${b.level}`;
+
+  const strike = (label, die, type, bonusOffset = 0) => ({
+    name: label,
+    type: 'melee',
+    img: 'systems/pf2e/icons/default-icons/melee.svg',
+    system: {
+      bonus: { value: b.atk + bonusOffset },
+      damageRolls: { [rollId()]: { damage: `${die}+${dmg}`, damageType: type } },
+      traits: { value: [], otherTags: [] },
+      attackEffects: { value: [] },
+      description: { value: '' },
+      action: 'strike',
+      subjectToMAP: true
+    }
+  });
+
+  return {
+    name,
+    type: 'npc',
+    img: img ?? undefined,
+    prototypeToken: {
+      name,
+      disposition: 1,                      // an ally, not a monster
+      actorLink: false,
+      sight: { enabled: true },
+      ...(img ? { texture: { src: img } } : {})
+    },
+    system: {
+      details: {
+        level: { value: b.level },
+        languages: { value: ['common'], details: '' },
+        publicNotes: `<p>A ${anc.name.toLowerCase()} warrior in plate, sworn to your service `
+          + `until death. Summoned by the Knight.</p>`,
+        blurb: 'Sworn to your service'
+      },
+      traits: {
+        value: [anc.trait, 'humanoid'].filter(Boolean),
+        rarity: 'common',
+        size: { value: 'med' }
+      },
+      abilities: { str: { mod: 4 }, dex: { mod: 2 }, con: { mod: 3 },
+                   int: { mod: 0 }, wis: { mod: 2 }, cha: { mod: 1 } },
+      attributes: {
+        ac: { value: b.ac, details: 'plate armor' },
+        hp: { value: b.hp, max: b.hp, temp: 0, details: '' },
+        speed: { value: 20, otherSpeeds: [] }   // plate slows them
+      },
+      perception: { mod: b.per, senses: [], vision: true, details: '' },
+      saves: {
+        fortitude: { value: b.fort, saveDetail: '' },
+        reflex: { value: Math.max(0, b.fort - 3), saveDetail: '' },
+        will: { value: Math.max(0, b.fort - 2), saveDetail: '' }
+      }
+    },
+    items: [
+      strike('Longsword', '1d8', 'slashing'),
+      strike('Gauntlet', '1d4', 'bludgeoning', -1)
+    ],
+    flags: { [MODULE_ID]: { summonedBy: 'knight', level: b.level } },
+    ownership: { default: 0 }
+  };
+}

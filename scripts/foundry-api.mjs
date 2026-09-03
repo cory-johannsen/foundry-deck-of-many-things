@@ -13,7 +13,7 @@
 export const WRITE_METHODS = [
   'updateActor', 'increaseCondition', 'createEffect', 'postChatCard',
   'addCoins', 'grantItems', 'removeItems', 'spawnCreatures', 'grantInnateSpells',
-  'removeCoins', 'etchRune'
+  'removeCoins', 'etchRune', 'spawnBuiltCreature'
 ];
 
 export const READ_METHODS = ['findItems', 'findCreatures', 'listItems', 'findWorldActors',
@@ -431,6 +431,32 @@ export function makeFoundryApi() {
         created.push(actor.name);
       }
       return created;
+    },
+
+    /**
+     * Place a creature built from scratch rather than copied from a pack.
+     * Shares the placement logic with spawnCreatures so a built summons lands
+     * beside the character the same way a found one does.
+     */
+    async spawnBuiltCreature(data, { nearActorId = null, disposition = 1 } = {}) {
+      const scene = canvas?.scene;
+      if (!scene) throw new Error('No active scene to place a creature on');
+      const grid = scene.grid?.size ?? 100;
+      const focus = nearActorId
+        ? canvas.tokens?.placeables?.find((t) => t.actor?.id === nearActorId)
+        : null;
+      const x = (focus?.document?.x ?? (scene.width ?? grid * 10) / 2) + grid;
+      const y = focus?.document?.y ?? (scene.height ?? grid * 10) / 2;
+
+      const [actor] = await Actor.createDocuments([foundry.utils.mergeObject(data, {
+        'system.details.alliance': disposition > 0 ? 'party' : 'opposition',
+        'prototypeToken.disposition': disposition
+      })]);
+      const td = await actor.getTokenDocument({ x, y, disposition });
+      const obj = td.toObject();
+      obj.disposition = disposition;
+      await scene.createEmbeddedDocuments('Token', [obj]);
+      return actor.name;
     },
 
     async postChatCard(payload) {

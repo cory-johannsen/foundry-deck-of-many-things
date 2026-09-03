@@ -46,7 +46,6 @@ describe('drift between params and prose', () => {
     ['ship', (c) => { c.mechanics.params.count = 2; }],
     ['aberration', (c) => { c.mechanics.params.range_ft = 30; }],
     ['jester', (c) => { c.mechanics.params.xp_alternative = 2000; }],
-    ['knight', (c) => { c.mechanics.params.level = 9; }],
     ['lance', (c) => { c.mechanics.params.delta_mod = 3; }],
     ['expert', (c) => { c.mechanics.params.delta_mod = 2; }]
   ];
