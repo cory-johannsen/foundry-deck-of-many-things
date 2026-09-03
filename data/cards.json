@@ -1202,14 +1202,15 @@
     "flavor": "A person wearing jester's motley and holding a staff rests his foot on a skull. This card deals with the relationship between humor and misfortune.",
     "set": "classic",
     "rules": {
-      "summary": "Gain 10,000 XP OR draw two additional cards beyond your declared draws.",
-      "full": "You gain 10,000 XP, or you can choose to draw two additional cards beyond your declared draws.",
+      "summary": "Gain 1,000 XP (one full level) OR draw two additional cards beyond your declared draws.",
+      "full": "You gain 1,000 XP, or you can choose to draw two additional cards beyond your declared draws. PF2e translation: the original 10,000 XP is a 5e figure, worth roughly one level at the tiers where this deck is used. PF2e levels every 1,000 XP regardless of level, so 1,000 XP is the equivalent — one level, not ten.",
       "draw_terminating": false
     },
     "mechanics": {
       "kind": "bonus_draws",
       "params": {
-        "xp_alternative": 10000,
+        "xp_alternative_pf2e": 1000,
+        "xp_alternative_5e": 10000,
         "additional_draws": 2,
         "choice": true
       }
