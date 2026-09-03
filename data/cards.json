@@ -52,13 +52,21 @@
     "flavor": "A set of scales holds day and night in balance. This card deals with many aspects of balance, or with things being out of balance.",
     "set": "classic",
     "rules": {
-      "summary": "Your alignment reverses (lawful↔chaotic, good↔evil).",
-      "full": "Your mind suffers a wrenching alteration, causing your alignment to change. Lawful becomes chaotic, good becomes evil, and vice versa. If you are neutral or unaligned, this card has no effect on you.",
+      "summary": "Take a 2-point penalty to Will saves, and gain a 2-point bonus to Deception, Diplomacy and Intimidation.",
+      "full": "Your mind suffers a wrenching alteration and your convictions invert. You take a -2 status penalty to Will saves, and gain a +2 status bonus to Deception, Diplomacy and Intimidation checks. The change is permanent.",
       "draw_terminating": false
     },
     "mechanics": {
-      "kind": "alignment_flip",
-      "params": {}
+      "kind": "moral_inversion",
+      "params": {
+        "will_penalty": 2,
+        "social_bonus": 2,
+        "skills": [
+          "deception",
+          "diplomacy",
+          "intimidation"
+        ]
+      }
     },
     "art": {
       "front": "assets/cards-labeled/balance.png",

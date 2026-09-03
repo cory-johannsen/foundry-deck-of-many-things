@@ -172,16 +172,47 @@ describe('age and alignment', () => {
   it('copes with a sheet that records no age', async () => {
     const actor = actorOf({ details: { age: { value: '' }, xp: { value: 0, max: 1000 }, level: { value: 5 } } });
     const { r, api } = await run('crossroads', { actor });
-    expect(api.spy.updates).toHaveLength(0);          // nothing written
-    expect(api.spy.effects).toHaveLength(1);          // but still recorded
-    expect(r.log).toContain('no age recorded');
+    expect(api.spy.updates).toHaveLength(0);
+    expect(r.log).toContain('set it by hand');
   });
 
-  it('records the wrench rather than writing an alignment PF2e does not have', async () => {
+  it('leaves no effect icon behind, the change being instantaneous', async () => {
+    // An icon would sit on the sheet forever describing something already
+    // written into the age.
+    const { api } = await run('crossroads');
+    expect(api.spy.effects).toHaveLength(0);
+    expect(api.spy.updates[0]).toHaveProperty('system.details.age.value');
+  });
+
+  it('imposes a real Will penalty and social bonus, not a note', async () => {
+    // The card used to flip alignment, which PF2e has no field for, so it
+    // recorded a marker and changed nothing.
     const { r, api } = await run('balance');
-    expect(api.spy.updates).toHaveLength(0);
-    expect(api.spy.effects[0].name).toContain('Balance');
-    expect(r.log).toContain('no alignment field');
+    const rules = api.spy.effects[0].system.rules;
+    expect(rules).toContainEqual(
+      { key: 'FlatModifier', selector: 'will', type: 'status', value: -2 });
+    for (const skill of ['deception', 'diplomacy', 'intimidation']) {
+      expect(rules, skill).toContainEqual(
+        { key: 'FlatModifier', selector: skill, type: 'status', value: 2 });
+    }
+    expect(r.log).toContain('Will');
+  });
+
+  it('puts both halves on one effect, so removing it undoes the card', async () => {
+    const { api } = await run('balance');
+    expect(api.spy.effects).toHaveLength(1);
+    expect(api.spy.effects[0].system.rules).toHaveLength(4);
+  });
+
+  it('honours the magnitudes from params', async () => {
+    const card = { ...BY_ID.get('balance'), mechanics: { kind: 'moral_inversion',
+      params: { will_penalty: 3, social_bonus: 1, skills: ['deception'] } } };
+    const api = makeApi();
+    await applyCardEffect({ card, actor: actorOf(), api, rng: () => 0.5, confirmGate: false });
+    expect(api.spy.effects[0].system.rules).toEqual([
+      { key: 'FlatModifier', selector: 'will', type: 'status', value: -3 },
+      { key: 'FlatModifier', selector: 'deception', type: 'status', value: 1 }
+    ]);
   });
 });
 
@@ -202,7 +233,7 @@ describe('every card is now handled', () => {
 
   it('gates everything that removes, ages, rewrites or sets an enemy on the character', () => {
     for (const kind of ['trap_extraplanar', 'feywild_transport', 'age_shift',
-                        'alignment_flip', 'permanent_enemy', 'beast_form', 'fiend_deal']) {
+                        'moral_inversion', 'permanent_enemy', 'beast_form', 'fiend_deal']) {
       expect(requiresConfirmation(kind), kind).toBe(true);
     }
     for (const kind of ['wish', 'sage_query', 'resurrection_grant',

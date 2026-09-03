@@ -302,40 +302,57 @@ export async function applyAgeShift({ actor, params, api, card, rng }) {
   const known = Number.isFinite(current);
   const next = known ? Math.max(current + (older ? years : -years), 1) : null;
 
+  // No effect is left behind. The change is instantaneous and permanent, so
+  // there is nothing for an icon to track — it would sit on the sheet forever
+  // describing something already written into the age.
   if (known) await api.updateActor(actor.id, { 'system.details.age.value': String(next) });
-  await api.createEffect(actor.id, usesEffect({
-    name: older ? `Aged ${years} Years` : `Made ${years} Years Younger`,
-    uses: 0,
-    cardId: card.id,
-    description: `Rolled ${parity} on the d20 — ${older ? 'aged' : 'made younger by'} ${years} years. `
-      + 'The change is instantaneous and permanent.',
-    img: 'icons/magic/time/hourglass-yellow-green.webp'
-  }));
+
   return {
     mode: 'auto',
     log: `${card.name}: d20 ${parity} — ${older ? '+' : '−'}${years} years`
-      + (known ? ` (age ${current} → ${next})` : ' (no age recorded on the sheet)')
+      + (known
+        ? ` (age ${current} → ${next})`
+        : `; no age is recorded on this sheet, so set it by hand`)
   };
 }
 
 /**
- * PF2e's Remaster removed alignment; there is no field on the sheet to invert,
- * which the live system confirms. Rather than write to something that does not
- * exist, the wrenching is recorded as an effect the table can play from.
+ * Balance: convictions invert.
+ *
+ * The card originally flipped alignment, which PF2e's Remaster removed — there
+ * is no field to write, so this recorded a note and changed nothing. The
+ * wrenching is now mechanical instead: a permanent penalty to Will, paid back
+ * as a bonus to the three skills a person with loosened scruples would find
+ * easier. Selectors verified on a live sheet, where the breakdown reads
+ * "Wisdom +0, Untrained +0, Wrenched Morals -2".
  */
-export async function applyAlignmentFlip({ actor, api, card }) {
-  await api.createEffect(actor.id, usesEffect({
+export async function applyMoralInversion({ actor, params, api, card }) {
+  const willPenalty = params.will_penalty ?? 2;
+  const socialBonus = params.social_bonus ?? 2;
+  const skills = params.skills ?? ['deception', 'diplomacy', 'intimidation'];
+
+  // One effect carries both halves, so removing it undoes the whole card.
+  const effect = usesEffect({
     name: 'Wrenched Morals (Balance)',
     uses: 0,
-    description: 'Your mind suffers a wrenching alteration: lawful becomes chaotic, good becomes '
-      + 'evil, and the reverse. PF2e has no alignment to change, so this stands as a marker for '
-      + 'the reversal of whatever your character held to.',
-    img: 'icons/magic/control/energy-stream-link-white.webp',
-    cardId: card.id
-  }));
+    cardId: card.id,
+    description: 'Your convictions have inverted. Your resolve is weaker, but lying, charming '
+      + 'and threatening come more readily than they did.',
+    img: 'icons/magic/control/energy-stream-link-white.webp'
+  });
+  effect.system.rules = [
+    { key: 'FlatModifier', selector: 'will', type: 'status', value: -willPenalty },
+    ...skills.map((slug) => ({
+      key: 'FlatModifier', selector: slug, type: 'status', value: socialBonus
+    }))
+  ];
+  await api.createEffect(actor.id, effect);
+
   return {
     mode: 'auto',
-    log: `${card.name}: morals wrenched into their opposite `
-      + '(recorded as an effect — PF2e has no alignment field to flip)'
+    log: `${card.name}: -${willPenalty} status to Will, +${socialBonus} status to `
+      + `${skills.map(titleCase).join(', ')}`
   };
 }
+
+const titleCase = (s) => s.charAt(0).toUpperCase() + s.slice(1);

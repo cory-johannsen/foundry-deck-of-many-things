@@ -93,6 +93,11 @@ export const CLAIMS = {
     expect: (p) => p.count ?? null,
     pattern: new RegExp(`${NUM}\\s+cantrips?`, 'gi')
   },
+  moral_inversion: {
+    label: 'Will penalty',
+    expect: (p) => p.will_penalty ?? null,
+    pattern: new RegExp(`${NUM}[- ]point penalty|penalty to Will|-${NUM} status penalty to Will`, 'gi')
+  },
   spawn_ally_npc: {
     label: 'ally level',
     expect: (p) => p.level ?? null,
