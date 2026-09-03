@@ -242,3 +242,67 @@ describe('beast form', () => {
     expect(r.log).toMatch(/transform by hand for \d+ days/);
   });
 });
+
+describe('spawning asks for the right kind of creature', () => {
+  // A bestiary stub that honours the trait filter, so a handler reaching for
+  // the wrong kind gets nothing rather than silently getting a mantis.
+  const bestiary = (creatures) => ({
+    ...makeApi(),
+    spy: undefined,
+    findCreatures: async ({ traits = [], minLevel = null, maxLevel = null } = {}) =>
+      creatures.filter((c) =>
+        (!traits.length || traits.some((t) => c.traits.includes(t)))
+        && (minLevel == null || c.level >= minLevel)
+        && (maxLevel == null || c.level <= maxLevel))
+  });
+
+  const world = [
+    { pack: 'b', id: 'mantis', name: 'Giant Mantis', level: 3, traits: ['animal'] },
+    { pack: 'b', id: 'wight', name: 'Wight', level: 5, traits: ['undead'] },
+    { pack: 'b', id: 'ghoul', name: 'Ghoul', level: 4, traits: ['undead'] },
+    { pack: 'b', id: 'cube', name: 'Gelatinous Cube', level: 6, traits: ['ooze'] }
+  ];
+
+  const spawnSpy = (api) => {
+    const seen = [];
+    return [{ ...api, spawnCreatures: async (e, o) => { seen.push({ e, o }); } }, seen];
+  };
+
+  it('spawns an undead for Undead, never an animal', async () => {
+    // The exact regression: PF2e names no undead "revenant" or "wraith", so a
+    // name filter found nothing and fell through to a Giant Mantis.
+    const [api, seen] = spawnSpy(bestiary(world));
+    for (const rng of [() => 0, () => 0.5, () => 0.999]) {
+      await applyCardEffect({ card: BY_ID.get('undead'), actor: actorOf(), api, rng, confirmGate: false });
+    }
+    const ids = seen.map((s) => s.e[0].id);
+    expect(ids).not.toContain('mantis');
+    expect(ids.every((id) => ['wight', 'ghoul'].includes(id))).toBe(true);
+  });
+
+  it('spawns an ooze for Ooze', async () => {
+    const [api, seen] = spawnSpy(bestiary(world));
+    await applyCardEffect({ card: BY_ID.get('ooze'), actor: actorOf(), api, rng: () => 0.5, confirmGate: false });
+    expect(seen[0].e[0].id).toBe('cube');
+  });
+
+  it('gives up rather than substituting when the kind is absent', async () => {
+    const [api, seen] = spawnSpy(bestiary([world[0]]));   // only an animal exists
+    const res = await applyCardEffect({
+      card: BY_ID.get('undead'), actor: actorOf(), api, rng: () => 0.5, confirmGate: false
+    });
+    expect(seen).toHaveLength(0);
+    expect(res.mode).toBe('gm');
+    expect(res.log).toContain('undead');
+  });
+
+  it('widens the level band before giving up, but never the kind', async () => {
+    // Skull wants undead at level 8-16; only a level 5 undead exists.
+    const [api, seen] = spawnSpy(bestiary([world[0], world[1]]));
+    const res = await applyCardEffect({
+      card: BY_ID.get('skull'), actor: actorOf(), api, rng: () => 0.5, confirmGate: false
+    });
+    expect(seen[0].e[0].id).toBe('wight');
+    expect(res.log).toContain('outside the usual level');
+  });
+});
