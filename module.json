@@ -2,7 +2,7 @@
   "id": "deck-of-many-more-things",
   "title": "Deck of Many More Things",
   "description": "The 66-card Deck of Many More Things for Pathfinder 2E, with a shared depleting play deck and Celtic Cross tarot divination.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "compatibility": {
     "minimum": "13",
     "verified": "14"
