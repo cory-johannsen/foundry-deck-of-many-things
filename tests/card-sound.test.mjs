@@ -128,3 +128,26 @@ describe('a card whose sound depends on who drew it', () => {
     }
   });
 });
+
+describe('the manifest understands every shape a sound can take', () => {
+  it('counts a variant map as the several files it is', async () => {
+    // Corpse carries two recordings; a tool that assumed a string crashed.
+    const { readFileSync } = await import('node:fs');
+    const src = readFileSync(new URL('../tools/sound-manifest.mjs', import.meta.url), 'utf8');
+    expect(src).toContain('filesOf');
+  });
+
+  it('resolves every card to a file that exists, variants included', () => {
+    const missing = [];
+    for (const card of cards) {
+      const sounds = typeof card.sound === 'string'
+        ? [card.sound]
+        : Object.values(card.sound ?? {});
+      for (const file of sounds) {
+        const path = new URL(`../assets/sounds/${file.split('/').pop()}`, import.meta.url);
+        if (!existsSync(path)) missing.push(`${card.name}: ${file}`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+});
