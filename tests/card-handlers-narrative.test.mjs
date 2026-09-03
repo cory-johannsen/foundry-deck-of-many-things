@@ -404,3 +404,39 @@ describe('Book asks for the languages instead of describing them', () => {
     expect(r.log).toContain('no languages left');
   });
 });
+
+describe('Undead marks the character rather than summoning', () => {
+  it('places no token', async () => {
+    // It used to put a monster in front of the party the instant the card was
+    // drawn, wherever they happened to be.
+    const { api } = await run('undead');
+    expect(api.spy.spawned).toHaveLength(0);
+  });
+
+  it('leaves an effect carrying the year as its duration', async () => {
+    const { api } = await run('undead');
+    const eff = api.spy.effects[0];
+    expect(eff.name).toContain('Revenant');
+    expect(eff.system.duration).toMatchObject({ value: 365, unit: 'days' });
+  });
+
+  it('tells the player the pursuit is under way', async () => {
+    const { r } = await run('undead');
+    expect(r.mode).toBe('auto');
+    expect(r.log).toMatch(/hunting you/);
+    expect(r.log).toMatch(/on your sheet/);
+  });
+
+  it('is traceable back to its card, so the sound follows it', async () => {
+    const { api } = await run('undead');
+    expect(api.spy.effects[0].flags['deck-of-many-more-things'].cardId).toBe('undead');
+  });
+
+  it('honours a different duration from params', async () => {
+    const card = { ...BY_ID.get('undead'), mechanics: { kind: 'revenant_hunter',
+      params: { duration_days: 30 } } };
+    const api = makeApi();
+    await applyCardEffect({ card, actor: actorOf(), api, rng: () => 0.5, confirmGate: false });
+    expect(api.spy.effects[0].system.duration.value).toBe(30);
+  });
+});

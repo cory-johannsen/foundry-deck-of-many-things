@@ -10,7 +10,8 @@ import {
 } from './card-handlers-extra.mjs';
 import {
   applyTrackedUses, applySpellGrant, applySkillProficiencies, applyThronePersuasion,
-  applyExile, applyNamedAdversary, applyAgeShift, applyMoralInversion
+  applyExile, applyNamedAdversary, applyAgeShift, applyMoralInversion,
+  applyRevenantHunter
 } from './card-handlers-narrative.mjs';
 
 /**
@@ -373,7 +374,7 @@ const HANDLERS = {
   resurrection_grant: applyTrackedUses,
   draw_two_keep_one: applyDrawTwoKeepOne,
   unarmored_defense: applyUnarmoredDefense,
-  revenant_hunter: applySpawn,
+  revenant_hunter: applyRevenantHunter,
   soul_trap: applySoulTrap,
   three_cantrips: applySpellGrant,
   petrify: applyPetrify,
