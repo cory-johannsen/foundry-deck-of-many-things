@@ -15,6 +15,11 @@
  *   - loudness-normalised to a common target, so no one card is startling
  *   - encoded to Ogg Vorbis, which every browser Foundry supports can play
  *
+ * `--trim=<dB>` moves the silence threshold for one file. The default of -50dB
+ * suits a sound that starts abruptly, but a reversed or swelling one has no
+ * silence to speak of — only a long quiet ramp — and would keep all five
+ * seconds of it. Raising the threshold cuts into the ramp instead.
+ *
  * `--keep` leaves the source file in place; by default it is left alone too,
  * and only ever read.
  */
@@ -32,8 +37,14 @@ const outDir = join(root, 'assets/sounds');
 // loud card does not clip once Foundry applies its own volume on top.
 const LUFS = '-16';
 const TRUE_PEAK = '-1.5';
-const SILENCE_FLOOR = '-50dB';
+const DEFAULT_SILENCE_FLOOR = '-50dB';
 const QUALITY = '5';            // ~112–128 kbps stereo vorbis
+
+const flags = process.argv.slice(2).filter((a) => a.startsWith('--'));
+const trimFlag = flags.find((a) => a.startsWith('--trim='))?.split('=')[1];
+const SILENCE_FLOOR = trimFlag
+  ? (/dB$/i.test(trimFlag) ? trimFlag : `${trimFlag}dB`)
+  : DEFAULT_SILENCE_FLOOR;
 
 const [source, target] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 if (!source || !target) {
@@ -156,7 +167,8 @@ const kb = (p) => `${(statSync(p).size / 1024).toFixed(0)} KB`;
 console.log(`${basename(source)}  ->  assets/sounds/${outName}`);
 console.log(`  ${dur(source)} ${kb(source)}   ->   ${dur(outPath)} ${kb(outPath)}`);
 const final = loudnessOf(outPath);
-console.log(`  trimmed, ogg vorbis q${QUALITY}, I=${final.I} LUFS TP=${final.TP} dBFS`
+console.log(`  trimmed at ${SILENCE_FLOOR}, ogg vorbis q${QUALITY}, `
+  + `I=${final.I} LUFS TP=${final.TP} dBFS`
   + (claimed
     ? `  (${claimed > 0 ? '+' : ''}${claimed.toFixed(1)} dB correction)`
     : ''));

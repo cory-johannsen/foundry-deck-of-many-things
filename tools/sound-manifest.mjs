@@ -51,11 +51,15 @@ const rows = Object.entries(SOUND_GROUPS).map(([group, file]) => ({
   cards: usage.get(group) ?? []
 }));
 
-const overrides = cards.filter((c) => c.sound).map((c) => ({
+// `sound` is either a filename or a map of voice variants, so a card can
+// contribute more than one file.
+const filesOf = (sound) => (typeof sound === 'string' ? [sound] : Object.values(sound ?? {}));
+
+const overrides = cards.flatMap((c) => filesOf(c.sound).map((file) => ({
   name: c.name,
-  file: c.sound,
-  present: existsSync(join(soundDir, c.sound.split('/').pop()))
-}));
+  file,
+  present: existsSync(join(soundDir, file.split('/').pop()))
+})));
 
 if (process.argv.includes('--missing')) {
   const missing = rows.filter((r) => !r.present && r.cards.length).map((r) => r.file)
