@@ -688,3 +688,48 @@ describe('sizeAtLeast', () => {
     expect(sizeAtLeast('tiny', null)).toBe(true);
   });
 });
+
+describe('a summoning brings one creature, not a formation', () => {
+  // Fiend answered with a "Vicious Levaloch Squad" — PF2e's `troop` trait
+  // marks a single actor standing in for a whole unit.
+  const world = [
+    { id: 'sq', name: 'Vicious Levaloch Squad', level: 18, size: 'lg', hasArt: true,
+      traits: ['devil', 'fiend', 'troop'] },
+    { id: 'bz', name: 'Barbazu', level: 5, size: 'med', hasArt: true, traits: ['devil', 'fiend'] }
+  ];
+  const honouring = (pool) => async ({ excludeTraits = [], traits = [] } = {}) => pool
+    .filter((c) => !traits.length || traits.some((t) => c.traits.includes(t)))
+    .filter((c) => !excludeTraits.some((t) => c.traits.includes(t)));
+
+  it('never summons a troop for Fiend', async () => {
+    const spawned = [];
+    const api = { ...makeApi(), findCreatures: honouring(world),
+                  spawnCreatures: async (e, o) => { spawned.push({ e, o }); } };
+    for (const rng of [() => 0, () => 0.5, () => 0.999]) {
+      await applyCardEffect({ card: BY_ID.get('fiend'), actor: actorOf(), api, rng, confirmGate: false });
+    }
+    expect(spawned.map((s) => s.e[0].id)).not.toContain('sq');
+    expect(spawned.every((s) => s.e[0].id === 'bz')).toBe(true);
+  });
+
+  it('never summons a troop for a spawn card either', async () => {
+    const spawned = [];
+    const api = { ...makeApi(),
+      findWorldActors: honouring(world.map((c) => ({ ...c, hasArt: true }))),
+      findCreatures: honouring(world),
+      spawnCreatures: async (e, o) => { spawned.push({ e, o }); } };
+    for (const rng of [() => 0, () => 0.999]) {
+      await applyCardEffect({ card: BY_ID.get('rogue'), actor: actorOf(), api, rng, confirmGate: false });
+    }
+    expect(spawned.every((s) => (s.e[0].actorId ?? s.e[0].id) !== 'sq')).toBe(true);
+  });
+
+  it('names the devil for Flames without picking a troop', async () => {
+    const effects = [];
+    const api = { ...makeApi(), findCreatures: honouring(world),
+                  createEffect: async (_i, e) => { effects.push(e); } };
+    await applyCardEffect({ card: BY_ID.get('flames'), actor: actorOf(), api, rng: () => 0.999, confirmGate: false });
+    expect(effects[0].name).toContain('Barbazu');
+    expect(effects[0].name).not.toContain('Squad');
+  });
+});

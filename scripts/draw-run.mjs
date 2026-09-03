@@ -5,6 +5,7 @@ import { makeFoundryApi } from './foundry-api.mjs';
 import { playCardSound } from './card-sound.mjs';
 import { postDrawCard } from './ui/card-message.mjs';
 import { drawTwoKeepOne } from './keep-one.mjs';
+import { replayPlan } from './effect-plan.mjs';
 import { pendingKind, resolvePendingDraw, markMessageResolved } from './gm-resolution.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
@@ -99,7 +100,16 @@ export async function runDraws({ count = 1, actor = null, notify = true } = {}) 
     }
 
     if (card.mechanics.kind === 'draw_two_keep_one') {
-      const outcome = await drawTwoKeepOne({ state, byId, actor, applyAndPost });
+      const outcome = await drawTwoKeepOne({
+        state, byId, actor, api, applyAndPost,
+        // The panel showed what this card would do; replaying that plan is
+        // what makes the shown outcome the one that lands.
+        applyPlanned: async (kept, plan) => {
+          if (plan.calls.length) await replayPlan(plan.calls, api);
+          playCardSound(kept, actor);
+          await postDrawCard({ card: kept, actor, result: plan.result });
+        }
+      });
       state = outcome.state;
       await persist();
       if (outcome.kept) drawn.push(outcome.kept);

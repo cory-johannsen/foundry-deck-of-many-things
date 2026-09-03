@@ -128,3 +128,61 @@ export async function promptChooseMany(card, prompt, options, count) {
     }
   });
 }
+
+/**
+ * Two cards face-up, side by side, each showing what it would actually do.
+ *
+ * Tower asks which of two cards to keep, and a name alone is not enough to
+ * choose on — the point of turning them over is seeing what you are picking
+ * between. Each panel carries the card's art and the outcome the planner
+ * worked out for it, so the choice is made on consequences rather than titles.
+ */
+export async function promptKeepOne(card, prompt, options) {
+  const { DialogV2 } = foundry.applications.api;
+  const esc = (s) => foundry.utils.escapeHTML?.(String(s ?? '')) ?? String(s ?? '');
+  const panels = options.map((o) => `
+    <label class="dommt-keep__panel" style="
+        flex:1 1 0; display:flex; flex-direction:column; gap:0.4rem; cursor:pointer;
+        border:2px solid transparent; border-radius:6px; padding:0.4rem;">
+      <input type="radio" name="keep" value="${esc(o.value)}" style="align-self:center;">
+      ${o.img ? `<img src="${esc(o.img)}" alt="${esc(o.label)}"
+                     style="width:100%; height:auto; border-radius:4px;">` : ''}
+      <strong style="text-align:center;">${esc(o.label)}</strong>
+      <div style="font-size:0.9em; opacity:0.85;">${esc(o.detail)}</div>
+    </label>`).join('');
+
+  return DialogV2.wait({
+    window: { title: card.name },
+    position: { width: 620 },
+    content: `
+      <form>
+        <p>${esc(prompt)}</p>
+        <div style="display:flex; gap:0.6rem; align-items:stretch;">${panels}</div>
+      </form>`,
+    buttons: [
+      {
+        action: 'pick',
+        label: game.i18n.localize('DOMMT.GM.Apply'),
+        default: true,
+        callback: (_e, _b, dialog) =>
+          dialog.element.querySelector('[name="keep"]:checked')?.value ?? null
+      },
+      { action: 'cancel', label: game.i18n.localize('DOMMT.GM.Cancel') }
+    ],
+    rejectClose: false,
+    render: (_event, dialog) => {
+      const root = dialog.element ?? dialog;
+      const apply = root.querySelector('button[data-action="pick"]');
+      const sync = () => {
+        const picked = root.querySelector('[name="keep"]:checked');
+        if (apply) apply.disabled = !picked;
+        for (const panel of root.querySelectorAll('.dommt-keep__panel')) {
+          const on = panel.querySelector('[name="keep"]')?.checked;
+          panel.style.borderColor = on ? 'var(--color-border-highlight, #c9c7b8)' : 'transparent';
+        }
+      };
+      root.querySelectorAll('[name="keep"]').forEach((r) => r.addEventListener('change', sync));
+      sync();
+    }
+  });
+}

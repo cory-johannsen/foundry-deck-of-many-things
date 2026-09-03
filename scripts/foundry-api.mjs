@@ -122,7 +122,7 @@ export function makeFoundryApi() {
      * `ooze` the difference is between a handful of candidates and none.
      */
     async findCreatures({ minLevel = null, maxLevel = null, traits = [], namePattern = null,
-                          minSize = null, packs = null } = {}) {
+                          minSize = null, excludeTraits = [], packs = null } = {}) {
       packs ??= game.packs
         .filter((p) => p.documentName === 'Actor' && /bestiary/i.test(p.collection))
         .map((p) => p.collection);
@@ -142,6 +142,7 @@ export function makeFoundryApi() {
           if (maxLevel != null && level > maxLevel) continue;
           const has = e.system?.traits?.value ?? [];
           if (traits.length && !traits.some((t) => has.includes(t))) continue;
+          if (excludeTraits.some((t) => has.includes(t))) continue;
           if (re && !re.test(e.name)) continue;
           const size = e.system?.traits?.size?.value ?? 'med';
           if (!sizeAtLeast(size, minSize)) continue;
@@ -158,13 +159,15 @@ export function makeFoundryApi() {
      * of a bestiary.
      */
     async findWorldActors({ types = ['npc'], traits = [], minLevel = null, maxLevel = null,
-                            minSize = null, excludeIds = [], withArtOnly = false } = {}) {
+                            minSize = null, excludeTraits = [], excludeIds = [],
+                            withArtOnly = false } = {}) {
       const skip = new Set(excludeIds);
       const isDefaultArt = (src) => !src || /mystery-man|default-icons|\.svg$/i.test(src);
       return game.actors
         .filter((a) => types.includes(a.type) && !skip.has(a.id) && a.name?.trim())
         .filter((a) => !traits.length
           || traits.some((t) => (a.system?.traits?.value ?? []).includes(t)))
+        .filter((a) => !excludeTraits.some((t) => (a.system?.traits?.value ?? []).includes(t)))
         .filter((a) => {
           const lvl = a.system?.details?.level?.value ?? 0;
           return (minLevel == null || lvl >= minLevel) && (maxLevel == null || lvl <= maxLevel);

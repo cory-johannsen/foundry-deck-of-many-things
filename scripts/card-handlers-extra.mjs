@@ -459,16 +459,20 @@ export async function applySpawn({ actor, params, api, card, rng }) {
   // Monstrosity says "Large or larger" and carried size_min in its params all
   // along, with nothing reading it — so it answered with a small aberration.
   const minSize = params?.size_min ?? spec.minSize ?? null;
+  // Every one of these cards summons a creature, singular. PF2e's `troop`
+  // trait marks a unit standing in for a whole squad — Fiend answered with a
+  // Vicious Levaloch Squad, which is a formation, not a fiend.
+  const excludeTraits = ['troop'];
 
   // In order of preference: a world NPC in band, any world NPC of the kind,
   // then the compendium on the same two terms.
   // The level band is negotiable; the traits and the size are not.
   const attempts = [
-    () => api.findWorldActors({ types: ['npc'], traits, minLevel, maxLevel, minSize, excludeIds: exclude, withArtOnly: true }),
-    () => api.findWorldActors({ types: ['npc'], traits, minSize, excludeIds: exclude, withArtOnly: true }),
-    () => api.findWorldActors({ types: ['npc'], traits, minSize, excludeIds: exclude }),
-    () => api.findCreatures({ minLevel, maxLevel, traits, minSize }),
-    () => api.findCreatures({ traits, minSize })
+    () => api.findWorldActors({ types: ['npc'], traits, minLevel, maxLevel, minSize, excludeTraits, excludeIds: exclude, withArtOnly: true }),
+    () => api.findWorldActors({ types: ['npc'], traits, minSize, excludeTraits, excludeIds: exclude, withArtOnly: true }),
+    () => api.findWorldActors({ types: ['npc'], traits, minSize, excludeTraits, excludeIds: exclude }),
+    () => api.findCreatures({ minLevel, maxLevel, traits, minSize, excludeTraits }),
+    () => api.findCreatures({ traits, minSize, excludeTraits })
   ];
 
   let pool = [];

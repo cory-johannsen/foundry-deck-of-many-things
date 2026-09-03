@@ -315,8 +315,11 @@ export async function applyRevenantHunter({ actor, params, api, card }) {
 export async function applyNamedAdversary({ actor, params, api, card, rng }) {
   const wantsDevil = card.mechanics.kind === 'permanent_enemy';
   const trait = wantsDevil ? (params.creature_type ?? 'devil') : 'fiend';
-  let pool = await api.findCreatures({ traits: [trait] });
-  if (!pool.length) pool = await api.findCreatures({ traits: ['fiend'] });
+  // A troop is a formation standing in for many creatures; these cards each
+  // describe one.
+  const excludeTraits = ['troop'];
+  let pool = await api.findCreatures({ traits: [trait], excludeTraits });
+  if (!pool.length) pool = await api.findCreatures({ traits: ['fiend'], excludeTraits });
 
   if (!pool.length) {
     return {
