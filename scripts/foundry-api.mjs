@@ -64,9 +64,19 @@ export function makeFoundryApi() {
       return found;
     },
 
-    /** Bestiary index entries matching a filter, same shape as findItems. */
+    /**
+     * Bestiary index entries matching a filter, same shape as findItems.
+     *
+     * Every installed bestiary is searched by default, not just the core one.
+     * Restricting to pathfinder-bestiary meant 166 creatures to choose from
+     * when the world has several times that — and for a narrow trait like
+     * `ooze` the difference is between a handful of candidates and none.
+     */
     async findCreatures({ minLevel = null, maxLevel = null, traits = [], namePattern = null,
-                          packs = ['pf2e.pathfinder-bestiary'] } = {}) {
+                          packs = null } = {}) {
+      packs ??= game.packs
+        .filter((p) => p.documentName === 'Actor' && /bestiary/i.test(p.collection))
+        .map((p) => p.collection);
       const found = [];
       const re = namePattern ? new RegExp(namePattern, 'i') : null;
       for (const id of packs) {

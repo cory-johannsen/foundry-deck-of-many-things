@@ -338,35 +338,57 @@ export async function applyDestroyMagicItems({ actor, api, card }) {
 // Spawning
 // ---------------------------------------------------------------------------
 
+/**
+ * What each spawning card should put on the table, keyed by PF2e creature
+ * traits rather than by name.
+ *
+ * Names were the original approach and they were wrong: Undead looked for
+ * /revenant|undead|wraith|ghost/ and PF2e calls its undead "Wight", "Ghoul"
+ * and "Zombie Shambler", so the filter matched nothing. Traits are what the
+ * system actually classifies creatures by — 192 undead across the installed
+ * bestiaries, against zero by that name pattern.
+ */
 const SPAWN_SPECS = {
-  spawn_ally_npc:     { name: '(fighter|warrior|guard|knight|mercenary)', level: [2, 6], friendly: true },
-  spawn_homunculus:   { name: 'homunculus', level: [0, 3], friendly: true },
-  spawn_wyrmling:     { name: 'dragon', level: [1, 6], friendly: true },
-  spawn_ooze:         { name: '(ooze|cube|pudding|jelly)', level: [0, 12], friendly: false },
-  spawn_hostile:      { name: null, level: [5, 12], friendly: false },
-  random_hostile_npc: { name: null, level: [1, 8], friendly: false },
-  revenant_hunter:    { name: '(revenant|undead|wraith|ghost)', level: [3, 10], friendly: false },
-  avatar_of_death:    { name: '(death|reaper|wraith|spectre|specter)', level: [8, 16], friendly: false }
+  spawn_ally_npc:     { traits: ['humanoid'], level: [2, 6],  friendly: true },
+  spawn_homunculus:   { traits: ['construct'], level: [0, 4], friendly: true },
+  spawn_wyrmling:     { traits: ['dragon'], level: [1, 6],    friendly: true },
+  spawn_ooze:         { traits: ['ooze'], level: [0, 12],     friendly: false },
+  spawn_hostile:      { traits: ['beast', 'aberration'], level: [5, 12], friendly: false },
+  random_hostile_npc: { traits: ['humanoid'], level: [1, 8],  friendly: false },
+  revenant_hunter:    { traits: ['undead'], level: [3, 10],   friendly: false },
+  avatar_of_death:    { traits: ['undead'], level: [8, 16],   friendly: false }
 };
 
 /**
- * Place a creature from the bestiary. The level band and name hint come from
- * the card; if nothing matches, the band is dropped before the card is given
- * up on, because an empty result is far more often a sparse compendium than a
- * card that should do nothing.
+ * Place a creature from the bestiary.
+ *
+ * The level band is negotiable; the traits are not. If nothing of the right
+ * kind sits in the band the band is dropped, but the card will never reach for
+ * a creature of another kind — an earlier version fell back to "anything in
+ * the level range" and answered Undead's revenant hunter with a giant mantis.
+ * A card that cannot find its creature says so and leaves it to the GM, which
+ * is a far smaller problem than quietly summoning the wrong thing.
  */
 export async function applySpawn({ actor, api, card, rng }) {
-  const spec = SPAWN_SPECS[card.mechanics.kind] ?? { name: null, level: [1, 10], friendly: false };
+  const spec = SPAWN_SPECS[card.mechanics.kind];
+  if (!spec) {
+    return { mode: 'gm', log: `${card.name}: no spawn rule for this card.`, meta: { kind: 'gm_only' } };
+  }
   const [minLevel, maxLevel] = spec.level;
-  let pool = await api.findCreatures({ minLevel, maxLevel, namePattern: spec.name });
-  if (!pool.length && spec.name) pool = await api.findCreatures({ minLevel, maxLevel });
-  if (!pool.length) pool = await api.findCreatures({});
+
+  let pool = await api.findCreatures({ minLevel, maxLevel, traits: spec.traits });
+  let widened = false;
+  if (!pool.length) {
+    pool = await api.findCreatures({ traits: spec.traits });
+    widened = pool.length > 0;
+  }
 
   if (!pool.length) {
     return {
       mode: 'gm',
-      log: `${card.name}: no bestiary creature available to place — add one by hand.`,
-      meta: { kind: 'gm_only' }
+      log: `${card.name}: no ${spec.traits.join(' or ')} creature in the installed bestiaries `
+        + `— place one yourself.`,
+      meta: { kind: 'gm_only', traits: spec.traits }
     };
   }
 
@@ -375,11 +397,12 @@ export async function applySpawn({ actor, api, card, rng }) {
     nearActorId: actor.id,
     disposition: spec.friendly ? 1 : -1
   });
+  const note = widened ? ` (outside the usual level ${minLevel}–${maxLevel} band)` : '';
   return {
     mode: 'auto',
     log: `${card.name}: ${spec.friendly ? 'summoned' : 'unleashed'} ${chosen.name} `
-      + `(level ${chosen.level}) onto the scene`,
-    meta: { spawned: chosen.name }
+      + `(level ${chosen.level})${note} onto the scene`,
+    meta: { spawned: chosen.name, traits: spec.traits }
   };
 }
 
