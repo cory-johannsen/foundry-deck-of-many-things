@@ -184,19 +184,24 @@ describe('size_grow (Giant)', () => {
   });
 });
 
-describe('GM-adjudication cards', () => {
-  it('Moon (wish) never auto-mutates', async () => {
+describe('cards the module cannot decide for the table', () => {
+  // Moon used to be inert. It now puts tracked wishes on the sheet — the
+  // module still does not adjudicate a wish, it just records what is owed.
+  it('Moon grants tracked wishes without touching the character', async () => {
     const actor = makeActor();
     const api = makeApi(actor);
-    const res = await applyCardEffect({ card: BY_ID.get('moon'), actor, api });
-    expect(res.mode).toBe('gm');
+    const res = await applyCardEffect({ card: BY_ID.get('moon'), actor, api, confirmGate: false });
+    expect(res.mode).toBe('auto');
+    expect(api._spy.effects[0].system.badge).toMatchObject({ type: 'counter' });
     expect(actor.system.attributes.hp.value).toBe(30);
   });
-  it('Talons (destroy items) posts GM card', async () => {
+
+  it('Talons holds for confirmation before destroying anything', async () => {
     const actor = makeActor();
     const api = makeApi(actor);
     const res = await applyCardEffect({ card: BY_ID.get('talons'), actor, api });
     expect(res.mode).toBe('gm');
+    expect(res.meta.kind).toBe('needs_confirm');
   });
 });
 

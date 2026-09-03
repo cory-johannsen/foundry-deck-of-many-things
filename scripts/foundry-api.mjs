@@ -39,8 +39,10 @@ export function makeFoundryApi() {
      * Returns plain objects ({pack, id, name, type, level, rarity}) rather than
      * documents, so a plan can be described, logged and replayed cheaply.
      */
-    async findItems({ types = [], minRarity = 'common', maxLevel = null, packs = ['pf2e.equipment-srd'] } = {}) {
+    async findItems({ types = [], minRarity = 'common', maxLevel = null, traits = [],
+                      namePattern = null, packs = ['pf2e.equipment-srd'] } = {}) {
       const found = [];
+      const re = namePattern ? new RegExp(namePattern, 'i') : null;
       for (const id of packs) {
         const pack = game.packs.get(id);
         if (!pack) continue;
@@ -53,10 +55,10 @@ export function makeFoundryApi() {
           if (!rarityAtLeast(rarity, minRarity)) continue;
           const level = e.system?.level?.value ?? 0;
           if (maxLevel != null && level > maxLevel) continue;
-          found.push({
-            pack: id, id: e._id, name: e.name, type: e.type, level, rarity,
-            traits: e.system?.traits?.value ?? []
-          });
+          const has = e.system?.traits?.value ?? [];
+          if (traits.length && !traits.every((t) => has.includes(t))) continue;
+          if (re && !re.test(e.name)) continue;
+          found.push({ pack: id, id: e._id, name: e.name, type: e.type, level, rarity, traits: has });
         }
       }
       return found;
