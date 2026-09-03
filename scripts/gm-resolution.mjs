@@ -1,6 +1,6 @@
 import { loadCards } from './data-loader.mjs';
 import { makeCardsById } from './deck.mjs';
-import { applyCardEffect } from './card-effects.mjs';
+import { planCardEffect, replayPlan } from './effect-plan.mjs';
 import { makeFoundryApi } from './foundry-api.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
@@ -10,8 +10,8 @@ const MODULE_ID = 'deck-of-many-more-things';
  *
  * A draw that resolves to `mode: 'gm'` posts its chat card WITHOUT touching the
  * actor, carrying enough in flags to finish the job later. The card shows an
- * Apply button that only a GM sees; clicking it opens the right prompt, applies
- * what can be applied, and marks the message resolved.
+ * Apply button that only a GM sees; clicking it walks the GM through the
+ * decisions the card needs and writes nothing until they confirm the outcome.
  *
  * This is deliberately not a socket handshake. The chat message is already
  * replicated to every client and already carries permissions, so gating the
@@ -64,7 +64,7 @@ async function promptSelectActor(card) {
         default: true,
         callback: (_e, _b, dialog) => dialog.element.querySelector('[name="actorId"]').value
       },
-      { action: 'skip', label: game.i18n.localize('DOMMT.GM.Skip') }
+      { action: 'cancel', label: game.i18n.localize('DOMMT.GM.Cancel') }
     ],
     rejectClose: false
   });
@@ -91,35 +91,57 @@ async function promptChooseAbility(card, delta) {
         default: true,
         callback: (_e, _b, dialog) => dialog.element.querySelector('[name="ability"]').value
       },
-      { action: 'skip', label: game.i18n.localize('DOMMT.GM.Skip') }
-    ],
-    rejectClose: false
-  });
-}
-
-async function promptAcknowledge(card, log) {
-  const { DialogV2 } = foundry.applications.api;
-  return DialogV2.wait({
-    window: { title: card.name },
-    content: `
-      <div>
-        <p><strong>${game.i18n.localize('DOMMT.Chat.GMAction.Header')}</strong></p>
-        <p>${foundry.utils.escapeHTML?.(log) ?? log}</p>
-        <hr/>
-        <p>${card.rules.full}</p>
-        <p class="hint">${game.i18n.localize('DOMMT.GM.AcknowledgeHint')}</p>
-      </div>`,
-    buttons: [
-      { action: 'apply', label: game.i18n.localize('DOMMT.GM.MarkResolved'), default: true },
-      { action: 'skip', label: game.i18n.localize('DOMMT.GM.Skip') }
+      { action: 'cancel', label: game.i18n.localize('DOMMT.GM.Cancel') }
     ],
     rejectClose: false
   });
 }
 
 /**
- * Finish a pending draw. Returns the outcome so the caller can update the
- * message, or null when the GM dismissed the prompt without deciding.
+ * The last stage before anything is written. Shows the actor, exactly what the
+ * card will do to them, and the rules text — so the GM confirms a concrete
+ * outcome rather than a card name.
+ */
+async function promptConfirm(card, actor, plan) {
+  const { DialogV2 } = foundry.applications.api;
+  const esc = (s) => foundry.utils.escapeHTML?.(String(s)) ?? String(s);
+  const writes = plan.calls.length;
+  const detail = writes
+    ? `<p>${esc(plan.result.log)}</p>`
+    : `<p>${esc(plan.result.log)}</p><p class="hint">${game.i18n.localize('DOMMT.GM.AcknowledgeHint')}</p>`;
+  return DialogV2.wait({
+    window: { title: card.name },
+    content: `
+      <div>
+        <p>${game.i18n.format('DOMMT.GM.Confirm.Prompt', { actor: esc(actor.name) })}</p>
+        ${detail}
+        <hr/>
+        <p>${card.rules.full}</p>
+      </div>`,
+    buttons: [
+      {
+        action: 'apply',
+        label: game.i18n.localize(writes ? 'DOMMT.GM.Apply' : 'DOMMT.GM.MarkResolved'),
+        default: true
+      },
+      { action: 'cancel', label: game.i18n.localize('DOMMT.GM.Cancel') }
+    ],
+    rejectClose: false
+  });
+}
+
+/**
+ * Finish a pending draw.
+ *
+ * Every stage is a cancellation point and nothing is written until the last
+ * one: the actor is chosen, the effect is *planned* against a recording api,
+ * an ability is chosen if the card needs it, and only after the GM confirms
+ * the concrete outcome are the planned writes replayed. Dismissing any dialog
+ * — button or window close — returns null and leaves the actor untouched and
+ * the message still pending.
+ *
+ * Returns the outcome so the caller can update the message, or null when the
+ * GM backed out.
  */
 export async function resolvePendingDraw(message) {
   if (!game.user.isGM) return null;
@@ -133,37 +155,40 @@ export async function resolvePendingDraw(message) {
     return null;
   }
 
-  // A draw with no actor never ran its handler — applyCardEffect short-circuits
-  // to a manual result. Ask for the actor now, then run the effect for real.
+  // Stage 1 — who does this apply to? A draw with no actor never ran its
+  // handler, because applyCardEffect short-circuits without one.
   let actor = flags.actorId ? game.actors.get(flags.actorId) : null;
   if (!actor) {
     const chosen = await promptSelectActor(card);
-    if (!chosen || chosen === 'skip') return null;
+    if (!chosen || chosen === 'cancel') return null;
     actor = game.actors.get(chosen);
     if (!actor) return null;
   }
 
-  const api = makeFoundryApi();
-  const result = await applyCardEffect({ card, actor, api, autoApplyEnabled: true });
+  // Stage 2 — work out what would happen, writing nothing.
+  let plan = await planCardEffect({ card, actor });
 
-  // Now that an actor is bound the effect may simply apply itself.
-  if (result.mode === 'auto') {
-    return { applied: true, log: result.log, actorId: actor.id };
-  }
-
-  // Still needs a call the module cannot make on its own.
-  if (pendingKind(result.meta) === 'choose_ability') {
-    const choice = await promptChooseAbility(card, result.meta?.delta ?? 1);
-    if (!choice || choice === 'skip') return null;
+  // Stage 3 — a decision the module cannot make on its own.
+  if (pendingKind(plan.result.meta) === 'choose_ability') {
+    const choice = await promptChooseAbility(card, plan.result.meta?.delta ?? 1);
+    if (!choice || choice === 'cancel') return null;
     const concrete = foundry.utils.deepClone(card);
     concrete.mechanics.params = { ...concrete.mechanics.params, ability: choice };
-    const applied = await applyCardEffect({ card: concrete, actor, api, autoApplyEnabled: true });
-    return { applied: true, log: applied.log, actorId: actor.id };
+    plan = await planCardEffect({ card: concrete, actor });
   }
 
-  const answer = await promptAcknowledge(card, result.log);
-  if (!answer || answer === 'skip') return null;
-  return { applied: false, log: game.i18n.localize('DOMMT.GM.ResolvedByGM'), actorId: actor.id };
+  // Stage 4 — confirm, and only now write.
+  const confirmed = await promptConfirm(card, actor, plan);
+  if (!confirmed || confirmed === 'cancel') return null;
+
+  if (plan.calls.length) await replayPlan(plan.calls, makeFoundryApi());
+  return {
+    applied: plan.calls.length > 0,
+    log: plan.calls.length
+      ? plan.result.log
+      : game.i18n.localize('DOMMT.GM.ResolvedByGM'),
+    actorId: actor.id
+  };
 }
 
 /** Rewrite a resolved message so the button is gone and the outcome is shown. */

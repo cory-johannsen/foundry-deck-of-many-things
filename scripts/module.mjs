@@ -112,14 +112,20 @@ async function ensureWorldMacros({ force = false } = {}) {
 }
 
 /**
- * Bind the GM-only Apply button on pending draw cards. Foundry 13+ fires
- * renderChatMessageHTML with a real element; older builds fire
- * renderChatMessage with a jQuery wrapper, so accept both.
+ * Bind the GM-only Apply button on pending draw cards.
+ *
+ * Only renderChatMessageHTML is registered. Foundry 13+ always fires it, and
+ * v14 still fires the deprecated renderChatMessage alongside it — listening to
+ * both bound this handler twice, so one click opened two prompts and could
+ * apply an effect twice. The dataset guard below is belt-and-braces: disabling
+ * the button on click is too late, because both listeners are already
+ * dispatched before the first one awaits.
  */
 function bindPendingDrawButton(message, html) {
   const root = html?.[0] ?? html;
   const button = root?.querySelector?.('[data-action="dommt-resolve"]');
-  if (!button) return;
+  if (!button || button.dataset.dommtBound) return;
+  button.dataset.dommtBound = '1';
   // The button ships in every client's copy of the message; only a GM may use
   // it, and nobody else should even see it.
   if (!game.user.isGM) {
@@ -141,7 +147,6 @@ function bindPendingDrawButton(message, html) {
 }
 
 Hooks.on('renderChatMessageHTML', bindPendingDrawButton);
-Hooks.on('renderChatMessage', bindPendingDrawButton);
 
 Hooks.on('getSceneControlButtons', (controls) => {
   const tokenControl = controls.find?.((c) => c.name === 'token') ?? controls.token;

@@ -50,5 +50,7 @@
   "DOMMT.Play.NoActorSelected": "No actor selected — you will be asked who this applies to.",
   "DOMMT.GM.SelectActor.Prompt": "This card was drawn without an actor. Choose who it applies to.",
   "DOMMT.GM.SelectActor.Label": "Actor",
-  "DOMMT.GM.NoActorsInWorld": "There are no actors in this world to apply the card to."
+  "DOMMT.GM.NoActorsInWorld": "There are no actors in this world to apply the card to.",
+  "DOMMT.GM.Confirm.Prompt": "Apply this card to {actor}?",
+  "DOMMT.GM.Cancel": "Cancel"
 }
