@@ -130,10 +130,14 @@ function loudnessOf(file) {
 const got = loudnessOf(outPath);
 let claimed = 0;
 if (got.I != null && got.TP != null) {
-  const wanted = Number(LUFS) - got.I;              // how far under target
+  const wanted = Number(LUFS) - got.I;              // negative when too loud
   const room = Number(TRUE_PEAK) - got.TP;          // how far the peak can rise
-  claimed = Math.min(wanted, room);
-  if (claimed > 0.5) encode(claimed);
+  // Turning a sound down is always safe; turning it up is capped by the peak.
+  // The correction used to run one way only, so a source that came out of
+  // loudnorm above target simply stayed loud — a level-up sting landed at
+  // -14.3 against a -16 target and would have sat louder than every other card.
+  claimed = wanted < 0 ? wanted : Math.min(wanted, room);
+  if (Math.abs(claimed) > 0.5) encode(claimed);
   else claimed = 0;
 }
 
@@ -153,4 +157,6 @@ console.log(`${basename(source)}  ->  assets/sounds/${outName}`);
 console.log(`  ${dur(source)} ${kb(source)}   ->   ${dur(outPath)} ${kb(outPath)}`);
 const final = loudnessOf(outPath);
 console.log(`  trimmed, ogg vorbis q${QUALITY}, I=${final.I} LUFS TP=${final.TP} dBFS`
-  + (claimed ? `  (+${claimed.toFixed(1)} dB of spare headroom claimed)` : ''));
+  + (claimed
+    ? `  (${claimed > 0 ? '+' : ''}${claimed.toFixed(1)} dB correction)`
+    : ''));

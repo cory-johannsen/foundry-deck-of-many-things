@@ -1913,7 +1913,8 @@
         "upright": "A problem that requires and rewards piety or the use of divine magic.",
         "reversed": "A situation caused by impiety or misguided zealotry."
       }
-    }
+    },
+    "sound": "priest.ogg"
   },
   {
     "id": "prisoner",
