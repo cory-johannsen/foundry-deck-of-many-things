@@ -127,13 +127,20 @@ export function makeFoundryApi() {
       throw new Error(`Actor ${actorId} has no inventory to add coins to`);
     },
 
-    /** Copy compendium items onto an actor. `entries` are {pack, id} pairs. */
+    /**
+     * Copy compendium items onto an actor. Entries are {pack, id}, optionally
+     * with `updates` merged into the copy — a battle form borrowed from a
+     * spell effect keeps its rule elements but needs the card's duration, not
+     * the spell's one minute.
+     */
     async grantItems(actorId, entries) {
       const actor = getActor(actorId);
       const sources = [];
-      for (const { pack, id } of entries) {
+      for (const { pack, id, updates } of entries) {
         const doc = await game.packs.get(pack)?.getDocument(id);
-        if (doc) sources.push(doc.toObject());
+        if (!doc) continue;
+        const obj = doc.toObject();
+        sources.push(updates ? foundry.utils.mergeObject(obj, updates) : obj);
       }
       if (!sources.length) return null;
       return actor.createEmbeddedDocuments('Item', sources);

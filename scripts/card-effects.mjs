@@ -4,7 +4,7 @@ import {
   applyWealthGrant, applyPetrify, applyFall, applySoulTrap,
   applyElementImmunity, applyGrantTelepathy, applyUnarmoredDefense,
   applyItemGrant, applyDestroyMagicItems, applySpawn,
-  applyBonusDraws, applyStopDrawing, applyDrawTwoKeepOne
+  applyBonusDraws, applyStopDrawing, applyDrawTwoKeepOne, applyBeastForm
 } from './card-handlers-extra.mjs';
 
 /**
@@ -223,7 +223,7 @@ const HANDLERS = {
 
   grant_telepathy: applyGrantTelepathy,
   alignment_flip: gmCard(),
-  beast_form: gmCard(),
+  beast_form: applyBeastForm,
   cast_time_stop_n: gmCard(),
   cast_gate_n: gmCard(),
   spawn_homunculus: applySpawn,
@@ -284,7 +284,7 @@ const HANDLERS = {
  * no prompt is exactly what this gate is for.
  */
 export const REQUIRES_CONFIRMATION = new Set([
-  'xp_loss', 'fall', 'petrify', 'soul_trap', 'destroy_magic_items',
+  'xp_loss', 'fall', 'petrify', 'soul_trap', 'destroy_magic_items', 'beast_form',
   'drop_to_zero_hp', 'stat_debuff', 'save_penalty', 'exhaustion',
   'restrain_no_spellcast', 'wealth_wipe',
   'spawn_hostile', 'spawn_ooze', 'random_hostile_npc',

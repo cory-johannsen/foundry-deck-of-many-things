@@ -198,3 +198,47 @@ describe('planning covers the new handlers too', () => {
     expect(plan.calls.map((c) => c.method)).toContain('spawnCreatures');
   });
 });
+
+describe('beast form', () => {
+  const forms = [
+    { pack: 'pf2e.spell-effects', id: 'f1', name: 'Spell Effect: Animal Form (Bear)', type: 'effect', level: 2, rarity: 'common' },
+    { pack: 'pf2e.spell-effects', id: 'f2', name: 'Spell Effect: Animal Form (Shark)', type: 'effect', level: 2, rarity: 'common' },
+    { pack: 'pf2e.spell-effects', id: 'f3', name: 'Spell Effect: Dragon Form', type: 'effect', level: 6, rarity: 'common' }
+  ];
+
+  it('grants a real battle form rather than a note to the GM', async () => {
+    const { r, api } = await run('beast', { api: makeApi({ items: forms }), rng: () => 0 });
+    expect(r.mode).toBe('auto');
+    expect(api.spy.granted[0].pack).toBe('pf2e.spell-effects');
+    expect(r.log).toContain('bear');
+  });
+
+  it('only ever picks an Animal Form, never Dragon Form', async () => {
+    // rng at the top of the range would reach Dragon Form if it were in the pool.
+    const { api } = await run('beast', { api: makeApi({ items: forms }), rng: () => 0.999 });
+    expect(['f1', 'f2']).toContain(api.spy.granted[0].id);
+  });
+
+  it('replaces the spell duration with the card roll, in days', async () => {
+    const { r, api } = await run('beast', { api: makeApi({ items: forms }) });
+    const days = Number(/for (\d+) days/.exec(r.log)[1]);
+    expect(days).toBeGreaterThanOrEqual(2);
+    expect(days).toBeLessThanOrEqual(24);
+    expect(api.spy.granted[0].updates['system.duration'])
+      .toMatchObject({ value: days, unit: 'days' });
+  });
+
+  it('is held for confirmation, since it replaces the character for weeks', async () => {
+    const res = await applyCardEffect({
+      card: BY_ID.get('beast'), actor: actorOf(), api: makeApi({ items: forms })
+    });
+    expect(res.mode).toBe('gm');
+    expect(res.meta.kind).toBe('needs_confirm');
+  });
+
+  it('falls back to the GM when no form is installed', async () => {
+    const { r } = await run('beast', { api: makeApi({ items: [] }) });
+    expect(r.mode).toBe('gm');
+    expect(r.log).toMatch(/transform by hand for \d+ days/);
+  });
+});

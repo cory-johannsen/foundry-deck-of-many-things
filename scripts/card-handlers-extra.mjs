@@ -424,3 +424,56 @@ export async function applyDrawTwoKeepOne({ actor, api, card }) {
     log: `${card.name}: draw two more cards and keep only one of them`
   };
 }
+
+// ---------------------------------------------------------------------------
+// Battle form
+// ---------------------------------------------------------------------------
+
+const ANIMAL_FORM = /^Spell Effect: Animal Form \((.+)\)$/;
+
+/**
+ * Beast turns the character into a random beast for 2d12 days, replacing their
+ * statistics with its own.
+ *
+ * PF2e already models exactly that. Its Animal Form spell effects carry a
+ * BattleForm rule element that substitutes AC, attacks, senses and speeds, so
+ * the transformation is a real mechanical change rather than a note asking the
+ * GM to swap sheets. Borrowing one of those beats picking a creature out of the
+ * bestiary, which would name an animal and change nothing — and the bestiary
+ * only holds four animals at level 5 or below anyway, against thirteen forms.
+ *
+ * The effect's own duration is one minute, so the card's roll replaces it.
+ */
+export async function applyBeastForm({ actor, params, api, card, rng }) {
+  const effects = await api.findItems({
+    types: ['effect'], minRarity: 'common', packs: ['pf2e.spell-effects']
+  });
+  const forms = effects.filter((e) => ANIMAL_FORM.test(e.name));
+  const days = rollFormula(params.duration_days_formula ?? '2d12', rng);
+
+  if (!forms.length) {
+    return {
+      mode: 'gm',
+      log: `${card.name}: no battle form available in the compendium — transform by hand `
+        + `for ${days} days.`,
+      meta: { kind: 'gm_only', days }
+    };
+  }
+
+  const chosen = forms[Math.floor(rng() * forms.length)];
+  const beast = ANIMAL_FORM.exec(chosen.name)?.[1] ?? chosen.name;
+  await api.grantItems(actor.id, [{
+    pack: chosen.pack,
+    id: chosen.id,
+    updates: {
+      name: `Beast Form (${beast})`,
+      'system.duration': { value: days, unit: 'days', expiry: 'turn-start', sustained: false }
+    }
+  }]);
+  return {
+    mode: 'auto',
+    log: `${card.name}: transformed into a ${beast.toLowerCase()} for ${days} days `
+      + `— statistics replaced by the battle form`,
+    meta: { form: beast, days }
+  };
+}
