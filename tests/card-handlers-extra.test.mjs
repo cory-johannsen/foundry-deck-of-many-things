@@ -141,8 +141,8 @@ describe('damage and conditions', () => {
 
 describe('item grants', () => {
   const items = [
-    { pack: 'p', id: '1', name: 'Flaming Sword', type: 'weapon', level: 8, rarity: 'uncommon' },
-    { pack: 'p', id: '2', name: 'Dull Blade', type: 'weapon', level: 2, rarity: 'uncommon' }
+    { pack: 'p', id: '1', name: 'Flaming Sword', type: 'weapon', level: 5, rarity: 'uncommon', traits: ['magical'] },
+    { pack: 'p', id: '2', name: 'Dull Blade', type: 'weapon', level: 2, rarity: 'uncommon', traits: ['magical'] }
   ];
 
   it('grants a real item and names it in the log', async () => {
@@ -155,6 +155,32 @@ describe('item grants', () => {
     const { r, api } = await run('key', { api: makeApi({ items: [] }) });
     expect(r.mode).toBe('gm');
     expect(api.spy.granted).toHaveLength(0);
+  });
+
+  it('refuses a merely uncommon weapon that is not magical', async () => {
+    // Key asked for a magic weapon and was handed a level 0 Thundermace:
+    // uncommon, but mundane. Rarity is not magic.
+    const mundane = [{ pack: 'p', id: 'x', name: 'Thundermace', type: 'weapon',
+                       level: 0, rarity: 'uncommon', traits: [] }];
+    const { r, api } = await run('key', { api: makeApi({ items: mundane }) });
+    expect(api.spy.granted).toHaveLength(0);
+    expect(r.mode).toBe('gm');
+    expect(r.log).toContain('no magical');
+  });
+
+  it('prefers items the character could actually use', async () => {
+    const spread = [
+      { pack: 'p', id: 'low', name: 'Handy Blade', type: 'weapon', level: 4, rarity: 'uncommon', traits: ['magical'] },
+      { pack: 'p', id: 'high', name: 'Staff of Ruin', type: 'weapon', level: 19, rarity: 'rare', traits: ['magical'] }
+    ];
+    // findItems honours maxLevel, as the real one does.
+    const api = { ...makeApi({ items: spread }),
+      findItems: async ({ maxLevel = null } = {}) =>
+        spread.filter((i) => maxLevel == null || i.level <= maxLevel) };
+    const seen = [];
+    api.grantItems = async (_i, e) => { seen.push(...e); };
+    await applyCardEffect({ card: BY_ID.get('key'), actor: actorOf(), api, rng: () => 0.999, confirmGate: false });
+    expect(seen[0].id).toBe('low');    // level 5 actor: 19 is out of band
   });
 
   it('destroys only what the actor actually carries', async () => {
@@ -193,7 +219,7 @@ describe('spawning', () => {
 
 describe('planning covers the new handlers too', () => {
   it('names the item in the plan and grants that same item on replay', async () => {
-    const items = [{ pack: 'p', id: '1', name: 'Flaming Sword', type: 'weapon', level: 8, rarity: 'uncommon' }];
+    const items = [{ pack: 'p', id: '1', name: 'Flaming Sword', type: 'weapon', level: 5, rarity: 'uncommon', traits: ['magical'] }];
     const real = makeApi({ items });
     const plan = await planCardEffect({ card: BY_ID.get('key'), actor: actorOf(), api: real });
 

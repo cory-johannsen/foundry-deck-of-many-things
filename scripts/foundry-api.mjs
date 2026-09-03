@@ -179,19 +179,31 @@ export function makeFoundryApi() {
       const originX = focus?.document?.x ?? (scene.width ?? grid * 10) / 2;
       const originY = focus?.document?.y ?? (scene.height ?? grid * 10) / 2;
 
+      // PF2e derives a token's disposition from the actor's alliance and wins
+      // over anything set on the token — a summoned ally created straight from
+      // a bestiary entry came out hostile, because every bestiary NPC is
+      // `opposition`. So the alliance is set on the actor first.
+      const alliance = disposition > 0 ? 'party' : disposition < 0 ? 'opposition' : null;
+
       const created = [];
       for (const [i, { pack, id }] of entries.entries()) {
         const doc = await game.packs.get(pack)?.getDocument(id);
         if (!doc) continue;
         const [actor] = await Actor.createDocuments([
-          foundry.utils.mergeObject(doc.toObject(), { 'ownership.default': 0 })
+          foundry.utils.mergeObject(doc.toObject(), {
+            'ownership.default': 0,
+            'system.details.alliance': alliance,
+            'prototypeToken.disposition': disposition
+          })
         ]);
         const td = await actor.getTokenDocument({
           x: originX + grid * (i + 1),
           y: originY,
           disposition
         });
-        await scene.createEmbeddedDocuments('Token', [td.toObject()]);
+        const obj = td.toObject();
+        obj.disposition = disposition;
+        await scene.createEmbeddedDocuments('Token', [obj]);
         created.push(actor.name);
       }
       return created;

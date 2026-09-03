@@ -275,37 +275,57 @@ const NAME_HINT = {
 /**
  * Pick one item of the right shape out of the equipment compendium.
  *
+ * Rarity alone does not mean magic. Of 644 uncommon-or-better weapons in the
+ * SRD, only 258 carry the `magical` trait; the rest are mundane exotics —
+ * which is how Key, asked for a magic weapon, granted a level 0 Thundermace.
+ * The magical trait is therefore required, never traded away.
+ *
+ * Level is scaled to the recipient. Without it the pool runs from level 0 to
+ * 20 and a 5th-level character is as likely to be handed a 19th-level staff as
+ * anything they could use. The band widens before the card gives up, but the
+ * magical requirement does not.
+ *
  * PF2e has no "ring" or "rod" item type — they are all `equipment` — so those
- * cards fall back to matching the name, which is what actually distinguishes
- * them. If the filter finds nothing the card degrades to a GM decision rather
- * than granting something arbitrary.
+ * cards match on name as well, which is what actually distinguishes them.
  */
 export async function applyItemGrant({ actor, params, api, card, rng }) {
   const kind = card.mechanics.kind;
   const types = ITEM_TYPES[kind] ?? ['equipment'];
   const minRarity = params.rarity_min ?? 'uncommon';
-  let pool = await api.findItems({ types, minRarity });
-
+  const level = deepGet(actor, 'system.details.level.value') ?? 1;
   const hint = NAME_HINT[kind];
-  if (hint) {
-    const re = new RegExp(hint, 'i');
-    const narrowed = pool.filter((i) => re.test(i.name));
-    if (narrowed.length) pool = narrowed;
+  const re = hint ? new RegExp(hint, 'i') : null;
+
+  const narrow = (pool) => {
+    if (!re) return pool;
+    const hit = pool.filter((i) => re.test(i.name));
+    return hit.length ? hit : pool;
+  };
+  const magicalOnly = (pool) => pool.filter((i) => (i.traits ?? []).includes('magical'));
+
+  // Items the character could plausibly use, then anything of the right kind.
+  let pool = magicalOnly(narrow(await api.findItems({ types, minRarity, maxLevel: level + 3 })));
+  let widened = false;
+  if (!pool.length) {
+    pool = magicalOnly(narrow(await api.findItems({ types, minRarity })));
+    widened = pool.length > 0;
   }
 
   if (!pool.length) {
     return {
       mode: 'gm',
-      log: `${card.name}: no ${types.join('/')} of ${minRarity}+ rarity found in the compendium — grant one by hand.`,
+      log: `${card.name}: no magical ${types.join('/')} of ${minRarity}+ rarity in the compendium `
+        + `— grant one by hand.`,
       meta: { kind: 'gm_only' }
     };
   }
 
   const chosen = pool[Math.floor(rng() * pool.length)];
   await api.grantItems(actor.id, [{ pack: chosen.pack, id: chosen.id }]);
+  const note = widened ? ', above your level' : '';
   return {
     mode: 'auto',
-    log: `${card.name}: granted ${chosen.name} (level ${chosen.level} ${chosen.rarity})`,
+    log: `${card.name}: granted ${chosen.name} (level ${chosen.level} ${chosen.rarity}${note})`,
     meta: { granted: chosen.name }
   };
 }
