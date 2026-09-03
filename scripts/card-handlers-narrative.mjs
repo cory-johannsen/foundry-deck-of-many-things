@@ -269,6 +269,37 @@ export async function applyExile({ actor, api, card }) {
   return { mode: 'auto', log: `${card.name}: ${spec.name} — no further cards are drawn` };
 }
 
+/**
+ * Undead: a revenant takes up the hunt.
+ *
+ * It used to place the creature on the current scene, which put a monster in
+ * front of the party the instant the card was drawn — wherever they happened
+ * to be, and whether or not the GM was ready for it. The card describes a
+ * pursuit lasting a year, not an encounter starting now.
+ *
+ * So the character is marked instead. The effect carries the year as its
+ * duration, so the sheet counts it down, and the GM brings the revenant when
+ * the story wants it.
+ */
+export async function applyRevenantHunter({ actor, params, api, card }) {
+  const days = params.duration_days ?? 365;
+  await api.createEffect(actor.id, usesEffect({
+    name: 'Hunted by a Revenant',
+    uses: 0,
+    days,
+    cardId: card.id,
+    description: 'An undead revenant has risen with the singular purpose of destroying you. '
+      + 'It hunts you until you are dead, until the year is out, or until a wish-tier miracle '
+      + 'ends the pursuit. You will not see it coming.',
+    img: 'icons/magic/death/undead-ghost-strike-white.webp'
+  }));
+  return {
+    mode: 'auto',
+    log: `${card.name}: a revenant is hunting you — ${days} days, or until one of you is dead. `
+      + `The effect is on your sheet; it will arrive when it arrives.`
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Named adversaries — Fiend, Flames
 // ---------------------------------------------------------------------------

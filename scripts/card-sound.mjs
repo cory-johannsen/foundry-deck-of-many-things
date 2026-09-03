@@ -90,7 +90,6 @@ export const GROUP_BY_KIND = {
   spawn_hostile: 'summon_hostile',
   spawn_ooze: 'summon_hostile',
   random_hostile_npc: 'summon_hostile',
-  revenant_hunter: 'summon_hostile',
   permanent_enemy: 'summon_hostile',
   avatar_of_death: 'summon_hostile',
 
@@ -105,6 +104,7 @@ export const GROUP_BY_KIND = {
   restrain_no_spellcast: 'curse',
   petrify: 'curse',
   fiend_deal: 'curse',
+  revenant_hunter: 'curse',
 
   // Something is taken away.
   wealth_wipe: 'loss',

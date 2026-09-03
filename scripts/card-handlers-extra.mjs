@@ -377,7 +377,6 @@ const SPAWN_SPECS = {
   spawn_wyrmling:     { traits: ['dragon'], level: [1, 6],    friendly: true },
   spawn_ooze:         { traits: ['ooze'], level: [0, 12],     friendly: false },
   spawn_hostile:      { traits: ['beast', 'aberration'], level: [5, 12], friendly: false },
-  revenant_hunter:    { traits: ['undead'], level: [3, 10],   friendly: false },
   avatar_of_death:    { traits: ['undead'], level: [8, 16],   friendly: false }
 };
 

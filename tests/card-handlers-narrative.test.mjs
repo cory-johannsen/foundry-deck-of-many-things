@@ -253,10 +253,10 @@ describe('every card is now handled', () => {
     expect(stubs).toEqual([]);
   });
 
-  it('gates everything that removes, ages, rewrites or sets an enemy on the character', () => {
+  it('gates nothing — every card applies as it is drawn', () => {
     for (const kind of ['trap_extraplanar', 'feywild_transport', 'age_shift',
                         'moral_inversion', 'permanent_enemy', 'fiend_deal']) {
-      expect(requiresConfirmation(kind), kind).toBe(true);
+      expect(requiresConfirmation(kind), kind).toBe(false);
     }
     for (const kind of ['wish', 'sage_query', 'resurrection_grant', 'save_penalty',
                         'three_cantrips', 'skill_proficiencies', 'throne_persuasion',
@@ -402,5 +402,41 @@ describe('Book asks for the languages instead of describing them', () => {
     const { r } = await run('book', { api: makeApi({ languages: [] }) });
     expect(r.mode).toBe('gm');
     expect(r.log).toContain('no languages left');
+  });
+});
+
+describe('Undead marks the character rather than summoning', () => {
+  it('places no token', async () => {
+    // It used to put a monster in front of the party the instant the card was
+    // drawn, wherever they happened to be.
+    const { api } = await run('undead');
+    expect(api.spy.spawned).toHaveLength(0);
+  });
+
+  it('leaves an effect carrying the year as its duration', async () => {
+    const { api } = await run('undead');
+    const eff = api.spy.effects[0];
+    expect(eff.name).toContain('Revenant');
+    expect(eff.system.duration).toMatchObject({ value: 365, unit: 'days' });
+  });
+
+  it('tells the player the pursuit is under way', async () => {
+    const { r } = await run('undead');
+    expect(r.mode).toBe('auto');
+    expect(r.log).toMatch(/hunting you/);
+    expect(r.log).toMatch(/on your sheet/);
+  });
+
+  it('is traceable back to its card, so the sound follows it', async () => {
+    const { api } = await run('undead');
+    expect(api.spy.effects[0].flags['deck-of-many-more-things'].cardId).toBe('undead');
+  });
+
+  it('honours a different duration from params', async () => {
+    const card = { ...BY_ID.get('undead'), mechanics: { kind: 'revenant_hunter',
+      params: { duration_days: 30 } } };
+    const api = makeApi();
+    await applyCardEffect({ card, actor: actorOf(), api, rng: () => 0.5, confirmGate: false });
+    expect(api.spy.effects[0].system.duration.value).toBe(30);
   });
 });

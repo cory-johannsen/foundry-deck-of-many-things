@@ -206,12 +206,11 @@ describe('cards the module cannot decide for the table', () => {
     expect(actor.system.attributes.hp.value).toBe(30);
   });
 
-  it('Talons holds for confirmation before destroying anything', async () => {
+  it('Talons destroys on the draw, with nothing held back', async () => {
     const actor = makeActor();
-    const api = makeApi(actor);
+    const api = { ...makeApi(actor), listItems: async () => [], removeItems: async () => {} };
     const res = await applyCardEffect({ card: BY_ID.get('talons'), actor, api });
-    expect(res.mode).toBe('gm');
-    expect(res.meta.kind).toBe('needs_confirm');
+    expect(res.mode).toBe('auto');
   });
 });
 
@@ -235,18 +234,24 @@ describe('the confirmation gate', () => {
     removeItems: async () => {}, spawnCreatures: async () => {}
   });
 
-  it('holds a destructive card at pending instead of applying it', async () => {
-    const res = await applyCardEffect({ card: BY_ID.get('statue'), actor: actor(), api: api() });
-    expect(res.mode).toBe('gm');
-    expect(res.meta.kind).toBe('needs_confirm');
+  it('holds nothing back: every card applies as it is drawn', async () => {
+    const held = Array.from(BY_ID.values())
+      .filter((card) => requiresConfirmation(card.mechanics.kind))
+      .map((card) => card.name);
+    expect(held).toEqual([]);
   });
 
-  it('writes nothing while the card is held', async () => {
-    let wrote = false;
-    const spy = { ...api(), updateActor: async () => { wrote = true; },
-                  increaseCondition: async () => { wrote = true; } };
-    await applyCardEffect({ card: BY_ID.get('statue'), actor: actor(), api: spy });
-    expect(wrote).toBe(false);
+  it('still holds a card back if a kind is added to the set', async () => {
+    // The mechanism is kept so one can be re-gated without rebuilding it.
+    const { REQUIRES_CONFIRMATION } = await import('../scripts/card-effects.mjs');
+    REQUIRES_CONFIRMATION.add('petrify');
+    try {
+      const res = await applyCardEffect({ card: BY_ID.get('statue'), actor: actor(), api: api() });
+      expect(res.mode).toBe('gm');
+      expect(res.meta.kind).toBe('needs_confirm');
+    } finally {
+      REQUIRES_CONFIRMATION.delete('petrify');
+    }
   });
 
   it('lets a gain apply straight away', async () => {
@@ -263,11 +268,8 @@ describe('the confirmation gate', () => {
 
   it('gates every card that takes something away or spawns a hostile', () => {
     for (const kind of ['xp_loss', 'fall', 'petrify', 'destroy_magic_items',
-                        'spawn_hostile', 'avatar_of_death']) {
-      expect(requiresConfirmation(kind), kind).toBe(true);
-    }
-    for (const kind of ['xp_gain', 'wealth_grant', 'long_rest', 'stat_bump',
-                        'magic_weapon_grant', 'spawn_ally_npc', 'drop_to_zero_hp']) {
+                        'spawn_hostile', 'avatar_of_death', 'xp_gain', 'wealth_grant',
+                        'long_rest', 'stat_bump', 'magic_weapon_grant', 'spawn_ally_npc']) {
       expect(requiresConfirmation(kind), kind).toBe(false);
     }
   });
@@ -284,15 +286,9 @@ describe('Euryale applies without asking', () => {
     });
   });
 
-  it('leaves gated only what is irreversible, removing or on the map', () => {
-    for (const kind of ['xp_loss', 'petrify', 'destroy_magic_items', 'spawn_hostile']) {
-      expect(requiresConfirmation(kind), kind).toBe(true);
-    }
-  });
-
-  it('applies the cards that do one definite thing', () => {
-    // Unpleasant, but nothing for a GM to decide.
-    for (const kind of ['drop_to_zero_hp', 'exhaustion', 'restrain_no_spellcast',
+  it('applies every card on the draw, destructive or not', () => {
+    for (const kind of ['xp_loss', 'petrify', 'destroy_magic_items', 'spawn_hostile',
+                        'drop_to_zero_hp', 'exhaustion', 'restrain_no_spellcast',
                         'wealth_wipe', 'save_penalty', 'soul_trap', 'stat_debuff',
                         'beast_form']) {
       expect(requiresConfirmation(kind), kind).toBe(false);
