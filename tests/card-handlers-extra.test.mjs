@@ -96,12 +96,16 @@ describe('experience', () => {
 });
 
 describe('choices', () => {
-  it('asks before granting a hoard rather than picking for the GM', async () => {
+  it('rolls the hoard instead of asking — both piles are worth the same', async () => {
     const { r, api } = await run('gem');
-    expect(r.mode).toBe('gm');
-    expect(r.meta.requires).toBe('choose_option');
-    expect(r.meta.options).toHaveLength(2);
-    expect(api.spy.coins).toHaveLength(0);      // nothing granted while asking
+    expect(r.mode).toBe('auto');
+    expect(api.spy.coins[0]).toEqual({ gp: 50000 });
+  });
+
+  it('still honours an explicit choice, for a GM who wants to pick', async () => {
+    const params = { ...BY_ID.get('gem').mechanics.params, chosen: '0' };
+    const { r } = await run('gem', { params });
+    expect(r.log).toMatch(/jewelry/);
   });
 
   it('grants the chosen hoard once the choice is made', async () => {
@@ -485,12 +489,11 @@ describe('Ruin actually takes the wealth', () => {
     expect(r.log).toContain('nothing mundane left to lose');
   });
 
-  it('is still held for confirmation before any of it happens', async () => {
+  it('applies without asking — it does one definite thing', async () => {
     const [a, spy] = api({ coins: { gp: 100 }, items: carried });
     const r = await applyCardEffect({ card: BY_ID.get('ruin'), actor: actorOf(), api: a });
-    expect(r.mode).toBe('gm');
-    expect(spy.removedCoins).toHaveLength(0);
-    expect(spy.removedItems).toHaveLength(0);
+    expect(r.mode).toBe('auto');
+    expect(spy.removedCoins).toHaveLength(1);
   });
 });
 

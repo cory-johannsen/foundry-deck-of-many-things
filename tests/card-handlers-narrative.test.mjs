@@ -259,7 +259,8 @@ describe('every card is now handled', () => {
       expect(requiresConfirmation(kind), kind).toBe(true);
     }
     for (const kind of ['wish', 'sage_query', 'resurrection_grant', 'save_penalty',
-                        'three_cantrips', 'skill_proficiencies', 'throne_persuasion']) {
+                        'three_cantrips', 'skill_proficiencies', 'throne_persuasion',
+                        'drop_to_zero_hp', 'exhaustion', 'restrain_no_spellcast', 'wealth_wipe']) {
       expect(requiresConfirmation(kind), kind).toBe(false);
     }
   });

@@ -396,19 +396,16 @@ const HANDLERS = {
  * about to appear — before anything is written. Gains apply silently, because
  * nobody needs protecting from being handed a magic sword.
  *
- * The already-automated destructive handlers are in here too. They were
- * applying silently before this list existed, which was an oversight rather
- * than a decision: a card that drops a character to 0 HP with no prompt is
- * exactly what this gate is for.
- *
- * Euryale is the exception among them, and stays automatic. It applies one
- * flat, visible, reversible penalty and takes nothing away — there is no
- * judgement in it for a GM to make, so a prompt would only be a click.
+ * The line has been drawn by play rather than by category. Corpse, Maze,
+ * Prisoner, Ruin and Euryale all do something unpleasant, but each does one
+ * definite thing with nothing for a GM to decide, so confirming them was only
+ * a click between drawing a card and seeing it land. What remains gated either
+ * removes something irreplaceable, takes the character out of the player's
+ * hands, or puts a creature on the map.
  */
 export const REQUIRES_CONFIRMATION = new Set([
   'xp_loss', 'fall', 'petrify', 'soul_trap', 'destroy_magic_items', 'beast_form',
-  'drop_to_zero_hp', 'stat_debuff', 'exhaustion',
-  'restrain_no_spellcast', 'wealth_wipe',
+  'stat_debuff',
   'trap_extraplanar', 'feywild_transport', 'age_shift', 'moral_inversion', 'permanent_enemy',
   'fiend_deal',   // indifferent, but it still puts a creature on the map
   'spawn_hostile', 'spawn_ooze', 'random_hostile_npc',

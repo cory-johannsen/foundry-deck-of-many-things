@@ -119,17 +119,14 @@ export async function applySoloKillLevelUp({ actor, params, api, card }) {
 // ---------------------------------------------------------------------------
 
 export async function applyWealthGrant({ actor, params, api, card, rng }) {
-  // Gem offers a choice between two piles of identical total value.
+  // Gem offers two piles of identical total value, so which one appears is
+  // flavour rather than a decision — the hoard is rolled instead of asked
+  // about. An explicit `chosen` still wins, for a GM who wants to pick.
   if (Array.isArray(params.choice)) {
-    if (!params.chosen) {
-      const options = params.choice.map((c, i) => ({
-        value: String(i),
-        label: `${c.count} ${c.kind} worth ${c.value_each_gp} gp each `
-          + `(${(c.count * c.value_each_gp).toLocaleString()} gp)`
-      }));
-      return needsChoice(card, 'chosen', options, `${card.name}: choose which hoard appears.`);
-    }
-    const pick = params.choice[Number(params.chosen)] ?? params.choice[0];
+    const index = params.chosen != null
+      ? Number(params.chosen)
+      : Math.floor(rng() * params.choice.length);
+    const pick = params.choice[index] ?? params.choice[0];
     const gp = pick.count * pick.value_each_gp;
     await api.addCoins(actor.id, { gp });
     return { mode: 'auto', log: `${card.name}: ${pick.count} ${pick.kind} — ${gp.toLocaleString()} gp` };

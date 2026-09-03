@@ -236,15 +236,16 @@ describe('the confirmation gate', () => {
   });
 
   it('holds a destructive card at pending instead of applying it', async () => {
-    const res = await applyCardEffect({ card: BY_ID.get('corpse'), actor: actor(), api: api() });
+    const res = await applyCardEffect({ card: BY_ID.get('statue'), actor: actor(), api: api() });
     expect(res.mode).toBe('gm');
     expect(res.meta.kind).toBe('needs_confirm');
   });
 
   it('writes nothing while the card is held', async () => {
     let wrote = false;
-    const spy = { ...api(), updateActor: async () => { wrote = true; } };
-    await applyCardEffect({ card: BY_ID.get('corpse'), actor: actor(), api: spy });
+    const spy = { ...api(), updateActor: async () => { wrote = true; },
+                  increaseCondition: async () => { wrote = true; } };
+    await applyCardEffect({ card: BY_ID.get('statue'), actor: actor(), api: spy });
     expect(wrote).toBe(false);
   });
 
@@ -255,18 +256,18 @@ describe('the confirmation gate', () => {
 
   it('opens the gate for the planner, which runs after the GM has clicked Apply', async () => {
     const res = await applyCardEffect({
-      card: BY_ID.get('corpse'), actor: actor(), api: api(), confirmGate: false
+      card: BY_ID.get('statue'), actor: actor(), api: api(), confirmGate: false
     });
     expect(res.mode).toBe('auto');
   });
 
   it('gates every card that takes something away or spawns a hostile', () => {
     for (const kind of ['xp_loss', 'fall', 'petrify', 'soul_trap', 'destroy_magic_items',
-                        'spawn_hostile', 'avatar_of_death', 'wealth_wipe']) {
+                        'spawn_hostile', 'avatar_of_death']) {
       expect(requiresConfirmation(kind), kind).toBe(true);
     }
     for (const kind of ['xp_gain', 'wealth_grant', 'long_rest', 'stat_bump',
-                        'magic_weapon_grant', 'spawn_ally_npc']) {
+                        'magic_weapon_grant', 'spawn_ally_npc', 'drop_to_zero_hp']) {
       expect(requiresConfirmation(kind), kind).toBe(false);
     }
   });
@@ -283,10 +284,18 @@ describe('Euryale applies without asking', () => {
     });
   });
 
-  it('leaves the cards that take something away still gated', () => {
-    for (const kind of ['drop_to_zero_hp', 'stat_debuff', 'exhaustion',
-                        'restrain_no_spellcast', 'wealth_wipe']) {
+  it('leaves gated only what is irreversible, removing or on the map', () => {
+    for (const kind of ['xp_loss', 'petrify', 'soul_trap', 'destroy_magic_items',
+                        'beast_form', 'spawn_hostile']) {
       expect(requiresConfirmation(kind), kind).toBe(true);
+    }
+  });
+
+  it('applies the cards that do one definite thing', () => {
+    // Unpleasant, but nothing for a GM to decide.
+    for (const kind of ['drop_to_zero_hp', 'exhaustion', 'restrain_no_spellcast',
+                        'wealth_wipe', 'save_penalty']) {
+      expect(requiresConfirmation(kind), kind).toBe(false);
     }
   });
 });
