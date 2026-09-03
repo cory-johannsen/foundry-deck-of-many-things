@@ -5,7 +5,8 @@ import {
   applyWealthGrant, applyPetrify, applyFall, applySoulTrap,
   applyElementImmunity, applyGrantTelepathy, applyUnarmoredDefense,
   applyItemGrant, applyDestroyMagicItems, applySpawn,
-  applyBonusDraws, applyStopDrawing, applyDrawTwoKeepOne, applyBeastForm
+  applyBonusDraws, applyStopDrawing, applyDrawTwoKeepOne, applyBeastForm,
+  applyRandomHostileNpc
 } from './card-handlers-extra.mjs';
 import {
   applyTrackedUses, applySpellGrant, applySkillProficiencies, applyThronePersuasion,
@@ -250,7 +251,7 @@ const HANDLERS = {
   spawn_ooze: applySpawn,
   fall: applyFall,
   spellcast_slotless: applySpellGrant,
-  random_hostile_npc: applySpawn,
+  random_hostile_npc: applyRandomHostileNpc,
   sage_query: applyTrackedUses,
   map_query: applyTrackedUses,
   armor_grant: applyItemGrant,

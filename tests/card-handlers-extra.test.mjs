@@ -17,7 +17,7 @@ const actorOf = (over = {}) => ({
 });
 
 /** Records writes, answers reads from fixtures. */
-const makeApi = ({ items = [], creatures = [], carried = [] } = {}) => {
+const makeApi = ({ items = [], creatures = [], carried = [], worldActors = [] } = {}) => {
   const spy = { updates: [], conditions: [], effects: [], coins: [], granted: [], removed: [], spawned: [] };
   return {
     spy,
@@ -31,7 +31,8 @@ const makeApi = ({ items = [], creatures = [], carried = [] } = {}) => {
     spawnCreatures: async (e, o) => { spy.spawned.push({ e, o }); },
     findItems: async () => items,
     findCreatures: async () => creatures,
-    listItems: async () => carried
+    listItems: async () => carried,
+    findWorldActors: async () => worldActors,
   };
 };
 
@@ -345,5 +346,90 @@ describe('spawning asks for the right kind of creature', () => {
     });
     expect(seen[0].e[0].id).toBe('wight');
     expect(res.log).toContain('outside the usual level');
+  });
+});
+
+describe('spawning prefers the world over the compendium', () => {
+  // The SRD bestiaries ship no token art, so a compendium summon arrives as
+  // the default silhouette. Fiend produced an artless Hellwasp Swarm.
+  const worldNpc = { id: 'w1', name: 'Aller Rosk', level: 5, hasArt: true, folder: 'Otari' };
+  const packNpc = { pack: 'b', id: 'c1', name: 'Generic Thug', level: 5, traits: ['humanoid'] };
+
+  const api = ({ world = [], pack = [] } = {}) => {
+    const spawned = [];
+    return [{
+      ...makeApi(),
+      findWorldActors: async () => world,
+      findCreatures: async () => pack,
+      spawnCreatures: async (e, o) => { spawned.push({ e, o }); }
+    }, spawned];
+  };
+
+  it('takes a world NPC when one fits, and spawns it by actor id', async () => {
+    const [a, spawned] = api({ world: [worldNpc], pack: [packNpc] });
+    const r = await applyCardEffect({ card: BY_ID.get('knight'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
+    expect(spawned[0].e[0]).toEqual({ actorId: 'w1' });
+    expect(r.meta.source).toBe('world');
+    expect(r.log).toContain('Aller Rosk');
+  });
+
+  it('falls back to the compendium when the world has nobody suitable', async () => {
+    const [a, spawned] = api({ world: [], pack: [packNpc] });
+    const r = await applyCardEffect({ card: BY_ID.get('knight'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
+    expect(spawned[0].e[0]).toEqual({ pack: 'b', id: 'c1' });
+    expect(r.meta.source).toBe('compendium');
+  });
+
+  it('gives up rather than spawning the wrong kind, world or not', async () => {
+    const [a, spawned] = api({ world: [], pack: [] });
+    const r = await applyCardEffect({ card: BY_ID.get('undead'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
+    expect(spawned).toHaveLength(0);
+    expect(r.mode).toBe('gm');
+  });
+});
+
+describe('Rogue turns an existing NPC against you', () => {
+  const world = [
+    { id: 'n1', name: 'Aller Rosk', level: 5, folder: 'Otari', hasArt: true },
+    { id: 'n2', name: 'Augrael', level: 3, folder: 'Otari', hasArt: true }
+  ];
+  const api = (worldActors) => {
+    const spy = { effects: [], chat: [], spawned: [] };
+    return [{
+      ...makeApi(),
+      findWorldActors: async () => worldActors,
+      createEffect: async (_i, e) => { spy.effects.push(e); },
+      postChatCard: async (p) => { spy.chat.push(p); },
+      spawnCreatures: async (e, o) => { spy.spawned.push({ e, o }); }
+    }, spy];
+  };
+
+  it('picks from the world and places no token', async () => {
+    const [a, spy] = api(world);
+    const r = await applyCardEffect({ card: BY_ID.get('rogue'), actor: actorOf(), api: a, rng: () => 0, confirmGate: false });
+    expect(spy.spawned).toHaveLength(0);
+    expect(r.meta.enemyId).toBe('n1');
+  });
+
+  it('keeps the identity out of the public log and the effect', async () => {
+    const [a, spy] = api(world);
+    const r = await applyCardEffect({ card: BY_ID.get('rogue'), actor: actorOf(), api: a, rng: () => 0, confirmGate: false });
+    expect(r.log).not.toContain('Aller Rosk');
+    expect(JSON.stringify(spy.effects)).not.toContain('Aller Rosk');
+  });
+
+  it('tells the GM who, in a whisper', async () => {
+    const [a, spy] = api(world);
+    const r = await applyCardEffect({ card: BY_ID.get('rogue'), actor: actorOf(), api: a, rng: () => 0, confirmGate: false });
+    expect(spy.chat[0].whisperGM).toBe(true);
+    expect(spy.chat[0].content).toContain('Aller Rosk');
+    expect(r.gmNote).toContain('Aller Rosk');
+  });
+
+  it('asks the GM when the world has no NPCs at all', async () => {
+    const [a, spy] = api([]);
+    const r = await applyCardEffect({ card: BY_ID.get('rogue'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
+    expect(r.mode).toBe('gm');
+    expect(spy.effects).toHaveLength(0);
   });
 });

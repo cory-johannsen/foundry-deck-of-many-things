@@ -19,7 +19,7 @@ const actorOf = (over = {}) => ({
   }
 });
 
-const makeApi = ({ items = [], creatures = [] } = {}) => {
+const makeApi = ({ items = [], creatures = [], worldActors = [] } = {}) => {
   const spy = { updates: [], conditions: [], effects: [], granted: [], spawned: [] };
   return {
     spy,
@@ -32,7 +32,8 @@ const makeApi = ({ items = [], creatures = [] } = {}) => {
     spawnCreatures: async (e, o) => { spy.spawned.push({ e, o }); },
     findItems: async () => items,
     findCreatures: async () => creatures,
-    listItems: async () => []
+    listItems: async () => [],
+    findWorldActors: async () => worldActors,
   };
 };
 
