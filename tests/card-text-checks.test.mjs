@@ -130,3 +130,24 @@ describe('every card narrates what it does', () => {
     expect(numeric).toEqual([]);
   });
 });
+
+describe('growHeight', () => {
+  it('reads the forms a player writes a height in', async () => {
+    const { growHeight } = await import('../scripts/card-effects.mjs');
+    expect(growHeight("5'10\"", 7)).toBe("6'5\"");
+    expect(growHeight('5 ft 10 in', 7)).toBe("6'5\"");
+    expect(growHeight('70', 7)).toBe("6'5\"");
+  });
+
+  it('carries inches over into feet', async () => {
+    const { growHeight } = await import('../scripts/card-effects.mjs');
+    expect(growHeight("5'11\"", 2)).toBe("6'1\"");
+  });
+
+  it('leaves alone what it cannot read, rather than guessing', async () => {
+    const { growHeight } = await import('../scripts/card-effects.mjs');
+    expect(growHeight('quite tall', 7)).toBeNull();
+    expect(growHeight('', 7)).toBeNull();
+    expect(growHeight(null, 7)).toBeNull();
+  });
+});
