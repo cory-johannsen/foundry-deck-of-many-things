@@ -302,18 +302,22 @@ export async function performDivinationOnTable() {
     return;
   }
 
-  const category = await chooseCategory();
-  if (!category || category === 'cancel') return;
-
+  // The table comes up first, then the category is chosen — so the sound and
+  // the scene change land together and the querent picks with the cloth already
+  // in front of them. Note this means cancelling the category dialog leaves
+  // everyone on the divination table; the reading simply does not begin.
   const scene = await ensureDivinationScene();
   await clearReadingTiles(scene);
+  playSound(SOUNDS.open);
   // activate(), not view(): view() only moves this client, leaving players on
   // whatever scene they were already on. activate() makes it the active scene
   // and pulls everyone, and views it for the GM as well.
   if (!scene.active) await scene.activate();
   else await scene.view();
-  playSound(SOUNDS.open);
   await new Promise((r) => setTimeout(r, 400));
+
+  const category = await chooseCategory();
+  if (!category || category === 'cancel') return;
 
   const fit = layoutTransform(scene);
 
