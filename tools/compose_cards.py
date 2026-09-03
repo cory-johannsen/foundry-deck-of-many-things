@@ -36,7 +36,7 @@ CORNER = 0.30
 # behind it, so the frame cannot cover important detail. The border area is
 # filled with a blurred, darkened blow-up of the same art, which keeps a related
 # background behind the ornament instead of flat black.
-APERTURE_INSET = 0.965   # shrink slightly so the oval corners do not clip the art
+APERTURE_INSET = 0.99    # shrink slightly so the oval corners do not clip the art
 BG_BLUR = 0.045          # blur radius as a fraction of the card's short side
 BG_DARKEN = 0.42         # how far the background is pulled toward EDGE_INK
 FEATHER = 0.055          # soft edge on the fitted art, as a fraction of its short side
