@@ -404,7 +404,7 @@ const HANDLERS = {
  * hands, or puts a creature on the map.
  */
 export const REQUIRES_CONFIRMATION = new Set([
-  'xp_loss', 'fall', 'petrify', 'soul_trap', 'destroy_magic_items',
+  'xp_loss', 'fall', 'petrify', 'destroy_magic_items',
   'trap_extraplanar', 'feywild_transport', 'age_shift', 'moral_inversion', 'permanent_enemy',
   'fiend_deal',   // indifferent, but it still puts a creature on the map
   'spawn_hostile', 'spawn_ooze', 'random_hostile_npc',

@@ -262,7 +262,7 @@ describe('the confirmation gate', () => {
   });
 
   it('gates every card that takes something away or spawns a hostile', () => {
-    for (const kind of ['xp_loss', 'fall', 'petrify', 'soul_trap', 'destroy_magic_items',
+    for (const kind of ['xp_loss', 'fall', 'petrify', 'destroy_magic_items',
                         'spawn_hostile', 'avatar_of_death']) {
       expect(requiresConfirmation(kind), kind).toBe(true);
     }
@@ -285,8 +285,7 @@ describe('Euryale applies without asking', () => {
   });
 
   it('leaves gated only what is irreversible, removing or on the map', () => {
-    for (const kind of ['xp_loss', 'petrify', 'soul_trap', 'destroy_magic_items',
-                        'spawn_hostile']) {
+    for (const kind of ['xp_loss', 'petrify', 'destroy_magic_items', 'spawn_hostile']) {
       expect(requiresConfirmation(kind), kind).toBe(true);
     }
   });
@@ -294,7 +293,8 @@ describe('Euryale applies without asking', () => {
   it('applies the cards that do one definite thing', () => {
     // Unpleasant, but nothing for a GM to decide.
     for (const kind of ['drop_to_zero_hp', 'exhaustion', 'restrain_no_spellcast',
-                        'wealth_wipe', 'save_penalty']) {
+                        'wealth_wipe', 'save_penalty', 'soul_trap', 'stat_debuff',
+                        'beast_form']) {
       expect(requiresConfirmation(kind), kind).toBe(false);
     }
   });
