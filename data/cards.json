@@ -863,7 +863,8 @@
         "upright": "A situation ordained by fate, perhaps involving a supernatural punishment or reward.",
         "reversed": "An unjust situation where evil is rewarded and good is punished."
       }
-    }
+    },
+    "sound": "fates.ogg"
   },
   {
     "id": "fey",
