@@ -108,28 +108,71 @@ async function autoApplySizeGrow({ actor, params, api, card, rng }) {
   return { mode: 'auto', log: `${card.name}: grew ${inches}", size ${current} → ${bigger}, HP +${hp_bump}` };
 }
 
+/**
+ * Movement in PF2e is derived, not stored.
+ *
+ * These three wrote to `system.attributes.speed`, which does not exist on a
+ * character — the real data lives under `system.movement.speeds` and is
+ * recomputed from ancestry and items every preparation, so a direct write is
+ * discarded. Path reported "walk speed 25 → 35" on a character with a 30-foot
+ * stride: the 25 was a fallback for the missing field, and the sheet never
+ * moved.
+ *
+ * Speeds are therefore granted the way the system grants them, with rule
+ * elements on an effect: FlatModifier against the land-speed selector for a
+ * bonus, BaseSpeed for a movement type the character did not have. Both were
+ * confirmed against a live sheet, including that BaseSpeed takes `selector`
+ * rather than `type`.
+ */
+const landSpeedOf = (actor) => deepGet(actor, 'system.movement.speeds.land.value') ?? 25;
+
 async function autoApplySpeedBonus({ actor, params, api, card }) {
   const { walk_ft = 0 } = params;
-  const path = 'system.attributes.speed.value';
-  const cur = deepGet(actor, path) ?? 25;
-  await api.updateActor(actor.id, { [path]: cur + walk_ft });
-  return { mode: 'auto', log: `${card.name}: walk speed ${cur} → ${cur + walk_ft} ft` };
+  const before = landSpeedOf(actor);
+  await api.createEffect(actor.id, {
+    type: 'effect',
+    name: `Quickened Stride (+${walk_ft} ft)`,
+    img: 'icons/magic/movement/trail-streak-zigzag-yellow.webp',
+    system: {
+      description: { value: `Your land Speed increases by ${walk_ft} feet.` },
+      duration: { unit: 'unlimited' },
+      rules: [{ key: 'FlatModifier', selector: 'land-speed', type: 'status', value: walk_ft }]
+    }
+  });
+  return {
+    mode: 'auto',
+    log: `${card.name}: land Speed ${before} → ${before + walk_ft} ft`
+  };
 }
 
-async function autoApplyClimbSpeed({ actor, params, api, card }) {
-  const walk = deepGet(actor, 'system.attributes.speed.value') ?? 25;
-  const others = deepGet(actor, 'system.attributes.speed.otherSpeeds') ?? [];
-  const nextOthers = [...others.filter((o) => o.type !== 'climb'), { type: 'climb', value: walk }];
-  await api.updateActor(actor.id, { 'system.attributes.speed.otherSpeeds': nextOthers });
-  return { mode: 'auto', log: `${card.name}: climb speed ${walk} ft (matches walk)` };
+async function autoApplyClimbSpeed({ actor, api, card }) {
+  const land = landSpeedOf(actor);
+  await api.createEffect(actor.id, {
+    type: 'effect',
+    name: `Climb Speed (${land} ft)`,
+    img: 'icons/magic/control/buff-flight-wings-runes-blue-white.webp',
+    system: {
+      description: { value: `You gain a climb Speed equal to your land Speed.` },
+      duration: { unit: 'unlimited' },
+      rules: [{ key: 'BaseSpeed', selector: 'climb', value: land }]
+    }
+  });
+  return { mode: 'auto', log: `${card.name}: climb Speed ${land} ft, matching your land Speed` };
 }
 
 async function autoApplyFlight({ actor, params, api, card }) {
   const { speed_ft = 30 } = params;
-  const others = deepGet(actor, 'system.attributes.speed.otherSpeeds') ?? [];
-  const nextOthers = [...others.filter((o) => o.type !== 'fly'), { type: 'fly', value: speed_ft }];
-  await api.updateActor(actor.id, { 'system.attributes.speed.otherSpeeds': nextOthers });
-  return { mode: 'auto', log: `${card.name}: fly speed ${speed_ft} ft` };
+  await api.createEffect(actor.id, {
+    type: 'effect',
+    name: `Fly Speed (${speed_ft} ft)`,
+    img: 'icons/magic/air/wind-swirl-gray-blue.webp',
+    system: {
+      description: { value: `You gain a fly Speed of ${speed_ft} feet.` },
+      duration: { unit: 'unlimited' },
+      rules: [{ key: 'BaseSpeed', selector: 'fly', value: speed_ft }]
+    }
+  });
+  return { mode: 'auto', log: `${card.name}: fly Speed ${speed_ft} ft` };
 }
 
 async function autoApplyExhaustion({ actor, params, api, card, rng }) {
@@ -157,7 +200,17 @@ async function autoApplyRestrainNoSpellcast({ actor, api, card }) {
   await api.createEffect(actor.id, {
     type: 'effect',
     name: t('DOMMT.Effects.Prisoner.Label', 'Restrained (Prisoner)'),
-    system: { rules: [{ key: 'ActiveEffectLike', mode: 'override', path: 'system.attributes.spellcasting', value: false }] }
+    img: 'icons/magic/control/energy-stream-link-white.webp',
+    system: {
+      description: { value: 'Bound by unseen forces. You are Restrained and cannot cast spells '
+        + 'until you are freed.' },
+      duration: { unit: 'unlimited' },
+      // No rule element. The previous one overrode system.attributes.spellcasting,
+      // which does not exist on a PF2e character, so it did nothing. PF2e has no
+      // flag for "cannot cast", so the restriction is stated for the table to
+      // enforce rather than faked with a write that goes nowhere.
+      rules: []
+    }
   });
   return { mode: 'auto', log: `${card.name}: Restrained; cannot cast spells` };
 }

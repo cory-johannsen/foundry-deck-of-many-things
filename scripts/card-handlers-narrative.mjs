@@ -49,7 +49,7 @@ const USE_CARDS = {
   cast_time_stop_n: {
     formula: 'count_dice', label: (n) => `Time Freeze (${n} free castings)`,
     text: (n) => `Cast Time Freeze ${n} time(s) without expending a spell slot.`,
-    img: 'icons/magic/time/hourglass-tilted-blue.webp'
+    img: 'icons/magic/time/clock-stopwatch-white-blue.webp'
   },
   cast_gate_n: {
     formula: 'count_dice', label: (n) => `Gate (${n} free castings)`,
@@ -64,7 +64,7 @@ const USE_CARDS = {
   erase_event: {
     fixed: 'uses', label: () => 'Erase an Event',
     text: () => 'Avoid or erase one event as if it never happened. Usable any time before death.',
-    img: 'icons/magic/time/clock-spinning-gold.webp'
+    img: 'icons/magic/time/clock-spinning-gold-pink.webp'
   },
   map_query: {
     fixed: 'uses', days: 'validity_days', label: () => 'Unerring Location',
@@ -300,7 +300,7 @@ export async function applyAgeShift({ actor, params, api, card, rng }) {
     uses: 0,
     description: `Rolled ${parity} on the d20 — ${older ? 'aged' : 'made younger by'} ${years} years. `
       + 'The change is instantaneous and permanent.',
-    img: 'icons/magic/time/hourglass-yellow.webp'
+    img: 'icons/magic/time/hourglass-yellow-green.webp'
   }));
   return {
     mode: 'auto',
