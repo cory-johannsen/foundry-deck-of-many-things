@@ -221,10 +221,18 @@ export async function resolvePendingDraw(message) {
 /** Rewrite a resolved message so the button is gone and the outcome is shown. */
 export async function markMessageResolved(message, outcome) {
   const flags = message.flags?.[MODULE_ID] ?? {};
-  const note = `<div class="dommt-chat__resolved"><em>${outcome.log}</em></div>`;
-  const content = message.content
+  // The waiting line becomes the outcome, rather than the card growing a
+  // second paragraph underneath saying much the same thing.
+  const esc = foundry.utils.escapeHTML?.(outcome.log) ?? outcome.log;
+  let content = message.content
     .replace(/<div class="dommt-chat__gm-actions">[\s\S]*?<\/div>/, '')
-    .replace(/<\/div>\s*$/, `${note}</div>`);
+    .replace(/(<div class="dommt-chat__outcome" data-outcome>)[\s\S]*?(<\/div>)/,
+      `$1\n      ${esc}\n    $2`);
+  // A card posted before this layout has no outcome block; append instead.
+  if (!content.includes('data-outcome')) {
+    content = content.replace(/<\/div>\s*$/,
+      `<div class="dommt-chat__resolved"><em>${esc}</em></div></div>`);
+  }
   return message.update({
     content,
     flags: {

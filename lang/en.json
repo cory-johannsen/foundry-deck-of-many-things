@@ -55,5 +55,6 @@
   "DOMMT.GM.Cancel": "Cancel",
   "DOMMT.Choice.Waiting": "Waiting for {user} to choose for {card}…",
   "DOMMT.Choice.NoAnswer": "{user} did not answer in time — the choice falls to you.",
-  "DOMMT.Play.ExtraDraws": "{card} grants {count} additional draw(s)."
+  "DOMMT.Play.ExtraDraws": "{card} grants {count} additional draw(s).",
+  "DOMMT.Chat.Awaiting": "The card is drawn. Its effect has not been settled yet."
 }

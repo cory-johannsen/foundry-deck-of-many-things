@@ -52,6 +52,14 @@ Hooks.once('ready', async () => {
     divineOnTable: () => performDivinationOnTable(),
     clearTable: () => clearDivinationTable(),
     drawForced: drawForced,
+    /**
+     * Draw from the play deck as the deck app does — budget growth, extra
+     * draws, terminators and Tower's keep-one included. Exposed because the
+     * loop was reachable only by clicking a button, which is what left the
+     * deck-flow cards untestable and, for a while, unimplemented.
+     */
+    draw: (count = 1, { actorId = null } = {}) =>
+      runDraws({ count, actor: actorId ? game.actors.get(actorId) : resolveDrawActor().actor }),
     resetDeck: async () => {
       const cards = await loadCards();
       const seed = String(Date.now());
