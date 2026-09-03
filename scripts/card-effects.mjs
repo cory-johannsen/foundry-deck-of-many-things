@@ -1,4 +1,5 @@
 import { rollFormula } from './dice.mjs';
+import { t } from './i18n.mjs';
 import {
   applyXpGain, applyXpLoss, applyXpGainWithItem, applySoloKillLevelUp,
   applyWealthGrant, applyPetrify, applyFall, applySoulTrap,
@@ -154,7 +155,7 @@ async function autoApplyRestrainNoSpellcast({ actor, api, card }) {
   await api.increaseCondition(actor.id, 'restrained', 1);
   await api.createEffect(actor.id, {
     type: 'effect',
-    name: 'DOMMT.Effects.Prisoner.Label',
+    name: t('DOMMT.Effects.Prisoner.Label', 'Restrained (Prisoner)'),
     system: { rules: [{ key: 'ActiveEffectLike', mode: 'override', path: 'system.attributes.spellcasting', value: false }] }
   });
   return { mode: 'auto', log: `${card.name}: Restrained; cannot cast spells` };
@@ -164,7 +165,7 @@ async function autoApplySavePenalty({ actor, params, api, card }) {
   const value = params.value ?? -2;
   await api.createEffect(actor.id, {
     type: 'effect',
-    name: 'DOMMT.Effects.Euryale.Label',
+    name: t('DOMMT.Effects.Euryale.Label', 'Curse of Euryale (−2 to saves)'),
     system: {
       rules: [
         { key: 'FlatModifier', selector: 'saving-throw', type: 'status', value }
