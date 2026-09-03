@@ -4,6 +4,8 @@ import { loadCards } from './data-loader.mjs';
 import { drawFromPlay, freshPlayDeckState, makeCardsById } from './deck.mjs';
 import { applyCardEffect } from './card-effects.mjs';
 import { makeFoundryApi } from './foundry-api.mjs';
+import { resolveDrawActor } from './draw-target.mjs';
+import { resolvePendingDraw, markMessageResolved } from './gm-resolution.mjs';
 import { postDrawCard } from './ui/card-message.mjs';
 import {
   ensureDivinationScene,
@@ -109,6 +111,38 @@ async function ensureWorldMacros({ force = false } = {}) {
   return { created: toCreate.length, updated: toUpdate.length };
 }
 
+/**
+ * Bind the GM-only Apply button on pending draw cards. Foundry 13+ fires
+ * renderChatMessageHTML with a real element; older builds fire
+ * renderChatMessage with a jQuery wrapper, so accept both.
+ */
+function bindPendingDrawButton(message, html) {
+  const root = html?.[0] ?? html;
+  const button = root?.querySelector?.('[data-action="dommt-resolve"]');
+  if (!button) return;
+  // The button ships in every client's copy of the message; only a GM may use
+  // it, and nobody else should even see it.
+  if (!game.user.isGM) {
+    button.closest('.dommt-chat__gm-actions')?.remove();
+    return;
+  }
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    try {
+      const outcome = await resolvePendingDraw(message);
+      if (outcome) await markMessageResolved(message, outcome);
+      else button.disabled = false;   // dismissed — leave it actionable
+    } catch (e) {
+      console.error(`${MODULE_ID} | resolving pending draw failed`, e);
+      ui.notifications.error(game.i18n.localize('DOMMT.GM.ResolveFailed'));
+      button.disabled = false;
+    }
+  });
+}
+
+Hooks.on('renderChatMessageHTML', bindPendingDrawButton);
+Hooks.on('renderChatMessage', bindPendingDrawButton);
+
 Hooks.on('getSceneControlButtons', (controls) => {
   const tokenControl = controls.find?.((c) => c.name === 'token') ?? controls.token;
   if (!tokenControl) return;
@@ -139,7 +173,7 @@ async function drawForced(cardId, { actorId = null } = {}) {
   const remaining = state.remaining.filter((id) => id !== cardId);
   const drawn = state.drawn.concat([{ cardId, actorId, at: Date.now() }]);
   await game.settings.set(MODULE_ID, 'playDeck', { ...state, remaining, drawn });
-  const actor = actorId ? game.actors.get(actorId) : null;
+  const { actor } = resolveDrawActor({ actorId });
   const api = makeFoundryApi();
   const autoApply = game.settings.get(MODULE_ID, 'autoApplyEffects');
   const result = await applyCardEffect({ card, actor, api, autoApplyEnabled: autoApply });
