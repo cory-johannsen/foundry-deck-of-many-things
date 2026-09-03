@@ -20,7 +20,7 @@ const actorOf = (over = {}) => ({
 });
 
 const makeApi = ({ items = [], creatures = [], worldActors = [], languages = [], coins = {}, gear = [] } = {}) => {
-  const spy = { updates: [], conditions: [], effects: [], granted: [], spawned: [], innate: [], coinsRemoved: [], etched: [] };
+  const spy = { updates: [], conditions: [], effects: [], granted: [], spawned: [], innate: [], coinsRemoved: [], etched: [], built: [] };
   return {
     spy,
     updateActor: async (_i, u) => { spy.updates.push(u); },
@@ -34,7 +34,9 @@ const makeApi = ({ items = [], creatures = [], worldActors = [], languages = [],
     listLanguages: async () => languages,
     getCoins: async () => coins,
     listGear: async () => gear,
+    ancestrySpeed: async () => null,
     etchRune: async (_i, id, slug) => { spy.etched.push({ id, slug }); },
+    spawnBuiltCreature: async (d, o) => { spy.built.push({ d, o }); },
     removeCoins: async (_i, c) => { spy.coinsRemoved.push(c); },
     findItems: async () => items,
     findCreatures: async () => creatures,

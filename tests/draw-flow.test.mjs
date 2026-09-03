@@ -98,10 +98,10 @@ describe('Tower shows both cards and what each would do', () => {
     updateActor: async () => {}, increaseCondition: async () => {}, createEffect: async () => {},
     postChatCard: async () => {}, addCoins: async () => {}, grantItems: async () => {},
     removeItems: async () => {}, spawnCreatures: async () => {}, grantInnateSpells: async () => {},
-    removeCoins: async () => {}, etchRune: async () => {},
+    removeCoins: async () => {}, etchRune: async () => {}, spawnBuiltCreature: async () => {},
     findItems: async () => [], findCreatures: async () => [], listItems: async () => [],
     findWorldActors: async () => [], listLanguages: async () => [], getCoins: async () => ({}),
-    listGear: async () => []
+    listGear: async () => [], ancestrySpeed: async () => null
   });
   const byId = new Map([
     ['star', { id: 'star', name: 'Star', art: { front: 'assets/cards-labeled/star.png' },

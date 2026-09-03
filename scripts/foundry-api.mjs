@@ -13,11 +13,11 @@
 export const WRITE_METHODS = [
   'updateActor', 'increaseCondition', 'createEffect', 'postChatCard',
   'addCoins', 'grantItems', 'removeItems', 'spawnCreatures', 'grantInnateSpells',
-  'removeCoins', 'etchRune'
+  'removeCoins', 'etchRune', 'spawnBuiltCreature'
 ];
 
 export const READ_METHODS = ['findItems', 'findCreatures', 'listItems', 'findWorldActors',
-                             'listLanguages', 'getCoins', 'listGear'];
+                             'listLanguages', 'getCoins', 'listGear', 'ancestrySpeed'];
 
 /**
  * PF2e's size codes, smallest first, with the words a card is likely to use.
@@ -218,6 +218,21 @@ export function makeFoundryApi() {
             || i.system?.equipped?.inSlot === true,
           propertyRunes: [...(i.system?.runes?.property ?? [])]
         }));
+    },
+
+    /**
+     * An ancestry's base walking speed, from the compendium rather than a
+     * table that would age. Null when the ancestry is not found, which lets
+     * the caller fall back to its own figures.
+     */
+    async ancestrySpeed(name) {
+      if (!name) return null;
+      const pack = game.packs.get('pf2e.ancestries');
+      if (!pack) return null;
+      const index = await pack.getIndex({ fields: ['type', 'system.speed'] });
+      const hit = [...index].find((e) => e.type === 'ancestry'
+        && e.name.toLowerCase() === String(name).toLowerCase());
+      return hit?.system?.speed ?? null;
     },
 
     /** What the actor is carrying in coin. */
@@ -431,6 +446,32 @@ export function makeFoundryApi() {
         created.push(actor.name);
       }
       return created;
+    },
+
+    /**
+     * Place a creature built from scratch rather than copied from a pack.
+     * Shares the placement logic with spawnCreatures so a built summons lands
+     * beside the character the same way a found one does.
+     */
+    async spawnBuiltCreature(data, { nearActorId = null, disposition = 1 } = {}) {
+      const scene = canvas?.scene;
+      if (!scene) throw new Error('No active scene to place a creature on');
+      const grid = scene.grid?.size ?? 100;
+      const focus = nearActorId
+        ? canvas.tokens?.placeables?.find((t) => t.actor?.id === nearActorId)
+        : null;
+      const x = (focus?.document?.x ?? (scene.width ?? grid * 10) / 2) + grid;
+      const y = focus?.document?.y ?? (scene.height ?? grid * 10) / 2;
+
+      const [actor] = await Actor.createDocuments([foundry.utils.mergeObject(data, {
+        'system.details.alliance': disposition > 0 ? 'party' : 'opposition',
+        'prototypeToken.disposition': disposition
+      })]);
+      const td = await actor.getTokenDocument({ x, y, disposition });
+      const obj = td.toObject();
+      obj.disposition = disposition;
+      await scene.createEmbeddedDocuments('Token', [obj]);
+      return actor.name;
     },
 
     async postChatCard(payload) {

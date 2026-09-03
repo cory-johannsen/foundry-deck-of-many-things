@@ -425,7 +425,6 @@ export async function applyDestroyMagicItems({ actor, api, card }) {
  * bestiaries, against zero by that name pattern.
  */
 const SPAWN_SPECS = {
-  spawn_ally_npc:     { traits: ['humanoid'], level: [2, 6],  friendly: true },
   spawn_homunculus:   { traits: ['construct'], level: [0, 4], friendly: true },
   spawn_wyrmling:     { traits: ['dragon'], level: [1, 6],    friendly: true },
   spawn_ooze:         { traits: ['ooze'], level: [0, 12],     friendly: false },
@@ -663,5 +662,34 @@ export async function applyRandomHostileNpc({ actor, api, card, rng }) {
     gmNote: `${enemy.name}${enemy.level ? ` (level ${enemy.level})` : ''}`
       + `${enemy.folder ? ` from ${enemy.folder}` : ''} now hates ${actor.name}.`,
     meta: { enemyId: enemy.id }
+  };
+}
+
+/**
+ * Knight: a warrior sworn to your service, matched to you.
+ *
+ * It used to lift an actor out of the world — conscripting a creature that
+ * already had a place in the campaign — and always a 4th-level one, whoever
+ * drew it. The warrior is built now, at the drawing character's level and in
+ * their ancestry, so it is a stranger who matches them.
+ */
+export async function applySpawnAlly({ actor, api, card }) {
+  const { buildWarrior, benchmarkFor, ancestryOf } = await import('./warrior-template.mjs');
+  const level = actor?.system?.details?.level?.value ?? 1;
+  const anc = ancestryOf(actor);
+  // The live compendium wins over the embedded table, so an ancestry added
+  // after this was written still gets its own stride.
+  const baseSpeed = await api.ancestrySpeed?.(anc.name) ?? null;
+  const npc = buildWarrior({ actor, level, ancestry: anc, baseSpeed });
+
+  await api.spawnBuiltCreature(npc, { nearActorId: actor.id, disposition: 1 });
+  const b = benchmarkFor(level);
+  return {
+    mode: 'auto',
+    log: `${card.name}: a level ${b.level} ${anc.name.toLowerCase()} warrior appears — `
+      + `AC ${b.ac}, ${b.hp} HP, Speed ${npc.system.attributes.speed.value} ft — `
+      + `and serves you until death`
+      + (anc.matched ? '' : ' (no ancestry on your sheet, so a human knight in plate)'),
+    meta: { level: b.level, ancestry: anc.name }
   };
 }

@@ -1336,16 +1336,16 @@
     "flavor": "A knight formed of folded cards offers a sword also made from cards. The Knight card signifies trust and loyalty.",
     "set": "classic",
     "rules": {
-      "summary": "A 4th-level warrior appears and serves you loyally until death.",
-      "full": "You gain the service of a 4th-level warrior who appears in a space you choose within 30 feet. They share your ancestry and serve you loyally until death.",
+      "summary": "A warrior of your own level and ancestry appears and serves you loyally until death.",
+      "full": "You gain the service of a warrior who appears in a space you choose within 30 feet. They are of your level and share your ancestry, and they serve you loyally until death.",
       "draw_terminating": false,
       "narration": "A stranger kneels and does not explain why; the Knight gives you a sword that answers to you."
     },
     "mechanics": {
       "kind": "spawn_ally_npc",
       "params": {
-        "level": 4,
-        "same_race": true
+        "match_drawer_level": true,
+        "same_ancestry": true
       }
     },
     "art": {

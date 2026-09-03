@@ -18,7 +18,7 @@ const actorOf = (over = {}) => ({
 
 /** Records writes, answers reads from fixtures. */
 const makeApi = ({ items = [], creatures = [], carried = [], worldActors = [], languages = [], coins = {}, gear = [] } = {}) => {
-  const spy = { updates: [], conditions: [], effects: [], coins: [], granted: [], removed: [], spawned: [], innate: [], coinsRemoved: [], etched: [] };
+  const spy = { updates: [], conditions: [], effects: [], coins: [], granted: [], removed: [], spawned: [], innate: [], coinsRemoved: [], etched: [], built: [] };
   return {
     spy,
     updateActor: async (_id, u) => { spy.updates.push(u); },
@@ -33,7 +33,9 @@ const makeApi = ({ items = [], creatures = [], carried = [], worldActors = [], l
     listLanguages: async () => languages,
     getCoins: async () => coins,
     listGear: async () => gear,
+    ancestrySpeed: async () => null,
     etchRune: async (_i, id, slug) => { spy.etched.push({ id, slug }); },
+    spawnBuiltCreature: async (d, o) => { spy.built.push({ d, o }); },
     removeCoins: async (_i, c) => { spy.coinsRemoved.push(c); },
     findItems: async () => items,
     findCreatures: async () => creatures,
@@ -218,7 +220,7 @@ describe('spawning', () => {
   });
 
   it('places an ally as friendly', async () => {
-    const { api } = await run('knight', { api: makeApi({ creatures }) });
+    const { api } = await run('construct', { api: makeApi({ creatures }) });
     expect(api.spy.spawned[0].o.disposition).toBe(1);
   });
 
@@ -376,7 +378,7 @@ describe('spawning prefers the world over the compendium', () => {
 
   it('takes a world NPC when one fits, and spawns it by actor id', async () => {
     const [a, spawned] = api({ world: [worldNpc], pack: [packNpc] });
-    const r = await applyCardEffect({ card: BY_ID.get('knight'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
+    const r = await applyCardEffect({ card: BY_ID.get('construct'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
     expect(spawned[0].e[0]).toEqual({ actorId: 'w1' });
     expect(r.meta.source).toBe('world');
     expect(r.log).toContain('Aller Rosk');
@@ -384,7 +386,7 @@ describe('spawning prefers the world over the compendium', () => {
 
   it('falls back to the compendium when the world has nobody suitable', async () => {
     const [a, spawned] = api({ world: [], pack: [packNpc] });
-    const r = await applyCardEffect({ card: BY_ID.get('knight'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
+    const r = await applyCardEffect({ card: BY_ID.get('construct'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
     expect(spawned[0].e[0]).toEqual({ pack: 'b', id: 'c1' });
     expect(r.meta.source).toBe('compendium');
   });
@@ -455,7 +457,9 @@ describe('Ruin actually takes the wealth', () => {
       ...makeApi(),
       getCoins: async () => coins,
     listGear: async () => gear,
+    ancestrySpeed: async () => null,
     etchRune: async (_i, id, slug) => { spy.etched.push({ id, slug }); },
+    spawnBuiltCreature: async (d, o) => { spy.built.push({ d, o }); },
       removeCoins: async (_i, c) => { spy.removedCoins.push(c); },
       listItems: async () => items,
       removeItems: async (_i, ids) => { spy.removedItems.push(...ids); }
@@ -532,6 +536,7 @@ describe('runes go onto what the character wields', () => {
       ...makeApi(),
       findItems: async () => items,
       listGear: async () => gear,
+    ancestrySpeed: async () => null,
       grantItems: async (_i, e) => { spy.granted.push(...e); },
       etchRune: async (_i, id, slug) => { spy.etched.push({ id, slug }); }
     }, spy];
@@ -662,7 +667,7 @@ describe('Monstrosity respects the size its card demands', () => {
 
   it('leaves cards with no size requirement alone', async () => {
     const [a, spawned] = api(world);
-    await applyCardEffect({ card: BY_ID.get('knight'), actor: actorOf(), api: a, rng: () => 0, confirmGate: false });
+    await applyCardEffect({ card: BY_ID.get('construct'), actor: actorOf(), api: a, rng: () => 0, confirmGate: false });
     expect(spawned).toHaveLength(1);   // Small is fine for an ally
   });
 });
@@ -789,5 +794,119 @@ describe('Ruin destroys a deed Throne handed out', () => {
     const [a] = api({ coins: { gp: 10 } });
     const r = await draw(a);
     expect(r.log).toContain('yours to narrate');
+  });
+});
+
+describe('Knight builds a warrior to match the character', () => {
+  // It used to lift an actor out of the world — conscripting a creature with
+  // its own place in the campaign — and always a 4th-level one.
+  const drawer = (level, ancestry) => ({
+    id: 'a1', name: 'Drawer',
+    system: { details: { level: { value: level },
+                         ...(ancestry ? { ancestry: { name: ancestry, trait: ancestry.toLowerCase() } } : {}) } }
+  });
+  const spy = () => {
+    const built = [];
+    return [{ ...makeApi(), spawnBuiltCreature: async (d, o) => { built.push({ d, o }); } }, built];
+  };
+  const draw = (actor, api) => applyCardEffect({
+    card: BY_ID.get('knight'), actor, api, rng: () => 0.5, confirmGate: false });
+
+  it('matches the level of whoever drew it, not a fixed 4', async () => {
+    for (const level of [1, 7, 13, 20]) {
+      const [api, built] = spy();
+      await draw(drawer(level, 'Human'), api);
+      expect(built[0].d.system.details.level.value, `level ${level}`).toBe(level);
+    }
+  });
+
+  it('shares the drawing character’s ancestry', async () => {
+    const [api, built] = spy();
+    const r = await draw(drawer(7, 'Dwarf'), api);
+    expect(built[0].d.name).toBe('Dwarf Warrior');
+    expect(built[0].d.system.traits.value).toContain('dwarf');
+    expect(r.log).toContain('dwarf warrior');
+  });
+
+  it('falls back to a human knight when the sheet says nothing', async () => {
+    const [api, built] = spy();
+    const r = await draw(drawer(5, null), api);
+    expect(built[0].d.name).toBe('Human Warrior');
+    expect(r.log).toContain('human knight in plate');
+  });
+
+  it('never takes an actor out of the world', async () => {
+    let askedWorld = false;
+    const [api, built] = spy();
+    api.findWorldActors = async () => { askedWorld = true; return []; };
+    await draw(drawer(7, 'Elf'), api);
+    expect(askedWorld).toBe(false);
+    expect(built).toHaveLength(1);
+  });
+
+  it('arrives as an ally', async () => {
+    const [api, built] = spy();
+    await draw(drawer(7, 'Human'), api);
+    expect(built[0].o.disposition).toBe(1);
+    expect(built[0].d.prototypeToken.disposition).toBe(1);
+  });
+
+  it('carries the statblock for its level', async () => {
+    const [api, built] = spy();
+    await draw(drawer(7, 'Human'), api);
+    const s = built[0].d.system;
+    expect(s.attributes.ac.value).toBe(25);
+    expect(s.attributes.hp.max).toBe(120);
+    expect(built[0].d.items[0].system.bonus.value).toBe(18);
+  });
+
+  it('clamps a level outside the table rather than breaking', async () => {
+    const [api, built] = spy();
+    await draw(drawer(25, 'Human'), api);
+    expect(built[0].d.system.details.level.value).toBe(20);
+  });
+});
+
+describe('the warrior strides like its ancestry, in plate', () => {
+  it('docks five feet for the armour', async () => {
+    const { speedFor } = await import('../scripts/warrior-template.mjs');
+    expect(speedFor('Human')).toBe(20);      // 25 base
+  });
+
+  it('makes a dwarf slower and an elf faster than a human', async () => {
+    // The point of matching the ancestry at all.
+    const { speedFor } = await import('../scripts/warrior-template.mjs');
+    expect(speedFor('Dwarf')).toBe(15);      // 20 base
+    expect(speedFor('Elf')).toBe(25);        // 30 base
+  });
+
+  it('never leaves one unable to move', async () => {
+    // Merfolk and Awakened Animals walk 5 feet before any armour.
+    const { speedFor } = await import('../scripts/warrior-template.mjs');
+    expect(speedFor('Merfolk')).toBe(5);
+    expect(speedFor('Awakened Animal')).toBe(5);
+  });
+
+  it('assumes the common stride for an ancestry it does not know', async () => {
+    const { speedFor } = await import('../scripts/warrior-template.mjs');
+    expect(speedFor('Something New')).toBe(20);
+    expect(speedFor(null)).toBe(20);
+  });
+
+  it('prefers a speed looked up live over its own table', async () => {
+    // So an ancestry added after this was written still gets its own stride.
+    const { speedFor } = await import('../scripts/warrior-template.mjs');
+    expect(speedFor('Dwarf', 40)).toBe(35);
+  });
+
+  it('carries the speed onto the built warrior', async () => {
+    const built = [];
+    const api = { ...makeApi(), spawnBuiltCreature: async (d) => { built.push(d); },
+                  ancestrySpeed: async () => null };
+    const actor = { id: 'a1', system: { details: { level: { value: 7 },
+      ancestry: { name: 'Dwarf', trait: 'dwarf' } } } };
+    const r = await applyCardEffect({ card: BY_ID.get('knight'), actor, api, rng: () => 0.5, confirmGate: false });
+    expect(built[0].system.attributes.speed.value).toBe(15);
+    expect(r.log).toContain('Speed 15 ft');
   });
 });
