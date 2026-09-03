@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import Ajv from 'ajv';
+import { checkCards } from './card-text-checks.mjs';
 import addFormats from 'ajv-formats';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -46,6 +47,16 @@ for (const c of cards) {
 
 const pct = ((filled / TOTAL_SLOTS) * 100).toFixed(1);
 console.log(`Divination coverage: ${filled}/${TOTAL_SLOTS} slots filled (${pct}%)`);
+
+// The schema checks shapes and the tests check handlers; neither reads the
+// sentence the player is shown. This does.
+const textProblems = checkCards(cards);
+if (textProblems.length) {
+  console.error(`\nCard text disagrees with itself or with its params (${textProblems.length}):`);
+  for (const p of textProblems) console.error(`  ${p.card.padEnd(14)} [${p.kind}] ${p.detail}`);
+  process.exit(1);
+}
+console.log('Card text agrees with mechanics params');
 
 if (process.argv.includes('--verbose')) {
   const incomplete = perCard.filter(c => c.filled < 10);
