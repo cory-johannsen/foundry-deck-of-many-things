@@ -2,6 +2,7 @@ import { loadCards } from './data-loader.mjs';
 import { makeCardsById } from './deck.mjs';
 import { planCardEffect, replayPlan } from './effect-plan.mjs';
 import { makeFoundryApi } from './foundry-api.mjs';
+import { playCardSound } from './card-sound.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 
@@ -181,7 +182,10 @@ export async function resolvePendingDraw(message) {
   const confirmed = await promptConfirm(card, actor, plan);
   if (!confirmed || confirmed === 'cancel') return null;
 
-  if (plan.calls.length) await replayPlan(plan.calls, makeFoundryApi());
+  if (plan.calls.length) {
+    await replayPlan(plan.calls, makeFoundryApi());
+    playCardSound(card);
+  }
   return {
     applied: plan.calls.length > 0,
     log: plan.calls.length

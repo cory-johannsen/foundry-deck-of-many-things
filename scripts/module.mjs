@@ -3,6 +3,7 @@ import { DivinationApp } from './ui/divination-app.mjs';
 import { loadCards } from './data-loader.mjs';
 import { drawFromPlay, freshPlayDeckState, makeCardsById } from './deck.mjs';
 import { applyCardEffect } from './card-effects.mjs';
+import { playCardSound } from './card-sound.mjs';
 import { makeFoundryApi } from './foundry-api.mjs';
 import { resolveDrawActor } from './draw-target.mjs';
 import { resolvePendingDraw, markMessageResolved } from './gm-resolution.mjs';
@@ -182,6 +183,7 @@ async function drawForced(cardId, { actorId = null } = {}) {
   const api = makeFoundryApi();
   const autoApply = game.settings.get(MODULE_ID, 'autoApplyEffects');
   const result = await applyCardEffect({ card, actor, api, autoApplyEnabled: autoApply });
+  if (result.mode === 'auto') playCardSound(card);
   await postDrawCard({ card, actor, result });
   return result;
 }

@@ -61,6 +61,28 @@ npm run validate
 node tools/validate-cards.mjs --verbose   # per-card breakdown
 ```
 
+## Card sounds
+
+Each card plays a sound when its effect is **applied** — not when it is drawn, so a
+card waiting on GM approval stays quiet until the GM confirms it.
+
+The 66 cards span 59 distinct `mechanics.kind` values, so sounds are keyed to the
+*character* of the effect rather than the kind: a boon, a curse, a summoning. That
+is 14 files instead of 66, and two cards that both hand you a magic item sound alike.
+
+    node tools/sound-manifest.mjs             # what is needed, what is missing
+    node tools/sound-manifest.mjs --missing   # bare filenames, one per line
+
+Put the files in `assets/sounds/` under the names the manifest lists. Any card can
+override its group by naming its own file in `data/cards.json`:
+
+    { "id": "skull", "sound": "skull-laugh.ogg", ... }
+
+A bare filename resolves under `assets/sounds/`; a path with a separator is used
+as-is, relative to the module root. Going fully per-card just means giving all 66
+cards a `sound`. Group mappings live in `scripts/card-sound.mjs`; a test fails if
+any card would end up silent or any `mechanics.kind` lacks a group.
+
 ## Development
 
 ```

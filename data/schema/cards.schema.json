@@ -1,34 +1,78 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Deck of Many More Things — cards.json",
+  "title": "Deck of Many More Things \u2014 cards.json",
   "type": "array",
   "minItems": 66,
   "maxItems": 66,
-  "items": { "$ref": "#/definitions/card" },
+  "items": {
+    "$ref": "#/definitions/card"
+  },
   "definitions": {
     "card": {
       "type": "object",
-      "required": ["id", "number", "name", "flavor", "set", "rules", "mechanics", "art", "divination"],
+      "required": [
+        "id",
+        "number",
+        "name",
+        "flavor",
+        "set",
+        "rules",
+        "mechanics",
+        "art",
+        "divination"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
-        "number": { "type": "integer", "minimum": 1, "maximum": 66 },
-        "name": { "type": "string", "minLength": 1 },
-        "flavor": { "type": "string", "minLength": 1 },
-        "set": { "enum": ["classic", "expansion"] },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 66
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "flavor": {
+          "type": "string",
+          "minLength": 1
+        },
+        "set": {
+          "enum": [
+            "classic",
+            "expansion"
+          ]
+        },
         "rules": {
           "type": "object",
-          "required": ["summary", "full", "draw_terminating"],
+          "required": [
+            "summary",
+            "full",
+            "draw_terminating"
+          ],
           "additionalProperties": false,
           "properties": {
-            "summary": { "type": "string", "minLength": 1 },
-            "full": { "type": "string", "minLength": 1 },
-            "draw_terminating": { "type": "boolean" }
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            },
+            "full": {
+              "type": "string",
+              "minLength": 1
+            },
+            "draw_terminating": {
+              "type": "boolean"
+            }
           }
         },
         "mechanics": {
           "type": "object",
-          "required": ["kind"],
+          "required": [
+            "kind"
+          ],
           "additionalProperties": true,
           "properties": {
             "kind": {
@@ -96,42 +140,89 @@
                 "solo_kill_level_up"
               ]
             },
-            "params": { "type": "object" }
+            "params": {
+              "type": "object"
+            }
           }
         },
         "art": {
           "type": "object",
-          "required": ["front", "prompt"],
+          "required": [
+            "front",
+            "prompt"
+          ],
           "additionalProperties": false,
           "properties": {
-            "front": { "type": "string", "pattern": "^assets/cards(-labeled)?/[a-z0-9_]+\\.(webp|png|jpg|jpeg)$" },
-            "prompt": { "type": "string", "minLength": 20 },
-            "negative": { "type": "string", "minLength": 3 },
-            "pinned": { "type": "boolean" },
-            "version": { "type": "integer", "minimum": 0 }
+            "front": {
+              "type": "string",
+              "pattern": "^assets/cards(-labeled)?/[a-z0-9_]+\\.(webp|png|jpg|jpeg)$"
+            },
+            "prompt": {
+              "type": "string",
+              "minLength": 20
+            },
+            "negative": {
+              "type": "string",
+              "minLength": 3
+            },
+            "pinned": {
+              "type": "boolean"
+            },
+            "version": {
+              "type": "integer",
+              "minimum": 0
+            }
           }
         },
         "divination": {
           "type": "object",
-          "required": ["person", "creature_or_trap", "place", "treasure", "situation"],
+          "required": [
+            "person",
+            "creature_or_trap",
+            "place",
+            "treasure",
+            "situation"
+          ],
           "additionalProperties": false,
           "properties": {
-            "person": { "$ref": "#/definitions/orientationPair" },
-            "creature_or_trap": { "$ref": "#/definitions/orientationPair" },
-            "place": { "$ref": "#/definitions/orientationPair" },
-            "treasure": { "$ref": "#/definitions/orientationPair" },
-            "situation": { "$ref": "#/definitions/orientationPair" }
+            "person": {
+              "$ref": "#/definitions/orientationPair"
+            },
+            "creature_or_trap": {
+              "$ref": "#/definitions/orientationPair"
+            },
+            "place": {
+              "$ref": "#/definitions/orientationPair"
+            },
+            "treasure": {
+              "$ref": "#/definitions/orientationPair"
+            },
+            "situation": {
+              "$ref": "#/definitions/orientationPair"
+            }
           }
+        },
+        "sound": {
+          "type": "string",
+          "description": "Optional sound played when this card's effect is applied. A bare filename resolves under assets/sounds/; a path containing a separator is used as-is, relative to the module root. Omitted cards fall back to their effect group's sound.",
+          "pattern": "^[A-Za-z0-9_./-]+\\.(ogg|mp3|wav|webm|m4a|flac)$"
         }
       }
     },
     "orientationPair": {
       "type": "object",
-      "required": ["upright", "reversed"],
+      "required": [
+        "upright",
+        "reversed"
+      ],
       "additionalProperties": false,
       "properties": {
-        "upright": { "type": "string" },
-        "reversed": { "type": "string" }
+        "upright": {
+          "type": "string"
+        },
+        "reversed": {
+          "type": "string"
+        }
       }
     }
   }

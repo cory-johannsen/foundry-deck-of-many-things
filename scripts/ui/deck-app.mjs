@@ -5,6 +5,7 @@ import {
   makeCardsById
 } from '../deck.mjs';
 import { applyCardEffect } from '../card-effects.mjs';
+import { playCardSound } from '../card-sound.mjs';
 import { makeFoundryApi } from '../foundry-api.mjs';
 import { postDrawCard } from './card-message.mjs';
 import { resolveDrawActor } from '../draw-target.mjs';
@@ -68,6 +69,9 @@ export class DeckApp extends HandlebarsApplicationMixin(ApplicationV2) {
       state = step.state;
       const card = byId.get(step.card);
       const result = await applyCardEffect({ card, actor, api, autoApplyEnabled: autoApply });
+      // A card that still needs the GM has not landed yet, so it stays quiet
+      // until they apply it.
+      if (result.mode === 'auto') playCardSound(card);
       await postDrawCard({ card, actor, result });
       if (card.rules.draw_terminating) {
         ui.notifications.info(game.i18n.format('DOMMT.Play.TerminatorHit', { card: card.name }));
