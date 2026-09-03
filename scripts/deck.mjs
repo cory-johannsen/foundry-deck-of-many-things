@@ -2,12 +2,16 @@ import { splitmix32, seedFromString, shuffle } from './prng.mjs';
 
 export const DRAW_WINDOW_MS = 3600 * 1000;
 
+// Traditional Celtic Cross dealing order, strictly 1..10: Crown is 3 (what is
+// conscious, the goal, what sits above the situation), Foundation is 4 (the
+// unconscious root beneath it), Past is 5. These three were previously dealt in
+// the wrong sequence — 3=foundation, 4=past, 5=crown.
 export const CELTIC_CROSS_ORDER = [
-  'significator',
+  'heart',
   'challenge',
+  'crown',
   'foundation',
   'recent_past',
-  'crown',
   'near_future',
   'self',
   'environment',

@@ -42,12 +42,12 @@
   gap: 0.6rem;
   grid-template-areas:
     ".      .           crown       .            .           self"
-    "recent_past significator challenge near_future  .        environment"
+    "recent_past heart challenge near_future  .        environment"
     ".      .           foundation  .            .           hopes_fears"
     ".      .           .           .            .           outcome";
 }
 .dommt-cross__slot { padding: 0.3rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; text-align: center; }
-.dommt-cross__slot--significator { grid-area: significator; }
+.dommt-cross__slot--heart { grid-area: heart; }
 .dommt-cross__slot--challenge    { grid-area: challenge; transform: rotate(90deg); transform-origin: center; }
 .dommt-cross__slot--foundation   { grid-area: foundation; }
 .dommt-cross__slot--recent_past  { grid-area: recent_past; }

@@ -3,7 +3,7 @@
 Foundry v13 module implementing the **Deck of Many More Things** (all 66 cards) for **Pathfinder 2E**. Includes two play modes:
 
 1. **Playing the Deck** — declare N draws, draw within 1 hour, effects auto-apply where safe. The play deck is **shared, world-scoped, and depletes**: drawn cards do not return; only the GM can reset the deck. This is a deliberate deviation from the wikidot "cards fade and reappear" rule.
-2. **Divination — Celtic Cross tarot spread** — deal 10 cards into the canonical positions (Significator, Challenge, Foundation, Recent Past, Crown, Near Future, Self, Environment, Hopes & Fears, Outcome). The querent declares one of five categories (Person / Creature or Trap / Place / Treasure / Situation) before dealing; each card lands upright or reversed. Divination uses a fresh ephemeral deck and never touches the shared play deck.
+2. **Divination — Celtic Cross tarot spread** — deal 10 cards into the canonical positions (Heart of the Matter, Crossing, Crown, Foundation, Past, Future, Querent, Environment, Hopes & Fears, Outcome). The querent declares one of five categories (Person / Creature or Trap / Place / Treasure / Situation) before dealing; each card lands upright or reversed. Divination uses a fresh ephemeral deck and never touches the shared play deck.
 
 ## Install
 

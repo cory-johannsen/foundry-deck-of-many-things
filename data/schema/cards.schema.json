@@ -104,8 +104,11 @@
           "required": ["front", "prompt"],
           "additionalProperties": false,
           "properties": {
-            "front": { "type": "string", "pattern": "^assets/cards/[a-z0-9_]+\\.(webp|png|jpg|jpeg)$" },
-            "prompt": { "type": "string", "minLength": 20 }
+            "front": { "type": "string", "pattern": "^assets/cards(-labeled)?/[a-z0-9_]+\\.(webp|png|jpg|jpeg)$" },
+            "prompt": { "type": "string", "minLength": 20 },
+            "negative": { "type": "string", "minLength": 3 },
+            "pinned": { "type": "boolean" },
+            "version": { "type": "integer", "minimum": 0 }
           }
         },
         "divination": {
