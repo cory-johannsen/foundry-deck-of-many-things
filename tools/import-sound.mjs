@@ -18,7 +18,7 @@
  * `--keep` leaves the source file in place; by default it is left alone too,
  * and only ever read.
  */
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, basename } from 'node:path';
@@ -58,12 +58,47 @@ const trim = [
   'silenceremove=start_periods=1:start_silence=0.02:start_threshold=' + SILENCE_FLOOR,
   'areverse'
 ].join(',');
-const filter = `${trim},loudnorm=I=${LUFS}:TP=${TRUE_PEAK}:LRA=11`;
+const norm = `loudnorm=I=${LUFS}:TP=${TRUE_PEAK}:LRA=11`;
+
+/**
+ * Two passes, not one. Single-pass loudnorm estimates loudness as it goes and
+ * drifts from the target; the first pass here only measures, and the second is
+ * told what was measured. It brought the boon sting from -16.8 to -16.3 LUFS.
+ *
+ * It cannot rescue everything. A sound whose true peak already sits at the
+ * ceiling cannot be raised further without limiting it, so a short, spiky
+ * sting may land below target and should: the curse sound measures -18.1 LUFS
+ * with a -1.9 dBFS peak, and lifting it 2 dB would mean squashing the very
+ * transient that makes it land. Perceived level for a sting that short tracks
+ * the peak more than the integrated figure, so it is left alone.
+ */
+function measure() {
+  // loudnorm prints its JSON to stderr and ffmpeg exits 0, so this reads
+  // stderr regardless of exit status rather than only on failure.
+  const r = spawnSync(ffmpeg, [
+    '-hide_banner', '-y', '-i', source,
+    '-af', `${trim},${norm}:print_format=json`,
+    '-f', 'null', '-'
+  ], { encoding: 'utf8' });
+  const out = `${r.stderr ?? ''}`;
+  const start = out.lastIndexOf('{');
+  const end = out.lastIndexOf('}');
+  if (start === -1 || end <= start) return null;
+  try { return JSON.parse(out.slice(start, end + 1)); } catch { return null; }
+}
+
+const m = measure();
+const second = m
+  ? `${norm}:measured_I=${m.input_i}:measured_TP=${m.input_tp}`
+    + `:measured_LRA=${m.input_lra}:measured_thresh=${m.input_thresh}`
+    + `:offset=${m.target_offset}:linear=true`
+  : norm;
+if (!m) console.warn('  (could not measure; falling back to single-pass)');
 
 execFileSync(ffmpeg, [
   '-hide_banner', '-loglevel', 'error', '-y',
   '-i', source,
-  '-af', filter,
+  '-af', `${trim},${second}`,
   '-ac', '2', '-ar', '44100',
   '-c:a', 'libvorbis', '-q:a', QUALITY,
   outPath
