@@ -23,11 +23,15 @@ const YEAR = 365;
  * An effect with a counter badge: the sheet shows "3" and the player clicks it
  * down as they spend uses. This is the whole trick behind most of these cards.
  */
-function usesEffect({ name, uses, days = null, description, img = 'icons/magic/light/explosion-star-glow-blue.webp' }) {
+function usesEffect({ name, uses, days = null, description, cardId = null,
+                      img = 'icons/magic/light/explosion-star-glow-blue.webp' }) {
   return {
     type: 'effect',
     name,
     img,
+    // The card is recorded so spending a charge can replay that card's sound;
+    // an effect on a sheet otherwise has no way back to where it came from.
+    flags: cardId ? { [MODULE_ID]: { cardId } } : {},
     system: {
       description: { value: description },
       duration: days
@@ -91,7 +95,8 @@ export async function applyTrackedUses({ actor, params, api, card, rng }) {
   const days = spec.days ? (params[spec.days] ?? null) : null;
 
   await grantUses(api, actor, {
-    name: spec.label(uses), uses, days, description: spec.text(uses), img: spec.img
+    name: spec.label(uses), uses, days, description: spec.text(uses), img: spec.img,
+    cardId: card.id
   });
   const window = days ? ` for ${days} days` : '';
   return {
@@ -136,6 +141,7 @@ export async function applySpellGrant({ actor, params, api, card, rng }) {
     await grantUses(api, actor, {
       name: `${picked[0].name} (1/day)`,
       uses: params.per_long_rest ?? 1,
+      cardId: card.id,
       description: `Cast ${picked[0].name} once per day without expending a spell slot.`,
       img: 'icons/magic/nature/leaf-glow-green.webp'
     });
@@ -196,7 +202,8 @@ export async function applyThronePersuasion({ actor, params, api, card }) {
     uses: 0,
     description: 'You are the rightful owner of a small keep in a distant land — '
       + 'currently held by monsters you must clear out before you can claim it.',
-    img: 'icons/environment/settlement/watchtower-cliff.webp'
+    img: 'icons/environment/settlement/watchtower-cliff.webp',
+    cardId: card.id
   }));
   return {
     mode: 'auto',
@@ -227,7 +234,7 @@ const EXILE = {
 export async function applyExile({ actor, api, card }) {
   const spec = EXILE[card.mechanics.kind];
   await api.createEffect(actor.id, usesEffect({
-    name: spec.name, uses: 0, description: spec.text, img: spec.img
+    name: spec.name, uses: 0, description: spec.text, img: spec.img, cardId: card.id
   }));
   if (spec.unconscious) await api.increaseCondition(actor.id, 'unconscious', 1);
   // Both cards end the draw, which is the module's own business.
@@ -266,6 +273,7 @@ export async function applyNamedAdversary({ actor, params, api, card, rng }) {
     await api.createEffect(actor.id, usesEffect({
       name: `Sworn Enemy: ${chosen.name}`,
       uses: 0,
+      cardId: card.id,
       description: `${chosen.name} (level ${chosen.level}) seeks your ruin and savours your `
         + 'suffering. The enmity lasts until one of you is dead.',
       img: 'icons/magic/fire/flame-burning-skull-orange.webp'
@@ -298,6 +306,7 @@ export async function applyAgeShift({ actor, params, api, card, rng }) {
   await api.createEffect(actor.id, usesEffect({
     name: older ? `Aged ${years} Years` : `Made ${years} Years Younger`,
     uses: 0,
+    cardId: card.id,
     description: `Rolled ${parity} on the d20 — ${older ? 'aged' : 'made younger by'} ${years} years. `
       + 'The change is instantaneous and permanent.',
     img: 'icons/magic/time/hourglass-yellow-green.webp'
@@ -321,7 +330,8 @@ export async function applyAlignmentFlip({ actor, api, card }) {
     description: 'Your mind suffers a wrenching alteration: lawful becomes chaotic, good becomes '
       + 'evil, and the reverse. PF2e has no alignment to change, so this stands as a marker for '
       + 'the reversal of whatever your character held to.',
-    img: 'icons/magic/control/energy-stream-link-white.webp'
+    img: 'icons/magic/control/energy-stream-link-white.webp',
+    cardId: card.id
   }));
   return {
     mode: 'auto',
