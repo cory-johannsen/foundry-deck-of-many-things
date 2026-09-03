@@ -101,3 +101,32 @@ describe('toNumber', () => {
     expect(toNumber('')).toBeNull();
   });
 });
+
+describe('every card narrates what it does', () => {
+  it('gives all 66 a line of narration', () => {
+    const missing = cards.filter((c) => !c.rules.narration?.trim()).map((c) => c.name);
+    expect(missing).toEqual([]);
+  });
+
+  it('names the card in its own narration, so the line stands alone', () => {
+    const unnamed = cards
+      .filter((c) => !new RegExp(`\\b${c.name}\\b`, 'i').test(c.rules.narration ?? ''))
+      .map((c) => c.name);
+    expect(unnamed).toEqual([]);
+  });
+
+  it('keeps narration distinct from the divination flavour', () => {
+    // The two describe different things: what the card does, and what its
+    // imagery means when it is read rather than drawn.
+    const same = cards.filter((c) => c.rules.narration === c.flavor).map((c) => c.name);
+    expect(same).toEqual([]);
+  });
+
+  it('leaves the mechanical summary to the summary', () => {
+    // Narration should not be where a number lives; that is what drifts.
+    const numeric = cards
+      .filter((c) => /\b\d+(st|nd|rd|th)?\b/.test((c.rules.narration ?? '').replace(/\bd\d+\b/g, '')))
+      .map((c) => `${c.name}: ${c.rules.narration}`);
+    expect(numeric).toEqual([]);
+  });
+});

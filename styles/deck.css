@@ -14,6 +14,11 @@
 .dommt-chat__header h3 { margin: 0; }
 .dommt-chat__actor { font-size: 0.85em; opacity: 0.75; }
 .dommt-chat__art { max-height: 300px; width: auto; margin: 0 auto; }
+.dommt-chat__narration {
+  font-style: italic;
+  opacity: 0.85;
+  line-height: 1.35;
+}
 .dommt-chat__outcome {
   padding: 0.35rem 0.5rem;
   border-left: 3px solid var(--color-border-highlight, #7a7971);

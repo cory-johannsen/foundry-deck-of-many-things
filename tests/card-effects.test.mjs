@@ -149,8 +149,11 @@ describe('flight (Celestial) / climb_speed (Cavern)', () => {
     const actor = makeActor();
     const api = makeApi(actor);
     await applyCardEffect({ card: BY_ID.get('celestial'), actor, api });
-    expect(api._spy.effects[0].system.rules[0])
-      .toEqual({ key: 'BaseSpeed', selector: 'fly', value: 30 });
+    const rules = api._spy.effects[0].system.rules;
+    expect(rules[0]).toEqual({ key: 'BaseSpeed', selector: 'fly', value: 30 });
+    // The card describes luminescent wings; the token should show it.
+    expect(rules[1]).toMatchObject({ key: 'TokenLight' });
+    expect(rules[1].value).toMatchObject({ bright: 20, dim: 40 });
   });
   it('adds climb equal to walk', async () => {
     const actor = makeActor();

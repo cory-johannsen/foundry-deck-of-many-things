@@ -8,7 +8,8 @@
     "rules": {
       "summary": "Gain telepathy within 90 feet.",
       "full": "You gain the ability to communicate telepathically with any creature you can see within 90 feet of you. The creature understands you only if the two of you share a language.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Alien thoughts brush against yours; the Aberration opens your mind to speak without speaking."
     },
     "mechanics": {
       "kind": "grant_telepathy",
@@ -54,7 +55,8 @@
     "rules": {
       "summary": "Take a 2-point penalty to Will saves, and gain a 2-point bonus to Deception, Diplomacy and Intimidation.",
       "full": "Your mind suffers a wrenching alteration and your convictions invert. You take a -2 status penalty to Will saves, and gain a +2 status bonus to Deception, Diplomacy and Intimidation checks. The change is permanent.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Something wrenches in you and settles the wrong way round; the Balance loosens your scruples and your resolve with them."
     },
     "mechanics": {
       "kind": "moral_inversion",
@@ -106,7 +108,8 @@
     "rules": {
       "summary": "Transform into a random animal battle form for 2d12 days.",
       "full": "You are transformed into a random animal for 2d12 days. Your statistics are replaced by those of the battle form. You retain your personality and your memories.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Your bones shorten and your spine bows; the Beast wears you as an animal for a season."
     },
     "mechanics": {
       "kind": "beast_form",
@@ -152,7 +155,8 @@
     "rules": {
       "summary": "Learn 1d6+2 languages.",
       "full": "You immediately learn 1d6+2 languages of your choice. You gain fluency in these languages as if you had studied them for years.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Every tongue you have ever half-heard falls into place; the Book leaves you fluent."
     },
     "mechanics": {
       "kind": "learn_languages",
@@ -197,7 +201,8 @@
     "rules": {
       "summary": "Cast Time Freeze 1d3 times without spending a spell slot.",
       "full": "You can cast Time Freeze 1d3 times without expending a spell slot. The uses are tracked on your sheet and are spent as you use them.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "The world holds its breath at your convenience; the Bridge lets you step outside the moment."
     },
     "mechanics": {
       "kind": "cast_time_stop_n",
@@ -243,7 +248,8 @@
     "rules": {
       "summary": "Immediately gain the benefits of a full night's rest.",
       "full": "You are immediately restored to full Hit Points, your focus points are refreshed, and your daily preparations are renewed as though you had rested for eight hours.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Warmth reaches the marrow; the Campfire gives you a full night in an instant."
     },
     "mechanics": {
       "kind": "long_rest",
@@ -286,7 +292,8 @@
     "rules": {
       "summary": "Gain a climbing speed equal to your walking speed; climb surfaces freely.",
       "full": "You gain a climbing speed equal to your current walking speed and can climb difficult surfaces, including upside down on ceilings, without needing to make a check.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Your fingers find purchase on bare stone; the Cavern makes every wall a road."
     },
     "mechanics": {
       "kind": "climb_speed",
@@ -330,15 +337,17 @@
     "flavor": "A beautiful couatl twines through the clouds. This card suggests the involvement of celestial beings and service to the divine.",
     "set": "expansion",
     "rules": {
-      "summary": "Sprout luminescent wings; gain 30 ft flying speed.",
-      "full": "Luminescent wings sprout from your back, granting you a flying speed of 30 feet. The wings shed a soft light in a 10-foot radius.",
-      "draw_terminating": false
+      "summary": "Sprout luminescent wings: a 30-foot fly Speed, and bright light for 20 feet.",
+      "full": "Wings of light unfold from your shoulders. You gain a fly Speed of 30 feet, and you shed bright light in a 20-foot radius and dim light for 20 feet beyond that.",
+      "draw_terminating": false,
+      "narration": "Light unfolds from your shoulders; the Celestial gives you the sky."
     },
     "mechanics": {
       "kind": "flight",
       "params": {
         "speed_ft": 30,
-        "emits_light_radius_ft": 10
+        "bright_ft": 20,
+        "dim_ft": 40
       }
     },
     "art": {
@@ -378,7 +387,8 @@
     "rules": {
       "summary": "If you solo-defeat the next hostile creature(s) you encounter, gain 1 level.",
       "full": "If you single-handedly defeat the next hostile creature or group of creatures you encounter, you gain enough experience to advance one level. Otherwise, this card has no effect.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "A promise is written against the dark; the Comet will pay it if you face the next foe alone."
     },
     "mechanics": {
       "kind": "solo_kill_level_up",
@@ -423,7 +433,8 @@
     "rules": {
       "summary": "A homunculus appears and treats you as its creator.",
       "full": "A homunculus appears in an unoccupied space within 30 feet of you. It treats you as its creator and is loyal to you for as long as it lives.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Something small and loyal blinks itself awake; the Construct gives you a made thing that calls you maker."
     },
     "mechanics": {
       "kind": "spawn_homunculus",
@@ -467,7 +478,8 @@
     "rules": {
       "summary": "You drop to 0 Hit Points and enter Dying 1; only a wish-tier miracle can restore you.",
       "full": "You immediately drop to 0 Hit Points, fall unconscious and enter Dying 1. If you die from this effect, only a wish-tier divine miracle can bring you back.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "The floor comes up to meet you; the Corpse takes you to the threshold and leaves you there."
     },
     "mechanics": {
       "kind": "drop_to_zero_hp",
@@ -512,7 +524,8 @@
     "rules": {
       "summary": "Roll d20: even = age 1d10 years older; odd = 1d10 years younger.",
       "full": "Roll a d20. On an even result, you age 1d10 years. On an odd result, you become 1d10 years younger (minimum 1 year old). The change is instantaneous and permanent.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Years arrive or depart in a single breath; the Crossroads is not interested in which you wanted."
     },
     "mechanics": {
       "kind": "age_shift",
@@ -558,7 +571,8 @@
     "rules": {
       "summary": "Entombed in an extradimensional sphere; you draw no more cards.",
       "full": "You disappear and become entombed in a state of suspended animation in an extradimensional sphere. Everything you were wearing and carrying stays behind in the space you occupied. You remain there until you are found and removed. You draw no more cards.",
-      "draw_terminating": true
+      "draw_terminating": true,
+      "narration": "The world folds shut around you; the Donjon keeps you until someone thinks to look."
     },
     "mechanics": {
       "kind": "trap_extraplanar",
@@ -605,7 +619,8 @@
     "rules": {
       "summary": "Cast Gate 1d4 times without spending a spell slot or components.",
       "full": "You can cast Gate 1d4 times without expending a spell slot or material components. The uses are tracked on your sheet.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Elsewhere becomes a matter of stepping through; the Door opens on anywhere."
     },
     "mechanics": {
       "kind": "cast_gate_n",
@@ -650,7 +665,8 @@
     "rules": {
       "summary": "A dragon wyrmling hatches nearby; it views you as its parent and is loyal.",
       "full": "A dragon wyrmling of a type chosen by the GM appears in an unoccupied space within 30 feet of you. The wyrmling views you as its parent and is loyal to you for as long as you both live.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "A shell cracks and something ancient imprints on you; the Dragon gives you a wyrmling that thinks you are its parent."
     },
     "mechanics": {
       "kind": "spawn_wyrmling",
@@ -691,9 +707,10 @@
     "flavor": "A hungry xorn feeds in an Underdark cavern. This card suggests an Elemental creature or reducing a thing to its essence.",
     "set": "expansion",
     "rules": {
-      "summary": "Become immune to one of: acid, cold, fire, lightning, or thunder (choice).",
-      "full": "You choose one damage type: acid, cold, fire, lightning, or thunder. You become permanently immune to damage of the chosen type.",
-      "draw_terminating": false
+      "summary": "Become immune to one of acid, cold, fire, electricity or sonic damage.",
+      "full": "You become immune to one damage type of your choice: acid, cold, fire, electricity or sonic.",
+      "draw_terminating": false,
+      "narration": "One of the world's furies decides you are not worth burning; the Elemental makes you immune to it."
     },
     "mechanics": {
       "kind": "element_immunity",
@@ -702,8 +719,8 @@
           "acid",
           "cold",
           "fire",
-          "lightning",
-          "thunder"
+          "electricity",
+          "sonic"
         ]
       }
     },
@@ -745,7 +762,8 @@
     "rules": {
       "summary": "You suffer a −2 penalty on saving throws until removed by divine intervention.",
       "full": "The card's medusa-like visage curses you. You suffer a −2 penalty on all saving throws. Only a god or the magic of the Fates card (or equivalent divine intervention) can end this curse.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "A gaze you cannot place settles on you; the Euryale leaves your every save a little weaker."
     },
     "mechanics": {
       "kind": "save_penalty",
@@ -791,7 +809,8 @@
     "rules": {
       "summary": "Your Dexterity modifier increases by 1, to a maximum of +7.",
       "full": "Your Dexterity modifier increases by 1, to a maximum of +7. The boost is permanent.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Your hands move before you decide to; the Expert sharpens your Dexterity for good."
     },
     "mechanics": {
       "kind": "stat_bump",
@@ -837,7 +856,8 @@
     "rules": {
       "summary": "Erase one event as if it never happened; usable anytime before your death.",
       "full": "Reality's fabric unravels and reshapes itself, allowing you to avoid or erase one event as if it never happened. You can use the card's magic as soon as you draw the card or at any other time before your death.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "A thread lifts free of the weave; the Fates let you unmake one thing that happened."
     },
     "mechanics": {
       "kind": "erase_event",
@@ -883,7 +903,8 @@
     "rules": {
       "summary": "You are pulled into the Feywild through a fey crossing; you draw no more cards.",
       "full": "You are pulled through a spontaneously opened fey crossing and deposited into the Feywild. You must find your own way back. You draw no more cards.",
-      "draw_terminating": true
+      "draw_terminating": true,
+      "narration": "The air thins into laughter and colour; the Fey takes you somewhere with no road home."
     },
     "mechanics": {
       "kind": "feywild_transport",
@@ -928,7 +949,8 @@
     "rules": {
       "summary": "A powerful fiend offers a deal (task in exchange for reward). Indifferent and keeps its bargains.",
       "full": "A powerful fiend (chosen by the GM) appears and offers you a deal — a task in exchange for a reward. The fiend is indifferent to you and honors its bargains, though it interprets them literally.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Something arrives that is very willing to be reasonable; the Fiend has a bargain and will keep it exactly."
     },
     "mechanics": {
       "kind": "fiend_deal",
@@ -972,7 +994,8 @@
     "rules": {
       "summary": "A powerful devil becomes your permanent enemy, seeking your ruin and death.",
       "full": "A powerful devil (chosen by the GM) becomes your enemy. The devil seeks your ruin and plagues your life, savoring your suffering before attempting to slay you. This enmity lasts until either you or the devil dies.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "You have been noticed by something that does not forget; the Flames give you an enemy for life."
     },
     "mechanics": {
       "kind": "permanent_enemy",
@@ -1018,7 +1041,8 @@
     "rules": {
       "summary": "Lose 1,000 XP, discard this card, and draw two more (counts as one declared draw).",
       "full": "You lose 1,000 XP, discard this card, and draw two more cards beyond your declared draws. If the loss exceeds the experience you have earned toward your current level, it costs you a level.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Hard-won understanding slips out of you unnoticed; the Fool costs you a level and hands you two more cards."
     },
     "mechanics": {
       "kind": "xp_loss",
@@ -1065,7 +1089,8 @@
     "rules": {
       "summary": "25 pieces of jewelry (2,000 gp each) OR 50 gems (1,000 gp each) appear at your feet.",
       "full": "Twenty-five pieces of jewelry worth 2,000 gp each, or fifty gems worth 1,000 gp each, appear at your feet. Choose one option.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Wealth spills across the ground at your feet; the Gem is generous without asking why."
     },
     "mechanics": {
       "kind": "wealth_grant",
@@ -1122,7 +1147,8 @@
     "rules": {
       "summary": "You grow 2d10 inches; your HP maximum and current HP increase by 20.",
       "full": "You grow 2d10 inches taller, and your hit point maximum and current hit points each increase by 20.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "You keep growing past the point of comfort; the Giant makes you larger and harder to put down."
     },
     "mechanics": {
       "kind": "size_grow",
@@ -1168,7 +1194,8 @@
     "rules": {
       "summary": "You may stop drawing regardless of the declared number.",
       "full": "You can choose to stop drawing cards regardless of how many you originally declared. The remaining declared draws are forfeited.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "The compulsion loosens; the Humanoid lets you walk away from the deck."
     },
     "mechanics": {
       "kind": "stop_drawing_optional",
@@ -1211,7 +1238,8 @@
     "rules": {
       "summary": "Gain 1,000 XP, or draw two additional cards beyond your declared draws.",
       "full": "You gain 1,000 XP — a full level's worth — or you can choose instead to draw two additional cards beyond your declared draws.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "The card grins at you; the Jester offers hard-won experience or two more turns of the wheel."
     },
     "mechanics": {
       "kind": "bonus_draws",
@@ -1258,7 +1286,8 @@
     "rules": {
       "summary": "An uncommon or rarer magic weapon appears in your hands, and you can wield it.",
       "full": "An uncommon or rarer magic weapon suddenly appears in your hands. You gain whatever proficiency you need to wield it, if you lacked it.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "A weapon settles into your grip as though made for it; the Key gives you the use of it too."
     },
     "mechanics": {
       "kind": "magic_weapon_grant",
@@ -1303,7 +1332,8 @@
     "rules": {
       "summary": "A 4th-level warrior appears and serves you loyally until death.",
       "full": "You gain the service of a 4th-level warrior who appears in a space you choose within 30 feet. They share your ancestry and serve you loyally until death.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "A stranger kneels and does not explain why; the Knight gives you a sword that answers to you."
     },
     "mechanics": {
       "kind": "spawn_ally_npc",
@@ -1351,7 +1381,8 @@
     "rules": {
       "summary": "Every one of your ability modifiers increases by 1, to a maximum of +7.",
       "full": "Each of your ability modifiers increases by 1, to a maximum of +7. The boost is permanent.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Everything about you sharpens at once; the Lance improves you in every measure."
     },
     "mechanics": {
       "kind": "all_stats_bump",
@@ -1398,7 +1429,8 @@
     "rules": {
       "summary": "Your Intelligence modifier increases by 1, to a maximum of +7.",
       "full": "Your Intelligence modifier increases by 1, to a maximum of +7. The boost is permanent.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Connections you had not seen arrange themselves; the Mage deepens your Intelligence permanently."
     },
     "mechanics": {
       "kind": "stat_bump",
@@ -1444,7 +1476,8 @@
     "rules": {
       "summary": "Within 1 year, mentally name an object or person to learn its location, distance, and condition.",
       "full": "At any time within the next year, you can mentally name a specific object or person you have seen and instantly learn its current location, distance from you, and general condition. The card's magic is expended after one use.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "You will know where to look when it matters; the Map answers one question of place within the year."
     },
     "mechanics": {
       "kind": "map_query",
@@ -1490,7 +1523,8 @@
     "rules": {
       "summary": "You become Fatigued, and Drained 1 or 2 besides.",
       "full": "Roll 1d3. You become Fatigued; on a 2 or 3 you are also Drained 1 or Drained 2 respectively. The conditions are removed by the usual means.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "You surface exhausted from turnings you cannot recall; the Maze leaves you fatigued and drained."
     },
     "mechanics": {
       "kind": "exhaustion",
@@ -1548,7 +1582,8 @@
     "rules": {
       "summary": "2d6 gems (5,000 gp each) plus 1d10 ore chunks (2,500 gp each) appear.",
       "full": "2d6 gems worth 5,000 gp each and 1d10 chunks of precious ore worth 2,500 gp each appear at your feet.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Raw wealth breaks the surface at your feet; the Mine gives up gems and ore together."
     },
     "mechanics": {
       "kind": "wealth_grant",
@@ -1598,7 +1633,8 @@
     "rules": {
       "summary": "A Large or larger creature of level 12 or lower appears, hostile, and attacks at once.",
       "full": "A Large or larger creature of level 12 or lower appears in an unoccupied space within 60 feet of you. It is hostile and attacks you immediately.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Something enormous decides you are in its way; the Monstrosity arrives already hostile."
     },
     "mechanics": {
       "kind": "spawn_hostile",
@@ -1645,7 +1681,8 @@
     "rules": {
       "summary": "Call on a divine miracle 1d3 times.",
       "full": "You gain the ability to call on a divine miracle 1d3 times. The GM adjudicates the scope of each; the uses are tracked on your sheet.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "A great favour hangs unclaimed above you; the Moon will answer when you ask."
     },
     "mechanics": {
       "kind": "wish",
@@ -1690,7 +1727,8 @@
     "rules": {
       "summary": "A gelatinous cube appears in your space and engulfs you (hostile).",
       "full": "A gelatinous cube appears in your space and immediately attempts to engulf you. The cube is hostile and will pursue you if you escape.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "The floor is not the floor; the Ooze is already around you."
     },
     "mechanics": {
       "kind": "spawn_ooze",
@@ -1738,7 +1776,8 @@
     "rules": {
       "summary": "Your walking speed increases by 10 feet.",
       "full": "Your walking speed permanently increases by 10 feet.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "The ground seems to help; the Path makes you permanently quicker."
     },
     "mechanics": {
       "kind": "speed_bonus",
@@ -1783,7 +1822,8 @@
     "rules": {
       "summary": "You fall 3d6×10 feet, taking falling damage; you land prone.",
       "full": "The ground beneath you opens into a chasm. You fall 3d6 × 10 feet, taking falling damage on landing, and end prone.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "There is nothing beneath you and then there is; the Pit hurts on arrival."
     },
     "mechanics": {
       "kind": "fall",
@@ -1831,7 +1871,8 @@
     "rules": {
       "summary": "Cast Speak with Plants once per day without spending a spell slot.",
       "full": "You can cast Speak with Plants once per day without expending a spell slot.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Green things lean towards you when you speak; the Plant lets you ask them things."
     },
     "mechanics": {
       "kind": "spellcast_slotless",
@@ -1878,7 +1919,8 @@
     "rules": {
       "summary": "Your Wisdom modifier increases by 1, to a maximum of +7.",
       "full": "Your Wisdom modifier increases by 1, to a maximum of +7. The boost is permanent.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "A quiet certainty arrives and stays; the Priest deepens your Wisdom permanently."
     },
     "mechanics": {
       "kind": "stat_bump",
@@ -1925,7 +1967,8 @@
     "rules": {
       "summary": "Magical force chains restrain you; you cannot cast spells; you draw no more cards.",
       "full": "Chains of magical force wrap around you, restraining you. You cannot cast spells while restrained by these chains, and you draw no more cards. The chains persist until dispelled or removed by powerful magic.",
-      "draw_terminating": true
+      "draw_terminating": true,
+      "narration": "Chains of nothing at all close on your wrists; the Prisoner holds you and silences your magic."
     },
     "mechanics": {
       "kind": "restrain_no_spellcast",
@@ -1966,9 +2009,10 @@
     "flavor": "An elaborate puzzle box floats in the air, glowing from within. The Puzzle card speaks to intelligence and strategic thinking.",
     "set": "classic",
     "rules": {
-      "summary": "Your Intelligence score decreases by 1d4+1 (min 1); draw one additional card.",
+      "summary": "Your Intelligence modifier drops by 1d4+1; draw one additional card.",
       "full": "Your Intelligence score decreases by 1d4+1 (minimum 1). You must also draw one additional card beyond your declared draws.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Something you knew is simply gone; the Puzzle costs you Intelligence and deals you another card."
     },
     "mechanics": {
       "kind": "stat_debuff",
@@ -2015,7 +2059,8 @@
     "rules": {
       "summary": "An uncommon or rarer magic ring appears on your finger and is invested automatically.",
       "full": "An uncommon or rarer magic ring appears on your finger. It is invested to you automatically, if you have an investiture available.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "A ring is already on your finger and already yours; the Ring invests itself."
     },
     "mechanics": {
       "kind": "ring_grant",
@@ -2059,9 +2104,10 @@
     "flavor": "A roguish kenku lurking in the shadows holds a dagger, poised to strike. This card suggests treachery and deception.",
     "set": "classic",
     "rules": {
-      "summary": "A random NPC known to you becomes a hostile enemy; only Wish or divine intervention ends it.",
+      "summary": "A non-player character you know becomes your enemy; only a wish-tier miracle ends it.",
       "full": "A non-player character of the GM's choice becomes hostile toward you. The identity of your new enemy is not known until they or someone else reveals it. Nothing short of a wish-tier divine miracle can end their hostility.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Someone you know has decided against you; the Rogue will not say who."
     },
     "mechanics": {
       "kind": "random_hostile_npc",
@@ -2105,7 +2151,8 @@
     "rules": {
       "summary": "All non-magical wealth you own is lost; property and ownership documentation disappear.",
       "full": "All forms of non-magical wealth you carry or own vanish. Portable property is reduced to dust; documents that establish your ownership also disappear, along with the deeds and titles.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Coin, gem and deed alike turn to nothing; the Ruin leaves you only what magic you carry."
     },
     "mechanics": {
       "kind": "wealth_wipe",
@@ -2155,7 +2202,8 @@
     "rules": {
       "summary": "Within 1 year, ask one question in meditation and receive a truthful answer with attendant wisdom.",
       "full": "At any time within the next year, you can meditate for one hour and ask a single question. You receive a truthful answer and gain any additional wisdom the answer entails. The card's magic is expended after one use.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "One true answer is set aside for you; the Sage is patient and will wait a year."
     },
     "mechanics": {
       "kind": "sage_query",
@@ -2201,7 +2249,8 @@
     "rules": {
       "summary": "An uncommon or rarer suit of magic armor appears on your body.",
       "full": "An uncommon or rarer suit of magic armor appears on your body. If you lack the proficiency to wear it, you gain a +2 item bonus to AC from it regardless while it remains.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Armour settles onto you as though buckled by unseen hands; the Shield fits regardless."
     },
     "mechanics": {
       "kind": "armor_grant",
@@ -2246,7 +2295,8 @@
     "rules": {
       "summary": "Become Trained in three skills of the GM's choice, or advance one step if already Trained.",
       "full": "You become Trained in three skills chosen by the GM, or advance one proficiency step in them if you are already Trained.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Competence arrives without the practice; the Ship makes you trained in three things."
     },
     "mechanics": {
       "kind": "skill_proficiencies",
@@ -2292,7 +2342,8 @@
     "rules": {
       "summary": "An avatar of death appears; it attacks you; any it kills cannot be resurrected.",
       "full": "You summon an avatar of death — a ghostly humanoid skeleton clad in a tattered black robe. It appears in an unoccupied space of the GM's choice within 10 feet of you and attacks you, warning all others that you must win the battle alone. Creatures it slays cannot be restored to life by any means short of a Wish.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Death comes personally; the Skull permits no resurrection for those it takes."
     },
     "mechanics": {
       "kind": "avatar_of_death",
@@ -2337,7 +2388,8 @@
     "rules": {
       "summary": "An uncommon or rarer magic staff, wand, or rod appears in your hands.",
       "full": "An uncommon or rarer magical implement — a staff, wand, or rod, at the GM's choice — appears in your hands.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "A length of carved wood finds your hand; the Staff gives you power to spend."
     },
     "mechanics": {
       "kind": "rod_or_staff_grant",
@@ -2382,16 +2434,15 @@
     "flavor": "A spiral stairway leads both up and down, but the downward stairs are cluttered and dark. This card points to a change in difficulty, either increasing or decreasing.",
     "set": "expansion",
     "rules": {
-      "summary": "Reduce your remaining declared draws by 2 OR receive a rare+ wondrous item (choice).",
-      "full": "You may choose to reduce the number of cards you have yet to draw by 2 (to a minimum of zero), or you may receive a rare or rarer wondrous item that appears in your possession.",
-      "draw_terminating": false
+      "summary": "An uncommon or rarer wondrous item appears in your hands.",
+      "full": "An uncommon or rarer wondrous item appears in your hands.",
+      "draw_terminating": false,
+      "narration": "A way upward opens; the Stairway rewards the climb with something rare."
     },
     "mechanics": {
       "kind": "wondrous_grant",
       "params": {
-        "rarity_min": "uncommon",
-        "alternative_reduce_draws": 2,
-        "choice": true
+        "rarity_min": "uncommon"
       }
     },
     "art": {
@@ -2431,7 +2482,8 @@
     "rules": {
       "summary": "Increase one ability modifier of your choice by 1, to a maximum of +7.",
       "full": "Increase one ability modifier of your choice by 1, to a maximum of +7. You choose which ability when the card is applied.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "One part of you is quietly perfected; the Star lets you choose which."
     },
     "mechanics": {
       "kind": "stat_bump",
@@ -2475,9 +2527,10 @@
     "flavor": "A statue depicts the goddess Pharasma offering the original Deck of Many Things as a gift. The Statue card is a reminder of the past.",
     "set": "expansion",
     "rules": {
-      "summary": "You are petrified; freed by Greater Restoration or similar magic.",
+      "summary": "You are petrified — removable only by remove petrification or a wish-tier ritual.",
       "full": "You are turned to stone (Petrified condition). You remain petrified until freed by Greater Restoration, Wish, or comparable magic.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Stillness starts at the fingertips and does not stop; the Statue makes you stone."
     },
     "mechanics": {
       "kind": "petrify",
@@ -2527,7 +2580,8 @@
     "rules": {
       "summary": "Gain 2,000 XP (two levels); a random uncommon+ wondrous item appears.",
       "full": "You gain 2,000 XP, and a random wondrous item of uncommon rarity or greater appears in your possession.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Everything is briefly, blindingly clear; the Sun gives you levels and a treasure besides."
     },
     "mechanics": {
       "kind": "xp_gain",
@@ -2574,7 +2628,8 @@
     "rules": {
       "summary": "All your magic items disintegrate; artifacts vanish but survive.",
       "full": "Every magic item you wear or carry disintegrates. Artifacts in your possession are not destroyed but vanish to another location.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Every enchantment you own comes apart at once; the Talons leave you with the mundane."
     },
     "mechanics": {
       "kind": "destroy_magic_items",
@@ -2620,7 +2675,8 @@
     "rules": {
       "summary": "Your Charisma modifier increases by 1, to a maximum of +7.",
       "full": "Your Charisma modifier increases by 1, to a maximum of +7. The boost is permanent.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "People lean in when you speak; the Tavern deepens your Charisma permanently."
     },
     "mechanics": {
       "kind": "stat_bump",
@@ -2667,7 +2723,8 @@
     "rules": {
       "summary": "A deity is bound to aid you once via divine intervention or Resurrection.",
       "full": "A deity of the GM's choice is bound to aid you once, either through divine intervention or by a Resurrection spell cast on your behalf. The debt is honored once and then expended.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "A god notes your name and owes you once; the Temple will pay when you are past saving."
     },
     "mechanics": {
       "kind": "resurrection_grant",
@@ -2715,7 +2772,8 @@
     "rules": {
       "summary": "Advance in Diplomacy, and gain the deed to a monster-held keep.",
       "full": "You advance one proficiency step in Diplomacy, to Expert at the least. You also become the rightful owner of a small keep in a distant land — though it is currently held by monsters you must clear out before you can claim it.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "You are listened to now, and there is a keep somewhere with your name on it; the Throne omits that it is occupied."
     },
     "mechanics": {
       "kind": "throne_persuasion",
@@ -2762,7 +2820,8 @@
     "rules": {
       "summary": "Within a year, cast Resurrect once without spending a spell slot or components.",
       "full": "At any time within the next year you can cast Resurrect, heightened as far as your level allows, once without expending a spell slot or material components. After that use the card's magic is spent.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "One death is not final; the Tomb holds a resurrection in reserve for a year."
     },
     "mechanics": {
       "kind": "resurrection_grant",
@@ -2810,7 +2869,8 @@
     "rules": {
       "summary": "Draw 2 additional cards; keep one and return the other to the deck.",
       "full": "You immediately draw two additional cards. Choose one of the two to keep as if you had drawn it normally, and return the other to the deck.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Two futures are laid face-up; the Tower lets you keep one."
     },
     "mechanics": {
       "kind": "draw_two_keep_one",
@@ -2851,9 +2911,10 @@
     "flavor": "A tree has broken through a fortress wall and reclaimed part of the keep. This card suggests perseverance in difficult circumstances.",
     "set": "expansion",
     "rules": {
-      "summary": "While unarmored, your AC = 15 + DEX; vulnerable to fire; undoable only by Wish.",
-      "full": "Your skin toughens like bark. While unarmored, your Armor Class becomes 15 + your Dexterity modifier. You also become vulnerable to fire damage. Only a Wish can end this effect.",
-      "draw_terminating": false
+      "summary": "While unarmoured you gain a +2 item bonus to AC, and weakness 5 to fire.",
+      "full": "Your skin toughens into bark. While you wear no armour you gain a +2 item bonus to AC, and you take weakness 5 to fire. PF2e has no way to set an unarmoured AC outright, so the bonus is the closest equivalent.",
+      "draw_terminating": false,
+      "narration": "Your skin roughens into bark; the Tree armours you and gives fire something to catch."
     },
     "mechanics": {
       "kind": "unarmored_defense",
@@ -2899,7 +2960,8 @@
     "rules": {
       "summary": "A revenant hunts you for a year, until your death, or until a miracle ends it.",
       "full": "An undead revenant rises with the singular purpose of destroying you. It hunts you for one year or until you die. A wish-tier miracle ends the pursuit.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Something has risen that wants only you; the Undead sets it on your trail for a year."
     },
     "mechanics": {
       "kind": "revenant_hunter",
@@ -2942,9 +3004,10 @@
     "flavor": "An endless void seems to spiral toward a central hole that devours all. This card spells disaster.",
     "set": "classic",
     "rules": {
-      "summary": "Your soul is trapped in an object; your body is incapacitated; Wish reveals the location; you draw no more.",
+      "summary": "Your soul is trapped in an object and your body left incapacitated; a wish-tier miracle reveals where. You draw no more cards.",
       "full": "Your soul is drawn from your body and imprisoned in an object at a distant, secret location. Your body is left incapacitated. A wish-tier divine miracle can reveal where the object lies; recovering your soul still requires going to get it. You draw no more cards.",
-      "draw_terminating": true
+      "draw_terminating": true,
+      "narration": "Your body remains and you do not; the Void keeps your soul somewhere else."
     },
     "mechanics": {
       "kind": "soul_trap",
@@ -2990,7 +3053,8 @@
     "rules": {
       "summary": "Your Strength modifier increases by 1, to a maximum of +7.",
       "full": "Your Strength modifier increases by 1, to a maximum of +7. The boost is permanent.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Power surges within you; the Warrior permanently improves your Strength."
     },
     "mechanics": {
       "kind": "stat_bump",
@@ -3037,7 +3101,8 @@
     "rules": {
       "summary": "Learn three cantrips of your choice from any tradition.",
       "full": "You learn three cantrips of your choice from any magical tradition. The GM adjudicates your casting statistics for them.",
-      "draw_terminating": false
+      "draw_terminating": false,
+      "narration": "Small magics well up unbidden; the Well leaves three of them yours to keep."
     },
     "mechanics": {
       "kind": "three_cantrips",

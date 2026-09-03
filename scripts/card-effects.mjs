@@ -161,19 +161,35 @@ async function autoApplyClimbSpeed({ actor, api, card }) {
   return { mode: 'auto', log: `${card.name}: climb Speed ${land} ft, matching your land Speed` };
 }
 
+/**
+ * Celestial: luminescent wings.
+ *
+ * The card describes wings that give off light, and the token should show it —
+ * a flying character who lights nothing is only half the picture. PF2e's
+ * TokenLight rule element does this on the same effect as the speed, so
+ * removing the effect takes the glow with it.
+ */
 async function autoApplyFlight({ actor, params, api, card }) {
-  const { speed_ft = 30 } = params;
+  const { speed_ft = 30, bright_ft = 20, dim_ft = 40 } = params;
   await api.createEffect(actor.id, {
     type: 'effect',
-    name: `Fly Speed (${speed_ft} ft)`,
+    name: `Luminescent Wings (${speed_ft} ft fly)`,
     img: 'icons/magic/air/wind-swirl-gray-blue.webp',
     system: {
-      description: { value: `You gain a fly Speed of ${speed_ft} feet.` },
+      description: { value: `Wings of light carry you. You gain a fly Speed of ${speed_ft} feet `
+        + `and shed bright light in a ${bright_ft}-foot radius, and dim light for ${dim_ft} feet.` },
       duration: { unit: 'unlimited' },
-      rules: [{ key: 'BaseSpeed', selector: 'fly', value: speed_ft }]
+      rules: [
+        { key: 'BaseSpeed', selector: 'fly', value: speed_ft },
+        { key: 'TokenLight', value: { bright: bright_ft, dim: dim_ft, color: '#ffeeaa', alpha: 0.4 } }
+      ]
     }
   });
-  return { mode: 'auto', log: `${card.name}: fly Speed ${speed_ft} ft` };
+  return {
+    mode: 'auto',
+    log: `${card.name}: fly Speed ${speed_ft} ft, and your token sheds `
+      + `${bright_ft} ft of bright light`
+  };
 }
 
 async function autoApplyExhaustion({ actor, params, api, card, rng }) {
