@@ -3,7 +3,7 @@ import { makeCardsById } from './deck.mjs';
 import { planCardEffect, replayPlan } from './effect-plan.mjs';
 import { makeFoundryApi } from './foundry-api.mjs';
 import { playCardSound } from './card-sound.mjs';
-import { promptChooseAbility, promptChooseOption } from './choice-prompts.mjs';
+import { promptChooseAbility, promptChooseOption, promptChooseMany } from './choice-prompts.mjs';
 import { askPlayer } from './player-choice.mjs';
 import { whoDecides } from './choice-routing.mjs';
 
@@ -29,6 +29,7 @@ const MODULE_ID = 'deck-of-many-more-things';
 export function pendingKind(meta) {
   if (meta?.requires === 'choose_ability') return 'choose_ability';
   if (meta?.requires === 'choose_option') return 'choose_option';
+  if (meta?.requires === 'choose_many') return 'choose_many';
   return 'acknowledge';
 }
 
@@ -168,19 +169,29 @@ export async function resolvePendingDraw(message) {
           user, card, kind,
           prompt: plan.result.log,
           options: meta.options ?? [],
-          delta: meta.delta ?? 1
+          delta: meta.delta ?? 1,
+          count: meta.count ?? 1
         })
       : null;
 
     // No player, or they let it lapse: the GM answers, as before.
     if (!choice) {
-      choice = kind === 'choose_ability'
-        ? await promptChooseAbility(card, meta.delta ?? 1)
-        : await promptChooseOption(card, plan.result.log, meta.options ?? []);
+      if (kind === 'choose_ability') choice = await promptChooseAbility(card, meta.delta ?? 1);
+      else if (kind === 'choose_many') {
+        choice = await promptChooseMany(card, plan.result.log, meta.options ?? [], meta.count ?? 1);
+      } else choice = await promptChooseOption(card, plan.result.log, meta.options ?? []);
     }
     if (!choice || choice === 'cancel') return null;
+    if (Array.isArray(choice) && !choice.length) return null;
 
-    concrete.mechanics.params = { ...concrete.mechanics.params, [paramKey]: choice };
+    concrete.mechanics.params = {
+      ...concrete.mechanics.params,
+      // Anything the handler rolled on the first pass is carried forward, or
+      // re-planning would roll it again and answer a different question than
+      // the one that was asked.
+      ...(meta.persist ?? {}),
+      [paramKey]: choice
+    };
     plan = await planCardEffect({ card: concrete, actor, api });
   }
 

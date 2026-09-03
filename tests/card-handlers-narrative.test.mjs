@@ -19,8 +19,8 @@ const actorOf = (over = {}) => ({
   }
 });
 
-const makeApi = ({ items = [], creatures = [], worldActors = [] } = {}) => {
-  const spy = { updates: [], conditions: [], effects: [], granted: [], spawned: [], innate: [] };
+const makeApi = ({ items = [], creatures = [], worldActors = [], languages = [], coins = {} } = {}) => {
+  const spy = { updates: [], conditions: [], effects: [], granted: [], spawned: [], innate: [], coinsRemoved: [] };
   return {
     spy,
     updateActor: async (_i, u) => { spy.updates.push(u); },
@@ -31,6 +31,9 @@ const makeApi = ({ items = [], creatures = [], worldActors = [] } = {}) => {
     removeItems: async () => {},
     spawnCreatures: async (e, o) => { spy.spawned.push({ e, o }); },
     grantInnateSpells: async (_i, e, o) => { spy.innate.push({ e, o }); },
+    listLanguages: async () => languages,
+    getCoins: async () => coins,
+    removeCoins: async (_i, c) => { spy.coinsRemoved.push(c); },
     findItems: async () => items,
     findCreatures: async () => creatures,
     listItems: async () => [],
@@ -231,8 +234,16 @@ describe('every card is now handled', () => {
   it('leaves no card posting a bare GM stub', async () => {
     const stubs = [];
     for (const card of cards) {
+      // A world that actually has content: an empty stub makes cards report
+      // "nothing available", which is not the same as being unimplemented.
+      const api = makeApi({
+        items: [{ pack: 'p', id: 'i1', name: 'Thing', type: 'spell', level: 1, rarity: 'common', traits: ['magical'], traditions: ['arcane'] }],
+        creatures: [{ pack: 'b', id: 'c1', name: 'Beast', level: 5, traits: ['undead','ooze','humanoid','construct','dragon','beast','fiend','devil'] }],
+        worldActors: [{ id: 'n1', name: 'Someone', level: 3, hasArt: true }],
+        languages: [{ value: 'aklo', label: 'Aklo' }]
+      });
       const res = await applyCardEffect({
-        card, actor: actorOf(), api: makeApi(), rng: () => 0.5, confirmGate: false
+        card, actor: actorOf(), api, rng: () => 0.5, confirmGate: false
       });
       if (res.meta?.kind === 'gm_only' && !/compendium|bestiary|by hand|yourself/.test(res.log)) {
         stubs.push(card.name);
@@ -262,8 +273,9 @@ describe('what the player actually sees on the sheet', () => {
     const offenders = [];
     for (const card of cards) {
       const api = makeApi({
-        items: [{ pack: 'p', id: 'i1', name: 'Thing', type: 'spell', level: 1, rarity: 'common' }],
-        creatures: [{ pack: 'b', id: 'c1', name: 'Beast', level: 5, traits: ['undead','ooze','humanoid','construct','dragon','beast','fiend','devil'] }]
+        items: [{ pack: 'p', id: 'i1', name: 'Thing', type: 'spell', level: 1, rarity: 'common', traditions: ['arcane'] }],
+        creatures: [{ pack: 'b', id: 'c1', name: 'Beast', level: 5, traits: ['undead','ooze','humanoid','construct','dragon','beast','fiend','devil'] }],
+        languages: [{ value: 'aklo', label: 'Aklo' }, { value: 'jotun', label: 'Jotun' }]
       });
       await applyCardEffect({ card, actor: actorOf(), api, rng: () => 0.5, confirmGate: false });
       for (const e of api.spy.effects) {
@@ -277,8 +289,9 @@ describe('what the player actually sees on the sheet', () => {
     const bad = [];
     for (const card of cards) {
       const api = makeApi({
-        items: [{ pack: 'p', id: 'i1', name: 'Thing', type: 'spell', level: 1, rarity: 'common' }],
-        creatures: [{ pack: 'b', id: 'c1', name: 'Beast', level: 5, traits: ['undead','ooze','humanoid','construct','dragon','beast','fiend','devil'] }]
+        items: [{ pack: 'p', id: 'i1', name: 'Thing', type: 'spell', level: 1, rarity: 'common', traditions: ['arcane'] }],
+        creatures: [{ pack: 'b', id: 'c1', name: 'Beast', level: 5, traits: ['undead','ooze','humanoid','construct','dragon','beast','fiend','devil'] }],
+        languages: [{ value: 'aklo', label: 'Aklo' }, { value: 'jotun', label: 'Jotun' }]
       });
       await applyCardEffect({ card, actor: actorOf(), api, rng: () => 0.5, confirmGate: false });
       for (const e of api.spy.effects) {
@@ -340,5 +353,53 @@ describe('a spell\'s tradition is not one of its traits', () => {
                     rarity: 'common', traits: [], traditions: [] }];
     const { api } = await run('plant', { api: makeApi({ items: none }) });
     expect(api.spy.innate[0].o.tradition).toBe('arcane');
+  });
+});
+
+describe('Book asks for the languages instead of describing them', () => {
+  const langs = Array.from({ length: 12 }, (_, i) => ({ value: `l${i}`, label: `Lang ${i}` }));
+
+  it('rolls a number and offers a choice of that many', async () => {
+    const { r } = await run('book', { api: makeApi({ languages: langs }) });
+    expect(r.meta.requires).toBe('choose_many');
+    expect(r.meta.count).toBeGreaterThanOrEqual(3);   // 1d6+2
+    expect(r.meta.count).toBeLessThanOrEqual(8);
+    expect(r.meta.options).toHaveLength(12);
+  });
+
+  it('carries the rolled count forward so re-planning asks the same question', async () => {
+    // Without this the count is re-rolled after the answer and the player is
+    // granted a different number than they chose for.
+    const { r } = await run('book', { api: makeApi({ languages: langs }) });
+    expect(r.meta.persist.count).toBe(r.meta.count);
+  });
+
+  it('writes the chosen languages once they are picked', async () => {
+    const card = { ...BY_ID.get('book'), mechanics: { kind: 'learn_languages',
+      params: { count: 2, languages: ['aklo', 'jotun'] } } };
+    const actor = actorOf();
+    actor.system.details.languages = { value: ['common'] };
+    const api = makeApi({ languages: langs });
+    const r = await applyCardEffect({ card, actor, api, rng: () => 0.5, confirmGate: false });
+    expect(api.spy.updates[0]['system.details.languages.value'])
+      .toEqual(['common', 'aklo', 'jotun']);
+    expect(r.log).toContain('aklo, jotun');
+  });
+
+  it('never offers a language the character already speaks', async () => {
+    // The api filters by what is known; the handler must not add its own.
+    const { r } = await run('book', { api: makeApi({ languages: [{ value: 'aklo', label: 'Aklo' }] }) });
+    expect(r.meta.options.map((o) => o.value)).toEqual(['aklo']);
+  });
+
+  it('cannot ask for more languages than remain', async () => {
+    const { r } = await run('book', { api: makeApi({ languages: [{ value: 'aklo', label: 'Aklo' }] }) });
+    expect(r.meta.count).toBe(1);
+  });
+
+  it('says so when there is nothing left to learn', async () => {
+    const { r } = await run('book', { api: makeApi({ languages: [] }) });
+    expect(r.mode).toBe('gm');
+    expect(r.log).toContain('no languages left');
   });
 });

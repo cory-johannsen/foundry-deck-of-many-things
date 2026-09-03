@@ -12,10 +12,12 @@
  */
 export const WRITE_METHODS = [
   'updateActor', 'increaseCondition', 'createEffect', 'postChatCard',
-  'addCoins', 'grantItems', 'removeItems', 'spawnCreatures', 'grantInnateSpells'
+  'addCoins', 'grantItems', 'removeItems', 'spawnCreatures', 'grantInnateSpells',
+  'removeCoins'
 ];
 
-export const READ_METHODS = ['findItems', 'findCreatures', 'listItems', 'findWorldActors'];
+export const READ_METHODS = ['findItems', 'findCreatures', 'listItems', 'findWorldActors',
+                             'listLanguages', 'getCoins'];
 
 /** PF2e rarities in ascending order, for "uncommon or better" style filters. */
 const RARITY_ORDER = ['common', 'uncommon', 'rare', 'unique'];
@@ -131,13 +133,48 @@ export function makeFoundryApi() {
         }));
     },
 
-    /** An actor's carried items, for cards that take things away. */
-    async listItems(actorId, { types = null, magicalOnly = false } = {}) {
+    /**
+     * Languages the actor could still learn, labelled for a dialog.
+     * Kept behind the api because CONFIG is a live-Foundry global, and a
+     * handler that reaches for it directly cannot be tested.
+     */
+    async listLanguages(actorId) {
+      const actor = actorId ? game.actors.get(actorId) : null;
+      const known = new Set(actor?.system?.details?.languages?.value ?? []);
+      return Object.entries(CONFIG.PF2E?.languages ?? {})
+        .filter(([slug]) => !known.has(slug))
+        .map(([slug, label]) => ({ value: slug, label: game.i18n.localize(label) }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+    },
+
+    /** What the actor is carrying in coin. */
+    async getCoins(actorId) {
+      const coins = getActor(actorId).inventory?.coins;
+      return coins?.toObject?.() ?? { ...(coins ?? {}) };
+    },
+
+    /**
+     * An actor's carried items, for cards that take things away.
+     *
+     * `magical` selects which side of the line: 'only' for the enchanted ones,
+     * 'exclude' for mundane wealth, and null for everything.
+     */
+    async listItems(actorId, { types = null, magical = null, magicalOnly = false,
+                               includeCoinage = false } = {}) {
       const actor = getActor(actorId);
+      const mode = magicalOnly ? 'only' : magical;
+      const isMagical = (i) => (i.system?.traits?.value ?? []).includes('magical')
+        || (i.system?.traits?.rarity ?? 'common') !== 'common';
+      // Coins are treasure items in PF2e — "Gold Pieces" sits in the same list
+      // as a gemstone. They are excluded by default because coin is handled
+      // through the inventory's own coin api, and listing them here would mean
+      // taking the same money twice.
+      const isCoinage = (i) => i.isCoinage ?? i.system?.stackGroup === 'coins';
       return actor.items
         .filter((i) => (!types || types.includes(i.type)))
-        .filter((i) => !magicalOnly || (i.system?.traits?.value ?? []).includes('magical')
-          || (i.system?.traits?.rarity ?? 'common') !== 'common')
+        .filter((i) => includeCoinage || !isCoinage(i))
+        .filter((i) => mode === null
+          || (mode === 'only' ? isMagical(i) : !isMagical(i)))
         .map((i) => ({ id: i.id, name: i.name, type: i.type }));
     },
 
@@ -233,6 +270,14 @@ export function makeFoundryApi() {
       }
       if (!sources.length) return null;
       return actor.createEmbeddedDocuments('Item', sources);
+    },
+
+    async removeCoins(actorId, coins) {
+      const actor = getActor(actorId);
+      if (typeof actor.inventory?.removeCoins === 'function') {
+        return actor.inventory.removeCoins(coins);
+      }
+      throw new Error(`Actor ${actorId} has no inventory to take coins from`);
     },
 
     async removeItems(actorId, itemIds) {
