@@ -1,4 +1,5 @@
-import { promptChooseAbility, promptChooseOption, promptChooseMany } from './choice-prompts.mjs';
+import { promptChooseAbility, promptChooseOption, promptChooseMany,
+         promptKeepOne } from './choice-prompts.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 export const SOCKET = `module.${MODULE_ID}`;
@@ -68,6 +69,8 @@ export function registerChoiceSocket() {
     if (msg.kind === 'choose_ability') choice = await promptChooseAbility(card, msg.delta);
     else if (msg.kind === 'choose_many') {
       choice = await promptChooseMany(card, msg.prompt, msg.options, msg.count);
+    } else if (msg.kind === 'keep_one') {
+      choice = await promptKeepOne(card, msg.prompt, msg.options);
     } else choice = await promptChooseOption(card, msg.prompt, msg.options);
 
     game.socket.emit(SOCKET, {

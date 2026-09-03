@@ -187,13 +187,48 @@ describe('long_rest (Campfire)', () => {
 });
 
 describe('size_grow (Giant)', () => {
-  it('bumps size one step and adds HP', async () => {
-    const actor = makeActor();
+  // Size and maximum HP are derived in PF2e; writing them is discarded, which
+  // is why the card changed nothing — not the sheet, not the token.
+  const bigActor = () => {
+    const a = makeActor();
+    a.system.traits = { size: { value: 'med' } };
+    a.system.details = { ...(a.system.details ?? {}), height: { value: "5'10\"" } };
+    return a;
+  };
+
+  it('grows the creature with a rule element, not a direct write', async () => {
+    const actor = bigActor();
     const api = makeApi(actor);
-    const rng = seededRng([0.5]);
-    await applyCardEffect({ card: BY_ID.get('giant'), actor, api, rng });
-    expect(actor.system.traits.size.value).toBe('lg');
-    expect(actor.system.attributes.hp.max).toBe(60);
+    await applyCardEffect({ card: BY_ID.get('giant'), actor, api, rng: () => 0.5 });
+    const rules = api._spy.effects[0].system.rules;
+    expect(rules).toContainEqual({ key: 'CreatureSize', value: 'large' });
+    expect(actor.system.traits.size.value).toBe('med');   // the stored value is untouched
+  });
+
+  it('raises maximum HP with a modifier, and current HP directly', async () => {
+    const actor = bigActor();
+    const api = makeApi(actor);
+    await applyCardEffect({ card: BY_ID.get('giant'), actor, api, rng: () => 0.5 });
+    expect(api._spy.effects[0].system.rules).toContainEqual(
+      { key: 'FlatModifier', selector: 'hp', type: 'untyped', value: 20 });
+    // A bigger maximum alone would leave the character wounded by the change.
+    expect(actor.system.attributes.hp.value).toBe(50);
+  });
+
+  it('grows the recorded height', async () => {
+    const actor = bigActor();
+    const api = makeApi(actor);
+    const res = await applyCardEffect({ card: BY_ID.get('giant'), actor, api, rng: () => 0.5 });
+    expect(actor.system.details.height.value).toMatch(/^\d+'\d+"$/);
+    expect(res.log).toContain("5'10\"");
+  });
+
+  it('leaves an unparseable height alone', async () => {
+    const actor = bigActor();
+    actor.system.details.height.value = 'quite tall';
+    const api = makeApi(actor);
+    await applyCardEffect({ card: BY_ID.get('giant'), actor, api, rng: () => 0.5 });
+    expect(actor.system.details.height.value).toBe('quite tall');
   });
 });
 

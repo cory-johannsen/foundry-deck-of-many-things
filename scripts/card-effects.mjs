@@ -92,21 +92,84 @@ async function autoApplyHpBump({ actor, params, api, card }) {
   return { mode: 'auto', log: `${card.name}: HP max ${max} → ${max + hp_bump}` };
 }
 
+/** PF2e's size ladder, and the word CreatureSize wants for each rung. */
+const SIZE_UP = { tiny: 'sm', sm: 'med', med: 'lg', lg: 'huge', huge: 'grg', grg: 'grg' };
+const SIZE_WORD = { tiny: 'tiny', sm: 'small', med: 'medium', lg: 'large', huge: 'huge', grg: 'gargantuan' };
+
+/**
+ * Add inches to a height written the way a player writes one.
+ *
+ * The field is free text — 5'10", 70, "5 ft 10 in" — so this reads what it can
+ * and leaves anything it cannot parse alone rather than overwriting it with a
+ * guess.
+ */
+export function growHeight(current, inches) {
+  const text = String(current ?? '').trim();
+  if (!text) return null;
+  const feetInches = /^(\d+)\s*(?:'|ft\.?|feet)\s*(\d+)?\s*(?:"|in\.?|inches)?$/i.exec(text);
+  const plain = /^(\d+)\s*(?:"|in\.?|inches)?$/i.exec(text);
+  let total = null;
+  if (feetInches) total = Number(feetInches[1]) * 12 + Number(feetInches[2] ?? 0);
+  else if (plain) total = Number(plain[1]);
+  if (total == null || !Number.isFinite(total)) return null;
+  const grown = total + inches;
+  return `${Math.floor(grown / 12)}'${grown % 12}"`;
+}
+
+/**
+ * Giant: you get bigger.
+ *
+ * Size and maximum HP are both derived in PF2e — writing system.traits.size or
+ * system.attributes.hp.max is discarded on the next preparation, which is why
+ * this card changed nothing at all: not the sheet, not the actor's size, not
+ * the token. A CreatureSize rule element does the size properly and the token
+ * scales itself from it; a FlatModifier on hp raises the maximum.
+ *
+ * Current HP is stored rather than derived, so it is written directly — the
+ * card raises both, and a bigger maximum on its own would leave the character
+ * wounded by the difference.
+ *
+ * Height is free text on the sheet and nothing was touching it.
+ */
 async function autoApplySizeGrow({ actor, params, api, card, rng }) {
   const { grow_inches_formula, hp_bump = 0 } = params;
   const inches = rollFormula(grow_inches_formula, rng);
-  const sizePath = 'system.traits.size.value';
-  const current = deepGet(actor, sizePath) ?? 'med';
-  const bigger = { tiny: 'sm', sm: 'med', med: 'lg', lg: 'huge', huge: 'grg', grg: 'grg' }[current] ?? 'lg';
-  const updates = { [sizePath]: bigger };
+  const current = deepGet(actor, 'system.traits.size.value') ?? 'med';
+  const bigger = SIZE_UP[current] ?? 'lg';
+
+  await api.createEffect(actor.id, {
+    type: 'effect',
+    name: `Giant's Growth (${SIZE_WORD[bigger]})`,
+    img: 'icons/magic/control/energy-stream-link-white.webp',
+    system: {
+      description: { value: `You have grown ${inches} inches, to ${SIZE_WORD[bigger]} size, `
+        + `and your maximum Hit Points increase by ${hp_bump}.` },
+      duration: { unit: 'unlimited' },
+      rules: [
+        { key: 'CreatureSize', value: SIZE_WORD[bigger] },
+        ...(hp_bump ? [{ key: 'FlatModifier', selector: 'hp', type: 'untyped', value: hp_bump }] : [])
+      ]
+    }
+  });
+
+  // Current HP and height are stored, so they are written.
+  const updates = {};
   if (hp_bump) {
     const cur = deepGet(actor, 'system.attributes.hp.value') ?? 0;
-    const max = deepGet(actor, 'system.attributes.hp.max') ?? 0;
     updates['system.attributes.hp.value'] = cur + hp_bump;
-    updates['system.attributes.hp.max'] = max + hp_bump;
   }
-  await api.updateActor(actor.id, updates);
-  return { mode: 'auto', log: `${card.name}: grew ${inches}", size ${current} → ${bigger}, HP +${hp_bump}` };
+  const height = deepGet(actor, 'system.details.height.value');
+  const taller = growHeight(height, inches);
+  if (taller) updates['system.details.height.value'] = taller;
+  if (Object.keys(updates).length) await api.updateActor(actor.id, updates);
+
+  const heightNote = taller ? `, height ${height} → ${taller}`
+    : (height ? '' : ', no height recorded on the sheet');
+  return {
+    mode: 'auto',
+    log: `${card.name}: grew ${inches}" to ${SIZE_WORD[bigger]} size, `
+      + `+${hp_bump} HP${heightNote}`
+  };
 }
 
 /**
@@ -115,15 +178,8 @@ async function autoApplySizeGrow({ actor, params, api, card, rng }) {
  * These three wrote to `system.attributes.speed`, which does not exist on a
  * character — the real data lives under `system.movement.speeds` and is
  * recomputed from ancestry and items every preparation, so a direct write is
- * discarded. Path reported "walk speed 25 → 35" on a character with a 30-foot
- * stride: the 25 was a fallback for the missing field, and the sheet never
- * moved.
- *
- * Speeds are therefore granted the way the system grants them, with rule
- * elements on an effect: FlatModifier against the land-speed selector for a
- * bonus, BaseSpeed for a movement type the character did not have. Both were
- * confirmed against a live sheet, including that BaseSpeed takes `selector`
- * rather than `type`.
+ * discarded. Speeds are therefore granted the way the system grants them, with
+ * rule elements on an effect.
  */
 const landSpeedOf = (actor) => deepGet(actor, 'system.movement.speeds.land.value') ?? 25;
 
@@ -310,24 +366,47 @@ async function autoApplyLongRest({ actor, api, card }) {
  * reads as losing your money would be a nasty surprise; deeds and titles stay
  * narrative because there is nothing on a sheet to remove.
  */
+/**
+ * Ruin: mundane wealth vanishes.
+ *
+ * It used to stamp a timestamp on the actor and ask the GM to empty the
+ * inventory by hand, which is to say it did nothing. Coins and non-magical
+ * valuables are now actually taken.
+ *
+ * The card also destroys "documents that establish your ownership", which is
+ * not an inventory matter: Throne hands out a deed to a keep as an effect, and
+ * a character who draws Throne and then Ruin should lose it. Effects the
+ * module marked as ownership documents are removed alongside the coin. The
+ * deed is recognised by that mark rather than by its name, so renaming it does
+ * not quietly break this.
+ *
+ * Deliberately limited otherwise. "Non-magical wealth" could be read to
+ * include a mundane sword, but stripping someone's gear on a card that reads
+ * as losing your money would be a nasty surprise.
+ */
 async function autoApplyWealthWipe({ actor, api, card }) {
   const coins = await api.getCoins(actor.id);
   const valuables = await api.listItems(actor.id, { types: ['treasure'], magical: 'exclude' });
+  const deeds = (await api.listItems(actor.id, { types: ['effect'] }))
+    .filter((i) => i.dommt?.kind === 'deed');
   const coinTotal = Object.entries(coins ?? {})
     .map(([d, n]) => `${n} ${d}`).filter((s) => !s.startsWith('0 '));
 
   if (coinTotal.length) await api.removeCoins(actor.id, coins);
-  if (valuables.length) await api.removeItems(actor.id, valuables.map((v) => v.id));
+  const doomed = [...valuables, ...deeds];
+  if (doomed.length) await api.removeItems(actor.id, doomed.map((i) => i.id));
 
-  if (!coinTotal.length && !valuables.length) {
+  if (!coinTotal.length && !doomed.length) {
     return { mode: 'auto', log: `${card.name}: nothing mundane left to lose` };
   }
   const parts = [];
   if (coinTotal.length) parts.push(coinTotal.join(', '));
-  if (valuables.length) parts.push(`${valuables.length} valuable(s): ${valuables.map((v) => v.name).join(', ')}`);
+  if (valuables.length) parts.push(`${valuables.length} valuable(s): ${valuables.map((i) => i.name).join(', ')}`);
+  for (const deed of deeds) parts.push(`${deed.name}, torn up`);
   return {
     mode: 'auto',
-    log: `${card.name}: lost ${parts.join('; ')}. Deeds and titles are gone too — those are yours to narrate.`
+    log: `${card.name}: lost ${parts.join('; ')}.`
+      + (deeds.length ? '' : ' Deeds and titles are gone too — those are yours to narrate.')
   };
 }
 
