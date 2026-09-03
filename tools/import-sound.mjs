@@ -95,14 +95,47 @@ const second = m
   : norm;
 if (!m) console.warn('  (could not measure; falling back to single-pass)');
 
-execFileSync(ffmpeg, [
+const encode = (extraGain) => execFileSync(ffmpeg, [
   '-hide_banner', '-loglevel', 'error', '-y',
   '-i', source,
-  '-af', `${trim},${second}`,
+  '-af', extraGain ? `${trim},${second},volume=${extraGain.toFixed(1)}dB` : `${trim},${second}`,
   '-ac', '2', '-ar', '44100',
   '-c:a', 'libvorbis', '-q:a', QUALITY,
   outPath
 ], { stdio: 'inherit' });
+
+encode(0);
+
+/**
+ * loudnorm is conservative about inter-sample peaks and can stop well short of
+ * the target while leaving real headroom — a card-shuffle sting landed at
+ * -22.7 LUFS with its peak still at -4.5 dBFS, 7 dB under target with 3 dB
+ * spare. Sparse, transient material does this: the gate sees mostly quiet
+ * between the clicks. So measure what actually came out and take whatever
+ * headroom is left, capped by the true-peak ceiling rather than by the
+ * loudness target, which is the limit that must not be crossed.
+ */
+function loudnessOf(file) {
+  const r = spawnSync(ffmpeg, [
+    '-hide_banner', '-nostats', '-i', file,
+    '-af', 'ebur128=peak=true:framelog=quiet', '-f', 'null', '-'
+  ], { encoding: 'utf8' });
+  const grab = (label, unit) => {
+    const m = new RegExp(`${label}[\\s\\S]{0,80}?(-?\\d+\\.\\d+) ${unit}`).exec(`${r.stderr}`);
+    return m ? Number(m[1]) : null;
+  };
+  return { I: grab('Integrated loudness', 'LUFS'), TP: grab('True peak', 'dBFS') };
+}
+
+const got = loudnessOf(outPath);
+let claimed = 0;
+if (got.I != null && got.TP != null) {
+  const wanted = Number(LUFS) - got.I;              // how far under target
+  const room = Number(TRUE_PEAK) - got.TP;          // how far the peak can rise
+  claimed = Math.min(wanted, room);
+  if (claimed > 0.5) encode(claimed);
+  else claimed = 0;
+}
 
 // ffmpeg reports duration on stderr and exits non-zero with no output file.
 const dur = (file) => {
@@ -118,4 +151,6 @@ const dur = (file) => {
 const kb = (p) => `${(statSync(p).size / 1024).toFixed(0)} KB`;
 console.log(`${basename(source)}  ->  assets/sounds/${outName}`);
 console.log(`  ${dur(source)} ${kb(source)}   ->   ${dur(outPath)} ${kb(outPath)}`);
-console.log(`  trimmed, normalised to ${LUFS} LUFS, ogg vorbis q${QUALITY}`);
+const final = loudnessOf(outPath);
+console.log(`  trimmed, ogg vorbis q${QUALITY}, I=${final.I} LUFS TP=${final.TP} dBFS`
+  + (claimed ? `  (+${claimed.toFixed(1)} dB of spare headroom claimed)` : ''));
