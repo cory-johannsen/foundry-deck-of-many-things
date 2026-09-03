@@ -12,7 +12,7 @@
  */
 export const WRITE_METHODS = [
   'updateActor', 'increaseCondition', 'createEffect', 'postChatCard',
-  'addCoins', 'grantItems', 'removeItems', 'spawnCreatures'
+  'addCoins', 'grantItems', 'removeItems', 'spawnCreatures', 'grantInnateSpells'
 ];
 
 export const READ_METHODS = ['findItems', 'findCreatures', 'listItems', 'findWorldActors'];
@@ -47,7 +47,11 @@ export function makeFoundryApi() {
         const pack = game.packs.get(id);
         if (!pack) continue;
         const index = await pack.getIndex({
-          fields: ['type', 'system.level.value', 'system.traits.rarity', 'system.traits.value']
+          // A spell's tradition is not among its traits — it lives in its own
+          // array, so it has to be asked for explicitly or spells arrive
+          // looking traditionless.
+          fields: ['type', 'system.level.value', 'system.traits.rarity',
+                   'system.traits.value', 'system.traits.traditions']
         });
         for (const e of index) {
           if (types.length && !types.includes(e.type)) continue;
@@ -58,7 +62,8 @@ export function makeFoundryApi() {
           const has = e.system?.traits?.value ?? [];
           if (traits.length && !traits.every((t) => has.includes(t))) continue;
           if (re && !re.test(e.name)) continue;
-          found.push({ pack: id, id: e._id, name: e.name, type: e.type, level, rarity, traits: has });
+          found.push({ pack: id, id: e._id, name: e.name, type: e.type, level, rarity,
+                       traits: has, traditions: e.system?.traits?.traditions ?? [] });
         }
       }
       return found;
@@ -180,6 +185,51 @@ export function makeFoundryApi() {
         if (!doc) continue;
         const obj = doc.toObject();
         sources.push(updates ? foundry.utils.mergeObject(obj, updates) : obj);
+      }
+      if (!sources.length) return null;
+      return actor.createEmbeddedDocuments('Item', sources);
+    },
+
+    /**
+     * Grant spells the character can actually cast.
+     *
+     * A spell item dropped on a sheet on its own belongs to no spellcasting
+     * entry, so it sits there uncastable. PF2e's model for "you may cast this
+     * without a slot" is an innate entry that owns the spell, with the daily
+     * allowance recorded on the spell's location.
+     *
+     * Entry creation and spell linking have to happen together, in one call:
+     * the spell references the entry by id, and a handler planning its writes
+     * ahead of time cannot know an id for a document that does not exist yet.
+     * The module keeps a single entry per actor and adds to it.
+     */
+    async grantInnateSpells(actorId, entries, { tradition = 'primal', ability = 'cha',
+                                                uses = null, entryName = 'Deck of Many More Things' } = {}) {
+      const actor = getActor(actorId);
+      let entry = actor.itemTypes.spellcastingEntry?.find((e) => e.name === entryName);
+      if (!entry) {
+        [entry] = await actor.createEmbeddedDocuments('Item', [{
+          name: entryName,
+          type: 'spellcastingEntry',
+          system: {
+            prepared: { value: 'innate' },
+            tradition: { value: tradition },
+            ability: { value: ability }
+          }
+        }]);
+      }
+
+      const sources = [];
+      for (const { pack, id } of entries) {
+        const doc = await game.packs.get(pack)?.getDocument(id);
+        if (!doc) continue;
+        const obj = doc.toObject();
+        obj.system.location = {
+          value: entry.id,
+          // A cantrip is at-will; anything else carries a daily allowance.
+          ...(uses ? { uses: { value: uses, max: uses } } : {})
+        };
+        sources.push(obj);
       }
       if (!sources.length) return null;
       return actor.createEmbeddedDocuments('Item', sources);

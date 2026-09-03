@@ -18,7 +18,7 @@ const actorOf = (over = {}) => ({
 
 /** Records writes, answers reads from fixtures. */
 const makeApi = ({ items = [], creatures = [], carried = [], worldActors = [] } = {}) => {
-  const spy = { updates: [], conditions: [], effects: [], coins: [], granted: [], removed: [], spawned: [] };
+  const spy = { updates: [], conditions: [], effects: [], coins: [], granted: [], removed: [], spawned: [], innate: [] };
   return {
     spy,
     updateActor: async (_id, u) => { spy.updates.push(u); },
@@ -29,6 +29,7 @@ const makeApi = ({ items = [], creatures = [], carried = [], worldActors = [] } 
     grantItems: async (_id, e) => { spy.granted.push(...e); },
     removeItems: async (_id, ids) => { spy.removed.push(...ids); },
     spawnCreatures: async (e, o) => { spy.spawned.push({ e, o }); },
+    grantInnateSpells: async (_i, e, o) => { spy.innate.push({ e, o }); },
     findItems: async () => items,
     findCreatures: async () => creatures,
     listItems: async () => carried,

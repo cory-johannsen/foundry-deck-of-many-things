@@ -17,6 +17,7 @@ import { deepGet } from './card-handlers-extra.mjs';
  */
 
 const MODULE_ID = 'deck-of-many-more-things';
+const TRADITIONS = ['arcane', 'divine', 'occult', 'primal'];
 const YEAR = 365;
 
 /**
@@ -114,8 +115,15 @@ export async function applySpellGrant({ actor, params, api, card, rng }) {
   const isCantrips = card.mechanics.kind === 'three_cantrips';
   const wanted = isCantrips ? (params.count ?? 3) : 1;
 
-  const pool = isCantrips
+  const allCantrips = isCantrips
     ? await api.findItems({ types: ['spell'], traits: ['cantrip'], packs: ['pf2e.spells-srd'] })
+    : [];
+  const pool = isCantrips
+    // The card says "from any tradition", so cantrips belonging to none —
+    // focus spells and the like — are not what it is offering.
+    ? (allCantrips.filter((c) => (c.traditions ?? []).length).length
+        ? allCantrips.filter((c) => (c.traditions ?? []).length)
+        : allCantrips)
     : await api.findItems({
         types: ['spell'], packs: ['pf2e.spells-srd'],
         namePattern: `^${(params.spell ?? '').replace(/-/g, '[ -]')}$`
@@ -136,19 +144,38 @@ export async function applySpellGrant({ actor, params, api, card, rng }) {
     picked.push(...remaining.splice(Math.floor(rng() * remaining.length), 1));
   }
 
-  await api.grantItems(actor.id, picked.map((p) => ({ pack: p.pack, id: p.id })));
-  if (!isCantrips) {
-    await grantUses(api, actor, {
-      name: `${picked[0].name} (1/day)`,
-      uses: params.per_long_rest ?? 1,
-      cardId: card.id,
-      description: `Cast ${picked[0].name} once per day without expending a spell slot.`,
-      img: 'icons/magic/nature/leaf-glow-green.webp'
+  // Into an innate spellcasting entry, not loose on the sheet. A spell that
+  // belongs to no entry cannot be cast, and a separate counter effect only
+  // described the allowance rather than enforcing it — the daily use now lives
+  // on the spell, where PF2e tracks and refreshes it.
+  //
+  // An entry carries one tradition, so spells are grouped by their own rather
+  // than filed under a single guess: Well draws cantrips from any tradition and
+  // could easily return an arcane one and a primal one together.
+  const perDay = isCantrips ? null : (params.per_long_rest ?? 1);
+  const byTradition = new Map();
+  for (const spell of picked) {
+    // Traditions are their own array, not traits: Speak with Plants lists
+    // concentrate/manipulate/plant/wood as traits and divine/occult/primal
+    // as traditions. Reading traits alone filed it as arcane.
+    const tradition = (spell.traditions ?? []).find((t) => TRADITIONS.includes(t))
+      ?? TRADITIONS.find((t) => (spell.traits ?? []).includes(t))
+      ?? 'arcane';
+    if (!byTradition.has(tradition)) byTradition.set(tradition, []);
+    byTradition.get(tradition).push({ pack: spell.pack, id: spell.id });
+  }
+  for (const [tradition, entries] of byTradition) {
+    await api.grantInnateSpells(actor.id, entries, {
+      uses: perDay,
+      tradition,
+      entryName: `Deck of Many More Things (${titleCase(tradition)})`
     });
   }
+
+  const allowance = perDay ? ` (${perDay}/day)` : '';
   return {
     mode: 'auto',
-    log: `${card.name}: learned ${picked.map((p) => p.name).join(', ')}`,
+    log: `${card.name}: learned ${picked.map((p) => p.name).join(', ')}${allowance}`,
     meta: { spells: picked.map((p) => p.name) }
   };
 }

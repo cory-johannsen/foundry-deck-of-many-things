@@ -20,7 +20,7 @@ const actorOf = (over = {}) => ({
 });
 
 const makeApi = ({ items = [], creatures = [], worldActors = [] } = {}) => {
-  const spy = { updates: [], conditions: [], effects: [], granted: [], spawned: [] };
+  const spy = { updates: [], conditions: [], effects: [], granted: [], spawned: [], innate: [] };
   return {
     spy,
     updateActor: async (_i, u) => { spy.updates.push(u); },
@@ -30,6 +30,7 @@ const makeApi = ({ items = [], creatures = [], worldActors = [] } = {}) => {
     grantItems: async (_i, e) => { spy.granted.push(...e); },
     removeItems: async () => {},
     spawnCreatures: async (e, o) => { spy.spawned.push({ e, o }); },
+    grantInnateSpells: async (_i, e, o) => { spy.innate.push({ e, o }); },
     findItems: async () => items,
     findCreatures: async () => creatures,
     listItems: async () => [],
@@ -82,16 +83,26 @@ describe('spell grants', () => {
 
   it('grants three different cantrips, not the same one three times', async () => {
     const { api } = await run('well', { api: makeApi({ items: cantrips }) });
-    expect(api.spy.granted).toHaveLength(3);
-    expect(new Set(api.spy.granted.map((g) => g.id)).size).toBe(3);
+    const granted = api.spy.innate[0].e;
+    expect(granted).toHaveLength(3);
+    expect(new Set(granted.map((g) => g.id)).size).toBe(3);
   });
 
-  it('grants the named spell and a per-day counter for it', async () => {
+  it('puts cantrips in a spellcasting entry at will, with no daily limit', async () => {
+    // A spell belonging to no entry cannot be cast at all.
+    const { api } = await run('well', { api: makeApi({ items: cantrips }) });
+    expect(api.spy.innate[0].o.uses).toBeNull();
+  });
+
+  it('grants the named spell with its daily use, not a separate counter', async () => {
     const spell = [{ pack: 'pf2e.spells-srd', id: 's1', name: 'Speak with Plants', type: 'spell', level: 2, rarity: 'common' }];
     const { r, api } = await run('plant', { api: makeApi({ items: spell }) });
-    expect(api.spy.granted).toEqual([{ pack: 'pf2e.spells-srd', id: 's1' }]);
-    expect(api.spy.effects[0].system.badge.value).toBe(1);
-    expect(r.log).toContain('Speak with Plants');
+    expect(api.spy.innate[0].e).toEqual([{ pack: 'pf2e.spells-srd', id: 's1' }]);
+    expect(api.spy.innate[0].o.uses).toBe(1);
+    // The old shape put the allowance on a badge effect beside the spell,
+    // which described the limit without enforcing it.
+    expect(api.spy.effects).toHaveLength(0);
+    expect(r.log).toContain('Speak with Plants (1/day)');
   });
 
   it('defers when the compendium has no match', async () => {
@@ -275,5 +286,59 @@ describe('what the player actually sees on the sheet', () => {
       }
     }
     expect(bad).toEqual([]);
+  });
+});
+
+describe('spells go into an entry of their own tradition', () => {
+  // Traditions sit in their own array, never among the traits — mirroring
+  // PF2e, where Speak with Plants lists plant/wood as traits and primal as a
+  // tradition.
+  const mixed = [
+    { pack: 'p', id: 'a', name: 'Arcane Cantrip', type: 'spell', level: 0, rarity: 'common', traits: ['cantrip'], traditions: ['arcane'] },
+    { pack: 'p', id: 'b', name: 'Primal Cantrip', type: 'spell', level: 0, rarity: 'common', traits: ['cantrip'], traditions: ['primal'] },
+    { pack: 'p', id: 'c', name: 'Divine Cantrip', type: 'spell', level: 0, rarity: 'common', traits: ['cantrip'], traditions: ['divine'] }
+  ];
+
+  it('files each spell under its own tradition rather than one guess', async () => {
+    // An innate entry carries a single tradition, and Well draws from any of
+    // them — filing an arcane cantrip under primal would misreport its DC.
+    const { api } = await run('well', { api: makeApi({ items: mixed }) });
+    const traditions = api.spy.innate.map((c) => c.o.tradition).sort();
+    expect(traditions).toEqual(['arcane', 'divine', 'primal']);
+  });
+
+  it('names each entry after its tradition, so they do not collide', async () => {
+    const { api } = await run('well', { api: makeApi({ items: mixed }) });
+    const names = api.spy.innate.map((c) => c.o.entryName);
+    expect(new Set(names).size).toBe(names.length);
+    expect(names[0]).toMatch(/Deck of Many More Things \((Arcane|Divine|Primal)\)/);
+  });
+
+  it('uses one entry when the spells share a tradition', async () => {
+    const primal = mixed.filter((s) => s.traditions.includes('primal'));
+    const { api } = await run('plant', { api: makeApi({ items: primal }) });
+    expect(api.spy.innate).toHaveLength(1);
+    expect(api.spy.innate[0].o.tradition).toBe('primal');
+  });
+});
+
+describe('a spell\'s tradition is not one of its traits', () => {
+  it('reads the traditions array, as PF2e stores it', async () => {
+    // Speak with Plants: traits are concentrate/manipulate/plant/wood, and the
+    // traditions are divine/occult/primal. Reading traits filed it as arcane.
+    const swp = [{ pack: 'pf2e.spells-srd', id: 's1', name: 'Speak with Plants', type: 'spell',
+                   level: 2, rarity: 'common',
+                   traits: ['concentrate', 'manipulate', 'plant', 'wood'],
+                   traditions: ['divine', 'occult', 'primal'] }];
+    const { api } = await run('plant', { api: makeApi({ items: swp }) });
+    expect(api.spy.innate[0].o.tradition).toBe('divine');
+    expect(api.spy.innate[0].o.tradition).not.toBe('arcane');
+  });
+
+  it('falls back to arcane only when a spell truly has no tradition', async () => {
+    const none = [{ pack: 'p', id: 'x', name: 'Odd Spell', type: 'spell', level: 1,
+                    rarity: 'common', traits: [], traditions: [] }];
+    const { api } = await run('plant', { api: makeApi({ items: none }) });
+    expect(api.spy.innate[0].o.tradition).toBe('arcane');
   });
 });
