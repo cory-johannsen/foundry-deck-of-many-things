@@ -444,7 +444,8 @@
       "front": "assets/cards-labeled/construct.png",
       "prompt": "A rigidly geometric clockwork automaton — a perfect cube of brass and enamel with a single large round eye on its front face and small jointed mechanical arms and legs — gripping a wrench inside the interior of a vast clockwork machine, gears and turning shafts receding in every direction; on the bench beside it a small half-built artificial creature of stitched clay and copper with little leathery wings has just begun to stir, dark fantasy illustration, aged parchment texture, intricate linework, rich jewel-tone colors, vertical portrait orientation, full bleed composition",
       "negative": "(humanoid robot:1.3), (android:1.3), (organic creature:1.3)",
-      "version": 1
+      "version": 2,
+      "pinned": true
     },
     "divination": {
       "person": {

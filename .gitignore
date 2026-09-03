@@ -37,3 +37,8 @@ docs/card-contact-sheet.html
 /*.aiff
 /*.aif
 /*.flac
+.venv/
+/*.jpg
+/*.jpeg
+/*.png
+/*.ogg
