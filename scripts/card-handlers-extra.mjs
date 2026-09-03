@@ -46,27 +46,34 @@ const xpShape = (actor) => ({
 // ---------------------------------------------------------------------------
 
 /**
- * PF2e carries XP as progress toward the next level and resets it on level-up,
- * so a grant large enough to cross the threshold has to roll the level over
- * itself rather than leaving 2,000/1,000 sitting on the sheet.
+ * XP is banked, not spent on levels.
+ *
+ * An earlier version rolled a grant into levels itself and wrote back the
+ * remainder. That was wrong twice over. Levelling in PF2e is not a number
+ * going up: it carries feats, attribute boosts and skill increases the player
+ * chooses, and setting `level.value` skips all of them — so a character became
+ * level 6 with a level 5 build. It was also invisible, because grants are
+ * whole multiples of 1,000: adding 1,000 to 200 left 200 on the sheet with
+ * only the level moving, which reads as "no XP was awarded".
+ *
+ * PF2e accepts XP above the threshold, so 2,200/1,000 simply sits there and
+ * the sheet offers its own level-up. That is the flow that builds the
+ * character properly.
  */
 export async function applyXpGain({ actor, params, api, card }) {
   const gain = params.xp_pf2e ?? params.xp ?? 0;
   const { xp, level, per } = xpShape(actor);
   const total = xp + gain;
-  const gained = Math.floor(total / per);
-  const newLevel = Math.min(level + gained, PF2E_MAX_LEVEL);
-  const remainder = newLevel === PF2E_MAX_LEVEL && level + gained > PF2E_MAX_LEVEL ? 0 : total % per;
+  const pending = Math.floor(total / per);
 
-  await api.updateActor(actor.id, {
-    'system.details.xp.value': remainder,
-    'system.details.level.value': newLevel
-  });
-  const levelNote = newLevel > level ? `, level ${level} → ${newLevel}` : '';
+  await api.updateActor(actor.id, { 'system.details.xp.value': total });
+  const ready = pending > 0 && level < PF2E_MAX_LEVEL
+    ? ` — enough to level up ${pending > 1 ? `${pending} times` : 'once'}`
+    : '';
   return {
     mode: 'auto',
-    log: `${card.name}: +${gain} XP (${xp} → ${remainder}/${per}${levelNote})`,
-    mutations: [{ path: 'system.details.level.value', from: level, to: newLevel }]
+    log: `${card.name}: +${gain} XP (${xp} → ${total}/${per})${ready}`,
+    mutations: [{ path: 'system.details.xp.value', from: xp, to: total }]
   };
 }
 
