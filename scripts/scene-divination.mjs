@@ -1,4 +1,5 @@
 import { loadCards, loadCelticCross } from './data-loader.mjs';
+import { playSound } from './audio.mjs';
 import {
   dealCelticCross,
   readingFromSpread,
@@ -76,24 +77,6 @@ const SOUNDS = {
   // Played as each card lands.
   place: `modules/${MODULE_ID}/assets/sounds/card-place-1.ogg`
 };
-const SOUND_VOLUME = 0.7;
-
-/**
- * Fire-and-forget so audio can never stall or break a reading — a missing file
- * or a browser autoplay block should cost the sound, not the deal. The `true`
- * broadcasts to every connected client so the whole table hears it, not just
- * the GM running the macro.
- */
-function playSound(src) {
-  try {
-    const played = foundry.audio.AudioHelper.play(
-      { src, volume: SOUND_VOLUME, autoplay: true, loop: false }, true);
-    if (played?.catch) played.catch((e) => console.warn(`${MODULE_ID} | sound failed: ${src}`, e));
-  } catch (e) {
-    console.warn(`${MODULE_ID} | sound failed: ${src}`, e);
-  }
-}
-
 const CLOTH_PATH = `modules/${MODULE_ID}/assets/cloth.png`;
 
 /**
