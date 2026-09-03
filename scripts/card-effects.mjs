@@ -10,7 +10,7 @@ import {
 } from './card-handlers-extra.mjs';
 import {
   applyTrackedUses, applySpellGrant, applySkillProficiencies, applyThronePersuasion,
-  applyExile, applyNamedAdversary, applyAgeShift, applyAlignmentFlip
+  applyExile, applyNamedAdversary, applyAgeShift, applyMoralInversion
 } from './card-handlers-narrative.mjs';
 
 /**
@@ -281,7 +281,7 @@ const HANDLERS = {
   wealth_wipe: autoApplyWealthWipe,
 
   grant_telepathy: applyGrantTelepathy,
-  alignment_flip: applyAlignmentFlip,
+  moral_inversion: applyMoralInversion,
   beast_form: applyBeastForm,
   cast_time_stop_n: applyTrackedUses,
   cast_gate_n: applyTrackedUses,
@@ -346,7 +346,7 @@ export const REQUIRES_CONFIRMATION = new Set([
   'xp_loss', 'fall', 'petrify', 'soul_trap', 'destroy_magic_items', 'beast_form',
   'drop_to_zero_hp', 'stat_debuff', 'save_penalty', 'exhaustion',
   'restrain_no_spellcast', 'wealth_wipe',
-  'trap_extraplanar', 'feywild_transport', 'age_shift', 'alignment_flip', 'permanent_enemy',
+  'trap_extraplanar', 'feywild_transport', 'age_shift', 'moral_inversion', 'permanent_enemy',
   'fiend_deal',   // indifferent, but it still puts a creature on the map
   'spawn_hostile', 'spawn_ooze', 'random_hostile_npc',
   'revenant_hunter', 'avatar_of_death'

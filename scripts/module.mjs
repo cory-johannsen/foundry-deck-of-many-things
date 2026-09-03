@@ -5,6 +5,7 @@ import { drawFromPlay, freshPlayDeckState, makeCardsById } from './deck.mjs';
 import { applyCardEffect } from './card-effects.mjs';
 import { playCardSound } from './card-sound.mjs';
 import { registerChoiceSocket } from './player-choice.mjs';
+import { registerChargeSound } from './charge-sound.mjs';
 import { makeFoundryApi } from './foundry-api.mjs';
 import { resolveDrawActor } from './draw-target.mjs';
 import { resolvePendingDraw, markMessageResolved } from './gm-resolution.mjs';
@@ -149,6 +150,7 @@ function bindPendingDrawButton(message, html) {
 }
 
 Hooks.once('ready', registerChoiceSocket);
+Hooks.once('ready', registerChargeSound);
 
 Hooks.on('renderChatMessageHTML', bindPendingDrawButton);
 

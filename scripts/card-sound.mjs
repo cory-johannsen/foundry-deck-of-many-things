@@ -67,7 +67,7 @@ export const GROUP_BY_KIND = {
   climb_speed: 'transform',
   speed_bonus: 'transform',
   age_shift: 'transform',
-  alignment_flip: 'transform',
+  moral_inversion: 'transform',
 
   wish: 'arcane',
   cast_time_stop_n: 'arcane',

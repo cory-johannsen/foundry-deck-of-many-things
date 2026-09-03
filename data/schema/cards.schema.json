@@ -78,7 +78,7 @@
             "kind": {
               "enum": [
                 "grant_telepathy",
-                "alignment_flip",
+                "moral_inversion",
                 "beast_form",
                 "learn_languages",
                 "cast_time_stop_n",
