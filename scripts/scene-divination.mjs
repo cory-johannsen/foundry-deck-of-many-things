@@ -291,7 +291,7 @@ async function showCardDialog({ order, positionMeta, card, orientationLabel, cat
           <p style="margin:0;">${bodyText}</p>
         </div>
       </div>`,
-    buttons: [{ action: 'next', label: isLast ? 'Finish' : 'Next card', default: true }],
+    buttons: [{ action: 'next', label: isLast ? 'End reading' : 'Next card', default: true }],
     rejectClose: false
   });
 }
@@ -304,9 +304,29 @@ export async function performDivinationOnTable() {
 
   // The table comes up first, then the category is chosen — so the sound and
   // the scene change land together and the querent picks with the cloth already
-  // in front of them. Note this means cancelling the category dialog leaves
-  // everyone on the divination table; the reading simply does not begin.
+  // in front of them.
   const scene = await ensureDivinationScene();
+
+  // Remember where the table was so the reading can put everyone back, whether
+  // it is cancelled at the category prompt or ended after the last card.
+  // Captured before activation, and null when we were already on the divination
+  // scene so ending a reading never re-activates the table we are leaving.
+  const priorScene = game.scenes.active ?? null;
+  const priorSceneId = priorScene && priorScene.id !== scene.id ? priorScene.id : null;
+
+  async function restorePriorScene() {
+    if (!priorSceneId) return;
+    // Re-resolve rather than holding the document: the scene may have been
+    // deleted while the reading ran.
+    const prior = game.scenes.get(priorSceneId);
+    if (!prior) return;
+    try {
+      await prior.activate();
+    } catch (e) {
+      console.warn(`${MODULE_ID} | could not return to the prior scene`, e);
+    }
+  }
+
   await clearReadingTiles(scene);
   playSound(SOUNDS.open);
   // activate(), not view(): view() only moves this client, leaving players on
@@ -317,7 +337,10 @@ export async function performDivinationOnTable() {
   await new Promise((r) => setTimeout(r, 400));
 
   const category = await chooseCategory();
-  if (!category || category === 'cancel') return;
+  if (!category || category === 'cancel') {
+    await restorePriorScene();
+    return;
+  }
 
   const fit = layoutTransform(scene);
 
@@ -372,6 +395,11 @@ export async function performDivinationOnTable() {
       isReversed
     });
   }
+
+  // "End reading" on the last card returns everyone to where they were. The
+  // spread is deliberately left on the table so it can be revisited; use the
+  // clear-table macro to take it down.
+  await restorePriorScene();
 }
 
 export async function clearDivinationTable() {
