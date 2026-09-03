@@ -29,3 +29,11 @@ assets/.card-history/
 
 # Review contact sheet - regenerate with tools/contact_sheet.py
 docs/card-contact-sheet.html
+
+# Raw sound downloads (Kenney, Freesound, …). Import them with
+# tools/import-sound.mjs, which writes the trimmed ogg into assets/sounds/.
+/*.wav
+/*.mp3
+/*.aiff
+/*.aif
+/*.flac
