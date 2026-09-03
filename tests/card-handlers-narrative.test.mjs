@@ -210,3 +210,38 @@ describe('every card is now handled', () => {
     }
   });
 });
+
+describe('what the player actually sees on the sheet', () => {
+  // An effect's name is stored, not rendered, so a translation key passed into
+  // `name` ends up hovering over the icon verbatim. That is what happened to
+  // Euryale: "DOMMT.Effects.Euryale.Label".
+  it('never leaves a translation key as an effect name', async () => {
+    const offenders = [];
+    for (const card of cards) {
+      const api = makeApi({
+        items: [{ pack: 'p', id: 'i1', name: 'Thing', type: 'spell', level: 1, rarity: 'common' }],
+        creatures: [{ pack: 'b', id: 'c1', name: 'Beast', level: 5, traits: ['undead','ooze','humanoid','construct','dragon','beast','fiend','devil'] }]
+      });
+      await applyCardEffect({ card, actor: actorOf(), api, rng: () => 0.5, confirmGate: false });
+      for (const e of api.spy.effects) {
+        if (/^[A-Z][A-Za-z]*\.[A-Za-z.]+$/.test(e.name)) offenders.push(`${card.name}: ${e.name}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('gives every effect a non-empty, human-readable name', async () => {
+    const bad = [];
+    for (const card of cards) {
+      const api = makeApi({
+        items: [{ pack: 'p', id: 'i1', name: 'Thing', type: 'spell', level: 1, rarity: 'common' }],
+        creatures: [{ pack: 'b', id: 'c1', name: 'Beast', level: 5, traits: ['undead','ooze','humanoid','construct','dragon','beast','fiend','devil'] }]
+      });
+      await applyCardEffect({ card, actor: actorOf(), api, rng: () => 0.5, confirmGate: false });
+      for (const e of api.spy.effects) {
+        if (!e.name || !/[a-z]/.test(e.name) || !/\s/.test(e.name)) bad.push(`${card.name}: ${e.name}`);
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+});
