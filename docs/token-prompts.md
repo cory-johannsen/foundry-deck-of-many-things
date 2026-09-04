@@ -139,6 +139,22 @@ Save as `assets/tokens/ooze-tar.webp`
 A thick column of living tar rising out of a spreading puddle of itself, heavy and viscous and dripping, its wet black surface shot through with an iridescent oil-slick sheen of violet, teal and gold, lit from the side against darkness. Dark fantasy illustration with intricate linework, rich jewel-tone colours and dramatic rim lighting, in the style of a painted trading card. Show the whole creature centred and filling the frame, alone in empty black space with nothing beneath or behind it. The background must be plain solid black with nothing in it at all — no scenery, no ground, no horizon, no border and no frame. The image is a map token and is drawn over dark terrain, so anything behind the subject shows up as a visible square tile. Output a square image, exactly 1024 by 1024 pixels, 1:1 aspect ratio. Do not include: text, letters, words, watermark, signature, logo, frame, border, ornate border, parchment, paper texture, scroll, background scenery, landscape, architecture, interior, multiple figures, crowd, full body, tiny figure, blurry, deformed hands, extra limbs, modern clothing, firearms, photograph, 3d render, face, head, eyes, mouth, teeth, fangs, portrait, person, humanoid, creature with a face, glass tank, aquarium, jar, container, display case, glass, wireframe, outline box, diagram, cutaway, cliff, canyon, rocks, cave, waterfall, ground, floor, terrain, horizon.
 ```
 
+## avatar-of-death
+
+Save as `assets/tokens/avatar-of-death.webp`
+
+```text
+A ghostly humanoid skeleton shrouded in a tattered black robe, its hood empty but for two points of cold light, a scythe held across its shoulder. Dark fantasy illustration with intricate linework, rich jewel-tone colours and dramatic rim lighting, in the style of a painted trading card. Frame it as a centred bust portrait, head and shoulders, filling most of the frame. The background must be plain solid black with nothing in it at all — no scenery, no ground, no horizon, no border and no frame. The image is a map token and is drawn over dark terrain, so anything behind the subject shows up as a visible square tile. Output a square image, exactly 1024 by 1024 pixels, 1:1 aspect ratio. Do not include: text, letters, words, watermark, signature, logo, frame, border, ornate border, parchment, paper texture, scroll, background scenery, landscape, architecture, interior, multiple figures, crowd, full body, tiny figure, blurry, deformed hands, extra limbs, modern clothing, firearms, photograph, 3d render, flesh, skin, hair, living face, jack-o-lantern, cartoon.
+```
+
+## monstrosity
+
+Save as `assets/tokens/monstrosity.webp`
+
+```text
+A huge nameless monster looming forward, heavy hunched shoulders, too many eyes and a mouth of uneven teeth, hide mottled and scarred, wrong in a way that is hard to place. Dark fantasy illustration with intricate linework, rich jewel-tone colours and dramatic rim lighting, in the style of a painted trading card. Frame it as a centred bust portrait, head and shoulders, filling most of the frame. The background must be plain solid black with nothing in it at all — no scenery, no ground, no horizon, no border and no frame. The image is a map token and is drawn over dark terrain, so anything behind the subject shows up as a visible square tile. Output a square image, exactly 1024 by 1024 pixels, 1:1 aspect ratio. Do not include: text, letters, words, watermark, signature, logo, frame, border, ornate border, parchment, paper texture, scroll, background scenery, landscape, architecture, interior, multiple figures, crowd, full body, tiny figure, blurry, deformed hands, extra limbs, modern clothing, firearms, photograph, 3d render, recognisable animal, dragon, wings, humanoid, armour, weapon.
+```
+
 ## ooze-blob
 
 Save as `assets/tokens/ooze-blob.webp`

@@ -1640,15 +1640,17 @@
     "flavor": "An owlbear sits in a sunny glade. This card represents something monstrous, including familiar things that turn strange and threatening.",
     "set": "expansion",
     "rules": {
-      "summary": "A Large or larger creature of level 12 or lower appears, hostile, and attacks at once.",
-      "full": "A Large or larger creature of level 12 or lower appears in an unoccupied space within 60 feet of you. It is hostile and attacks you immediately.",
+      "summary": "A Large or larger creature appears, hostile, and attacks at once.",
+      "full": "A Large or larger creature appears in an unoccupied space within 60 feet of you, no greater than your own level. It is hostile and attacks you immediately.",
       "draw_terminating": false,
       "narration": "Something enormous decides you are in its way; the Monstrosity arrives already hostile."
     },
     "mechanics": {
       "kind": "spawn_hostile",
       "params": {
-        "size_min": "large"
+        "size_min": "large",
+        "match_drawer_level": true,
+        "level_band": 3
       }
     },
     "art": {
@@ -2350,15 +2352,16 @@
     "flavor": "A skeletal figure is shrouded in a swirling robe, though its skull is clearly visible. The Skull card is a reminder of the universality of death—and the fact that everyone must confront death alone.",
     "set": "classic",
     "rules": {
-      "summary": "An avatar of death appears; it attacks you; any it kills cannot be resurrected.",
-      "full": "You summon an avatar of death — a ghostly humanoid skeleton clad in a tattered black robe. It appears in an unoccupied space of the GM's choice within 10 feet of you and attacks you, warning all others that you must win the battle alone. Creatures it slays cannot be restored to life by any means short of a Wish.",
+      "summary": "An avatar of death at your own level attacks you; any it kills cannot be raised.",
+      "full": "You summon an avatar of death — a ghostly humanoid skeleton clad in a tattered black robe, of your own level. It appears in an unoccupied space of the GM's choice within 10 feet of you and attacks you, warning all others that you must win the battle alone. Creatures it slays cannot be restored to life by any means short of a wish.",
       "draw_terminating": false,
       "narration": "Death comes personally; the Skull permits no resurrection for those it takes."
     },
     "mechanics": {
       "kind": "avatar_of_death",
       "params": {
-        "no_resurrection_for_victims": true
+        "no_resurrection_for_victims": true,
+        "match_drawer_level": true
       }
     },
     "art": {

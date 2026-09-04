@@ -219,11 +219,15 @@ describe('spawning', () => {
     expect(api.spy.spawned[0].o.nearActorId).toBe('a1');
   });
 
-  it('places a hostile summons with hostile disposition', async () => {
-    // Knight, Construct and Dragon each build or name their own creature now,
-    // so everything left on the shared spawner is hostile.
-    const { api } = await run('skull', { api: makeApi({ creatures }) });
-    expect(api.spy.spawned[0].o.disposition).toBe(-1);
+  it('builds Skull\'s avatar rather than looking for one', async () => {
+    // There is no avatar of death in PF2e to find. Handed a bestiary full of
+    // undead, the card must still build its own and ignore them.
+    const undead = [{ pack: 'b', id: 'h', name: 'Skeletal Horse', level: 2, traits: ['undead'] }];
+    const { api } = await run('skull', { api: makeApi({ creatures: undead }) });
+    expect(api.spy.spawned).toHaveLength(0);
+    expect(api.spy.built).toHaveLength(1);
+    expect(api.spy.built[0].d.name).toBe('Avatar of Death');
+    expect(api.spy.built[0].o.disposition).toBe(-1);
   });
 
   it('defers to the GM when the bestiary yields nothing', async () => {
@@ -247,11 +251,17 @@ describe('planning covers the new handlers too', () => {
 
   it('reads compendia during planning even though writes are held', async () => {
     let reads = 0;
-    const real = { ...makeApi(), findCreatures: async () => { reads += 1; return [{ pack: 'b', id: 'c1', name: 'Wraith', level: 6 }]; } };
-    const plan = await planCardEffect({ card: BY_ID.get('skull'), actor: actorOf(), api: real });
+    const real = { ...makeApi(), findCreatures: async () => { reads += 1; return [{ pack: 'b', id: 'c1', name: 'Froghemoth', level: 12, size: 'huge', traits: ['aberration'] }]; } };
+    const plan = await planCardEffect({ card: BY_ID.get('monstrosity'), actor: actorOf(), api: real });
     expect(reads).toBeGreaterThan(0);
-    expect(plan.result.log).toContain('Wraith');
+    expect(plan.result.log).toContain('Froghemoth');
     expect(plan.calls.map((c) => c.method)).toContain('spawnCreatures');
+  });
+
+  it('plans Skull without writing, even though it builds its creature', async () => {
+    const plan = await planCardEffect({ card: BY_ID.get('skull'), actor: actorOf(), api: makeApi() });
+    expect(plan.calls.map((c) => c.method)).toContain('spawnBuiltCreature');
+    expect(plan.result.log).toContain('avatar of death');
   });
 });
 
@@ -298,7 +308,10 @@ describe('beast form', () => {
   });
 });
 
-const SIZE_ORDER = ['tiny', 'sm', 'med', 'large', 'huge', 'grg'];
+// PF2e stores 'lg', not 'large', and the real lookup normalises before
+// comparing. A stub that did not would silently reject every Large creature.
+const SIZE_ORDER = ['tiny', 'sm', 'med', 'lg', 'huge', 'grg'];
+const normSize = (v) => ({ large: 'lg', small: 'sm', medium: 'med', gargantuan: 'grg' }[v] ?? v);
 
 describe('spawning asks for the right kind of creature', () => {
   // A bestiary stub that honours the trait filter, so a handler reaching for
@@ -313,7 +326,7 @@ describe('spawning asks for the right kind of creature', () => {
         && (minLevel == null || c.level >= minLevel)
         && (maxLevel == null || c.level <= maxLevel)
         && (!namePattern || new RegExp(namePattern, 'i').test(c.name))
-        && (!minSize || SIZE_ORDER.indexOf(c.size ?? 'med') >= SIZE_ORDER.indexOf(minSize)))
+        && (!minSize || SIZE_ORDER.indexOf(normSize(c.size ?? 'med')) >= SIZE_ORDER.indexOf(normSize(minSize))))
   });
 
   const world = [
@@ -419,63 +432,56 @@ describe('spawning asks for the right kind of creature', () => {
     });
   });
 
-  it('gives up rather than substituting when the kind is absent', async () => {
-    const [api, seen] = spawnSpy(bestiary([world[0]]));   // only an animal exists
+  it('gives up rather than shrinking what the card demands', async () => {
+    // Monstrosity says Large or larger. A bestiary of small things owes it
+    // nothing, and the card asks the GM rather than sending something tiny.
+    const [api, seen] = spawnSpy(bestiary([
+      { pack: 'b', id: 'imp', name: 'Imp', level: 1, size: 'tiny', traits: ['fiend'] }
+    ]));
     const res = await applyCardEffect({
-      card: BY_ID.get('skull'), actor: actorOf(), api, rng: () => 0.5, confirmGate: false
+      card: BY_ID.get('monstrosity'), actor: actorOf(), api, rng: () => 0.5, confirmGate: false
     });
     expect(seen).toHaveLength(0);
     expect(res.mode).toBe('gm');
-    expect(res.log).toContain('undead');
+    expect(res.log).toContain('Large or larger');
   });
 
-  it('widens the level band before giving up, but never the kind', async () => {
-    // Skull wants undead at level 8-16; only a level 5 undead exists.
-    const [api, seen] = spawnSpy(bestiary([world[0], world[1]]));
+  it('gives up the kind before it gives up the size', async () => {
+    // It prefers beasts and aberrations. A world with neither still owes the
+    // card a Large creature, because size is what the card actually says.
+    const [api, seen] = spawnSpy(bestiary([
+      { pack: 'b', id: 'ogre', name: 'Ogre Warrior', level: 3, size: 'lg', traits: ['humanoid'] }
+    ]));
+    const actor = actorOf();
+    actor.system.details.level.value = 5;
     const res = await applyCardEffect({
-      card: BY_ID.get('skull'), actor: actorOf(), api, rng: () => 0.5, confirmGate: false
+      card: BY_ID.get('monstrosity'), actor, api, rng: () => 0.5, confirmGate: false
     });
-    expect(seen[0].e[0].id).toBe('wight');
-    expect(res.log).toContain('outside the usual level');
+    expect(seen[0].e[0].id).toBe('ogre');
+    expect(res.mode).toBe('auto');
   });
 });
 
-describe('spawning prefers the world over the compendium', () => {
-  // The SRD bestiaries ship no token art, so a compendium summon arrives as
-  // the default silhouette. Fiend produced an artless Hellwasp Swarm.
-  const worldNpc = { id: 'w1', name: 'Aller Rosk', level: 5, hasArt: true, folder: 'Otari' };
-  const packNpc = { pack: 'b', id: 'c1', name: 'Generic Thug', level: 5, traits: ['humanoid'] };
+describe('no summoning card reaches into the world', () => {
+  // This block used to assert the opposite. The world was preferred because
+  // the SRD bestiaries ship no token art, so a compendium summons arrived as
+  // the default silhouette — but it meant conscripting creatures that already
+  // had a name, a location and a part in somebody's plot. The module brings
+  // its own art now, so every one of these draws from the compendium.
+  const SUMMONERS = ['knight', 'construct', 'dragon', 'ooze', 'monstrosity', 'skull'];
 
-  const api = ({ world = [], pack = [] } = {}) => {
-    const spawned = [];
-    return [{
-      ...makeApi(),
-      findWorldActors: async () => world,
-      findCreatures: async () => pack,
-      spawnCreatures: async (e, o) => { spawned.push({ e, o }); }
-    }, spawned];
-  };
-
-  it('takes a world NPC when one fits, and spawns it by actor id', async () => {
-    const [a, spawned] = api({ world: [worldNpc], pack: [packNpc] });
-    const r = await applyCardEffect({ card: BY_ID.get('skull'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
-    expect(spawned[0].e[0]).toEqual({ actorId: 'w1' });
-    expect(r.meta.source).toBe('world');
-    expect(r.log).toContain('Aller Rosk');
-  });
-
-  it('falls back to the compendium when the world has nobody suitable', async () => {
-    const [a, spawned] = api({ world: [], pack: [packNpc] });
-    const r = await applyCardEffect({ card: BY_ID.get('skull'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
-    expect(spawned[0].e[0]).toEqual({ pack: 'b', id: 'c1' });
-    expect(r.meta.source).toBe('compendium');
-  });
-
-  it('gives up rather than spawning the wrong kind, world or not', async () => {
-    const [a, spawned] = api({ world: [], pack: [] });
-    const r = await applyCardEffect({ card: BY_ID.get('skull'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
-    expect(spawned).toHaveLength(0);
-    expect(r.mode).toBe('gm');
+  it.each(SUMMONERS)('%s never asks the world for a creature', async (id) => {
+    let asked = 0;
+    const api = {
+      ...makeApi({ creatures: [
+        { pack: 'b', id: 'c1', name: 'Froghemoth', level: 3, size: 'huge', traits: ['aberration', 'ooze', 'dragon', 'undead', 'beast'] }
+      ] }),
+      findWorldActors: async () => { asked += 1; return []; }
+    };
+    await applyCardEffect({
+      card: BY_ID.get(id), actor: actorOf(), api, rng: () => 0.5, confirmGate: false
+    });
+    expect(asked).toBe(0);
   });
 });
 
@@ -700,55 +706,73 @@ describe('rune keys and fundamentals', () => {
 describe('Monstrosity respects the size its card demands', () => {
   // It summoned a Soul Feeder: an aberration of level 10, and Small. The trait
   // and level filters passed it because nothing looked at size.
-  const world = [
-    { id: 'sf', name: 'Soul Feeder', level: 10, size: 'sm', hasArt: true },
-    { id: 'ch', name: 'Chuul', level: 7, size: 'lg', hasArt: true },
-    { id: 'fr', name: 'Froghemoth', level: 12, size: 'huge', hasArt: true }
+  //
+  // These stubs feed findCreatures. An earlier version fed findWorldActors,
+  // and once the card stopped reading the world the pool was always empty —
+  // so two of these tests passed while asserting nothing at all.
+  const pool = [
+    { pack: 'b', id: 'sf', name: 'Soul Feeder', level: 10, size: 'sm',   traits: ['aberration'] },
+    { pack: 'b', id: 'ch', name: 'Chuul',       level: 7,  size: 'lg',   traits: ['aberration'] },
+    { pack: 'b', id: 'fr', name: 'Froghemoth',  level: 12, size: 'huge', traits: ['aberration'] }
   ];
 
-  const api = (pool) => {
-    const spawned = [];
-    return [{
+  const draw = async (creatures, level = 12, rng = () => 0.5) => {
+    const seen = [];
+    const api = {
       ...makeApi(),
-      // A stub that honours minSize, as the real lookup now does.
-      findWorldActors: async ({ minSize = null } = {}) => {
-        const order = ['tiny', 'sm', 'med', 'lg', 'huge', 'grg'];
-        const want = { large: 'lg' }[minSize] ?? minSize;
-        return pool.filter((c) => !want || order.indexOf(c.size) >= order.indexOf(want));
-      },
-      findCreatures: async () => [],
-      spawnCreatures: async (e, o) => { spawned.push({ e, o }); }
-    }, spawned];
+      findCreatures: async ({ traits = [], minLevel = null, maxLevel = null,
+                             minSize = null, excludeTraits = [] } = {}) =>
+        creatures.filter((c) =>
+          (!traits.length || traits.some((t) => c.traits.includes(t)))
+          && (minLevel == null || c.level >= minLevel)
+          && (maxLevel == null || c.level <= maxLevel)
+          && !excludeTraits.some((t) => c.traits.includes(t))
+          && (!minSize || SIZE_ORDER.indexOf(normSize(c.size ?? 'med'))
+                          >= SIZE_ORDER.indexOf(normSize(minSize)))),
+      spawnCreatures: async (e, o) => { seen.push({ e, o }); }
+    };
+    const actor = actorOf();
+    actor.system.details.level.value = level;
+    const r = await applyCardEffect({
+      card: BY_ID.get('monstrosity'), actor, api, rng, confirmGate: false
+    });
+    return { r, seen };
   };
 
-  const draw = (a, rng) => applyCardEffect({
-    card: BY_ID.get('monstrosity'), actor: actorOf(), api: a, rng, confirmGate: false });
-
   it('never summons something Small, whatever the roll', async () => {
-    const [a, spawned] = api(world);
-    for (const rng of [() => 0, () => 0.5, () => 0.999]) await draw(a, rng);
-    expect(spawned.map((s) => s.e[0].actorId)).not.toContain('sf');
+    for (const rng of [() => 0, () => 0.5, () => 0.999]) {
+      const { seen } = await draw(pool, 12, rng);
+      expect(seen.map((x) => x.e[0].id)).not.toContain('sf');
+    }
   });
 
   it('summons only Large or larger', async () => {
-    const [a, spawned] = api(world);
-    for (const rng of [() => 0, () => 0.999]) await draw(a, rng);
-    expect(spawned.every((s) => ['ch', 'fr'].includes(s.e[0].actorId))).toBe(true);
+    for (const rng of [() => 0, () => 0.999]) {
+      const { seen } = await draw(pool, 12, rng);
+      expect(['ch', 'fr']).toContain(seen[0].e[0].id);
+    }
   });
 
   it('gives up rather than shrinking the requirement', async () => {
-    // Only a Small candidate exists; the card asks the GM instead.
-    const [a, spawned] = api([world[0]]);
-    const r = await draw(a, () => 0.5);
-    expect(spawned).toHaveLength(0);
+    const { r, seen } = await draw([pool[0]]);
+    expect(seen).toHaveLength(0);
     expect(r.mode).toBe('gm');
-    expect(r.log).toContain('large or larger');
+    expect(r.log).toContain('Large or larger');
   });
 
-  it('leaves cards with no size requirement alone', async () => {
-    const [a, spawned] = api(world);
-    await applyCardEffect({ card: BY_ID.get('skull'), actor: actorOf(), api: a, rng: () => 0, confirmGate: false });
-    expect(spawned).toHaveLength(1);   // Small is fine for an ally
+  it('never reaches above the drawer', async () => {
+    // The band was a fixed level 5 to 12 for everyone, so a level 7 character
+    // could meet the Froghemoth and a level 20 one could meet nothing else.
+    const { seen } = await draw(pool, 7);
+    expect(seen[0].e[0].id).toBe('ch');
+  });
+
+  it('leaves the creature its own art and only supplies a fallback', async () => {
+    // Whatever turns up could be anything, so one picture over all of them
+    // would be a lie about most. It fills in only where there is nothing.
+    const { seen } = await draw(pool, 12);
+    expect(seen[0].o.img).toBeUndefined();
+    expect(seen[0].o.imgFallback).toMatch(/monstrosity\.webp$/);
   });
 });
 
@@ -1195,5 +1219,54 @@ describe('Dragon grows with the character', () => {
     const r = await draw(1, a);
     expect(spawned).toHaveLength(0);
     expect(r.mode).toBe('gm');
+  });
+});
+
+describe('Skull builds an avatar of death rather than finding one', () => {
+  // The card went to the shared spawner for any undead of level 8 to 16. The
+  // installed bestiaries answer that with a Skeletal Horse, a Wolf Skeleton or
+  // a Tyrannosaurus Skeleton — all undead, none of them death.
+  const build = async (level) => {
+    const { buildAvatarOfDeath } = await import('../scripts/death-avatar.mjs');
+    return buildAvatarOfDeath({ level });
+  };
+
+  it('meets the character at their own level, high or low', async () => {
+    for (const level of [1, 5, 12, 20]) {
+      expect((await build(level)).system.details.level.value).toBe(level);
+    }
+  });
+
+  it('is undead and incorporeal, and immune to what undead are immune to', async () => {
+    const a = await build(10);
+    expect(a.system.traits.value).toEqual(expect.arrayContaining(['undead', 'incorporeal']));
+    const immunities = a.system.attributes.immunities.map((i) => i.type);
+    expect(immunities).toEqual(expect.arrayContaining(['death-effects', 'poison', 'disease']));
+  });
+
+  it('hits harder than its level and is easier to put down', async () => {
+    const { benchmarkFor } = await import('../scripts/npc-benchmark.mjs');
+    const b = benchmarkFor(12);
+    const a = await build(12);
+    expect(a.system.attributes.ac.value).toBeLessThan(b.ac);
+    expect(a.system.attributes.hp.max).toBeLessThan(b.hp);
+    expect(a.items[0].system.bonus.value).toBeGreaterThan(b.atk);
+  });
+
+  it('says on the creature that its victims cannot be raised', async () => {
+    // PF2e has no flag for it and raising the dead is a GM ruling anyway, so
+    // what matters is that it is legible during the fight, not after it.
+    expect((await build(4)).system.details.publicNotes).toMatch(/cannot be restored to life/i);
+  });
+
+  it('carries the module art, since nothing in PF2e depicts it', async () => {
+    const a = await build(4);
+    expect(a.img).toMatch(/avatar-of-death\.webp$/);
+    expect(a.prototypeToken.texture.src).toBe(a.img);
+  });
+
+  it('is never weaker than a level 1 creature nor stronger than a level 20 one', async () => {
+    expect((await build(-3)).system.details.level.value).toBe(1);
+    expect((await build(40)).system.details.level.value).toBe(20);
   });
 });

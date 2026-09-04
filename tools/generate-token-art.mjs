@@ -143,6 +143,18 @@ export const CREATURES = [
     prompt: 'A thick column of living tar rising out of a spreading puddle of itself, heavy and '
       + 'viscous and dripping, its wet black surface shot through with an iridescent oil-slick '
       + 'sheen of violet, teal and gold, lit from the side against darkness' },
+  // Skull's avatar is built, not found, so nothing in PF2e depicts it.
+  { id: 'avatar-of-death', file: 'avatar-of-death',
+    prompt: 'A ghostly humanoid skeleton shrouded in a tattered black robe, its hood empty but '
+      + 'for two points of cold light, a scythe held across its shoulder',
+    avoid: 'flesh, skin, hair, living face, jack-o-lantern, cartoon' },
+  // Monstrosity draws a creature at random and most of them have their own
+  // picture; this stands in only where one has none, so it says "something
+  // large and wrong" rather than depicting any particular monster.
+  { id: 'monstrosity', file: 'monstrosity',
+    prompt: 'A huge nameless monster looming forward, heavy hunched shoulders, too many eyes and '
+      + 'a mouth of uneven teeth, hide mottled and scarred, wrong in a way that is hard to place',
+    avoid: 'recognisable animal, dragon, wings, humanoid, armour, weapon' },
   { id: 'ooze-blob', file: 'ooze-blob', shapeless: true,
     prompt: 'A vast mound of translucent pink and grey devouring slime, veined and pulsing, '
       + 'its leading edge curling forward over itself in a slow breaking wave' }

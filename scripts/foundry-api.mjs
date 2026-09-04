@@ -412,7 +412,7 @@ export function makeFoundryApi() {
      * so a summons lands next to whoever drew rather than at the origin.
      */
     async spawnCreatures(entries, { nearActorId = null, disposition = -1, img = null,
-                                    place = 'beside' } = {}) {
+                                    imgFallback = null, place = 'beside' } = {}) {
       const scene = canvas?.scene;
       if (!scene) throw new Error('No active scene to place creatures on');
       const grid = scene.grid?.size ?? 100;
@@ -437,12 +437,19 @@ export function makeFoundryApi() {
           ? game.actors.get(entry.actorId)
           : await game.packs.get(entry.pack)?.getDocument(entry.id);
         if (!doc) continue;
-        // Compendium creatures carry no token art, so a card may supply its own.
+        // Compendium creatures carry no token art, so a card may supply its
+        // own. `img` replaces whatever the creature has; `imgFallback` only
+        // fills in when it has nothing — which is what a card wants when the
+        // creature is drawn at random and could be anything. Overriding there
+        // would put one picture on every possible answer.
+        const existing = doc.prototypeToken?.texture?.src ?? '';
+        const bare = !existing || /mystery-man|default-icons|\.svg$/i.test(existing);
+        const art = img ?? (bare ? imgFallback : null);
         const overrides = {
           'ownership.default': 0,
           'system.details.alliance': alliance,
           'prototypeToken.disposition': disposition,
-          ...(img ? { img, 'prototypeToken.texture.src': img } : {})
+          ...(art ? { img: art, 'prototypeToken.texture.src': art } : {})
         };
         const [actor] = await Actor.createDocuments([
           foundry.utils.mergeObject(doc.toObject(), overrides)

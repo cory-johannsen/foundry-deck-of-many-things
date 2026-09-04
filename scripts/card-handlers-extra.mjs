@@ -414,94 +414,6 @@ export async function applyDestroyMagicItems({ actor, api, card }) {
 // Spawning
 // ---------------------------------------------------------------------------
 
-/**
- * What each spawning card should put on the table, keyed by PF2e creature
- * traits rather than by name.
- *
- * Names were the original approach and they were wrong: Undead looked for
- * /revenant|undead|wraith|ghost/ and PF2e calls its undead "Wight", "Ghoul"
- * and "Zombie Shambler", so the filter matched nothing. Traits are what the
- * system actually classifies creatures by — 192 undead across the installed
- * bestiaries, against zero by that name pattern.
- */
-const SPAWN_SPECS = {
-  spawn_ooze:         { traits: ['ooze'], level: [0, 12],     friendly: false },
-  spawn_hostile:      { traits: ['beast', 'aberration'], level: [5, 12], friendly: false },
-  avatar_of_death:    { traits: ['undead'], level: [8, 16],   friendly: false }
-};
-
-/**
- * Place a creature.
- *
- * The world's own NPCs come first, and the compendium is the fallback — the
- * reverse of the obvious order, for a practical reason: the SRD bestiaries
- * ship no token art at all, so a creature summoned from one arrives as the
- * default mystery-man silhouette. A world populated by an adventure module has
- * art on essentially every NPC. Fiend summoned a Hellwasp Swarm with no
- * artwork, which is what prompted the change.
- *
- * The level band is negotiable and is dropped if nothing of the right kind sits
- * inside it. The traits never are: an earlier version fell back to "anything in
- * the level range" and answered Undead's revenant hunter with a giant mantis.
- * A card that cannot find its creature says so and leaves it to the GM.
- */
-export async function applySpawn({ actor, params, api, card, rng }) {
-  const spec = SPAWN_SPECS[card.mechanics.kind];
-  if (!spec) {
-    return { mode: 'gm', log: `${card.name}: no spawn rule for this card.`, meta: { kind: 'gm_only' } };
-  }
-  const [minLevel, maxLevel] = spec.level;
-  const traits = spec.traits;
-  const exclude = [actor.id];
-  // Monstrosity says "Large or larger" and carried size_min in its params all
-  // along, with nothing reading it — so it answered with a small aberration.
-  const minSize = params?.size_min ?? spec.minSize ?? null;
-  // Every one of these cards summons a creature, singular. PF2e's `troop`
-  // trait marks a unit standing in for a whole squad — Fiend answered with a
-  // Vicious Levaloch Squad, which is a formation, not a fiend.
-  const excludeTraits = ['troop'];
-
-  // In order of preference: a world NPC in band, any world NPC of the kind,
-  // then the compendium on the same two terms.
-  // The level band is negotiable; the traits and the size are not.
-  const attempts = [
-    () => api.findWorldActors({ types: ['npc'], traits, minLevel, maxLevel, minSize, excludeTraits, excludeIds: exclude, withArtOnly: true }),
-    () => api.findWorldActors({ types: ['npc'], traits, minSize, excludeTraits, excludeIds: exclude, withArtOnly: true }),
-    () => api.findWorldActors({ types: ['npc'], traits, minSize, excludeTraits, excludeIds: exclude }),
-    () => api.findCreatures({ minLevel, maxLevel, traits, minSize, excludeTraits }),
-    () => api.findCreatures({ traits, minSize, excludeTraits })
-  ];
-
-  let pool = [];
-  let attempt = 0;
-  for (; attempt < attempts.length && !pool.length; attempt += 1) pool = await attempts[attempt]();
-
-  if (!pool.length) {
-    return {
-      mode: 'gm',
-      log: `${card.name}: no ${minSize ? `${minSize} or larger ` : ''}`
-        + `${traits.join(' or ')} creature in this world or the installed bestiaries `
-        + `— place one yourself.`,
-      meta: { kind: 'gm_only', traits }
-    };
-  }
-
-  const chosen = pool[Math.floor(rng() * pool.length)];
-  const fromWorld = chosen.id != null && chosen.pack == null;
-  await api.spawnCreatures(
-    [fromWorld ? { actorId: chosen.id } : { pack: chosen.pack, id: chosen.id }],
-    { nearActorId: actor.id, disposition: spec.friendly ? 1 : -1 }
-  );
-
-  const outOfBand = attempt === 3 || attempt === 5;
-  const note = outOfBand ? ' (outside the usual level band)' : '';
-  return {
-    mode: 'auto',
-    log: `${card.name}: ${spec.friendly ? 'summoned' : 'unleashed'} ${chosen.name} `
-      + `(level ${chosen.level})${note} onto the scene`,
-    meta: { spawned: chosen.name, traits, source: fromWorld ? 'world' : 'compendium' }
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Deck flow
@@ -886,5 +798,98 @@ export async function applySpawnOoze({ actor, api, card }) {
     log: `${card.name}: a ${chosen.name.toLowerCase()} (level ${chosen.level}) closes over you `
       + `— it is hostile, and it means to engulf you`,
     meta: { spawned: chosen.name, level: chosen.level }
+  };
+}
+
+/**
+ * Monstrosity: something big, and it is here for you.
+ *
+ * The card asked the shared spawner for a beast or aberration of level 5 to
+ * 12. Two things were wrong with that. The band is fixed, so a level 1
+ * character met a creature up to eleven levels above them and a level 20
+ * character met one eight levels below — the first is not a fight and neither
+ * is the second. And it preferred the world's own NPCs, which meant the
+ * monstrosity that turned up was liable to be a creature with a name, a
+ * location and a part in somebody's plot.
+ *
+ * It now scales like Dragon, with the band the other way up: at or just below
+ * the drawer, because this one is hostile and a card that is meant to be
+ * frightening should not be answered with something the party outclasses.
+ *
+ * Size is the card's own word and is never negotiated. Swarms are excluded
+ * along with troops: both are large by virtue of being many, and "a Large
+ * creature appears" means one thing arrives, not a cloud of rats.
+ */
+const MONSTROSITY_BAND = 3;
+const MONSTROUS = ['beast', 'aberration'];
+const MONSTROSITY_ART = `modules/${MODULE_ID}/assets/tokens/monstrosity.webp`;
+const MONSTER_CORE = ['pf2e.pathfinder-monster-core', 'pf2e.pathfinder-monster-core-2'];
+
+export async function applySpawnMonstrosity({ actor, api, card, rng }) {
+  const level = actor?.system?.details?.level?.value ?? 1;
+  const minLevel = Math.max(-1, level - MONSTROSITY_BAND);
+  const look = (traits, packs) => api.findCreatures({
+    minLevel, maxLevel: level, traits, minSize: 'large',
+    excludeTraits: ['troop', 'swarm'], packs
+  });
+
+  // Monster Core first for the same reason Dragon prefers it, then the wider
+  // bestiaries. Only then is "monstrous" given up — a Large creature of any
+  // kind still answers the card, where nothing at all does not.
+  let pool = await look(MONSTROUS, MONSTER_CORE);
+  if (!pool.length) pool = await look(MONSTROUS, null);
+  if (!pool.length) pool = await look([], MONSTER_CORE);
+  if (!pool.length) pool = await look([], null);
+
+  if (!pool.length) {
+    return {
+      mode: 'gm',
+      log: `${card.name}: no Large or larger creature of level ${level} or below in the `
+        + `installed bestiaries — place one yourself.`,
+      meta: { kind: 'gm_only' }
+    };
+  }
+
+  const chosen = pool[Math.floor(rng() * pool.length)];
+  // Whatever turns up keeps its own picture if it has one. The fallback is a
+  // fallback: the creature is drawn at random and could be anything, so one
+  // picture over all of them would be a lie about most.
+  await api.spawnCreatures([{ pack: chosen.pack, id: chosen.id }], {
+    nearActorId: actor.id,
+    disposition: -1,
+    imgFallback: MONSTROSITY_ART
+  });
+  return {
+    mode: 'auto',
+    log: `${card.name}: a ${chosen.name} (level ${chosen.level}) rears up and attacks`,
+    meta: { spawned: chosen.name, level: chosen.level }
+  };
+}
+
+/**
+ * Skull: the avatar of death arrives, and it wants only you.
+ *
+ * The card went to the shared spawner for any undead of level 8 to 16, which
+ * in the installed bestiaries answers with a Skeletal Horse or a Wolf
+ * Skeleton — undead, certainly, but not death. PF2e has no avatar of death to
+ * find, so it is built, the way Knight's warrior is. See death-avatar.mjs for
+ * why it arrives at the drawer's level rather than as one of the creatures
+ * that share its idea.
+ */
+export async function applySummonAvatarOfDeath({ actor, api, card }) {
+  const { buildAvatarOfDeath } = await import('./death-avatar.mjs');
+  const level = actor?.system?.details?.level?.value ?? 1;
+  const npc = buildAvatarOfDeath({ actor, level });
+
+  // Beside the character, not on them: the card gives it a space of its own
+  // within ten feet and has it announce itself before it strikes.
+  await api.spawnBuiltCreature(npc, { nearActorId: actor.id, disposition: -1 });
+
+  return {
+    mode: 'auto',
+    log: `${card.name}: an avatar of death (level ${npc.system.details.level.value}) — `
+      + `AC ${npc.system.attributes.ac.value}, ${npc.system.attributes.hp.max} HP — `
+      + `comes for you alone; anyone it slays cannot be raised`,
+    meta: { level: npc.system.details.level.value }
   };
 }
