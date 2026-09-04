@@ -826,10 +826,16 @@ const MONSTROSITY_ART = `modules/${MODULE_ID}/assets/tokens/monstrosity.webp`;
 const MONSTER_CORE = ['pf2e.pathfinder-monster-core', 'pf2e.pathfinder-monster-core-2'];
 
 export async function applySpawnMonstrosity({ actor, api, card, rng }) {
-  const level = actor?.system?.details?.level?.value ?? 1;
-  const minLevel = Math.max(-1, level - MONSTROSITY_BAND);
+  // Sized to the party, not to whoever turned the card over. Scaling to the
+  // drawer gave a party of five first-level characters a single level 1
+  // creature — and only one exists in every installed bestiary, so every draw
+  // produced the same graveshell. It also meant a card meant to threaten the
+  // table was answered with something one character could handle.
+  const drawer = actor?.system?.details?.level?.value ?? 1;
+  const party = (await api.partyLevel?.()) ?? drawer;
+  const maxLevel = party + MONSTROSITY_BAND;
   const look = (traits, packs) => api.findCreatures({
-    minLevel, maxLevel: level, traits, minSize: 'large',
+    minLevel: party, maxLevel, traits, minSize: 'large',
     excludeTraits: ['troop', 'swarm'], packs
   });
 
@@ -844,7 +850,7 @@ export async function applySpawnMonstrosity({ actor, api, card, rng }) {
   if (!pool.length) {
     return {
       mode: 'gm',
-      log: `${card.name}: no Large or larger creature of level ${level} or below in the `
+      log: `${card.name}: no Large or larger creature of level ${party} to ${maxLevel} in the `
         + `installed bestiaries — place one yourself.`,
       meta: { kind: 'gm_only' }
     };

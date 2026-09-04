@@ -24,10 +24,13 @@ export const WRITE_METHODS = [
  * primary creature source, not an extra. A card looking for a homunculus found
  * none, because the only ones are in Monster Core.
  */
+import { freeSpot, footprint, partyLevelFrom } from './placement.mjs';
+
 export const CREATURE_PACK_PATTERN = /bestiary|monster-core|npc-core|npc-gallery/i;
 
 export const READ_METHODS = ['findItems', 'findCreatures', 'listItems', 'findWorldActors',
-                             'listLanguages', 'getCoins', 'listGear', 'ancestrySpeed'];
+                             'listLanguages', 'getCoins', 'listGear', 'ancestrySpeed',
+                             'partyLevel'];
 
 /**
  * PF2e's size codes, smallest first, with the words a card is likely to use.
@@ -422,6 +425,11 @@ export function makeFoundryApi() {
       const originX = focus?.document?.x ?? (scene.width ?? grid * 10) / 2;
       const originY = focus?.document?.y ?? (scene.height ?? grid * 10) / 2;
 
+      // Everything already on the scene, in squares. Creatures placed by this
+      // call are added as they go, so a card summoning several does not stack
+      // them either.
+      const occupied = scene.tokens.map((t) => footprint(t, grid));
+
       // PF2e derives a token's disposition from the actor's alliance and wins
       // over anything set on the token — a summoned ally created straight from
       // a bestiary entry came out hostile, because every bestiary NPC is
@@ -459,12 +467,26 @@ export function makeFoundryApi() {
         // beside you is a different card. A large token's top-left square is
         // the character's own, and a huge one straddles it, so the offset is
         // half its footprint rounded down — which also keeps it grid-aligned.
-        const tw = actor.prototypeToken?.width ?? 1;
-        const th = actor.prototypeToken?.height ?? 1;
-        const spot = place === 'on'
-          ? { x: originX - grid * Math.floor((tw - 1) / 2),
-              y: originY - grid * Math.floor((th - 1) / 2) }
-          : { x: originX + grid * (i + 1), y: originY };
+        const tw = Math.max(1, Math.round(actor.prototypeToken?.width ?? 1));
+        const th = Math.max(1, Math.round(actor.prototypeToken?.height ?? 1));
+        let spot;
+        if (place === 'on') {
+          spot = { x: originX - grid * Math.floor((tw - 1) / 2),
+                   y: originY - grid * Math.floor((th - 1) / 2) };
+        } else {
+          // The first empty place big enough, searched outward. Landing one
+          // square east regardless is how a witchwarg and an avatar of death
+          // ended up sharing a square across two draws.
+          const free = freeSpot({
+            occupied,
+            gx: Math.round(originX / grid), gy: Math.round(originY / grid),
+            gw: tw, gh: th
+          });
+          spot = free
+            ? { x: free.gx * grid, y: free.gy * grid }
+            : { x: originX + grid * (i + 1), y: originY };
+        }
+        occupied.push(footprint({ ...spot, width: tw, height: th }, grid));
         const td = await actor.getTokenDocument({ ...spot, disposition });
         const obj = td.toObject();
         obj.disposition = disposition;
@@ -486,18 +508,46 @@ export function makeFoundryApi() {
       const focus = nearActorId
         ? canvas.tokens?.placeables?.find((t) => t.actor?.id === nearActorId)
         : null;
-      const x = (focus?.document?.x ?? (scene.width ?? grid * 10) / 2) + grid;
-      const y = focus?.document?.y ?? (scene.height ?? grid * 10) / 2;
+      const originX = focus?.document?.x ?? (scene.width ?? grid * 10) / 2;
+      const originY = focus?.document?.y ?? (scene.height ?? grid * 10) / 2;
 
       const [actor] = await Actor.createDocuments([foundry.utils.mergeObject(data, {
         'system.details.alliance': disposition > 0 ? 'party' : 'opposition',
         'prototypeToken.disposition': disposition
       })]);
+      // The same search a found creature gets. Skull's avatar and Monstrosity's
+      // beast came out of two separate draws onto the same square.
+      const gw = Math.max(1, Math.round(actor.prototypeToken?.width ?? 1));
+      const gh = Math.max(1, Math.round(actor.prototypeToken?.height ?? 1));
+      const free = freeSpot({
+        occupied: scene.tokens.map((t) => footprint(t, grid)),
+        gx: Math.round(originX / grid), gy: Math.round(originY / grid), gw, gh
+      });
+      const x = free ? free.gx * grid : originX + grid;
+      const y = free ? free.gy * grid : originY;
       const td = await actor.getTokenDocument({ x, y, disposition });
       const obj = td.toObject();
       obj.disposition = disposition;
       await scene.createEmbeddedDocuments('Token', [obj]);
       return actor.name;
+    },
+
+    /**
+     * The level of the party, for cards that threaten everyone at once.
+     *
+     * PF2e keeps a real party actor and it is the only trustworthy source:
+     * counting every character in the world would have included the GM's
+     * eighth-level test dummy alongside five first-level players.
+     */
+    async partyLevel() {
+      const party = game.actors?.party ?? null;
+      const fromParty = partyLevelFrom(party?.members ?? null);
+      if (fromParty != null) return fromParty;
+      // No party actor: the characters a player actually owns.
+      const owned = (game.actors ?? []).filter((a) => a.type === 'character'
+        && Object.entries(a.ownership ?? {}).some(([id, lvl]) =>
+          lvl === 3 && game.users?.get(id) && !game.users.get(id).isGM));
+      return partyLevelFrom(owned);
     },
 
     async postChatCard(payload) {
