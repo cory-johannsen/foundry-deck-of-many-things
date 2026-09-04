@@ -89,7 +89,12 @@ export const SUBJECTS = [
   { id: 'gnome',    who: 'a gnome warrior, small and wiry with an oversized head, enormous eyes, wild brightly-coloured hair' },
   { id: 'goblin',   who: 'a goblin warrior, small and green-skinned, enormous pointed ears, wide mouth of sharp teeth, no hair' },
   { id: 'halfling', who: 'a halfling warrior, small and round-cheeked with curly hair and large bare feet, cheerful weathered face' },
-  { id: 'leshy',    who: 'a leshy warrior, a small plant creature with a carved gourd for a head, body of bound vines and leaves' },
+  // A leshy is not a green man. Asked for one plainly, the model drew a
+  // bearded human face wreathed in leaves inside a heraldic border, which is
+  // the folk motif it has far more of. The gourd has to be insisted on and the
+  // human face named as something to avoid.
+  { id: 'leshy',    who: 'a leshy warrior, a small plant creature whose entire head is a carved wooden gourd with holes cut through it for eyes and mouth, body of bound vines and leaves',
+                    avoid: 'human face, beard, moustache, human skin, antlers, laurel wreath, heraldic crest, symmetrical emblem, coat of arms' },
   { id: 'orc',      who: 'an orc warrior, heavy green-grey brow and jutting tusks from the lower jaw, thick corded neck' },
   // Anyone else.
   { id: 'generic',  who: 'an armoured warrior, face shadowed within a closed steel helm' }
@@ -141,7 +146,10 @@ const promptFor = (s) => s.prompt
   : `Portrait bust of ${s.who}, wearing full plate armour, `
     + `a longsword held upright at the shoulder, stern and watchful, sworn to service, ${STYLE}`;
 
-const negativeFor = (s) => (s.shapeless ? SHAPELESS_NEGATIVE : NEGATIVE);
+const negativeFor = (s) => {
+  const base = s.shapeless ? SHAPELESS_NEGATIVE : NEGATIVE;
+  return s.avoid ? `${base}, ${s.avoid}` : base;
+};
 
 /** Every subject, warriors and creatures alike, with the file each writes. */
 const ALL = [
