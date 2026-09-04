@@ -1640,8 +1640,8 @@
     "flavor": "An owlbear sits in a sunny glade. This card represents something monstrous, including familiar things that turn strange and threatening.",
     "set": "expansion",
     "rules": {
-      "summary": "A Large or larger creature appears, hostile, and attacks at once.",
-      "full": "A Large or larger creature appears in an unoccupied space within 60 feet of you, no greater than your own level. It is hostile and attacks you immediately.",
+      "summary": "A Large or larger creature appears, hostile, and attacks the whole party.",
+      "full": "A Large or larger creature appears in an unoccupied space within 60 feet of you, of a level chosen to threaten your whole party rather than you alone. It is hostile and attacks immediately.",
       "draw_terminating": false,
       "narration": "Something enormous decides you are in its way; the Monstrosity arrives already hostile."
     },
@@ -1649,7 +1649,7 @@
       "kind": "spawn_hostile",
       "params": {
         "size_min": "large",
-        "match_drawer_level": true,
+        "match_party_level": true,
         "level_band": 3
       }
     },

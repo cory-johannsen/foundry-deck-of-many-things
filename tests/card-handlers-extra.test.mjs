@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { applyCardEffect } from '../scripts/card-effects.mjs';
 import { planCardEffect, replayPlan } from '../scripts/effect-plan.mjs';
+import { freeSpot, footprint, overlaps, partyLevelFrom } from '../scripts/placement.mjs';
 
 const cards = JSON.parse(readFileSync(new URL('../data/cards.json', import.meta.url)));
 const BY_ID = new Map(cards.map((c) => [c.id, c]));
@@ -41,6 +42,7 @@ const makeApi = ({ items = [], creatures = [], carried = [], worldActors = [], l
     findCreatures: async () => creatures,
     listItems: async () => carried,
     findWorldActors: async () => worldActors,
+    partyLevel: async () => null,
   };
 };
 
@@ -450,7 +452,7 @@ describe('spawning asks for the right kind of creature', () => {
     // It prefers beasts and aberrations. A world with neither still owes the
     // card a Large creature, because size is what the card actually says.
     const [api, seen] = spawnSpy(bestiary([
-      { pack: 'b', id: 'ogre', name: 'Ogre Warrior', level: 3, size: 'lg', traits: ['humanoid'] }
+      { pack: 'b', id: 'ogre', name: 'Ogre Warrior', level: 6, size: 'lg', traits: ['humanoid'] }
     ]));
     const actor = actorOf();
     actor.system.details.level.value = 5;
@@ -495,6 +497,7 @@ describe('Rogue turns an existing NPC against you', () => {
     return [{
       ...makeApi(),
       findWorldActors: async () => worldActors,
+    partyLevel: async () => null,
       createEffect: async (_i, e) => { spy.effects.push(e); },
       postChatCard: async (p) => { spy.chat.push(p); },
       spawnCreatures: async (e, o) => { spy.spawned.push({ e, o }); }
@@ -1268,5 +1271,106 @@ describe('Skull builds an avatar of death rather than finding one', () => {
   it('is never weaker than a level 1 creature nor stronger than a level 20 one', async () => {
     expect((await build(-3)).system.details.level.value).toBe(1);
     expect((await build(40)).system.details.level.value).toBe(20);
+  });
+});
+
+describe('Monstrosity is sized to the party, not to whoever drew it', () => {
+  // Scaling to the drawer gave a party of five first-level characters a single
+  // level 1 creature — and exactly one qualifies in every installed bestiary,
+  // so every draw produced the same graveshell. A card that threatens the
+  // table should not be answered with something one character can handle.
+  const ladder = Array.from({ length: 12 }, (_, i) => ({
+    pack: 'b', id: `c${i}`, name: `Beast ${i}`, level: i, size: 'lg', traits: ['beast']
+  }));
+
+  const draw = async ({ drawerLevel, party }) => {
+    const asked = [];
+    const api = {
+      ...makeApi(),
+      partyLevel: async () => party,
+      findCreatures: async (q) => {
+        asked.push(q);
+        return ladder.filter((c) => c.level >= (q.minLevel ?? -99)
+                                 && c.level <= (q.maxLevel ?? 99)
+                                 && (!q.traits?.length || q.traits.some((t) => c.traits.includes(t))));
+      },
+      spawnCreatures: async () => {}
+    };
+    const actor = actorOf();
+    actor.system.details.level.value = drawerLevel;
+    const r = await applyCardEffect({
+      card: BY_ID.get('monstrosity'), actor, api, rng: () => 0.5, confirmGate: false
+    });
+    return { r, asked };
+  };
+
+  it('asks from the party level up to three above it', async () => {
+    const { asked } = await draw({ drawerLevel: 1, party: 4 });
+    expect(asked[0].minLevel).toBe(4);
+    expect(asked[0].maxLevel).toBe(7);
+  });
+
+  it('ignores the drawer\'s own level entirely', async () => {
+    // The level 1 rogue who turned the card over does not make it a level 1
+    // problem, and the level 8 guest does not make it a level 8 one.
+    const low = await draw({ drawerLevel: 1, party: 5 });
+    const high = await draw({ drawerLevel: 8, party: 5 });
+    expect(low.asked[0]).toEqual(high.asked[0]);
+  });
+
+  it('falls back to the drawer when there is no party to read', async () => {
+    const { asked } = await draw({ drawerLevel: 6, party: null });
+    expect(asked[0].minLevel).toBe(6);
+    expect(asked[0].maxLevel).toBe(9);
+  });
+
+  it('never reaches below the party, so the card always has teeth', async () => {
+    const { r } = await draw({ drawerLevel: 1, party: 6 });
+    expect(r.meta.level).toBeGreaterThanOrEqual(6);
+  });
+});
+
+describe('summons do not stack on one another', () => {
+
+  const occupy = (...rects) => rects.map(([gx, gy, gw = 1, gh = 1]) => ({ gx, gy, gw, gh }));
+
+  it('takes the first free square beside the character', () => {
+    const spot = freeSpot({ occupied: occupy([5, 5]), gx: 5, gy: 5 });
+    expect(spot).not.toBeNull();
+    expect(overlaps(spot, { gx: 5, gy: 5, gw: 1, gh: 1 })).toBe(false);
+  });
+
+  it('steps past an occupied square rather than sharing it', () => {
+    // The exact failure: a witchwarg and an avatar of death from two draws
+    // both landed one square east of the drawer.
+    const taken = occupy([5, 5], [6, 5, 2, 2]);
+    const spot = freeSpot({ occupied: taken, gx: 5, gy: 5 });
+    expect(taken.every((t) => !overlaps(spot, t))).toBe(true);
+  });
+
+  it('finds a hole big enough for a Huge creature, not merely a gap', () => {
+    // A 3x3 creature cannot use the one free square a Medium one would take.
+    const taken = occupy([5, 5], [4, 4, 2, 8], [6, 4, 8, 8]);
+    const spot = freeSpot({ occupied: taken, gx: 5, gy: 5, gw: 3, gh: 3 });
+    expect(spot).not.toBeNull();
+    expect(taken.every((t) => !overlaps(spot, t))).toBe(true);
+  });
+
+  it('gives up rather than searching forever', () => {
+    const wall = occupy([-20, -20, 60, 60]);
+    expect(freeSpot({ occupied: wall, gx: 0, gy: 0 })).toBeNull();
+  });
+
+  it('reads a token footprint from pixels and squares', () => {
+    expect(footprint({ x: 600, y: 900, width: 2, height: 2 }, 150))
+      .toEqual({ gx: 4, gy: 6, gw: 2, gh: 2 });
+  });
+
+  it('averages the party and ignores an empty roster', () => {
+    const at = (n) => ({ system: { details: { level: { value: n } } } });
+    expect(partyLevelFrom([at(1), at(1), at(1), at(2)])).toBe(1);
+    expect(partyLevelFrom([at(4), at(5)])).toBe(5);
+    expect(partyLevelFrom([])).toBeNull();
+    expect(partyLevelFrom(null)).toBeNull();
   });
 });
