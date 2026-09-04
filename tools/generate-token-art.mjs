@@ -112,9 +112,15 @@ export const CREATURES = [
       + 'with little leathery bat wings and glowing eyes, perched and alert, looking up at its maker' },
   // Dragon scales with the drawer, so it needs a picture per age band rather
   // than one: a drake at low levels is not an ancient wyrm at high ones.
+  // The generic "border" in the negative list was not enough: the drake came
+  // back curled inside an ornate ring, which passed the background check
+  // because the ring is dark. A roundel is what a small coiled creature
+  // invites, so it is ruled out by name.
   { id: 'drake', file: 'dragon-drake',
     prompt: 'A small drake, a lesser dragon the size of a large dog, lean and quick with bright '
-      + 'scales and folded leathery wings, head cocked and watchful' },
+      + 'scales and folded leathery wings, head cocked and watchful',
+    avoid: 'circular border, ring, roundel, medallion, decorative surround, wreath, '
+      + 'coiled into a circle, ouroboros' },
   { id: 'young-dragon', file: 'dragon-young',
     prompt: 'A young dragon, sleek and dangerous with gleaming scales, horned head raised, '
       + 'wings half-furled, coiled and alert' },
