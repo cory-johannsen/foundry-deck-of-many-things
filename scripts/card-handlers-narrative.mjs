@@ -340,15 +340,33 @@ export async function applyNamedAdversary({ actor, params, api, card, rng }) {
 
   const chosen = pool[Math.floor(rng() * pool.length)];
   if (wantsDevil) {
+    // Which devil is the GM's to know. It named the creature in the effect's
+    // title, so the answer sat on the character sheet for the rest of the
+    // campaign — a card whose whole substance is an unseen enemy, spoiled at
+    // the moment it was drawn. Rogue already had the shape of this: an effect
+    // that says something is coming, and a whisper that says what.
     await api.createEffect(actor.id, usesEffect({
-      name: `Sworn Enemy: ${chosen.name}`,
+      name: 'Sworn Enemy',
       uses: 0,
       cardId: card.id,
-      description: `${chosen.name} (level ${chosen.level}) seeks your ruin and savours your `
-        + 'suffering. The enmity lasts until one of you is dead.',
+      description: 'A powerful devil has sworn itself to your ruin and savours your suffering. '
+        + 'You do not know which devil until it chooses to show itself. The enmity lasts until '
+        + 'one of you is dead.',
       img: 'icons/magic/fire/flame-burning-skull-orange.webp'
     }));
-    return { mode: 'auto', log: `${card.name}: ${chosen.name} (level ${chosen.level}) is now your sworn enemy` };
+    await api.postChatCard({
+      whisperGM: true,
+      content: `<p><strong>${card.name}</strong> — <em>${chosen.name}</em> `
+        + `(level ${chosen.level}) is now the sworn enemy of ${actor.name}, `
+        + 'and they do not know it.</p>'
+    });
+    return {
+      mode: 'auto',
+      // Public. Naming the devil here would defeat the card.
+      log: `${card.name}: a powerful devil has sworn itself to your ruin — you do not know which`,
+      gmNote: `${chosen.name} (level ${chosen.level}) is now sworn against ${actor.name}.`,
+      meta: { enemyId: chosen.id }
+    };
   }
 
   await api.spawnCreatures([{ pack: chosen.pack, id: chosen.id }], {
