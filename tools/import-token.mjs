@@ -61,19 +61,61 @@ if (!file) {
 
 const dest = join(OUT_DIR, `${file}.webp`);
 
-// Square first, then down to token size. A picture that arrives oblong is
-// centre-cropped rather than squashed, since a token is drawn in a square hole
-// and a stretched face looks wrong in a way that is hard to place.
+/**
+ * Trim the mount, then pad to square. Never crop the subject.
+ *
+ * An image can arrive matted: the drake came back as a black panel centred in
+ * a white page, which is a picture of a picture. Removing the white by making
+ * it transparent would leave the panel's own hard edge behind, so the token
+ * would be a black rectangle on the map — the exact fault the background check
+ * exists to catch, arrived at from the other direction. The mount has to go
+ * rather than be hidden, so a uniform border of any colour is trimmed away.
+ *
+ * What is left is usually not square, and it is padded rather than cropped.
+ * Cropping to the short side is what this did first, and on this drake it
+ * would have taken thirty-five pixels off the top, where its horns are. The
+ * background is flat by construction, so padding with the border's own colour
+ * is invisible and cannot lose any of the creature.
+ */
 const convert = `
-from PIL import Image
+from PIL import Image, ImageChops
 import sys
+import numpy as np
+
 src, dest, px = sys.argv[1], sys.argv[2], int(sys.argv[3])
 im = Image.open(src).convert('RGB')
+before = im.size
+
+def border_colour(img, inset=0):
+    # Sampled a few pixels in, not on the cut itself. Straight after a trim the
+    # outermost row IS the boundary between mount and artwork, so measuring it
+    # returns the average of the two — which padded this drake in grey and was
+    # rejected by the background check for being exactly that.
+    a = np.asarray(img)
+    if inset and min(a.shape[:2]) > inset * 4:
+        a = a[inset:-inset, inset:-inset]
+    edge = np.concatenate([a[0,:], a[-1,:], a[:,0], a[:,-1]])
+    return tuple(int(v) for v in np.median(edge, axis=0))
+
+# Trim any uniform mount. A tolerance of 12 ignores jpeg noise in a flat field
+# without eating into the artwork, whose edge is a hard line against it.
+mount = border_colour(im)
+bbox = ImageChops.difference(im, Image.new('RGB', im.size, mount)).convert('L').point(
+    lambda v: 255 if v > 12 else 0).getbbox()
+if bbox and (bbox[2] - bbox[0]) > im.width * 0.2 and (bbox[3] - bbox[1]) > im.height * 0.2:
+    if bbox != (0, 0, im.width, im.height):
+        im = im.crop(bbox)
+        print(f'trimmed {before[0]}x{before[1]} mount rgb{mount} to {im.width}x{im.height}')
+
 w, h = im.size
 if w != h:
-    s = min(w, h)
-    im = im.crop(((w - s) // 2, (h - s) // 2, (w + s) // 2, (h + s) // 2))
-    print(f'cropped {w}x{h} to square {s}x{s}')
+    s = max(w, h)
+    pad = border_colour(im, inset=3)
+    square = Image.new('RGB', (s, s), pad)
+    square.paste(im, ((s - w) // 2, (s - h) // 2))
+    im = square
+    print(f'padded {w}x{h} to square {s}x{s} with rgb{pad}')
+
 im.resize((px, px), Image.LANCZOS).save(dest, 'WEBP', quality=90, method=6)
 `;
 
