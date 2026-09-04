@@ -840,9 +840,9 @@ describe('a summoning brings one creature, not a formation', () => {
     const effects = [];
     const api = { ...makeApi(), findCreatures: honouring(world),
                   createEffect: async (_i, e) => { effects.push(e); } };
-    await applyCardEffect({ card: BY_ID.get('flames'), actor: actorOf(), api, rng: () => 0.999, confirmGate: false });
-    expect(effects[0].name).toContain('Barbazu');
-    expect(effects[0].name).not.toContain('Squad');
+    const r = await applyCardEffect({ card: BY_ID.get('flames'), actor: actorOf(), api, rng: () => 0.999, confirmGate: false });
+    expect(r.gmNote).toContain('Barbazu');
+    expect(r.gmNote).not.toContain('Squad');
   });
 });
 

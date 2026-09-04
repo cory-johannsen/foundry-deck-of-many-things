@@ -1002,7 +1002,7 @@
     "set": "classic",
     "rules": {
       "summary": "A powerful devil becomes your permanent enemy, seeking your ruin and death.",
-      "full": "A powerful devil (chosen by the GM) becomes your enemy. The devil seeks your ruin and plagues your life, savoring your suffering before attempting to slay you. This enmity lasts until either you or the devil dies.",
+      "full": "A powerful devil becomes your enemy. The devil seeks your ruin and plagues your life, savoring your suffering before attempting to slay you. Its identity is known only to the GM until it chooses to reveal itself. This enmity lasts until either you or the devil dies.",
       "draw_terminating": false,
       "narration": "You have been noticed by something that does not forget; the Flames give you an enemy for life."
     },

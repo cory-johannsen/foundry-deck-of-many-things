@@ -160,11 +160,39 @@ describe('removal from play', () => {
 describe('named adversaries', () => {
   const fiends = [{ pack: 'b', id: 'd1', name: 'Barbazu', level: 5, traits: ['devil', 'fiend'] }];
 
-  it('names the devil as an enemy without placing a token', async () => {
+  it('swears an enemy without placing a token', async () => {
     const { r, api } = await run('flames', { api: makeApi({ creatures: fiends }) });
     expect(api.spy.spawned).toHaveLength(0);
-    expect(api.spy.effects[0].name).toContain('Barbazu');
-    expect(r.log).toContain('sworn enemy');
+    expect(r.mode).toBe('auto');
+    expect(r.gmNote).toContain('Barbazu');
+  });
+
+  it('keeps which devil to the GM, on the sheet and in the chat', async () => {
+    // The effect used to be titled "Sworn Enemy: Barbazu", so the answer sat
+    // on the character sheet for the rest of the campaign — a card whose whole
+    // substance is an unseen enemy, spoiled the moment it was drawn.
+    const chat = [];
+    const api = { ...makeApi({ creatures: fiends }),
+                  postChatCard: async (p) => { chat.push(p); } };
+    const r = await applyCardEffect({
+      card: BY_ID.get('flames'), actor: actorOf(), api, rng: () => 0, confirmGate: false
+    });
+    const effect = api.spy.effects[0];
+    expect(effect.name).toBe('Sworn Enemy');
+    expect(JSON.stringify(effect)).not.toContain('Barbazu');
+    expect(r.log).not.toContain('Barbazu');
+    // ...and the GM is told, in a message only they can read.
+    const whisper = chat.find((c) => c.whisperGM);
+    expect(whisper).toBeTruthy();
+    expect(whisper.content).toContain('Barbazu');
+  });
+
+  it('still says it is a devil, because the card does', async () => {
+    // Only the identity is secret. Hiding the kind as well would contradict
+    // the card's own rules text, which the chat card prints in full.
+    const { r, api } = await run('flames', { api: makeApi({ creatures: fiends }) });
+    expect(r.log).toMatch(/devil/i);
+    expect(api.spy.effects[0].system.description.value).toMatch(/devil/i);
   });
 
   it('places the fiend, since the card says it appears', async () => {
@@ -489,6 +517,6 @@ describe('Fiend arrives able to bargain', () => {
                   createEffect: async (_i, e) => { effects.push(e); } };
     const r = await applyCardEffect({ card: BY_ID.get('flames'), actor: actorOf(), api, rng: () => 0, confirmGate: false });
     expect(r.mode).toBe('auto');
-    expect(effects[0].name).toContain('Silent Devil');
+    expect(r.gmNote).toContain('Silent Devil');
   });
 });
