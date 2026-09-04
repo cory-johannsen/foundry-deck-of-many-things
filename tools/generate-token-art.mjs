@@ -78,7 +78,18 @@ export const SUBJECTS = [
 export const CREATURES = [
   { id: 'homunculus', file: 'homunculus',
     prompt: 'A tiny homunculus, a small artificial creature of stitched clay and hammered copper '
-      + 'with little leathery bat wings and glowing eyes, perched and alert, looking up at its maker' }
+      + 'with little leathery bat wings and glowing eyes, perched and alert, looking up at its maker' },
+  // Dragon scales with the drawer, so it needs a picture per age band rather
+  // than one: a drake at low levels is not an ancient wyrm at high ones.
+  { id: 'drake', file: 'dragon-drake',
+    prompt: 'A small drake, a lesser dragon the size of a large dog, lean and quick with bright '
+      + 'scales and folded leathery wings, head cocked and watchful' },
+  { id: 'young-dragon', file: 'dragon-young',
+    prompt: 'A young dragon, sleek and dangerous with gleaming scales, horned head raised, '
+      + 'wings half-furled, coiled and alert' },
+  { id: 'elder-dragon', file: 'dragon-elder',
+    prompt: 'An ancient dragon, vast and scarred with heavy horns and battered scales, '
+      + 'head lowered toward the viewer, ancient and unhurried' }
 ];
 
 const promptFor = (s) => s.prompt
@@ -181,6 +192,7 @@ const MAX_ATTEMPTS = 4;
 async function main() {
   const args = process.argv.slice(2);
   const force = args.includes('--force');
+  const reroll = parseInt(args.find((a) => a.startsWith('--reroll='))?.split('=')[1] ?? '0', 10);
   const only = args.filter((a) => !a.startsWith('--'));
   mkdirSync(OUT_DIR, { recursive: true });
 
@@ -194,7 +206,8 @@ async function main() {
     // interior on others, so this rerolls rather than accepting the first
     // answer. The seed is derived from the ancestry and the attempt, so a
     // rerun reproduces the same sequence.
-    const base = [...s.id].reduce((a, c) => a * 31 + c.charCodeAt(0), 7) % 2_000_000_000;
+    const base = ([...s.id].reduce((a, c) => a * 31 + c.charCodeAt(0), 7)
+      + reroll * 104_729) % 2_000_000_000;
     let best = null;
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
       process.stdout.write(`${s.id.padEnd(10)} attempt ${attempt + 1}… `);
