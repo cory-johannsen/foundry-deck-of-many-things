@@ -1734,16 +1734,17 @@
     "flavor": "A gelatinous cube with various items suspended inside it creeps through a vaulted sewer. The Ooze card indicates the importance of something that seems lowly or innocuous.",
     "set": "expansion",
     "rules": {
-      "summary": "A gelatinous cube appears in your space and engulfs you (hostile).",
-      "full": "A gelatinous cube appears in your space and immediately attempts to engulf you. The cube is hostile and will pursue you if you escape.",
+      "summary": "An ooze appears in your space and tries to engulf you (hostile).",
+      "full": "An ooze appears in your space and immediately attempts to engulf you: a gelatinous cube at first, and heavier things as you grow. It is hostile and will pursue you if you escape.",
       "draw_terminating": false,
       "narration": "The floor is not the floor; the Ooze is already around you."
     },
     "mechanics": {
       "kind": "spawn_ooze",
       "params": {
-        "creature": "gelatinous_cube",
-        "in_own_space": true
+        "creature": "engulfing_ooze",
+        "in_own_space": true,
+        "scales_with_level": true
       }
     },
     "art": {

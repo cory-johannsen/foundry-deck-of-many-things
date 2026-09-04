@@ -411,7 +411,8 @@ export function makeFoundryApi() {
      * Place creatures on the active scene near a focal token when there is one,
      * so a summons lands next to whoever drew rather than at the origin.
      */
-    async spawnCreatures(entries, { nearActorId = null, disposition = -1, img = null } = {}) {
+    async spawnCreatures(entries, { nearActorId = null, disposition = -1, img = null,
+                                    place = 'beside' } = {}) {
       const scene = canvas?.scene;
       if (!scene) throw new Error('No active scene to place creatures on');
       const grid = scene.grid?.size ?? 100;
@@ -446,11 +447,18 @@ export function makeFoundryApi() {
         const [actor] = await Actor.createDocuments([
           foundry.utils.mergeObject(doc.toObject(), overrides)
         ]);
-        const td = await actor.getTokenDocument({
-          x: originX + grid * (i + 1),
-          y: originY,
-          disposition
-        });
+        // Most summons stand next to the character. Ooze lands *on* them: the
+        // card is explicit that the thing appears in your space, and a cube
+        // beside you is a different card. A large token's top-left square is
+        // the character's own, and a huge one straddles it, so the offset is
+        // half its footprint rounded down — which also keeps it grid-aligned.
+        const tw = actor.prototypeToken?.width ?? 1;
+        const th = actor.prototypeToken?.height ?? 1;
+        const spot = place === 'on'
+          ? { x: originX - grid * Math.floor((tw - 1) / 2),
+              y: originY - grid * Math.floor((th - 1) / 2) }
+          : { x: originX + grid * (i + 1), y: originY };
+        const td = await actor.getTokenDocument({ ...spot, disposition });
         const obj = td.toObject();
         obj.disposition = disposition;
         await scene.createEmbeddedDocuments('Token', [obj]);

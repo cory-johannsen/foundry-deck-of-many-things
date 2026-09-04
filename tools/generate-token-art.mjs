@@ -45,6 +45,31 @@ const NEGATIVE = 'text, letters, words, watermark, signature, logo, frame, borde
   + 'modern clothing, firearms, photograph, 3d render';
 
 /**
+ * A style for creatures that have no head to make a bust of.
+ *
+ * "Centered bust portrait" is right for a warrior and actively wrong for an
+ * ooze: asked for living tar, the model produced a woman's face, and asked for
+ * a blob it produced a mouth full of teeth. It was obeying the style, not the
+ * prompt. The background checker passed all three, because a wrong subject on
+ * a clean black field is still a clean black field.
+ *
+ * The second attempt got the shape right and the setting wrong: the tar came
+ * back as a waterfall between canyon walls, which the corner check also passed
+ * because the corners were black and the scenery was in the middle. Hence
+ * "floating in empty black space" here — a creature with nothing under it
+ * cannot be standing in a landscape.
+ */
+const SHAPELESS_STYLE = 'dark fantasy illustration, intricate linework, rich jewel-tone colors, '
+  + 'dramatic rim lighting, one single creature alone, floating in empty black space with '
+  + 'nothing around it, isolated on a plain solid black background, black background, '
+  + 'no scenery, no ground, no backdrop';
+
+const SHAPELESS_NEGATIVE = `${NEGATIVE}, face, head, eyes, mouth, teeth, fangs, portrait, `
+  + 'person, humanoid, creature with a face, glass tank, aquarium, jar, container, display case, '
+  + 'glass, wireframe, outline box, diagram, cutaway, cliff, canyon, rocks, cave, waterfall, '
+  + 'ground, floor, terrain, horizon';
+
+/**
  * One entry per ancestry we expect to see, plus a fallback.
  *
  * Ordered as the table plays: the party's own ancestries first, then the rest
@@ -89,13 +114,34 @@ export const CREATURES = [
       + 'wings half-furled, coiled and alert' },
   { id: 'elder-dragon', file: 'dragon-elder',
     prompt: 'An ancient dragon, vast and scarred with heavy horns and battered scales, '
-      + 'head lowered toward the viewer, ancient and unhurried' }
+      + 'head lowered toward the viewer, ancient and unhurried' },
+  // Ooze scales the same way, and none of the system's oozes ship any art at
+  // all. "Bust portrait" means nothing for a creature with no head, so these
+  // say what shape the thing is instead and let the style carry the rest.
+  { id: 'ooze-cube', file: 'ooze-cube', shapeless: true,
+    prompt: 'A solid block of translucent green acidic jelly in the shape of a cube, the jelly '
+      + 'itself forming every face and edge with nothing holding it, soft and quivering, bones '
+      + 'and coins suspended half-dissolved deep inside the green' },
+  // A black creature on a black field is a contradiction: four rerolls all
+  // came back with the tar on white, because the model needed the contrast
+  // somewhere. It is right — a matte black token is a smudge on a dark map —
+  // so the tar is given the oil-slick sheen that real tar has, and the colour
+  // lives on the creature instead of behind it.
+  { id: 'ooze-tar', file: 'ooze-tar', shapeless: true,
+    prompt: 'A thick column of living tar rising out of a spreading puddle of itself, heavy and '
+      + 'viscous and dripping, its wet black surface shot through with an iridescent oil-slick '
+      + 'sheen of violet, teal and gold, lit from the side against darkness' },
+  { id: 'ooze-blob', file: 'ooze-blob', shapeless: true,
+    prompt: 'A vast mound of translucent pink and grey devouring slime, veined and pulsing, '
+      + 'spreading forward in a slow wave over the ground' }
 ];
 
 const promptFor = (s) => s.prompt
-  ? `${s.prompt}, ${STYLE}`
+  ? `${s.prompt}, ${s.shapeless ? SHAPELESS_STYLE : STYLE}`
   : `Portrait bust of ${s.who}, wearing full plate armour, `
     + `a longsword held upright at the shoulder, stern and watchful, sworn to service, ${STYLE}`;
+
+const negativeFor = (s) => (s.shapeless ? SHAPELESS_NEGATIVE : NEGATIVE);
 
 /** Every subject, warriors and creatures alike, with the file each writes. */
 const ALL = [
@@ -103,10 +149,10 @@ const ALL = [
   ...CREATURES.map((c) => ({ ...c, file: c.file }))
 ];
 
-const build = (prompt, seed, prefix) => ({
+const build = (prompt, seed, prefix, negative = NEGATIVE) => ({
   '1': { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: CHECKPOINT } },
   '2': { class_type: 'CLIPTextEncode', inputs: { text: prompt, clip: ['1', 1] } },
-  '3': { class_type: 'CLIPTextEncode', inputs: { text: NEGATIVE, clip: ['1', 1] } },
+  '3': { class_type: 'CLIPTextEncode', inputs: { text: negative, clip: ['1', 1] } },
   '4': { class_type: 'EmptyLatentImage', inputs: { width: SIZE, height: SIZE, batch_size: 1 } },
   '5': { class_type: 'KSampler',
          inputs: { seed, steps: STEPS, cfg: CFG, sampler_name: SAMPLER, scheduler: SCHEDULER,
@@ -149,22 +195,27 @@ async function fetchImage({ filename, subfolder = '', type = 'output' }) {
 }
 
 /**
- * Mean brightness of the four corners. A portrait on plain dark ground scores
- * near zero; parchment, sky or a lit interior scores over a hundred.
+ * How much background an image has, as one number to reroll against.
  *
- * This is measured rather than eyeballed because eyeballing missed it: two of
- * the first six looked right, and four had backgrounds.
+ * This measured the four corners until the oozes got past it three times over:
+ * a canyon with black sky in the corners, then a white halo with the corners
+ * still black. It now matches tools/check-token-art.mjs — a ring right round
+ * the outside, and a penalty for pale pixels anywhere — so the generator stops
+ * keeping images the checker will reject afterwards.
  */
-function cornerBrightness(path) {
+function backgroundScore(path) {
   const py = join(root, '.venv/bin/python3');
   const script = `
-from PIL import Image, ImageStat
+from PIL import Image
 import sys
-im = Image.open(sys.argv[1]).convert('L')
-w, h = im.size
-b = int(min(w, h) * 0.14)
-c = [im.crop((0,0,b,b)), im.crop((w-b,0,w,b)), im.crop((0,h-b,b,h)), im.crop((w-b,h-b,w,h))]
-print(sum(ImageStat.Stat(x).mean[0] for x in c) / 4)
+import numpy as np
+a = np.asarray(Image.open(sys.argv[1]).convert('L'), dtype=float)
+h, w = a.shape
+r = max(1, int(min(w, h) * 0.10))
+ring = np.concatenate([a[:r,:].ravel(), a[-r:,:].ravel(), a[:,:r].ravel(), a[:,-r:].ravel()])
+bright = (a > 200).mean() * 100
+# A pale backdrop is worth as much as a bright edge; the worse fault wins.
+print(max(ring.mean(), bright * 2.5))
 `;
   try {
     return parseFloat(execFileSync(py, ['-c', script, path], { encoding: 'utf8' }).trim());
@@ -186,7 +237,7 @@ Image.open(sys.argv[1]).convert('RGB').resize((512, 512), Image.LANCZOS) \
   catch { writeFileSync(dest, readFileSync(src)); }   // no Pillow: keep the png bytes
 }
 
-const CLEAN_THRESHOLD = 40;
+const CLEAN_THRESHOLD = 45;      // stay under the checker's 50
 const MAX_ATTEMPTS = 4;
 
 async function main() {
@@ -212,11 +263,11 @@ async function main() {
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
       process.stdout.write(`${s.id.padEnd(10)} attempt ${attempt + 1}… `);
       const id = await enqueue(build(prompt, (base + attempt * 7919) % 2_000_000_000,
-                                     `dommt-token-${s.id}`));
+                                     `dommt-token-${s.id}`, negativeFor(s)));
       writeFileSync(dest, await fetchImage(await waitFor(id)));
-      const score = cornerBrightness(dest);
+      const score = backgroundScore(dest);
       if (score === null) { console.log('(unmeasured) kept'); best = { score: 0 }; break; }
-      console.log(`corners ${score.toFixed(0)}`);
+      console.log(`background ${score.toFixed(0)}`);
       if (!best || score < best.score) {
         best = { score, buf: null };
         writeFileSync(join(OUT_DIR, `.best-${s.file}.png`), readFileSync(dest));
@@ -229,12 +280,12 @@ async function main() {
       writeFileSync(dest, readFileSync(bestPath));
       unlinkSync(bestPath);
     }
-    const kept = cornerBrightness(dest);
+    const kept = backgroundScore(dest);
     // ComfyUI returns a 1024 png; a token is drawn at a couple of hundred
     // pixels, so it is stored at 512 as webp — 1.5 MB becomes about 50 KB.
     shrink(dest, final);
     unlinkSync(dest);
-    console.log(`${' '.repeat(10)} kept corners ${kept === null ? '?' : kept.toFixed(0)}`
+    console.log(`${' '.repeat(10)} kept background ${kept === null ? '?' : kept.toFixed(0)}`
       + ` -> assets/tokens/${s.file}.webp`);
   }
 }

@@ -5,7 +5,7 @@ import {
   applyWealthGrant, applyPetrify, applyFall, applySoulTrap,
   applyElementImmunity, applyGrantTelepathy, applyUnarmoredDefense,
   applyItemGrant, applyDestroyMagicItems, applySpawn,
-  applyBonusDraws, applyStopDrawing, applyDrawTwoKeepOne, applyBeastForm, applySpawnAlly, applySpawnHomunculus, applySpawnDragon,
+  applyBonusDraws, applyStopDrawing, applyDrawTwoKeepOne, applyBeastForm, applySpawnAlly, applySpawnHomunculus, applySpawnDragon, applySpawnOoze,
   applyRandomHostileNpc
 } from './card-handlers-extra.mjs';
 import {
@@ -456,7 +456,7 @@ const HANDLERS = {
   spawn_ally_npc: applySpawnAlly,
   spawn_wyrmling: applySpawnDragon,
   spawn_hostile: applySpawn,
-  spawn_ooze: applySpawn,
+  spawn_ooze:         applySpawnOoze,
   fall: applyFall,
   spellcast_slotless: applySpellGrant,
   random_hostile_npc: applyRandomHostileNpc,
