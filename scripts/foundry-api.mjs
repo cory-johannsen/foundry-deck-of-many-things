@@ -16,6 +16,16 @@ export const WRITE_METHODS = [
   'removeCoins', 'etchRune', 'spawnBuiltCreature'
 ];
 
+/**
+ * Packs that hold creatures worth summoning.
+ *
+ * Matching on "bestiary" alone missed 1,214 creatures across four packs,
+ * Monster Core and Monster Core 2 among them — which in the Remaster are the
+ * primary creature source, not an extra. A card looking for a homunculus found
+ * none, because the only ones are in Monster Core.
+ */
+export const CREATURE_PACK_PATTERN = /bestiary|monster-core|npc-core|npc-gallery/i;
+
 export const READ_METHODS = ['findItems', 'findCreatures', 'listItems', 'findWorldActors',
                              'listLanguages', 'getCoins', 'listGear', 'ancestrySpeed'];
 
@@ -113,19 +123,17 @@ export function makeFoundryApi() {
       return found;
     },
 
+
     /**
-     * Bestiary index entries matching a filter, same shape as findItems.
+     * Creature index entries matching a filter, same shape as findItems.
      *
-     * Every installed bestiary is searched by default, not just the core one.
-     * Restricting to pathfinder-bestiary meant 166 creatures to choose from
-     * when the world has several times that — and for a narrow trait like
-     * `ooze` the difference is between a handful of candidates and none.
+     * Every installed creature pack is searched by default.
      */
     async findCreatures({ minLevel = null, maxLevel = null, traits = [], namePattern = null,
                           minSize = null, excludeTraits = [], speaksLanguage = false,
                           packs = null } = {}) {
       packs ??= game.packs
-        .filter((p) => p.documentName === 'Actor' && /bestiary/i.test(p.collection))
+        .filter((p) => p.documentName === 'Actor' && CREATURE_PACK_PATTERN.test(p.collection))
         .map((p) => p.collection);
       const found = [];
       const re = namePattern ? new RegExp(namePattern, 'i') : null;
@@ -403,7 +411,7 @@ export function makeFoundryApi() {
      * Place creatures on the active scene near a focal token when there is one,
      * so a summons lands next to whoever drew rather than at the origin.
      */
-    async spawnCreatures(entries, { nearActorId = null, disposition = -1 } = {}) {
+    async spawnCreatures(entries, { nearActorId = null, disposition = -1, img = null } = {}) {
       const scene = canvas?.scene;
       if (!scene) throw new Error('No active scene to place creatures on');
       const grid = scene.grid?.size ?? 100;
@@ -428,12 +436,15 @@ export function makeFoundryApi() {
           ? game.actors.get(entry.actorId)
           : await game.packs.get(entry.pack)?.getDocument(entry.id);
         if (!doc) continue;
+        // Compendium creatures carry no token art, so a card may supply its own.
+        const overrides = {
+          'ownership.default': 0,
+          'system.details.alliance': alliance,
+          'prototypeToken.disposition': disposition,
+          ...(img ? { img, 'prototypeToken.texture.src': img } : {})
+        };
         const [actor] = await Actor.createDocuments([
-          foundry.utils.mergeObject(doc.toObject(), {
-            'ownership.default': 0,
-            'system.details.alliance': alliance,
-            'prototypeToken.disposition': disposition
-          })
+          foundry.utils.mergeObject(doc.toObject(), overrides)
         ]);
         const td = await actor.getTokenDocument({
           x: originX + grid * (i + 1),

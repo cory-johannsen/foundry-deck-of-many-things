@@ -220,7 +220,7 @@ describe('spawning', () => {
   });
 
   it('places an ally as friendly', async () => {
-    const { api } = await run('construct', { api: makeApi({ creatures }) });
+    const { api } = await run('dragon', { api: makeApi({ creatures }) });
     expect(api.spy.spawned[0].o.disposition).toBe(1);
   });
 
@@ -378,7 +378,7 @@ describe('spawning prefers the world over the compendium', () => {
 
   it('takes a world NPC when one fits, and spawns it by actor id', async () => {
     const [a, spawned] = api({ world: [worldNpc], pack: [packNpc] });
-    const r = await applyCardEffect({ card: BY_ID.get('construct'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
+    const r = await applyCardEffect({ card: BY_ID.get('dragon'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
     expect(spawned[0].e[0]).toEqual({ actorId: 'w1' });
     expect(r.meta.source).toBe('world');
     expect(r.log).toContain('Aller Rosk');
@@ -386,7 +386,7 @@ describe('spawning prefers the world over the compendium', () => {
 
   it('falls back to the compendium when the world has nobody suitable', async () => {
     const [a, spawned] = api({ world: [], pack: [packNpc] });
-    const r = await applyCardEffect({ card: BY_ID.get('construct'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
+    const r = await applyCardEffect({ card: BY_ID.get('dragon'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
     expect(spawned[0].e[0]).toEqual({ pack: 'b', id: 'c1' });
     expect(r.meta.source).toBe('compendium');
   });
@@ -667,7 +667,7 @@ describe('Monstrosity respects the size its card demands', () => {
 
   it('leaves cards with no size requirement alone', async () => {
     const [a, spawned] = api(world);
-    await applyCardEffect({ card: BY_ID.get('construct'), actor: actorOf(), api: a, rng: () => 0, confirmGate: false });
+    await applyCardEffect({ card: BY_ID.get('dragon'), actor: actorOf(), api: a, rng: () => 0, confirmGate: false });
     expect(spawned).toHaveLength(1);   // Small is fine for an ally
   });
 });
@@ -954,5 +954,86 @@ describe('the summoned warrior has a face', () => {
       if (!existsSync(new URL(`../assets/tokens/${file}`, import.meta.url))) missing.push(file);
     }
     expect(missing).toEqual([]);
+  });
+});
+
+describe('Construct summons a homunculus, not whatever is to hand', () => {
+  // It asked the spawner for any construct of level 0-4 and preferred the
+  // world, which in this campaign meant Dreshkan or Mister Beak — named NPCs
+  // with their own place in the story, and never a homunculus.
+  const world = [{ id: 'w1', name: 'Dreshkan', level: 4, hasArt: true, traits: ['construct'] }];
+  const compendium = [
+    { pack: 'pf2e.pathfinder-monster-core', id: 'h1', name: 'Homunculus', level: 0, traits: ['construct'] },
+    { pack: 'b', id: 'x1', name: 'Clockwork Sentry', level: 4, traits: ['construct'] }
+  ];
+  const api = () => {
+    const spawned = [];
+    let askedWorld = false;
+    return [{
+      ...makeApi(),
+      findWorldActors: async () => { askedWorld = true; return world; },
+      findCreatures: async ({ namePattern } = {}) => {
+        const re = namePattern ? new RegExp(namePattern, 'i') : null;
+        return compendium.filter((c) => !re || re.test(c.name));
+      },
+      spawnCreatures: async (e, o) => { spawned.push({ e, o }); }
+    }, spawned, () => askedWorld];
+  };
+  const draw = (a) => applyCardEffect({
+    card: BY_ID.get('construct'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
+
+  it('summons the homunculus by name', async () => {
+    const [a, spawned] = api();
+    const r = await draw(a);
+    expect(spawned[0].e[0].id).toBe('h1');
+    expect(r.log).toContain('homunculus');
+  });
+
+  it('never reaches into the world', async () => {
+    const [a, , askedWorld] = api();
+    await draw(a);
+    expect(askedWorld()).toBe(false);
+  });
+
+  it('arrives as an ally that takes you for its maker', async () => {
+    const [a, spawned] = api();
+    const r = await draw(a);
+    expect(spawned[0].o.disposition).toBe(1);
+    expect(r.log).toContain('takes you for its maker');
+  });
+
+  it('brings its own art, Monster Core having none', async () => {
+    const [a, spawned] = api();
+    await draw(a);
+    expect(spawned[0].o.img).toContain('homunculus.webp');
+  });
+
+  it('asks the GM when no homunculus is installed', async () => {
+    const [a, spawned] = api();
+    a.findCreatures = async () => [];
+    const r = await draw(a);
+    expect(spawned).toHaveLength(0);
+    expect(r.mode).toBe('gm');
+    expect(r.log).toContain('no homunculus');
+  });
+});
+
+describe('creature packs', () => {
+  it('searches Monster Core, not only the bestiaries', async () => {
+    // Matching on "bestiary" alone missed 1,214 creatures across four packs,
+    // Monster Core among them — where the only homunculus lives.
+    const { CREATURE_PACK_PATTERN } = await import('../scripts/foundry-api.mjs');
+    for (const pack of ['pf2e.pathfinder-bestiary', 'pf2e.pathfinder-monster-core',
+                        'pf2e.pathfinder-monster-core-2', 'pf2e.pathfinder-npc-core',
+                        'pf2e.npc-gallery']) {
+      expect(CREATURE_PACK_PATTERN.test(pack), pack).toBe(true);
+    }
+  });
+
+  it('leaves non-creature packs alone', async () => {
+    const { CREATURE_PACK_PATTERN } = await import('../scripts/foundry-api.mjs');
+    for (const pack of ['pf2e.equipment-srd', 'pf2e.spells-srd', 'pf2e.ancestries']) {
+      expect(CREATURE_PACK_PATTERN.test(pack), pack).toBe(false);
+    }
   });
 });

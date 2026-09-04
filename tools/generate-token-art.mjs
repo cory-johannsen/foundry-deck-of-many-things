@@ -70,8 +70,27 @@ export const SUBJECTS = [
   { id: 'generic',  who: 'an armoured warrior, face shadowed within a closed steel helm' }
 ];
 
-const promptFor = (s) => `Portrait bust of ${s.who}, wearing full plate armour, `
-  + `a longsword held upright at the shoulder, stern and watchful, sworn to service, ${STYLE}`;
+/**
+ * Creatures other cards summon, which the compendium also has no art for.
+ * These are not warriors, so they carry their own prompt rather than the
+ * plate-and-longsword suffix.
+ */
+export const CREATURES = [
+  { id: 'homunculus', file: 'homunculus',
+    prompt: 'A tiny homunculus, a small artificial creature of stitched clay and hammered copper '
+      + 'with little leathery bat wings and glowing eyes, perched and alert, looking up at its maker' }
+];
+
+const promptFor = (s) => s.prompt
+  ? `${s.prompt}, ${STYLE}`
+  : `Portrait bust of ${s.who}, wearing full plate armour, `
+    + `a longsword held upright at the shoulder, stern and watchful, sworn to service, ${STYLE}`;
+
+/** Every subject, warriors and creatures alike, with the file each writes. */
+const ALL = [
+  ...SUBJECTS.map((s) => ({ ...s, file: `warrior-${s.id}` })),
+  ...CREATURES.map((c) => ({ ...c, file: c.file }))
+];
 
 const build = (prompt, seed, prefix) => ({
   '1': { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: CHECKPOINT } },
@@ -165,10 +184,10 @@ async function main() {
   const only = args.filter((a) => !a.startsWith('--'));
   mkdirSync(OUT_DIR, { recursive: true });
 
-  const wanted = SUBJECTS.filter((s) => (!only.length || only.includes(s.id)));
+  const wanted = ALL.filter((s) => (!only.length || only.includes(s.id)));
   for (const s of wanted) {
-    const dest = join(OUT_DIR, `warrior-${s.id}.png`);
-    const final = join(OUT_DIR, `warrior-${s.id}.webp`);
+    const dest = join(OUT_DIR, `${s.file}.png`);
+    const final = join(OUT_DIR, `${s.file}.webp`);
     if (existsSync(final) && !force) { console.log(`${s.id.padEnd(10)} exists, skipping`); continue; }
     const prompt = promptFor(s);
     // The same prompt produces a plain background on some rolls and a lit
@@ -187,12 +206,12 @@ async function main() {
       console.log(`corners ${score.toFixed(0)}`);
       if (!best || score < best.score) {
         best = { score, buf: null };
-        writeFileSync(join(OUT_DIR, `.best-${s.id}.png`), readFileSync(dest));
+        writeFileSync(join(OUT_DIR, `.best-${s.file}.png`), readFileSync(dest));
       }
       if (score < CLEAN_THRESHOLD) break;
     }
     // Keep the darkest of the attempts if none came back clean.
-    const bestPath = join(OUT_DIR, `.best-${s.id}.png`);
+    const bestPath = join(OUT_DIR, `.best-${s.file}.png`);
     if (existsSync(bestPath)) {
       writeFileSync(dest, readFileSync(bestPath));
       unlinkSync(bestPath);
@@ -203,7 +222,7 @@ async function main() {
     shrink(dest, final);
     unlinkSync(dest);
     console.log(`${' '.repeat(10)} kept corners ${kept === null ? '?' : kept.toFixed(0)}`
-      + ` -> assets/tokens/warrior-${s.id}.webp`);
+      + ` -> assets/tokens/${s.file}.webp`);
   }
 }
 
