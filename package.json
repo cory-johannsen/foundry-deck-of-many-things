@@ -10,7 +10,10 @@
     "validate": "node tools/validate-cards.mjs",
     "art": "node tools/generate-art.mjs",
     "build:pack": "node tools/build-pack.mjs",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "prompts": "node tools/token-prompts.mjs",
+    "tokens": "node tools/generate-token-art.mjs",
+    "tokens:check": "node tools/check-token-art.mjs"
   },
   "devDependencies": {
     "ajv": "^8.17.1",

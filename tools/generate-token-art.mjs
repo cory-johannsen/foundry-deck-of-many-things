@@ -28,18 +28,19 @@ const STEPS = parseInt(process.env.COMFYUI_STEPS || '28', 10);
 const CFG = parseFloat(process.env.COMFYUI_CFG || '7.0');
 const SAMPLER = process.env.COMFYUI_SAMPLER || 'dpmpp_sde';
 const SCHEDULER = process.env.COMFYUI_SCHEDULER || 'karras';
-const SIZE = 1024;
+export const SIZE = 1024;
+export const TOKEN_PX = 512;
 
 // No "aged parchment texture" here, though the card art uses it. On a token it
 // invites the model to draw the parchment — the tengu came back on a bordered
 // sheet, which reads as a square tile on a map instead of blending into dark
 // ground. The background instruction is repeated and placed last, where it
 // carries more weight.
-const STYLE = 'dark fantasy illustration, intricate linework, rich jewel-tone colors, '
+export const STYLE = 'dark fantasy illustration, intricate linework, rich jewel-tone colors, '
   + 'dramatic rim lighting, centered bust portrait, isolated on a plain solid black background, '
   + 'black background, no scenery, no backdrop';
 
-const NEGATIVE = 'text, letters, words, watermark, signature, logo, frame, border, ornate border, '
+export const NEGATIVE = 'text, letters, words, watermark, signature, logo, frame, border, ornate border, '
   + 'parchment, paper texture, scroll, background scenery, landscape, architecture, interior, '
   + 'multiple figures, crowd, full body, tiny figure, blurry, deformed hands, extra limbs, '
   + 'modern clothing, firearms, photograph, 3d render';
@@ -59,12 +60,12 @@ const NEGATIVE = 'text, letters, words, watermark, signature, logo, frame, borde
  * "floating in empty black space" here — a creature with nothing under it
  * cannot be standing in a landscape.
  */
-const SHAPELESS_STYLE = 'dark fantasy illustration, intricate linework, rich jewel-tone colors, '
+export const SHAPELESS_STYLE = 'dark fantasy illustration, intricate linework, rich jewel-tone colors, '
   + 'dramatic rim lighting, one single creature alone, floating in empty black space with '
   + 'nothing around it, isolated on a plain solid black background, black background, '
   + 'no scenery, no ground, no backdrop';
 
-const SHAPELESS_NEGATIVE = `${NEGATIVE}, face, head, eyes, mouth, teeth, fangs, portrait, `
+export const SHAPELESS_NEGATIVE = `${NEGATIVE}, face, head, eyes, mouth, teeth, fangs, portrait, `
   + 'person, humanoid, creature with a face, glass tank, aquarium, jar, container, display case, '
   + 'glass, wireframe, outline box, diagram, cutaway, cliff, canyon, rocks, cave, waterfall, '
   + 'ground, floor, terrain, horizon';
