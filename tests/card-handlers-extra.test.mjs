@@ -910,3 +910,49 @@ describe('the warrior strides like its ancestry, in plate', () => {
     expect(r.log).toContain('Speed 15 ft');
   });
 });
+
+describe('the summoned warrior has a face', () => {
+  // The compendium has no token art at all — not one sampled martial NPC has
+  // any, the system's own Knight included — so a summons would otherwise
+  // arrive as the default silhouette.
+  it('gives each covered ancestry its own picture', async () => {
+    const { tokenArtFor } = await import('../scripts/warrior-template.mjs');
+    for (const a of ['Dwarf', 'Human', 'Tengu', 'Elf', 'Gnome', 'Goblin', 'Halfling', 'Leshy', 'Orc']) {
+      expect(tokenArtFor(a), a).toContain(`warrior-${a.toLowerCase()}.webp`);
+    }
+  });
+
+  it('falls back to a helmed warrior for anyone else', async () => {
+    // A deliberate answer rather than a missing one.
+    const { tokenArtFor } = await import('../scripts/warrior-template.mjs');
+    for (const a of ['Kobold', 'Centaur', 'Automaton', null, '']) {
+      expect(tokenArtFor(a)).toContain('warrior-generic.webp');
+    }
+  });
+
+  it('puts the art on both the actor and its token', async () => {
+    const { buildWarrior } = await import('../scripts/warrior-template.mjs');
+    const w = buildWarrior({ actor: { system: { details: { level: { value: 5 },
+      ancestry: { name: 'Orc', trait: 'orc' } } } } });
+    expect(w.img).toContain('warrior-orc.webp');
+    expect(w.prototypeToken.texture.src).toBe(w.img);
+  });
+
+  it('lets a caller override the art', async () => {
+    const { buildWarrior } = await import('../scripts/warrior-template.mjs');
+    const w = buildWarrior({ actor: { system: { details: { level: { value: 5 } } } },
+                             img: 'custom/path.webp' });
+    expect(w.img).toBe('custom/path.webp');
+  });
+
+  it('has every referenced image on disk', async () => {
+    const { existsSync } = await import('node:fs');
+    const { TOKEN_ART, tokenArtFor } = await import('../scripts/warrior-template.mjs');
+    const missing = [];
+    for (const a of [...TOKEN_ART, 'unknown-ancestry']) {
+      const file = tokenArtFor(a).split('/').pop();
+      if (!existsSync(new URL(`../assets/tokens/${file}`, import.meta.url))) missing.push(file);
+    }
+    expect(missing).toEqual([]);
+  });
+});
