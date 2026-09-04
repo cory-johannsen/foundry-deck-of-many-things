@@ -27,12 +27,12 @@
  * that, so look at the images too.
  */
 import { execFileSync } from 'node:child_process';
-import { readdirSync } from 'node:fs';
+import { readdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const dir = join(root, 'assets/tokens');
+const dirs = ['assets/tokens', 'assets/icons'].map((d) => join(root, d));
 const PY = join(root, '.venv/bin/python3');
 
 /**
@@ -58,21 +58,22 @@ for path in sys.argv[1:]:
 print(json.dumps(out))
 `;
 
-const files = readdirSync(dir).filter((f) => f.endsWith('.webp')).map((f) => join(dir, f));
+const files = dirs.flatMap((dir) => (existsSync(dir) ? readdirSync(dir) : [])
+  .filter((f) => f.endsWith('.webp')).map((f) => join(dir, f)));
 if (!files.length) { console.log('no tokens yet'); process.exit(0); }
 const stats = JSON.parse(execFileSync(PY, ['-c', script, ...files], { encoding: 'utf8' }));
 
-console.log(`${'file'.padEnd(24)}${'edge'.padStart(8)}${'bright'.padStart(9)}   verdict`);
+console.log(`${'file'.padEnd(32)}${'edge'.padStart(8)}${'bright'.padStart(9)}   verdict`);
 let bad = 0;
 for (const [path, { edge, bright } ] of Object.entries(stats)) {
-  const name = path.split('/').pop();
+  const name = path.split('/').slice(-2).join('/');
   const faults = [];
   if (edge >= EDGE_LIMIT) faults.push('BACKGROUND');
   if (bright >= BRIGHT_LIMIT) faults.push('PALE BACKDROP');
   if (faults.length) bad += 1;
   const verdict = faults.length ? faults.join(' + ')
     : edge >= EDGE_LIMIT * 0.8 ? 'borderline' : 'clean';
-  console.log(`${name.padEnd(24)}${edge.toFixed(1).padStart(8)}${bright.toFixed(1).padStart(9)}   ${verdict}`);
+  console.log(`${name.padEnd(32)}${edge.toFixed(1).padStart(8)}${bright.toFixed(1).padStart(9)}   ${verdict}`);
 }
 console.log(bad ? `\n${bad} token(s) need regenerating` : '\nall clean');
 process.exit(bad ? 1 : 0);
