@@ -804,3 +804,87 @@ export async function applySpawnDragon({ actor, api, card, rng }) {
     meta: { spawned: chosen.name, level: chosen.level }
   };
 }
+
+/**
+ * Ooze: the thing arrives in your space, and it is always worth fearing.
+ *
+ * The card named a gelatinous cube, and the shared spawner honoured that by
+ * asking for any ooze between levels 0 and 12 — which is 79 creatures in the
+ * installed bestiaries, most of them puddles. A Gutter Ooze is level -1 and
+ * tiny. Drawing this card and receiving a Gutter Ooze is not the card.
+ *
+ * Only three oozes in the whole set actually engulf a creature, which is what
+ * the card describes, and they happen to sit at levels 3, 7 and 13 — a ladder,
+ * already built. So the card climbs it:
+ *
+ *   levels 1-6    Gelatinous Cube (3, large)
+ *   levels 7-12   Living Tar (7, huge)
+ *   levels 13+    Carnivorous Blob (13, gargantuan)
+ *
+ * The cube is the floor rather than the match. Unlike Knight and Dragon, this
+ * summons an enemy, so arriving above the drawer's level is the point of the
+ * card and not a fault in it — a level 1 character meets a level 3 cube, and
+ * that is a bad afternoon by design. What the ladder prevents is the opposite:
+ * a level 15 character meeting the same cube and walking away.
+ *
+ * The cube is not in Monster Core. It survives only in the legacy Bestiary, so
+ * this cannot go through the Monster Core preference the other cards use, and
+ * each rung falls back down the ladder if a world lacks that pack.
+ */
+const OOZE_LADDER = [
+  { from: 13, pattern: '^Carnivorous Blob$', art: 'blob' },
+  { from: 7,  pattern: '^Living Tar$',       art: 'tar' },
+  { from: 0,  pattern: '^Gelatinous Cube$',  art: 'cube' }
+];
+
+export const oozeArt = (rung) => `modules/${MODULE_ID}/assets/tokens/ooze-${rung}.webp`;
+
+/** The rungs a character of this level may receive, best first. */
+export function oozeLadderFor(level) {
+  const start = OOZE_LADDER.findIndex((r) => level >= r.from);
+  return OOZE_LADDER.slice(start === -1 ? OOZE_LADDER.length - 1 : start);
+}
+
+export async function applySpawnOoze({ actor, api, card }) {
+  const level = actor?.system?.details?.level?.value ?? 1;
+
+  let chosen = null;
+  let rung = null;
+  for (const step of oozeLadderFor(level)) {
+    const [found] = await api.findCreatures({
+      namePattern: step.pattern, traits: ['ooze'], excludeTraits: ['troop']
+    });
+    if (found) { chosen = found; rung = step; break; }
+  }
+
+  // No named ooze at all: take the biggest thing that is still an ooze rather
+  // than give up, since the card's whole promise is that something arrives.
+  if (!chosen) {
+    const pool = await api.findCreatures({
+      traits: ['ooze'], minSize: 'large', maxLevel: Math.max(3, level), excludeTraits: ['troop']
+    });
+    chosen = pool.sort((a, b) => b.level - a.level)[0] ?? null;
+    rung = OOZE_LADDER[OOZE_LADDER.length - 1];
+  }
+
+  if (!chosen) {
+    return {
+      mode: 'gm',
+      log: `${card.name}: no ooze in the installed bestiaries — place one yourself.`,
+      meta: { kind: 'gm_only' }
+    };
+  }
+
+  await api.spawnCreatures([{ pack: chosen.pack, id: chosen.id }], {
+    nearActorId: actor.id,
+    disposition: -1,
+    img: oozeArt(rung.art),
+    place: 'on'                      // in your space, as the card says
+  });
+  return {
+    mode: 'auto',
+    log: `${card.name}: a ${chosen.name.toLowerCase()} (level ${chosen.level}) closes over you `
+      + `— it is hostile, and it means to engulf you`,
+    meta: { spawned: chosen.name, level: chosen.level }
+  };
+}

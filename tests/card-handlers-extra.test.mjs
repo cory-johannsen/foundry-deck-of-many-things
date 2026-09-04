@@ -298,17 +298,22 @@ describe('beast form', () => {
   });
 });
 
+const SIZE_ORDER = ['tiny', 'sm', 'med', 'large', 'huge', 'grg'];
+
 describe('spawning asks for the right kind of creature', () => {
   // A bestiary stub that honours the trait filter, so a handler reaching for
   // the wrong kind gets nothing rather than silently getting a mantis.
   const bestiary = (creatures) => ({
     ...makeApi(),
     spy: undefined,
-    findCreatures: async ({ traits = [], minLevel = null, maxLevel = null } = {}) =>
+    findCreatures: async ({ traits = [], minLevel = null, maxLevel = null,
+                            namePattern = null, minSize = null } = {}) =>
       creatures.filter((c) =>
         (!traits.length || traits.some((t) => c.traits.includes(t)))
         && (minLevel == null || c.level >= minLevel)
-        && (maxLevel == null || c.level <= maxLevel))
+        && (maxLevel == null || c.level <= maxLevel)
+        && (!namePattern || new RegExp(namePattern, 'i').test(c.name))
+        && (!minSize || SIZE_ORDER.indexOf(c.size ?? 'med') >= SIZE_ORDER.indexOf(minSize)))
   });
 
   const world = [
@@ -339,6 +344,79 @@ describe('spawning asks for the right kind of creature', () => {
     const [api, seen] = spawnSpy(bestiary(world));
     await applyCardEffect({ card: BY_ID.get('ooze'), actor: actorOf(), api, rng: () => 0.5, confirmGate: false });
     expect(seen[0].e[0].id).toBe('cube');
+  });
+
+  describe('Ooze climbs a ladder of things that actually engulf', () => {
+    // The three oozes in the whole bestiary with an Engulf action. The shared
+    // spawner asked for any ooze of level 0-12 and would happily deliver a
+    // tiny level -1 Gutter Ooze, which is not what the card describes.
+    const oozes = [
+      { pack: 'b', id: 'cube', name: 'Gelatinous Cube',  level: 3,  size: 'large', traits: ['ooze'] },
+      { pack: 'b', id: 'tar',  name: 'Living Tar',       level: 7,  size: 'huge',  traits: ['ooze'] },
+      { pack: 'b', id: 'blob', name: 'Carnivorous Blob', level: 13, size: 'grg',   traits: ['ooze'] },
+      { pack: 'b', id: 'gut',  name: 'Gutter Ooze',      level: -1, size: 'tiny',  traits: ['ooze'] }
+    ];
+
+    const drawnBy = async (level, pool = oozes) => {
+      const [api, seen] = spawnSpy(bestiary(pool));
+      const actor = actorOf();
+      actor.system.details.level.value = level;
+      const r = await applyCardEffect({
+        card: BY_ID.get('ooze'), actor, api, rng: () => 0.5, confirmGate: false
+      });
+      return { r, seen };
+    };
+
+    it.each([[1, 'cube'], [3, 'cube'], [6, 'cube'],
+             [7, 'tar'], [12, 'tar'],
+             [13, 'blob'], [20, 'blob']])('level %i gets the %s', async (level, id) => {
+      const { seen } = await drawnBy(level);
+      expect(seen[0].e[0].id).toBe(id);
+    });
+
+    it('never delivers the gutter ooze, at any level', async () => {
+      for (const level of [1, 5, 9, 14, 20]) {
+        const { seen } = await drawnBy(level);
+        expect(seen[0].e[0].id).not.toBe('gut');
+      }
+    });
+
+    it('arrives in the drawer\'s own space, not beside them', async () => {
+      const { seen } = await drawnBy(4);
+      expect(seen[0].o.place).toBe('on');
+      expect(seen[0].o.disposition).toBe(-1);
+    });
+
+    it('falls back down the ladder when the world lacks the top rung', async () => {
+      // The Carnivorous Blob is Monster Core; a world with only the legacy
+      // Bestiary has the cube and nothing above it.
+      const { seen } = await drawnBy(20, oozes.filter((o) => o.id === 'cube'));
+      expect(seen[0].e[0].id).toBe('cube');
+    });
+
+    it('takes the biggest ooze going when none of the three exist', async () => {
+      const odd = [
+        { pack: 'b', id: 'slime', name: 'Swamp Ooze',  level: 1, size: 'large', traits: ['ooze'] },
+        { pack: 'b', id: 'gut',   name: 'Gutter Ooze', level: -1, size: 'tiny', traits: ['ooze'] }
+      ];
+      const { seen } = await drawnBy(5, odd);
+      expect(seen[0].e[0].id).toBe('slime');       // large, not the tiny one
+    });
+
+    it('defers to the GM when there is no ooze at all', async () => {
+      const { r, seen } = await drawnBy(5, []);
+      expect(seen).toHaveLength(0);
+      expect(r.mode).toBe('gm');
+    });
+
+    it('gives each rung its own art', async () => {
+      const art = [];
+      for (const level of [3, 8, 15]) art.push((await drawnBy(level)).seen[0].o.img);
+      expect(new Set(art).size).toBe(3);
+      expect(art[0]).toMatch(/ooze-cube\.webp$/);
+      expect(art[1]).toMatch(/ooze-tar\.webp$/);
+      expect(art[2]).toMatch(/ooze-blob\.webp$/);
+    });
   });
 
   it('gives up rather than substituting when the kind is absent', async () => {
