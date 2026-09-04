@@ -669,14 +669,17 @@
     "flavor": "A menacing red dragon perches atop its treasure hoard inside a cave. This card can point to things connected to Dragons, but it also suggests hoarding, greed, and places rich in magical energy.",
     "set": "expansion",
     "rules": {
-      "summary": "A dragon wyrmling hatches nearby; it views you as its parent and is loyal.",
-      "full": "A dragon wyrmling of a type chosen by the GM appears in an unoccupied space within 30 feet of you. The wyrmling views you as its parent and is loyal to you for as long as you both live.",
+      "summary": "A dragon suited to your own power appears; it takes you for its parent and is loyal.",
+      "full": "A dragon of a kind chosen by the GM appears in an unoccupied space within 30 feet of you. It is no greater than your own level — a drake or dragonet early on, a true dragon later — and it takes you for its parent, loyal for as long as you both live.",
       "draw_terminating": false,
-      "narration": "A shell cracks and something ancient imprints on you; the Dragon gives you a wyrmling that thinks you are its parent."
+      "narration": "Something scaled uncurls and fixes on you; the Dragon gives you a kin that thinks you are its parent."
     },
     "mechanics": {
       "kind": "spawn_wyrmling",
-      "params": {}
+      "params": {
+        "match_drawer_level": true,
+        "level_band": 4
+      }
     },
     "art": {
       "front": "assets/cards-labeled/dragon.png",

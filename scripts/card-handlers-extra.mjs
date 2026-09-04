@@ -425,7 +425,6 @@ export async function applyDestroyMagicItems({ actor, api, card }) {
  * bestiaries, against zero by that name pattern.
  */
 const SPAWN_SPECS = {
-  spawn_wyrmling:     { traits: ['dragon'], level: [1, 6],    friendly: true },
   spawn_ooze:         { traits: ['ooze'], level: [0, 12],     friendly: false },
   spawn_hostile:      { traits: ['beast', 'aberration'], level: [5, 12], friendly: false },
   avatar_of_death:    { traits: ['undead'], level: [8, 16],   friendly: false }
@@ -734,5 +733,74 @@ export async function applySpawnHomunculus({ actor, api, card }) {
     log: `${card.name}: a ${chosen.name.toLowerCase()} (level ${chosen.level}) blinks awake `
       + `and takes you for its maker`,
     meta: { spawned: chosen.name }
+  };
+}
+
+/**
+ * Dragon: a dragon that grows with you.
+ *
+ * The card says "wyrmling", which is 5e's youngest of four age categories.
+ * PF2e has three and starts at Young, whose cheapest example is level 7 — so
+ * taken literally this card hands a level 1 party a permanent, loyal level 7
+ * dragon, which is the end of the campaign rather than a card in it.
+ *
+ * The dragon is matched to the drawing character instead, the same principle
+ * as Knight's warrior: the best dragon-family creature at or just below their
+ * level. That is faithful to "a dragon of a type chosen by the GM" at every
+ * level, and Monster Core happens to supply a clean ladder — House Drake at 1,
+ * dragonets and drakes through 6, Young dragons from 7, Adult from 11.
+ *
+ * Monster Core is preferred over the adventure bestiaries, so the dragon is a
+ * dragon rather than somebody's named villain.
+ */
+const DRAGON_BAND = 4;                    // how far below the drawer to look
+const DRAGON_ART = {
+  drake: `modules/${MODULE_ID}/assets/tokens/dragon-drake.webp`,
+  young: `modules/${MODULE_ID}/assets/tokens/dragon-young.webp`,
+  elder: `modules/${MODULE_ID}/assets/tokens/dragon-elder.webp`
+};
+
+/** Which picture suits the thing that turned up. */
+export function dragonArtFor(name, level) {
+  if (/\((Adult|Ancient)/i.test(name ?? '') || level >= 11) return DRAGON_ART.elder;
+  if (/\(Young/i.test(name ?? '') || level >= 7) return DRAGON_ART.young;
+  return DRAGON_ART.drake;
+}
+
+export async function applySpawnDragon({ actor, api, card, rng }) {
+  const level = actor?.system?.details?.level?.value ?? 1;
+  const minLevel = Math.max(-1, level - DRAGON_BAND);
+
+  const pick = async (packs) => api.findCreatures({
+    traits: ['dragon'], minLevel, maxLevel: level, excludeTraits: ['troop'], packs
+  });
+
+  // Monster Core first: its dragons are dragons, not named villains from an
+  // adventure path with a place in someone's plot.
+  let pool = await pick(['pf2e.pathfinder-monster-core', 'pf2e.pathfinder-monster-core-2']);
+  if (!pool.length) pool = await pick(null);
+  if (!pool.length) {
+    pool = await api.findCreatures({ traits: ['dragon'], maxLevel: level, excludeTraits: ['troop'] });
+  }
+
+  if (!pool.length) {
+    return {
+      mode: 'gm',
+      log: `${card.name}: no dragon of level ${level} or below in the installed bestiaries `
+        + `— place one yourself.`,
+      meta: { kind: 'gm_only' }
+    };
+  }
+
+  const chosen = pool[Math.floor(rng() * pool.length)];
+  await api.spawnCreatures([{ pack: chosen.pack, id: chosen.id }], {
+    nearActorId: actor.id,
+    disposition: 1,
+    img: dragonArtFor(chosen.name, chosen.level)
+  });
+  return {
+    mode: 'auto',
+    log: `${card.name}: a ${chosen.name} (level ${chosen.level}) takes you for its parent`,
+    meta: { spawned: chosen.name, level: chosen.level }
   };
 }

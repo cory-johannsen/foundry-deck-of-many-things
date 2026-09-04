@@ -219,9 +219,11 @@ describe('spawning', () => {
     expect(api.spy.spawned[0].o.nearActorId).toBe('a1');
   });
 
-  it('places an ally as friendly', async () => {
-    const { api } = await run('dragon', { api: makeApi({ creatures }) });
-    expect(api.spy.spawned[0].o.disposition).toBe(1);
+  it('places a hostile summons with hostile disposition', async () => {
+    // Knight, Construct and Dragon each build or name their own creature now,
+    // so everything left on the shared spawner is hostile.
+    const { api } = await run('skull', { api: makeApi({ creatures }) });
+    expect(api.spy.spawned[0].o.disposition).toBe(-1);
   });
 
   it('defers to the GM when the bestiary yields nothing', async () => {
@@ -378,7 +380,7 @@ describe('spawning prefers the world over the compendium', () => {
 
   it('takes a world NPC when one fits, and spawns it by actor id', async () => {
     const [a, spawned] = api({ world: [worldNpc], pack: [packNpc] });
-    const r = await applyCardEffect({ card: BY_ID.get('dragon'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
+    const r = await applyCardEffect({ card: BY_ID.get('skull'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
     expect(spawned[0].e[0]).toEqual({ actorId: 'w1' });
     expect(r.meta.source).toBe('world');
     expect(r.log).toContain('Aller Rosk');
@@ -386,7 +388,7 @@ describe('spawning prefers the world over the compendium', () => {
 
   it('falls back to the compendium when the world has nobody suitable', async () => {
     const [a, spawned] = api({ world: [], pack: [packNpc] });
-    const r = await applyCardEffect({ card: BY_ID.get('dragon'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
+    const r = await applyCardEffect({ card: BY_ID.get('skull'), actor: actorOf(), api: a, rng: () => 0.5, confirmGate: false });
     expect(spawned[0].e[0]).toEqual({ pack: 'b', id: 'c1' });
     expect(r.meta.source).toBe('compendium');
   });
@@ -667,7 +669,7 @@ describe('Monstrosity respects the size its card demands', () => {
 
   it('leaves cards with no size requirement alone', async () => {
     const [a, spawned] = api(world);
-    await applyCardEffect({ card: BY_ID.get('dragon'), actor: actorOf(), api: a, rng: () => 0, confirmGate: false });
+    await applyCardEffect({ card: BY_ID.get('skull'), actor: actorOf(), api: a, rng: () => 0, confirmGate: false });
     expect(spawned).toHaveLength(1);   // Small is fine for an ally
   });
 });
@@ -1035,5 +1037,85 @@ describe('creature packs', () => {
     for (const pack of ['pf2e.equipment-srd', 'pf2e.spells-srd', 'pf2e.ancestries']) {
       expect(CREATURE_PACK_PATTERN.test(pack), pack).toBe(false);
     }
+  });
+});
+
+describe('Dragon grows with the character', () => {
+  // Taken literally the card hands a level 1 party a permanent loyal level 7
+  // dragon, PF2e's youngest true dragon age category starting there.
+  const core = [
+    { pack: 'pf2e.pathfinder-monster-core', id: 'd1', name: 'House Drake', level: 1, traits: ['dragon'] },
+    { pack: 'pf2e.pathfinder-monster-core', id: 'd3', name: 'River Drake', level: 3, traits: ['dragon'] },
+    { pack: 'pf2e.pathfinder-monster-core', id: 'd7', name: 'Omen Dragon (Young)', level: 7, traits: ['dragon'] },
+    { pack: 'pf2e.pathfinder-monster-core', id: 'd12', name: 'Horned Dragon (Adult)', level: 12, traits: ['dragon'] }
+  ];
+  const other = [{ pack: 'pf2e.age-of-ashes-bestiary', id: 'v1', name: "Somebody's Villain", level: 3, traits: ['dragon'] }];
+
+  const api = () => {
+    const spawned = [];
+    return [{
+      ...makeApi(),
+      findCreatures: async ({ minLevel = null, maxLevel = null, packs = null } = {}) => {
+        const pool = packs ? core : [...core, ...other];
+        return pool.filter((c) => (minLevel == null || c.level >= minLevel)
+          && (maxLevel == null || c.level <= maxLevel));
+      },
+      spawnCreatures: async (e, o) => { spawned.push({ e, o }); }
+    }, spawned];
+  };
+  const draw = (level, a, rng = () => 0) => applyCardEffect({
+    card: BY_ID.get('dragon'),
+    actor: { id: 'a1', system: { details: { level: { value: level } } } },
+    api: a, rng, confirmGate: false });
+
+  it('never exceeds the drawing character’s level', async () => {
+    for (const level of [1, 3, 7, 12]) {
+      const [a, spawned] = api();
+      await draw(level, a, () => 0.999);
+      const got = core.find((c) => c.id === spawned[0].e[0].id);
+      expect(got.level, `level ${level}`).toBeLessThanOrEqual(level);
+    }
+  });
+
+  it('gives a level 1 character a drake, not a true dragon', async () => {
+    const [a, spawned] = api();
+    const r = await draw(1, a);
+    expect(spawned[0].e[0].id).toBe('d1');
+    expect(r.log).toContain('House Drake');
+  });
+
+  it('gives a high-level character a real dragon', async () => {
+    const [a, spawned] = api();
+    await draw(12, a, () => 0.999);
+    expect(['d7', 'd12']).toContain(spawned[0].e[0].id);
+  });
+
+  it('prefers Monster Core over somebody’s adventure villain', async () => {
+    const [a, spawned] = api();
+    await draw(3, a, () => 0.999);
+    expect(spawned[0].e[0].id).not.toBe('v1');
+  });
+
+  it('arrives loyal', async () => {
+    const [a, spawned] = api();
+    const r = await draw(3, a);
+    expect(spawned[0].o.disposition).toBe(1);
+    expect(r.log).toContain('takes you for its parent');
+  });
+
+  it('brings a picture suited to what turned up', async () => {
+    const { dragonArtFor } = await import('../scripts/card-handlers-extra.mjs');
+    expect(dragonArtFor('House Drake', 1)).toContain('dragon-drake.webp');
+    expect(dragonArtFor('Omen Dragon (Young)', 7)).toContain('dragon-young.webp');
+    expect(dragonArtFor('Horned Dragon (Adult)', 12)).toContain('dragon-elder.webp');
+    expect(dragonArtFor('Requiem Dragon (Ancient)', 20)).toContain('dragon-elder.webp');
+  });
+
+  it('asks the GM when nothing is small enough', async () => {
+    const [a, spawned] = api();
+    a.findCreatures = async () => [];
+    const r = await draw(1, a);
+    expect(spawned).toHaveLength(0);
+    expect(r.mode).toBe('gm');
   });
 });
