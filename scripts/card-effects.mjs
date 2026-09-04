@@ -4,8 +4,8 @@ import {
   applyXpGain, applyXpLoss, applyXpGainWithItem, applySoloKillLevelUp,
   applyWealthGrant, applyPetrify, applyFall, applySoulTrap,
   applyElementImmunity, applyGrantTelepathy, applyUnarmoredDefense,
-  applyItemGrant, applyDestroyMagicItems, applySpawn,
-  applyBonusDraws, applyStopDrawing, applyDrawTwoKeepOne, applyBeastForm, applySpawnAlly, applySpawnHomunculus, applySpawnDragon, applySpawnOoze,
+  applyItemGrant, applyDestroyMagicItems,
+  applyBonusDraws, applyStopDrawing, applyDrawTwoKeepOne, applyBeastForm, applySpawnAlly, applySpawnHomunculus, applySpawnDragon, applySpawnOoze, applySpawnMonstrosity, applySummonAvatarOfDeath,
   applyRandomHostileNpc
 } from './card-handlers-extra.mjs';
 import {
@@ -455,7 +455,7 @@ const HANDLERS = {
   stop_drawing_optional: applyStopDrawing,
   spawn_ally_npc: applySpawnAlly,
   spawn_wyrmling: applySpawnDragon,
-  spawn_hostile: applySpawn,
+  spawn_hostile:      applySpawnMonstrosity,
   spawn_ooze:         applySpawnOoze,
   fall: applyFall,
   spellcast_slotless: applySpellGrant,
@@ -464,7 +464,7 @@ const HANDLERS = {
   map_query: applyTrackedUses,
   armor_grant: applyItemGrant,
   skill_proficiencies: applySkillProficiencies,
-  avatar_of_death: applySpawn,
+  avatar_of_death:    applySummonAvatarOfDeath,
   keep_grant: gmCard(),
   resurrection_grant: applyTrackedUses,
   draw_two_keep_one: applyDrawTwoKeepOne,
