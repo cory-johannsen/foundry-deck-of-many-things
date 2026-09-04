@@ -425,7 +425,6 @@ export async function applyDestroyMagicItems({ actor, api, card }) {
  * bestiaries, against zero by that name pattern.
  */
 const SPAWN_SPECS = {
-  spawn_homunculus:   { traits: ['construct'], level: [0, 4], friendly: true },
   spawn_wyrmling:     { traits: ['dragon'], level: [1, 6],    friendly: true },
   spawn_ooze:         { traits: ['ooze'], level: [0, 12],     friendly: false },
   spawn_hostile:      { traits: ['beast', 'aberration'], level: [5, 12], friendly: false },
@@ -691,5 +690,49 @@ export async function applySpawnAlly({ actor, api, card }) {
       + `and serves you until death`
       + (anc.matched ? '' : ' (no ancestry on your sheet, so a human knight in plate)'),
     meta: { level: b.level, ancestry: anc.name }
+  };
+}
+
+/**
+ * Construct: a homunculus, specifically.
+ *
+ * It used to ask the spawner for any construct between levels 0 and 4, and
+ * take one out of the world by preference — which in this campaign meant
+ * Dreshkan or Mister Beak, named NPCs with their own place in the story, and
+ * never a homunculus at all.
+ *
+ * The card names its creature, so the creature is looked up by name. PF2e has
+ * a canonical Homunculus in Monster Core: level 0, tiny, and unlike Knight's
+ * warrior it does not scale, because the card does not ask it to.
+ */
+const HOMUNCULUS_NAMES = ['^Homunculus$', '^Soulbound Homunculus$', 'Homunculus'];
+/** Monster Core ships no token art for it, so the module brings its own. */
+const HOMUNCULUS_ART = `modules/${MODULE_ID}/assets/tokens/homunculus.webp`;
+
+export async function applySpawnHomunculus({ actor, api, card }) {
+  let chosen = null;
+  for (const namePattern of HOMUNCULUS_NAMES) {
+    const found = await api.findCreatures({ namePattern, excludeTraits: ['troop'] });
+    if (found.length) { chosen = found[0]; break; }
+  }
+
+  if (!chosen) {
+    return {
+      mode: 'gm',
+      log: `${card.name}: no homunculus in the installed bestiaries — place one yourself.`,
+      meta: { kind: 'gm_only' }
+    };
+  }
+
+  await api.spawnCreatures([{ pack: chosen.pack, id: chosen.id }], {
+    nearActorId: actor.id,
+    disposition: 1,
+    img: HOMUNCULUS_ART
+  });
+  return {
+    mode: 'auto',
+    log: `${card.name}: a ${chosen.name.toLowerCase()} (level ${chosen.level}) blinks awake `
+      + `and takes you for its maker`,
+    meta: { spawned: chosen.name }
   };
 }

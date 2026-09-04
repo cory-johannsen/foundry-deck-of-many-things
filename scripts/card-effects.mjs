@@ -5,7 +5,7 @@ import {
   applyWealthGrant, applyPetrify, applyFall, applySoulTrap,
   applyElementImmunity, applyGrantTelepathy, applyUnarmoredDefense,
   applyItemGrant, applyDestroyMagicItems, applySpawn,
-  applyBonusDraws, applyStopDrawing, applyDrawTwoKeepOne, applyBeastForm, applySpawnAlly,
+  applyBonusDraws, applyStopDrawing, applyDrawTwoKeepOne, applyBeastForm, applySpawnAlly, applySpawnHomunculus,
   applyRandomHostileNpc
 } from './card-handlers-extra.mjs';
 import {
@@ -440,7 +440,7 @@ const HANDLERS = {
   beast_form: applyBeastForm,
   cast_time_stop_n: applyTrackedUses,
   cast_gate_n: applyTrackedUses,
-  spawn_homunculus: applySpawn,
+  spawn_homunculus: applySpawnHomunculus,
   age_shift: applyAgeShift,
   trap_extraplanar: applyExile,
   element_immunity: applyElementImmunity,
