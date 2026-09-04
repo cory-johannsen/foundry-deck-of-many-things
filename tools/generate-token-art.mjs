@@ -139,7 +139,7 @@ export const CREATURES = [
       + 'sheen of violet, teal and gold, lit from the side against darkness' },
   { id: 'ooze-blob', file: 'ooze-blob', shapeless: true,
     prompt: 'A vast mound of translucent pink and grey devouring slime, veined and pulsing, '
-      + 'spreading forward in a slow wave over the ground' }
+      + 'its leading edge curling forward over itself in a slow breaking wave' }
 ];
 
 const promptFor = (s) => s.prompt
