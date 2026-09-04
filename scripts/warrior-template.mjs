@@ -116,9 +116,29 @@ export function ancestryOf(actor) {
     : { name: 'Human', trait: 'human', matched: false };
 }
 
+/** Ancestries with their own token art; anyone else gets the helmed generic. */
+export const TOKEN_ART = new Set([
+  'dwarf', 'human', 'tengu',                                    // the party
+  'elf', 'gnome', 'goblin', 'halfling', 'leshy', 'orc'          // Player Core common
+]);
+
 /**
- * Build the NPC. Returns document data ready to create, with no art — the
- * caller supplies that, since the compendium has none to offer either.
+ * The token image for an ancestry.
+ *
+ * The compendium offers none — not one sampled martial NPC has token art, the
+ * system's own Knight included — so these are generated. An ancestry without
+ * its own picture gets a warrior whose face is inside a closed helm, which is
+ * a deliberate answer rather than a missing one.
+ */
+export function tokenArtFor(ancestryName) {
+  const slug = String(ancestryName ?? '').toLowerCase();
+  const file = TOKEN_ART.has(slug) ? slug : 'generic';
+  return `modules/${MODULE_ID}/assets/tokens/warrior-${file}.webp`;
+}
+
+/**
+ * Build the NPC. Returns document data ready to create. Art is chosen from the
+ * ancestry unless the caller overrides it.
  */
 export function buildWarrior({ actor, level, ancestry = null, img = null,
                               baseSpeed = null } = {}) {
@@ -126,6 +146,7 @@ export function buildWarrior({ actor, level, ancestry = null, img = null,
   const anc = ancestry ?? ancestryOf(actor);
   const dmg = damageBonus(b.level);
   const name = `${anc.name} Warrior`;
+  const art = img ?? tokenArtFor(anc.name);
 
   // A local id generator: this module builds plain data and is tested without
   // a live Foundry, so it cannot reach for foundry.utils.
@@ -150,13 +171,13 @@ export function buildWarrior({ actor, level, ancestry = null, img = null,
   return {
     name,
     type: 'npc',
-    img: img ?? undefined,
+    img: art,
     prototypeToken: {
       name,
       disposition: 1,                      // an ally, not a monster
       actorLink: false,
       sight: { enabled: true },
-      ...(img ? { texture: { src: img } } : {})
+      texture: { src: art }
     },
     system: {
       details: {
