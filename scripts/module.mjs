@@ -77,20 +77,29 @@ Hooks.once('ready', async () => {
   console.log(`${MODULE_ID} | ready — api attached to game.modules.get('${MODULE_ID}').api`);
 });
 
+/**
+ * The macros the module puts on the hotbar.
+ *
+ * The icons were Foundry's own card-hand, eye and regen SVGs: flat grey line
+ * drawings that look like nothing to do with this deck, and which a GM has to
+ * tell apart by hovering. A hotbar slot is about fifty pixels, so these are
+ * drawn as icons rather than as pictures — one shape each, and one colour
+ * each, so the three read apart at a glance without being read at all.
+ */
 const MACRO_DEFS = [
   {
     name: 'DOMMT: Play the Deck',
-    img: 'icons/svg/card-hand.svg',
+    img: `modules/${MODULE_ID}/assets/icons/macro-deck.webp`,
     command: `game.modules.get('${MODULE_ID}').api.openDeck();`
   },
   {
     name: 'DOMMT: Divine — Celtic Cross',
-    img: 'icons/svg/eye.svg',
+    img: `modules/${MODULE_ID}/assets/icons/macro-divine.webp`,
     command: `game.modules.get('${MODULE_ID}').api.openDivination();`
   },
   {
     name: 'DOMMT: Reset Play Deck (GM)',
-    img: 'icons/svg/regen.svg',
+    img: `modules/${MODULE_ID}/assets/icons/macro-reset.webp`,
     command: `if (!game.user.isGM) return ui.notifications.warn('GM only');\nawait game.modules.get('${MODULE_ID}').api.resetDeck();\nui.notifications.info('Deck reset');`
   }
 ];
@@ -101,7 +110,10 @@ async function ensureWorldMacros({ force = false } = {}) {
   for (const def of MACRO_DEFS) {
     const existing = game.macros.find((m) => m.name === def.name);
     if (existing) {
-      if (force || existing.command !== def.command) {
+      // The picture counts as a change. This compared commands only, so a
+      // macro already on someone's hotbar kept its old icon for ever unless
+      // the code behind it happened to change too.
+      if (force || existing.command !== def.command || existing.img !== def.img) {
         toUpdate.push({ _id: existing.id, command: def.command, img: def.img });
       }
     } else {

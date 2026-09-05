@@ -71,6 +71,28 @@ export const SHAPELESS_NEGATIVE = `${NEGATIVE}, face, head, eyes, mouth, teeth, 
   + 'ground, floor, terrain, horizon';
 
 /**
+ * A style for the macro icons, which are not tokens and are not drawn big.
+ *
+ * A hotbar slot is about fifty pixels. Everything the token style asks for —
+ * intricate linework, fine detail, a portrait's worth of face — turns to mud
+ * at that size, so this asks for the opposite: a few large shapes with a
+ * silhouette you can read at a glance, which is what an icon is.
+ */
+export const ICON_STYLE = 'bold emblematic game icon, one strong simple silhouette, a few large shapes, '
+  + 'thick heavy outlines, very high contrast, dramatic rim lighting, painted dark fantasy, '
+  + 'the object centred and filling the frame, isolated on a plain solid black background, '
+  + 'black background, no scenery';
+
+// The first three came back as gold line-art inside ornate frames, and at
+// fifty pixels they were three identical gold circles. "Tarot" invited the
+// frame and the gold; naming the ornament explicitly is what keeps it out, and
+// each icon carries its own colour so they read apart in the hotbar.
+export const ICON_NEGATIVE = `${NEGATIVE}, fine detail, intricate tiny elements, busy composition, `
+  + 'thin delicate lines, cluttered, many small objects, realistic photograph, muted colours, '
+  + 'card frame, ornamental border, filigree, corner ornament, circular frame, ring border, '
+  + 'concentric circles, symmetrical mandala, art deco border, gold line art, engraving';
+
+/**
  * One entry per ancestry we expect to see, plus a fallback.
  *
  * Ordered as the table plays: the party's own ancestries first, then the rest
@@ -160,21 +182,49 @@ export const CREATURES = [
       + 'its leading edge curling forward over itself in a slow breaking wave' }
 ];
 
+/**
+ * The macro icons the module installs onto the hotbar.
+ *
+ * They ship pointing at Foundry's own card-hand, eye and regen SVGs, which are
+ * flat grey line drawings and look like nothing to do with this deck. Three
+ * shapes that read apart at a glance: a fan of cards, an eye, a spiral.
+ */
+export const ICONS = [
+  // A single card filling the frame is a framed picture, which is why this
+  // kept coming back bordered. The cards have to overlap and tilt to read as
+  // a hand rather than as a portrait of one card.
+  { id: 'icon-deck', file: 'macro-deck', dir: 'assets/icons', icon: true,
+    prompt: 'Four playing cards fanned out at sharply different angles like a hand held in the '
+      + 'fingers, overlapping each other, deep crimson backs edged in gold, tilted diagonally '
+      + 'across the picture',
+    avoid: 'single card, one card upright, framed picture, picture frame, heart symbol, '
+      + 'poker card face, suits, numbers' },
+  { id: 'icon-divine', file: 'macro-divine', dir: 'assets/icons', icon: true,
+    prompt: 'One single huge open eye, a glowing violet iris pouring pale light, nothing else' },
+  { id: 'icon-reset', file: 'macro-reset', dir: 'assets/icons', icon: true,
+    prompt: 'Two thick emerald green arrows curving around each other into a closed circle, '
+      + 'a small squat stack of cards resting in the middle' }
+];
+
 const promptFor = (s) => s.prompt
-  ? `${s.prompt}, ${s.shapeless ? SHAPELESS_STYLE : STYLE}`
+  ? `${s.prompt}, ${s.icon ? ICON_STYLE : s.shapeless ? SHAPELESS_STYLE : STYLE}`
   : `Portrait bust of ${s.who}, wearing full plate armour, `
     + `a longsword held upright at the shoulder, stern and watchful, sworn to service, ${STYLE}`;
 
 const negativeFor = (s) => {
-  const base = s.shapeless ? SHAPELESS_NEGATIVE : NEGATIVE;
+  const base = s.icon ? ICON_NEGATIVE : s.shapeless ? SHAPELESS_NEGATIVE : NEGATIVE;
   return s.avoid ? `${base}, ${s.avoid}` : base;
 };
 
 /** Every subject, warriors and creatures alike, with the file each writes. */
 const ALL = [
   ...SUBJECTS.map((s) => ({ ...s, file: `warrior-${s.id}` })),
-  ...CREATURES.map((c) => ({ ...c, file: c.file }))
+  ...CREATURES.map((c) => ({ ...c, file: c.file })),
+  ...ICONS
 ];
+
+/** Tokens go to assets/tokens; a subject may name somewhere else. */
+const dirFor = (s) => (s.dir ? join(root, s.dir) : OUT_DIR);
 
 const build = (prompt, seed, prefix, negative = NEGATIVE) => ({
   '1': { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: CHECKPOINT } },
@@ -272,12 +322,12 @@ async function main() {
   const force = args.includes('--force');
   const reroll = parseInt(args.find((a) => a.startsWith('--reroll='))?.split('=')[1] ?? '0', 10);
   const only = args.filter((a) => !a.startsWith('--'));
-  mkdirSync(OUT_DIR, { recursive: true });
-
   const wanted = ALL.filter((s) => (!only.length || only.includes(s.id)));
   for (const s of wanted) {
-    const dest = join(OUT_DIR, `${s.file}.png`);
-    const final = join(OUT_DIR, `${s.file}.webp`);
+    const outDir = dirFor(s);
+    mkdirSync(outDir, { recursive: true });
+    const dest = join(outDir, `${s.file}.png`);
+    const final = join(outDir, `${s.file}.webp`);
     if (existsSync(final) && !force) { console.log(`${s.id.padEnd(10)} exists, skipping`); continue; }
     const prompt = promptFor(s);
     // The same prompt produces a plain background on some rolls and a lit
@@ -297,12 +347,12 @@ async function main() {
       console.log(`background ${score.toFixed(0)}`);
       if (!best || score < best.score) {
         best = { score, buf: null };
-        writeFileSync(join(OUT_DIR, `.best-${s.file}.png`), readFileSync(dest));
+        writeFileSync(join(outDir, `.best-${s.file}.png`), readFileSync(dest));
       }
       if (score < CLEAN_THRESHOLD) break;
     }
     // Keep the darkest of the attempts if none came back clean.
-    const bestPath = join(OUT_DIR, `.best-${s.file}.png`);
+    const bestPath = join(outDir, `.best-${s.file}.png`);
     if (existsSync(bestPath)) {
       writeFileSync(dest, readFileSync(bestPath));
       unlinkSync(bestPath);
@@ -313,7 +363,7 @@ async function main() {
     shrink(dest, final);
     unlinkSync(dest);
     console.log(`${' '.repeat(10)} kept background ${kept === null ? '?' : kept.toFixed(0)}`
-      + ` -> assets/tokens/${s.file}.webp`);
+      + ` -> ${s.dir ?? 'assets/tokens'}/${s.file}.webp`);
   }
 }
 

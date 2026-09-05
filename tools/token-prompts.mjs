@@ -28,7 +28,7 @@ import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import {
-  SUBJECTS, CREATURES, SIZE, TOKEN_PX, NEGATIVE, SHAPELESS_NEGATIVE
+  SUBJECTS, CREATURES, ICONS, SIZE, TOKEN_PX, NEGATIVE, SHAPELESS_NEGATIVE, ICON_NEGATIVE
 } from './generate-token-art.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -45,10 +45,22 @@ const STYLE_PROSE =
   'Dark fantasy illustration with intricate linework, rich jewel-tone colours and dramatic '
   + 'rim lighting, in the style of a painted trading card.';
 
+// The token style asks for intricate linework, which is exactly wrong for
+// something drawn at fifty pixels: the detail is not merely wasted, it turns
+// the silhouette to mud. Icons get the opposite instruction.
+const ICON_PROSE =
+  'Painted dark fantasy, bold and graphic, with heavy outlines, very high contrast and '
+  + 'dramatic rim lighting.';
+
 const FRAMING = {
   bust: 'Frame it as a centred bust portrait, head and shoulders, filling most of the frame.',
   shapeless: 'Show the whole creature centred and filling the frame, alone in empty black space '
-    + 'with nothing beneath or behind it.'
+    + 'with nothing beneath or behind it.',
+  // An icon is looked at, not read. Saying the display size is what stops the
+  // model spending its detail budget on things nobody will ever see.
+  icon: 'Draw it as a bold game icon: one strong silhouette in a few large shapes with thick '
+    + 'outlines and very high contrast. It is displayed about fifty pixels across, so anything '
+    + 'finer than that is wasted.'
 };
 
 /**
@@ -63,6 +75,13 @@ const BACKGROUND =
   + 'no horizon, no border and no frame. The image is a map token and is drawn over dark '
   + 'terrain, so anything behind the subject shows up as a visible square tile.';
 
+// Same requirement, different reason. Telling a model an icon is a map token
+// is simply untrue, and the true reason is at least as persuasive.
+const ICON_BACKGROUND =
+  'The background must be plain solid black with nothing in it at all — no scenery, no border, '
+  + 'no frame and no decorative surround. It sits in a small dark square slot on a toolbar, so '
+  + 'any frame reads as a box drawn around the icon.';
+
 const dimensions = (px) =>
   `Output a square image, exactly ${px} by ${px} pixels, 1:1 aspect ratio.`;
 
@@ -75,13 +94,13 @@ export function geminiPrompt(s, px = SIZE) {
     ? `${s.prompt.replace(/^A /, 'A ')}.`
     : `Portrait bust of ${s.who}, wearing full plate armour, a longsword held upright at the `
       + 'shoulder, stern and watchful, sworn to service.';
-  const negatives = [s.shapeless ? SHAPELESS_NEGATIVE : NEGATIVE, s.avoid]
-    .filter(Boolean).join(', ');
+  const base = s.icon ? ICON_NEGATIVE : s.shapeless ? SHAPELESS_NEGATIVE : NEGATIVE;
+  const negatives = [base, s.avoid].filter(Boolean).join(', ');
   return [
     subject,
-    STYLE_PROSE,
-    FRAMING[s.shapeless ? 'shapeless' : 'bust'],
-    BACKGROUND,
+    s.icon ? ICON_PROSE : STYLE_PROSE,
+    FRAMING[s.icon ? 'icon' : s.shapeless ? 'shapeless' : 'bust'],
+    s.icon ? ICON_BACKGROUND : BACKGROUND,
     dimensions(px),
     avoidance(negatives)
   ].join(' ');
@@ -89,7 +108,8 @@ export function geminiPrompt(s, px = SIZE) {
 
 const ALL = [
   ...SUBJECTS.map((s) => ({ ...s, file: `warrior-${s.id}` })),
-  ...CREATURES
+  ...CREATURES,
+  ...ICONS
 ];
 
 function main() {
@@ -122,7 +142,7 @@ function main() {
   ];
 
   for (const s of chosen) {
-    lines.push(`## ${s.id}`, '', `Save as \`assets/tokens/${s.file}.webp\``, '',
+    lines.push(`## ${s.id}`, '', `Save as \`${s.dir ?? 'assets/tokens'}/${s.file}.webp\``, '',
                '```text', geminiPrompt(s), '```', '');
   }
 
