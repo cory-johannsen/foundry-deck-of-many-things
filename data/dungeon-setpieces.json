@@ -1,0 +1,57 @@
+[
+  {
+    "id": "the_perfect_hand",
+    "kind": "puzzle",
+    "name": "The Perfect Hand",
+    "difficulty": "easy",
+    "complete": true,
+    "summary": "A statue of a halfling holds one card (the Rogue) and speaks a riddle naming four missing cards — Sage, Jester, Knight, Fates — and how each relates to the others (who dislikes being next to whom, who gazes at whom, who stands beside whom, orientation included). The party must find the four missing cards elsewhere nearby, then arrange all five in the statue's hand — in the correct order, each upright or reversed per the riddle — to slide the statue aside and reveal a secret door.",
+    "hintChecks": [
+      { "skill": "Perception", "dc": 10, "hint": "Grooves in the statue's palms are sized for a fanned hand of five cards." },
+      { "skill": "Society", "dc": 10, "hint": "The statue's riddle explains the order the cards must be sorted into." },
+      { "skill": "Occultism", "dc": 10, "hint": "For the cards to face the directions the riddle describes, some must be placed reversed." }
+    ],
+    "solution": "Work outward from the fixed Rogue card using each relationship in the riddle in turn — the book's diagram 4.1 shows the exact five-card final arrangement and orientations. DCs are the book's flat 5e values; scale them to your party's level per PF2e's normal DC-by-level guidance.",
+    "source": { "chapter": 4 }
+  },
+  {
+    "id": "unseen_order",
+    "kind": "puzzle",
+    "name": "Unseen Order",
+    "difficulty": "medium",
+    "complete": true,
+    "summary": "A ghostly jester challenges the party to a Mastermind-style guessing game. She secretly holds four cards (drawn from six possibilities — Comet, Gem, Moon, Skull, Star, Sun — repeats allowed) face down. The party places a guess of four cards into a row; for each guess, a correct card in the correct position scores a red marker and a correct card in the wrong position scores a blue marker. Ten guesses total. Solving it in six or fewer wins a bonus treasure on top of the normal prize for winning at all.",
+    "hintChecks": [
+      { "skill": "Diplomacy", "dc": 10, "hint": "Asked politely, the ghost demonstrates one example round so the players can see how the red/blue markers work." }
+    ],
+    "solution": "Solvable only through deduction from the accumulating red/blue feedback, not a fixed answer — the GM secretly picks the four-card hand at the start. The book's diagram 4.4 walks through one full example game (hand: Moon, Sun, Skull, Gem).",
+    "source": { "chapter": 4 }
+  },
+  {
+    "id": "balance_and_ruin",
+    "kind": "trap",
+    "name": "Balance and Ruin",
+    "difficulty": "medium",
+    "complete": false,
+    "summary": "(mechanics not transcribed — the book's Chapter 4 \"Trap Rooms\" section names this trap but gives no base write-up anywhere in the printed text; it only reappears, modified, as a room in the Gardmore Abbey adventure later in the book: a narrow beam spanning a pit of grinding gears, with a pressure plate that raises spiked metal walls when weight shifts to the wrong side of the beam.)",
+    "source": { "chapter": 4, "note": "Only a reused, modified version survives in this copy, in the Gardmore Abbey chapter." }
+  },
+  {
+    "id": "surface_of_the_sun",
+    "kind": "trap",
+    "name": "Surface of the Sun",
+    "difficulty": "medium",
+    "complete": false,
+    "summary": "(mechanics not transcribed — named only in Chapter 4's \"Trap Rooms\" list, with no base write-up in the printed text; it reappears, modified, in the Gardmore Abbey chapter as three parallel halls under a scorching ceiling that deals fire damage to anyone inside each round.)",
+    "source": { "chapter": 4, "note": "Only a reused, modified version survives in this copy, in the Gardmore Abbey chapter." }
+  },
+  {
+    "id": "test_of_the_empty_moon",
+    "kind": "trap",
+    "name": "Test of the Empty Moon",
+    "difficulty": "medium",
+    "complete": false,
+    "summary": "(mechanics not transcribed — named only in Chapter 4's \"Trap Rooms\" list, with no base write-up in the printed text; it reappears, modified, in the Gardmore Abbey chapter as a chamber with a portcullis, a moon-phase glyph, and a lever puzzle gating passage north.)",
+    "source": { "chapter": 4, "note": "Only a reused, modified version survives in this copy, in the Gardmore Abbey chapter." }
+  }
+]

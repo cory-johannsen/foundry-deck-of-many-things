@@ -60,7 +60,7 @@ describe('the hotbar macros point at the module\'s own icons', () => {
     const defs = source.slice(source.indexOf('const MACRO_DEFS'),
                               source.indexOf('async function ensureWorldMacros'));
     expect(defs).not.toMatch(/icons\/svg\//);
-    expect(defs.match(/assets\/icons\/macro-[\w-]+\.webp/g)).toHaveLength(4);
+    expect(defs.match(/assets\/icons\/macro-[\w-]+\.webp/g)).toHaveLength(5);
   });
 
   it('treats a changed icon as a reason to update an installed macro', () => {

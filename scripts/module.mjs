@@ -17,6 +17,8 @@ import {
   clearDivinationTable
 } from './scene-divination.mjs';
 import { generateEncounter } from './encounter-generator.mjs';
+import { DungeonApp } from './ui/dungeon-app.mjs';
+import { abandonRun } from './dungeon-runner.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 
@@ -41,6 +43,13 @@ Hooks.once('init', () => {
   game.settings.register(MODULE_ID, 'playDeck', {
     scope: 'world', config: false, type: Object,
     default: { remaining: [], drawn: [], seed: '' }
+  });
+  // Keyed by scene id: { [sceneId]: DungeonRunState }. See dungeon-runner.mjs —
+  // there is no precedent in this module for structured data on a Scene flag,
+  // so a dungeon run reuses playDeck's proven "read whole, mutate, write
+  // whole" shape instead, scoped by scene id rather than by flag.
+  game.settings.register(MODULE_ID, 'dungeonRuns', {
+    scope: 'world', config: false, type: Object, default: {}
   });
 });
 
@@ -70,7 +79,15 @@ Hooks.once('ready', async () => {
     },
     installMacros: () => ensureWorldMacros({ force: true }),
     installDivinationScene: () => ensureDivinationScene(),
-    generateEncounter: () => generateEncounter()
+    generateEncounter: (options) => generateEncounter(options),
+    openDungeon: () => {
+      if (!game.user.isGM) return ui.notifications.warn(game.i18n.localize('DOMMT.Dungeon.GmOnlyWarning'));
+      return new DungeonApp().render(true);
+    },
+    resetDungeon: async (sceneId) => {
+      if (!game.user.isGM) return ui.notifications.warn(game.i18n.localize('DOMMT.Dungeon.GmOnlyWarning'));
+      await abandonRun({ sceneId: sceneId ?? canvas?.scene?.id });
+    }
   };
   if (game.user.isGM) {
     try { await ensureWorldMacros(); } catch (e) { console.error(`${MODULE_ID} | ensureWorldMacros failed`, e); }
@@ -108,6 +125,11 @@ const MACRO_DEFS = [
     name: 'DOMMT: Generate Encounter',
     img: `modules/${MODULE_ID}/assets/icons/macro-encounter.webp`,
     command: `game.modules.get('${MODULE_ID}').api.generateEncounter();`
+  },
+  {
+    name: 'DOMMT: Dungeon Crawl',
+    img: `modules/${MODULE_ID}/assets/icons/macro-dungeon.webp`,
+    command: `game.modules.get('${MODULE_ID}').api.openDungeon();`
   }
 ];
 

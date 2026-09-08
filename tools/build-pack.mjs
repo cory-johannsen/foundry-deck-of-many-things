@@ -106,6 +106,16 @@ const macros = [
     img: 'modules/deck-of-many-more-things/assets/icons/macro-encounter.webp',
     command: `game.modules.get('deck-of-many-more-things').api.generateEncounter();`,
     flags: {}
+  },
+  {
+    _id: foundryId('macro-dungeon'),
+    name: 'DOMMT: Dungeon Crawl',
+    type: 'script',
+    scope: 'global',
+    author: null,
+    img: 'modules/deck-of-many-more-things/assets/icons/macro-dungeon.webp',
+    command: `game.modules.get('deck-of-many-more-things').api.openDungeon();`,
+    flags: {}
   }
 ];
 

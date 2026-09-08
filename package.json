@@ -8,6 +8,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "validate": "node tools/validate-cards.mjs",
+    "validate:dungeon": "node tools/validate-dungeon-setpieces.mjs",
     "art": "node tools/generate-art.mjs",
     "build:pack": "node tools/build-pack.mjs",
     "format": "prettier --write .",

@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Deck of Many More Things — dungeon-setpieces.json",
+  "type": "array",
+  "minItems": 1,
+  "items": { "$ref": "#/definitions/setpiece" },
+  "definitions": {
+    "setpiece": {
+      "type": "object",
+      "required": ["id", "kind", "name", "difficulty", "summary", "complete", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "kind": { "type": "string", "enum": ["puzzle", "trap"] },
+        "name": { "type": "string", "minLength": 1 },
+        "difficulty": { "type": "string", "enum": ["easy", "medium", "hard"] },
+        "summary": { "type": "string", "minLength": 1 },
+        "complete": {
+          "type": "boolean",
+          "description": "False for a set-piece named in the source but not fully written out there — see summary for what's missing."
+        },
+        "hintChecks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["skill", "dc", "hint"],
+            "additionalProperties": false,
+            "properties": {
+              "skill": { "type": "string", "minLength": 1 },
+              "dc": { "type": "integer", "minimum": 1 },
+              "hint": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "solution": { "type": "string", "minLength": 1 },
+        "source": {
+          "type": "object",
+          "required": ["chapter"],
+          "additionalProperties": false,
+          "properties": {
+            "chapter": { "type": "integer", "minimum": 1 },
+            "note": { "type": "string" }
+          }
+        }
+      },
+      "if": { "properties": { "complete": { "const": true } } },
+      "then": { "required": ["hintChecks", "solution"] }
+    }
+  }
+}

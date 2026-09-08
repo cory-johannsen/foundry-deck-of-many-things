@@ -1,0 +1,72 @@
+{{#if hasScene}}
+  {{#if hasRun}}
+    <div class="dommt-dungeon">
+      <div class="dommt-dungeon__progress">
+        {{#if completed}}
+          {{localize "DOMMT.Dungeon.Completed"}}
+        {{else}}
+          {{localize "DOMMT.Dungeon.ProgressLabel" n=roomNumber total=roomTotal}}
+        {{/if}}
+      </div>
+
+      {{#if currentRoom}}
+        <div class="dommt-dungeon__room">
+          {{#if currentRoom.isGoal}}
+            <strong>{{localize "DOMMT.Dungeon.Kind.goal"}}</strong>
+          {{else}}
+            <strong>{{currentRoom.kindLabel}}</strong>
+          {{/if}}
+
+          {{#if currentRoom.setpiece}}
+            <p class="dommt-dungeon__setpiece-name">{{currentRoom.setpiece.name}}</p>
+            <p>{{currentRoom.setpiece.summary}}</p>
+          {{/if}}
+        </div>
+      {{/if}}
+
+      {{#unless completed}}
+        <p class="hint">{{localize "DOMMT.Dungeon.ThemeReminder" traits=traits excludeTraits=excludeTraits}}</p>
+        <footer>
+          <button type="button" data-action="runEncounter">{{localize "DOMMT.Dungeon.RunEncounterButton"}}</button>
+          <button type="button" data-action="succeed">{{localize "DOMMT.Dungeon.SucceedButton"}}</button>
+          <button type="button" data-action="fail">{{localize "DOMMT.Dungeon.FailButton"}}</button>
+        </footer>
+      {{/unless}}
+
+      {{#if history.length}}
+        <div class="dommt-dungeon__history">
+          {{#each history}}
+            <div class="dommt-dungeon__history-entry">
+              <span class="dommt-dungeon__history-outcome">{{this.outcomeLabel}}</span>
+              <span>{{this.effectLabel}}</span>
+            </div>
+          {{/each}}
+        </div>
+      {{/if}}
+
+      <footer>
+        <button type="button" data-action="abandon">{{localize "DOMMT.Dungeon.AbandonButton"}}</button>
+      </footer>
+    </div>
+  {{else}}
+    <form class="dommt-dungeon">
+      <label>
+        {{localize "DOMMT.Dungeon.RoomCountLabel"}}
+        <input type="number" name="roomCount" min="2" max="20" value="{{defaultRoomCount}}" />
+      </label>
+      <label>
+        {{localize "DOMMT.Encounter.ThemeLabel"}}
+        <input type="text" name="traits" placeholder="{{localize 'DOMMT.Encounter.ThemePlaceholder'}}" />
+      </label>
+      <label>
+        {{localize "DOMMT.Encounter.ExcludeTraitsLabel"}}
+        <input type="text" name="excludeTraits" />
+      </label>
+      <footer>
+        <button type="button" data-action="start">{{localize "DOMMT.Dungeon.StartButton"}}</button>
+      </footer>
+    </form>
+  {{/if}}
+{{else}}
+  <p class="hint">{{localize "DOMMT.Dungeon.NoSceneWarning"}}</p>
+{{/if}}
