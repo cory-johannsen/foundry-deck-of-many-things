@@ -95,7 +95,7 @@ const MACRO_DEFS = [
     command: `game.modules.get('${MODULE_ID}').api.openDeck();`
   },
   {
-    name: 'DOMMT: Divine — Celtic Cross',
+    name: 'DOMMT: Divine',
     img: `modules/${MODULE_ID}/assets/icons/macro-divine.webp`,
     command: `game.modules.get('${MODULE_ID}').api.openDivination();`
   },
