@@ -9,7 +9,7 @@ several of them look like obvious things to "fix" back the other way.
 ```
 data/cards.json  art.prompt
         │
-        ▼  tools/generate-art.mjs        sd_xl_base_1.0, CFG 7, 28 steps
+        ▼  tools/generate-art.mjs        Z-Image Base (GGUF) + distill LoRA, 8 steps, cfg 1
 assets/cards/<id>.png                    raw art, full bleed, no frame, no text
         │
         ▼  tools/compose-cards.mjs       + assets/frame.png  + name plate
@@ -53,6 +53,8 @@ prompt wording, which is why both moved to compositing.
 `generate-art.mjs` carries the other half of this in its negative prompt —
 text, cartouche, banner, nameplate terms at weight 1.4–1.5, plus frame and
 border terms so the model's own frame cannot clash with the composited one.
+It is still wired through under the default `zimage` family, but has no real
+effect there — see the cfg-1 caveat under **Model choice** below.
 
 ## Stage 2 — compositing
 
@@ -86,7 +88,50 @@ card.
 
 ## Model choice
 
-`sd_xl_base_1.0` at CFG 7 / 28 steps, ~106s per card.
+Default is **Z-Image Base** (GGUF, 6B unet, `z_image-Q8_0.gguf`) plus its
+8-step distill LoRA — `COMFYUI_MODEL_FAMILY=zimage`, the default. Set
+`COMFYUI_MODEL_FAMILY=sdxl` to fall back to `sd_xl_base_1.0`; both graphs live
+side by side in `buildWorkflow()` in `generate-art.mjs` rather than one
+replacing the other, for the reasons below. All settings for both families are
+env-overridable — see the file's header comment for the full list
+(`COMFYUI_ZIMAGE_*` / `COMFYUI_CHECKPOINT`, `COMFYUI_STEPS`, `COMFYUI_CFG`,
+`COMFYUI_SAMPLER`).
+
+### Z-Image Base (current default)
+
+Only the model graph changed — `UnetLoaderGGUF` → `LoraLoaderModelOnly`
+(distill LoRA, strength 0.7) → `KSampler` (steps 8, cfg 1, `sa_solver_pece`,
+`simple`), with `CLIPLoaderGGUF` (`Qwen3-4B-UD-Q6_K_XL.gguf`, type `lumina2`),
+`VAELoader` (`z-image-ae.safetensors`), and `EmptySD3LatentImage` in place of
+`EmptyLatentImage`. The prompt/negative pipeline (stage 1, `art.prompt` /
+`art.negative` / the shared `NEGATIVE` constant) is untouched.
+
+Chosen for prompt/scene adherence: on a Balance test render, Z-Image Base
+actually drew the sun and moon the prompt asks for. `sd_xl_base_1.0`'s raw
+output (`assets/cards/balance.png`) omits both entirely — the same failure
+mode the lightning-checkpoint comparison below already caught on this exact
+card ("Balance with no scales").
+
+Tradeoffs accepted going in, not discovered after the fact:
+
+- **Style shifted.** Cleaner cel-shaded/comic-style linework, not
+  `sd_xl_base_1.0`'s painterly aged-parchment look. Treated as the new house
+  style rather than fought.
+- **Slower, not faster, despite 8 steps vs. 28.** The 6B unet does not fully
+  fit in 8GB VRAM alongside its VAE and 4B text encoder — part of it stays
+  offloaded to system RAM and pays a transfer cost every step. Per-step time
+  climbed through the test render and plateaued around 22-23s/step, vs.
+  `sd_xl_base_1.0`'s ~3.8s/step — 217s total for one card, against
+  `sd_xl_base_1.0`'s ~106s below.
+- **cfg 1 makes the negative prompt decorative.** The distill LoRA needs
+  cfg ≈ 1 to behave; classifier-free guidance — and so the text/border/
+  monochrome suppression this pipeline otherwise leans on — has no real
+  effect at that cfg. Still wired through for parity with the sdxl path, and
+  in case a future non-distilled, higher-cfg run is worth the extra time.
+
+### sd_xl_base_1.0 (fallback — `COMFYUI_MODEL_FAMILY=sdxl`)
+
+CFG 7 / 28 steps, ~106s per card.
 
 The deck was previously generated on `dreamshaperXL_lightningDPMSDE` at CFG 2 /
 6 steps (~26s). Lightning checkpoints require very low CFG, and at that guidance
@@ -95,7 +140,7 @@ with no X, Balance with no scales, Mine with no pick) and drifted photo-real
 despite the style tags. The same Mine prompt on `sd_xl_base` came back properly
 illustrated in the intended palette.
 
-All four settings are env-overridable — `COMFYUI_CHECKPOINT`, `COMFYUI_STEPS`,
+Its four settings are env-overridable — `COMFYUI_CHECKPOINT`, `COMFYUI_STEPS`,
 `COMFYUI_CFG`, `COMFYUI_SAMPLER` — so dropping back to lightning for a fast
 iteration is one variable. Expect the fidelity loss above if you do.
 

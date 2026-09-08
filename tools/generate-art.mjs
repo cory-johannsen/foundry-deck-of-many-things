@@ -15,12 +15,27 @@
  * which adds the decorative frame and the name plate.
  *
  * Env:
- *   COMFYUI_BASE_URL   default https://comfyui.johannsen.cloud
- *   COMFYUI_CHECKPOINT default sd_xl_base_1.0.safetensors
- *   COMFYUI_STEPS      default 28   (lightning checkpoints want ~6)
- *   COMFYUI_CFG        default 7.0  (lightning checkpoints want ~2.0)
- *   COMFYUI_SAMPLER    default dpmpp_sde
- *   COMFYUI_SCHEDULER  default karras
+ *   COMFYUI_BASE_URL         default https://comfyui.johannsen.cloud
+ *   COMFYUI_MODEL_FAMILY     default zimage — 'zimage' (Z-Image Base/GGUF) or 'sdxl' (CheckpointLoaderSimple)
+ *
+ *   zimage family (default — see docs/card-art-pipeline.md for why):
+ *     COMFYUI_ZIMAGE_UNET           default z_image-Q8_0.gguf
+ *     COMFYUI_ZIMAGE_CLIP           default Qwen3-4B-UD-Q6_K_XL.gguf
+ *     COMFYUI_ZIMAGE_CLIP_TYPE      default lumina2
+ *     COMFYUI_ZIMAGE_VAE            default z-image-ae.safetensors
+ *     COMFYUI_ZIMAGE_LORA           default Z-Image-Fun-Lora-Distill-8-Steps_ComfyUI.safetensors
+ *     COMFYUI_ZIMAGE_LORA_STRENGTH  default 0.7
+ *     COMFYUI_ZIMAGE_STEPS          default 8
+ *     COMFYUI_ZIMAGE_CFG            default 1
+ *     COMFYUI_ZIMAGE_SAMPLER        default sa_solver_pece
+ *     COMFYUI_ZIMAGE_SCHEDULER      default simple
+ *
+ *   sdxl family (fallback — set COMFYUI_MODEL_FAMILY=sdxl to use it):
+ *     COMFYUI_CHECKPOINT default sd_xl_base_1.0.safetensors
+ *     COMFYUI_STEPS      default 28   (lightning checkpoints want ~6)
+ *     COMFYUI_CFG        default 7.0  (lightning checkpoints want ~2.0)
+ *     COMFYUI_SAMPLER    default dpmpp_sde
+ *     COMFYUI_SCHEDULER  default karras
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync, copyFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -30,6 +45,26 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
 
 const BASE = (process.env.COMFYUI_BASE_URL || 'https://comfyui.johannsen.cloud').replace(/\/$/, '');
+const FAMILY = (process.env.COMFYUI_MODEL_FAMILY || 'zimage').toLowerCase();
+
+// zimage: Z-Image Base, GGUF-quantized, plus its 8-step distill LoRA. Chosen
+// over sd_xl_base_1.0 for materially better prompt/scene adherence (see
+// docs/card-art-pipeline.md) despite being slower per card on this GPU — the
+// 6B unet does not fully fit in 8GB VRAM alongside its VAE and 4B text
+// encoder, so part of it stays offloaded to system RAM and pays a transfer
+// cost every step (~22-23s/step here, vs. sd_xl_base_1.0's ~3.8s/step).
+const ZIMAGE_UNET = process.env.COMFYUI_ZIMAGE_UNET || 'z_image-Q8_0.gguf';
+const ZIMAGE_CLIP = process.env.COMFYUI_ZIMAGE_CLIP || 'Qwen3-4B-UD-Q6_K_XL.gguf';
+const ZIMAGE_CLIP_TYPE = process.env.COMFYUI_ZIMAGE_CLIP_TYPE || 'lumina2';
+const ZIMAGE_VAE = process.env.COMFYUI_ZIMAGE_VAE || 'z-image-ae.safetensors';
+const ZIMAGE_LORA = process.env.COMFYUI_ZIMAGE_LORA || 'Z-Image-Fun-Lora-Distill-8-Steps_ComfyUI.safetensors';
+const ZIMAGE_LORA_STRENGTH = parseFloat(process.env.COMFYUI_ZIMAGE_LORA_STRENGTH || '0.7');
+const ZIMAGE_STEPS = parseInt(process.env.COMFYUI_ZIMAGE_STEPS || '8', 10);
+const ZIMAGE_CFG = parseFloat(process.env.COMFYUI_ZIMAGE_CFG || '1');
+const ZIMAGE_SAMPLER = process.env.COMFYUI_ZIMAGE_SAMPLER || 'sa_solver_pece';
+const ZIMAGE_SCHEDULER = process.env.COMFYUI_ZIMAGE_SCHEDULER || 'simple';
+
+// sdxl: the original path, kept as a fallback (COMFYUI_MODEL_FAMILY=sdxl).
 // sd_xl_base, not a lightning checkpoint. Lightning runs in ~26s/card but
 // follows the prompt weakly at the CFG it requires (~2.0): scenes lost their
 // named elements and drifted photo-real despite the style tags. sd_xl_base at
@@ -95,28 +130,64 @@ const SHARED = [
 ];
 
 function buildWorkflow({ prompt, negative = NEGATIVE, width = WIDTH, height = HEIGHT, seed, filenamePrefix }) {
+  if (FAMILY === 'sdxl') {
+    return {
+      '1': { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: CHECKPOINT } },
+      '2': { class_type: 'CLIPTextEncode', inputs: { text: prompt, clip: ['1', 1] } },
+      '3': { class_type: 'CLIPTextEncode', inputs: { text: negative, clip: ['1', 1] } },
+      '4': { class_type: 'EmptyLatentImage', inputs: { width, height, batch_size: 1 } },
+      '5': {
+        class_type: 'KSampler',
+        inputs: {
+          seed,
+          steps: STEPS,
+          cfg: CFG,
+          sampler_name: SAMPLER,
+          scheduler: SCHEDULER,
+          denoise: 1.0,
+          model: ['1', 0],
+          positive: ['2', 0],
+          negative: ['3', 0],
+          latent_image: ['4', 0]
+        }
+      },
+      '6': { class_type: 'VAEDecode', inputs: { samples: ['5', 0], vae: ['1', 2] } },
+      '7': { class_type: 'SaveImage', inputs: { filename_prefix: filenamePrefix, images: ['6', 0] } }
+    };
+  }
+
+  // zimage: unet/clip/vae load separately (GGUF), and the distill LoRA rides
+  // on the unet only — cfg 1 means the negative conditioning below has no
+  // real effect at these settings, but it stays wired for parity with the
+  // sdxl path and in case a future non-distilled run raises cfg again.
   return {
-    '1': { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: CHECKPOINT } },
-    '2': { class_type: 'CLIPTextEncode', inputs: { text: prompt, clip: ['1', 1] } },
-    '3': { class_type: 'CLIPTextEncode', inputs: { text: negative, clip: ['1', 1] } },
-    '4': { class_type: 'EmptyLatentImage', inputs: { width, height, batch_size: 1 } },
-    '5': {
+    '1': { class_type: 'UnetLoaderGGUF', inputs: { unet_name: ZIMAGE_UNET } },
+    '2': {
+      class_type: 'LoraLoaderModelOnly',
+      inputs: { model: ['1', 0], lora_name: ZIMAGE_LORA, strength_model: ZIMAGE_LORA_STRENGTH }
+    },
+    '3': { class_type: 'CLIPLoaderGGUF', inputs: { clip_name: ZIMAGE_CLIP, type: ZIMAGE_CLIP_TYPE } },
+    '4': { class_type: 'CLIPTextEncode', inputs: { text: prompt, clip: ['3', 0] } },
+    '5': { class_type: 'CLIPTextEncode', inputs: { text: negative, clip: ['3', 0] } },
+    '6': { class_type: 'VAELoader', inputs: { vae_name: ZIMAGE_VAE } },
+    '7': { class_type: 'EmptySD3LatentImage', inputs: { width, height, batch_size: 1 } },
+    '8': {
       class_type: 'KSampler',
       inputs: {
         seed,
-        steps: STEPS,
-        cfg: CFG,
-        sampler_name: SAMPLER,
-        scheduler: SCHEDULER,
+        steps: ZIMAGE_STEPS,
+        cfg: ZIMAGE_CFG,
+        sampler_name: ZIMAGE_SAMPLER,
+        scheduler: ZIMAGE_SCHEDULER,
         denoise: 1.0,
-        model: ['1', 0],
-        positive: ['2', 0],
-        negative: ['3', 0],
-        latent_image: ['4', 0]
+        model: ['2', 0],
+        positive: ['4', 0],
+        negative: ['5', 0],
+        latent_image: ['7', 0]
       }
     },
-    '6': { class_type: 'VAEDecode', inputs: { samples: ['5', 0], vae: ['1', 2] } },
-    '7': { class_type: 'SaveImage', inputs: { filename_prefix: filenamePrefix, images: ['6', 0] } }
+    '9': { class_type: 'VAEDecode', inputs: { samples: ['8', 0], vae: ['6', 0] } },
+    '10': { class_type: 'SaveImage', inputs: { filename_prefix: filenamePrefix, images: ['9', 0] } }
   };
 }
 
@@ -233,7 +304,8 @@ async function main() {
   }
   if (DO_SHARED) jobs.push(...SHARED);
 
-  console.log(`Targets: ${jobs.length}${FORCE ? ' (force)' : ''}, concurrency=${CONCURRENCY}, server=${BASE}, checkpoint=${CHECKPOINT}`);
+  const modelDesc = FAMILY === 'sdxl' ? CHECKPOINT : `${ZIMAGE_UNET}+${ZIMAGE_LORA}`;
+  console.log(`Targets: ${jobs.length}${FORCE ? ' (force)' : ''}, concurrency=${CONCURRENCY}, server=${BASE}, family=${FAMILY}, model=${modelDesc}`);
 
   const queue = jobs.slice();
   const inFlight = new Set();
