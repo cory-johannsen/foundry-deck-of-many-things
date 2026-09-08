@@ -96,6 +96,16 @@ const macros = [
     img: 'icons/svg/regen.svg',
     command: `if (!game.user.isGM) return ui.notifications.warn('GM only'); await game.modules.get('deck-of-many-more-things').api.resetDeck(); ui.notifications.info('Deck reset');`,
     flags: {}
+  },
+  {
+    _id: foundryId('macro-encounter'),
+    name: 'DOMMT: Generate Encounter',
+    type: 'script',
+    scope: 'global',
+    author: null,
+    img: 'modules/deck-of-many-more-things/assets/icons/macro-encounter.webp',
+    command: `game.modules.get('deck-of-many-more-things').api.generateEncounter();`,
+    flags: {}
   }
 ];
 
