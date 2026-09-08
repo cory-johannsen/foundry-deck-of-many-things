@@ -16,14 +16,14 @@ function freshSeed() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function parseTraitList(text) {
+export function parseTraitList(text) {
   return String(text ?? '')
     .split(',')
     .map((t) => t.trim().toLowerCase())
     .filter(Boolean);
 }
 
-async function chooseThemeAndSize() {
+async function chooseThemeAndSize({ prefillTraits = [], prefillExcludeTraits = [] } = {}) {
   const { DialogV2 } = foundry.applications.api;
   return DialogV2.wait({
     window: { title: game.i18n.localize('DOMMT.Encounter.Title') },
@@ -31,11 +31,12 @@ async function chooseThemeAndSize() {
       <form>
         <div class="form-group">
           <label>${game.i18n.localize('DOMMT.Encounter.ThemeLabel')}</label>
-          <input type="text" name="traits" placeholder="${game.i18n.localize('DOMMT.Encounter.ThemePlaceholder')}" />
+          <input type="text" name="traits" placeholder="${game.i18n.localize('DOMMT.Encounter.ThemePlaceholder')}"
+                 value="${prefillTraits.join(', ')}" />
         </div>
         <div class="form-group">
           <label>${game.i18n.localize('DOMMT.Encounter.ExcludeTraitsLabel')}</label>
-          <input type="text" name="excludeTraits" />
+          <input type="text" name="excludeTraits" value="${prefillExcludeTraits.join(', ')}" />
         </div>
       </form>`,
     buttons: [
@@ -104,7 +105,7 @@ async function spawnEncounterTokens(api, roster, partyMembers) {
   }
 }
 
-export async function generateEncounter() {
+export async function generateEncounter({ prefillTraits = [], prefillExcludeTraits = [] } = {}) {
   if (!game.user.isGM) {
     ui.notifications.warn(game.i18n.localize('DOMMT.Encounter.GmOnlyWarning'));
     return;
@@ -122,7 +123,7 @@ export async function generateEncounter() {
     ui.notifications.warn(game.i18n.localize('DOMMT.Encounter.PartyTooSmall'));
   }
 
-  const theme = await chooseThemeAndSize();
+  const theme = await chooseThemeAndSize({ prefillTraits, prefillExcludeTraits });
   if (!theme || theme === 'cancel') return;
 
   let seed = freshSeed();
