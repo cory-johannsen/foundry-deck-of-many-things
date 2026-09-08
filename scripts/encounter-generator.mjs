@@ -82,30 +82,33 @@ function findFocusActorId(partyMembers) {
   return partyMembers.find((m) => onScene.has(m.id))?.id ?? partyMembers[0]?.id ?? null;
 }
 
-async function spawnEncounterTokens(api, roster, partyMembers) {
+async function spawnEncounterTokens(api, roster, partyMembers, { originArea = null, forceHidden = false, extraFlags = null } = {}) {
   const nearActorId = findFocusActorId(partyMembers);
+  const place = (hidden) => ({ nearActorId, originArea, extraFlags, hidden: hidden || forceHidden });
 
   if (roster.foes.length) {
     const entries = roster.foes.flatMap((f) => Array(f.count ?? 1).fill({ pack: f.pack, id: f.id }));
-    await api.spawnCreatures(entries, { nearActorId, disposition: -1 });
+    await api.spawnCreatures(entries, { ...place(false), disposition: -1 });
   }
   if (roster.friend) {
-    await api.spawnCreatures([{ pack: roster.friend.pack, id: roster.friend.id }], { nearActorId, disposition: 1 });
+    await api.spawnCreatures([{ pack: roster.friend.pack, id: roster.friend.id }], { ...place(false), disposition: 1 });
   }
   if (roster.twins) {
     const entries = roster.twins.map((t) => ({ pack: t.pack, id: t.id }));
-    await api.spawnCreatures(entries, { nearActorId, disposition: -1 });
+    await api.spawnCreatures(entries, { ...place(false), disposition: -1 });
   }
   if (roster.lurker) {
     // Hidden: the book has the lurker ambush once the party is distracted, not
     // stand revealed on the table from the moment the encounter is generated.
     await api.spawnCreatures([{ pack: roster.lurker.pack, id: roster.lurker.id }], {
-      nearActorId, disposition: -1, hidden: true
+      ...place(true), disposition: -1
     });
   }
 }
 
-export async function generateEncounter({ prefillTraits = [], prefillExcludeTraits = [] } = {}) {
+export async function generateEncounter({
+  prefillTraits = [], prefillExcludeTraits = [], originArea = null, forceHidden = false, extraFlags = null
+} = {}) {
   if (!game.user.isGM) {
     ui.notifications.warn(game.i18n.localize('DOMMT.Encounter.GmOnlyWarning'));
     return;
@@ -145,5 +148,5 @@ export async function generateEncounter({ prefillTraits = [], prefillExcludeTrai
   }
 
   await postEncounterChatCard(api, roster);
-  await spawnEncounterTokens(api, roster, partyMembers);
+  await spawnEncounterTokens(api, roster, partyMembers, { originArea, forceHidden, extraFlags });
 }

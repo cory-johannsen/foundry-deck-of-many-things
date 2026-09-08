@@ -19,6 +19,7 @@ import {
 import { generateEncounter } from './encounter-generator.mjs';
 import { DungeonApp } from './ui/dungeon-app.mjs';
 import { abandonRun } from './dungeon-runner.mjs';
+import { handleDungeonRoomEnter } from './dungeon-scene.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 
@@ -87,7 +88,10 @@ Hooks.once('ready', async () => {
     resetDungeon: async (sceneId) => {
       if (!game.user.isGM) return ui.notifications.warn(game.i18n.localize('DOMMT.Dungeon.GmOnlyWarning'));
       await abandonRun({ sceneId: sceneId ?? canvas?.scene?.id });
-    }
+    },
+    // Called by the dispatcher script on each room's Region (executeScript,
+    // gmOnly) when a party token walks into it — see dungeon-scene.mjs.
+    onDungeonRoomEnter: (sceneId, tokenId, slot) => handleDungeonRoomEnter(sceneId, tokenId, slot)
   };
   if (game.user.isGM) {
     try { await ensureWorldMacros(); } catch (e) { console.error(`${MODULE_ID} | ensureWorldMacros failed`, e); }

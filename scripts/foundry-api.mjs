@@ -24,7 +24,7 @@ export const WRITE_METHODS = [
  * primary creature source, not an extra. A card looking for a homunculus found
  * none, because the only ones are in Monster Core.
  */
-import { freeSpot, footprint, partyLevelFrom } from './placement.mjs';
+import { freeSpot, freeSpotInRect, footprint, partyLevelFrom } from './placement.mjs';
 
 export const CREATURE_PACK_PATTERN = /bestiary|monster-core|npc-core|npc-gallery/i;
 
@@ -413,17 +413,32 @@ export function makeFoundryApi() {
     /**
      * Place creatures on the active scene near a focal token when there is one,
      * so a summons lands next to whoever drew rather than at the origin.
+     *
+     * `originArea` (scene pixels) overrides the focus-token origin entirely —
+     * for dropping a dungeon encounter inside a specific generated room, which
+     * may have no token anywhere near it yet. Placement then searches outward
+     * from the area's own center and is clamped to its bounds via
+     * freeSpotInRect, rather than freeSpot's unbounded ring search.
      */
     async spawnCreatures(entries, { nearActorId = null, disposition = -1, img = null,
-                                    imgFallback = null, place = 'beside', hidden = false } = {}) {
+                                    imgFallback = null, place = 'beside', hidden = false,
+                                    originArea = null, extraFlags = null } = {}) {
       const scene = canvas?.scene;
       if (!scene) throw new Error('No active scene to place creatures on');
       const grid = scene.grid?.size ?? 100;
-      const focus = nearActorId
+      const focus = (!originArea && nearActorId)
         ? canvas.tokens?.placeables?.find((t) => t.actor?.id === nearActorId)
         : null;
-      const originX = focus?.document?.x ?? (scene.width ?? grid * 10) / 2;
-      const originY = focus?.document?.y ?? (scene.height ?? grid * 10) / 2;
+      const areaRectGrid = originArea ? {
+        gx: Math.round(originArea.x / grid), gy: Math.round(originArea.y / grid),
+        gw: Math.round(originArea.width / grid), gh: Math.round(originArea.height / grid)
+      } : null;
+      const originX = originArea
+        ? originArea.x + originArea.width / 2
+        : focus?.document?.x ?? (scene.width ?? grid * 10) / 2;
+      const originY = originArea
+        ? originArea.y + originArea.height / 2
+        : focus?.document?.y ?? (scene.height ?? grid * 10) / 2;
 
       // Everything already on the scene, in squares. Creatures placed by this
       // call are added as they go, so a card summoning several does not stack
@@ -477,11 +492,13 @@ export function makeFoundryApi() {
           // The first empty place big enough, searched outward. Landing one
           // square east regardless is how a witchwarg and an avatar of death
           // ended up sharing a square across two draws.
-          const free = freeSpot({
-            occupied,
-            gx: Math.round(originX / grid), gy: Math.round(originY / grid),
-            gw: tw, gh: th
-          });
+          const free = areaRectGrid
+            ? freeSpotInRect({ occupied, rect: areaRectGrid, gw: tw, gh: th })
+            : freeSpot({
+                occupied,
+                gx: Math.round(originX / grid), gy: Math.round(originY / grid),
+                gw: tw, gh: th
+              });
           spot = free
             ? { x: free.gx * grid, y: free.gy * grid }
             : { x: originX + grid * (i + 1), y: originY };
@@ -491,6 +508,7 @@ export function makeFoundryApi() {
         const obj = td.toObject();
         obj.disposition = disposition;
         obj.hidden = hidden;
+        if (extraFlags) obj.flags = foundry.utils.mergeObject(obj.flags ?? {}, extraFlags);
         await scene.createEmbeddedDocuments('Token', [obj]);
         created.push(actor.name);
       }
