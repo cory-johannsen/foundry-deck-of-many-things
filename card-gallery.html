@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Card Gallery</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 32px 64px;
+    background: #14100c;
+    color: #e8ddc8;
+    font-family: Georgia, 'Times New Roman', serif;
+  }
+  h1 { font-size: 1.6rem; letter-spacing: 0.04em; margin: 0 0 4px; }
+  .sub { color: #a6957a; margin: 0 0 28px; font-size: 0.9rem; }
+  h2 { font-size: 1.1rem; letter-spacing: 0.03em; border-bottom: 1px solid #3a3025; padding-bottom: 8px; margin: 32px 0 16px; }
+  .count { color: #7a6c56; font-weight: normal; font-size: 0.85em; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    margin: 0; background: #1d1712; border: 1px solid #3a3025; border-radius: 6px;
+    overflow: hidden; transition: transform 0.12s ease, border-color 0.12s ease;
+  }
+  .card:hover { transform: translateY(-2px); border-color: #7a6440; }
+  .card img { width: 100%; aspect-ratio: 683 / 1013; object-fit: cover; display: block; background: #0a0806; }
+  .card figcaption { padding: 6px 8px 8px; display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+  .card .num { color: #7a6c56; font-size: 0.75rem; }
+  .card .name { font-size: 0.85rem; text-align: right; }
+  .card.hidden { display: none; }
+  #filter {
+    background: #1d1712; border: 1px solid #3a3025; color: #e8ddc8;
+    padding: 8px 12px; border-radius: 6px; font: inherit; font-size: 0.9rem;
+    width: 260px; max-width: 100%;
+  }
+  #filter::placeholder { color: #7a6c56; }
+</style>
+</head>
+<body>
+  <h1>Deck of Many More Things — Card Gallery</h1>
+  <p class="sub">66 cards · generated from data/cards.json</p>
+  <input id="filter" type="search" placeholder="Filter by name…" autofocus>
+    <section>
+      <h2>Classic 22 <span class="count">(22)</span></h2>
+      <div class="grid">
+      <figure class="card" data-set="classic" data-name="balance">
+        <img src="assets/cards-labeled/balance.png" alt="Balance" loading="lazy">
+        <figcaption>
+          <span class="num">#2</span>
+          <span class="name">Balance</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="classic" data-name="comet">
+        <img src="assets/cards-labeled/comet.png" alt="Comet" loading="lazy">
+        <figcaption>
+          <span class="num">#9</span>
+          <span class="name">Comet</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="classic" data-name="donjon">
+        <img src="assets/cards-labeled/donjon.png" alt="Donjon" loading="lazy">
+        <figcaption>
+          <span class="num">#13</span>
+          <span class="name">Donjon</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="classic" data-name="euryale">
+        <img src="assets/cards-labeled/euryale.png" alt="Euryale" loading="lazy">
+        <figcaption>
+          <span class="num">#17</span>
+          <span class="name">Euryale</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="classic" data-name="fates">
+        <img src="assets/cards-labeled/fates.png" alt="Fates" loading="lazy">
+        <figcaption>
+          <span class="num">#19</span>
+          <span class="name">Fates</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="classic" data-name="flames">
+        <img src="assets/cards-labeled/flames.png" alt="Flames" loading="lazy">
+        <figcaption>
+          <span class="num">#22</span>
+          <span class="name">Flames</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="classic" data-name="fool">
+        <img src="assets/cards-labeled/fool.png" alt="Fool" loading="lazy">
+        <figcaption>
+          <span class="num">#23</span>
+          <span class="name">Fool</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="classic" data-name="gem">
+        <img src="assets/cards-labeled/gem.png" alt="Gem" loading="lazy">
+        <figcaption>
+          <span class="num">#24</span>
+          <span class="name">Gem</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="classic" data-name="jester">
+        <img src="assets/cards-labeled/jester.png" alt="Jester" loading="lazy">
+        <figcaption>
+          <span class="num">#27</span>
+          <span class="name">Jester</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="classic" data-name="key">
+        <img src="assets/cards-labeled/key.png" alt="Key" loading="lazy">
+        <figcaption>
+          <span class="num">#28</span>
+          <span class="name">Key</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="classic" data-name="knight">
+        <img src="assets/cards-labeled/knight.png" alt="Knight" loading="lazy">
+        <figcaption>
+          <span class="num">#29</span>
+          <span class="name">Knight</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="classic" data-name="moon">
+        <img src="assets/cards-labeled/moon.png" alt="Moon" loading="lazy">
+        <figcaption>
+          <span class="num">#36</span>
+          <span class="name">Moon</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="classic" data-name="puzzle">
+        <img src="assets/cards-labeled/puzzle.png" alt="Puzzle" loading="lazy">
+        <figcaption>
+          <span class="num">#43</span>
+          <span class="name">Puzzle</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="classic" data-name="rogue">
+        <img src="assets/cards-labeled/rogue.png" alt="Rogue" loading="lazy">
+        <figcaption>
+          <span class="num">#45</span>
+          <span class="name">Rogue</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="classic" data-name="ruin">
+        <img src="assets/cards-labeled/ruin.png" alt="Ruin" loading="lazy">
+        <figcaption>
+          <span class="num">#46</span>
+          <span class="name">Ruin</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="classic" data-name="sage">
+        <img src="assets/cards-labeled/sage.png" alt="Sage" loading="lazy">
+        <figcaption>
+          <span class="num">#47</span>
+          <span class="name">Sage</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="classic" data-name="skull">
+        <img src="assets/cards-labeled/skull.png" alt="Skull" loading="lazy">
+        <figcaption>
+          <span class="num">#50</span>
+          <span class="name">Skull</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="classic" data-name="star">
+        <img src="assets/cards-labeled/star.png" alt="Star" loading="lazy">
+        <figcaption>
+          <span class="num">#53</span>
+          <span class="name">Star</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="classic" data-name="sun">
+        <img src="assets/cards-labeled/sun.png" alt="Sun" loading="lazy">
+        <figcaption>
+          <span class="num">#55</span>
+          <span class="name">Sun</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="classic" data-name="talons">
+        <img src="assets/cards-labeled/talons.png" alt="Talons" loading="lazy">
+        <figcaption>
+          <span class="num">#56</span>
+          <span class="name">Talons</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="classic" data-name="throne">
+        <img src="assets/cards-labeled/throne.png" alt="Throne" loading="lazy">
+        <figcaption>
+          <span class="num">#59</span>
+          <span class="name">Throne</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="classic" data-name="void">
+        <img src="assets/cards-labeled/void.png" alt="Void" loading="lazy">
+        <figcaption>
+          <span class="num">#64</span>
+          <span class="name">Void</span>
+        </figcaption>
+      </figure>
+      </div>
+    </section>
+    <section>
+      <h2>Expansion 44 <span class="count">(44)</span></h2>
+      <div class="grid">
+      <figure class="card" data-set="expansion" data-name="aberration">
+        <img src="assets/cards-labeled/aberration.png" alt="Aberration" loading="lazy">
+        <figcaption>
+          <span class="num">#1</span>
+          <span class="name">Aberration</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="beast">
+        <img src="assets/cards-labeled/beast.png" alt="Beast" loading="lazy">
+        <figcaption>
+          <span class="num">#3</span>
+          <span class="name">Beast</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="book">
+        <img src="assets/cards-labeled/book.png" alt="Book" loading="lazy">
+        <figcaption>
+          <span class="num">#4</span>
+          <span class="name">Book</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="bridge">
+        <img src="assets/cards-labeled/bridge.png" alt="Bridge" loading="lazy">
+        <figcaption>
+          <span class="num">#5</span>
+          <span class="name">Bridge</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="campfire">
+        <img src="assets/cards-labeled/campfire.png" alt="Campfire" loading="lazy">
+        <figcaption>
+          <span class="num">#6</span>
+          <span class="name">Campfire</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="cavern">
+        <img src="assets/cards-labeled/cavern.png" alt="Cavern" loading="lazy">
+        <figcaption>
+          <span class="num">#7</span>
+          <span class="name">Cavern</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="celestial">
+        <img src="assets/cards-labeled/celestial.png" alt="Celestial" loading="lazy">
+        <figcaption>
+          <span class="num">#8</span>
+          <span class="name">Celestial</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="construct">
+        <img src="assets/cards-labeled/construct.png" alt="Construct" loading="lazy">
+        <figcaption>
+          <span class="num">#10</span>
+          <span class="name">Construct</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="corpse">
+        <img src="assets/cards-labeled/corpse.png" alt="Corpse" loading="lazy">
+        <figcaption>
+          <span class="num">#11</span>
+          <span class="name">Corpse</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="crossroads">
+        <img src="assets/cards-labeled/crossroads.png" alt="Crossroads" loading="lazy">
+        <figcaption>
+          <span class="num">#12</span>
+          <span class="name">Crossroads</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="door">
+        <img src="assets/cards-labeled/door.png" alt="Door" loading="lazy">
+        <figcaption>
+          <span class="num">#14</span>
+          <span class="name">Door</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="dragon">
+        <img src="assets/cards-labeled/dragon.png" alt="Dragon" loading="lazy">
+        <figcaption>
+          <span class="num">#15</span>
+          <span class="name">Dragon</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="elemental">
+        <img src="assets/cards-labeled/elemental.png" alt="Elemental" loading="lazy">
+        <figcaption>
+          <span class="num">#16</span>
+          <span class="name">Elemental</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="expert">
+        <img src="assets/cards-labeled/expert.png" alt="Expert" loading="lazy">
+        <figcaption>
+          <span class="num">#18</span>
+          <span class="name">Expert</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="fey">
+        <img src="assets/cards-labeled/fey.png" alt="Fey" loading="lazy">
+        <figcaption>
+          <span class="num">#20</span>
+          <span class="name">Fey</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="fiend">
+        <img src="assets/cards-labeled/fiend.png" alt="Fiend" loading="lazy">
+        <figcaption>
+          <span class="num">#21</span>
+          <span class="name">Fiend</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="giant">
+        <img src="assets/cards-labeled/giant.png" alt="Giant" loading="lazy">
+        <figcaption>
+          <span class="num">#25</span>
+          <span class="name">Giant</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="humanoid">
+        <img src="assets/cards-labeled/humanoid.png" alt="Humanoid" loading="lazy">
+        <figcaption>
+          <span class="num">#26</span>
+          <span class="name">Humanoid</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="lance">
+        <img src="assets/cards-labeled/lance.png" alt="Lance" loading="lazy">
+        <figcaption>
+          <span class="num">#30</span>
+          <span class="name">Lance</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="mage">
+        <img src="assets/cards-labeled/mage.png" alt="Mage" loading="lazy">
+        <figcaption>
+          <span class="num">#31</span>
+          <span class="name">Mage</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="map">
+        <img src="assets/cards-labeled/map.png" alt="Map" loading="lazy">
+        <figcaption>
+          <span class="num">#32</span>
+          <span class="name">Map</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="maze">
+        <img src="assets/cards-labeled/maze.png" alt="Maze" loading="lazy">
+        <figcaption>
+          <span class="num">#33</span>
+          <span class="name">Maze</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="mine">
+        <img src="assets/cards-labeled/mine.png" alt="Mine" loading="lazy">
+        <figcaption>
+          <span class="num">#34</span>
+          <span class="name">Mine</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="monstrosity">
+        <img src="assets/cards-labeled/monstrosity.png" alt="Monstrosity" loading="lazy">
+        <figcaption>
+          <span class="num">#35</span>
+          <span class="name">Monstrosity</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="ooze">
+        <img src="assets/cards-labeled/ooze.png" alt="Ooze" loading="lazy">
+        <figcaption>
+          <span class="num">#37</span>
+          <span class="name">Ooze</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="path">
+        <img src="assets/cards-labeled/path.png" alt="Path" loading="lazy">
+        <figcaption>
+          <span class="num">#38</span>
+          <span class="name">Path</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="pit">
+        <img src="assets/cards-labeled/pit.png" alt="Pit" loading="lazy">
+        <figcaption>
+          <span class="num">#39</span>
+          <span class="name">Pit</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="plant">
+        <img src="assets/cards-labeled/plant.png" alt="Plant" loading="lazy">
+        <figcaption>
+          <span class="num">#40</span>
+          <span class="name">Plant</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="priest">
+        <img src="assets/cards-labeled/priest.png" alt="Priest" loading="lazy">
+        <figcaption>
+          <span class="num">#41</span>
+          <span class="name">Priest</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="prisoner">
+        <img src="assets/cards-labeled/prisoner.png" alt="Prisoner" loading="lazy">
+        <figcaption>
+          <span class="num">#42</span>
+          <span class="name">Prisoner</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="ring">
+        <img src="assets/cards-labeled/ring.png" alt="Ring" loading="lazy">
+        <figcaption>
+          <span class="num">#44</span>
+          <span class="name">Ring</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="shield">
+        <img src="assets/cards-labeled/shield.png" alt="Shield" loading="lazy">
+        <figcaption>
+          <span class="num">#48</span>
+          <span class="name">Shield</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="ship">
+        <img src="assets/cards-labeled/ship.png" alt="Ship" loading="lazy">
+        <figcaption>
+          <span class="num">#49</span>
+          <span class="name">Ship</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="staff">
+        <img src="assets/cards-labeled/staff.png" alt="Staff" loading="lazy">
+        <figcaption>
+          <span class="num">#51</span>
+          <span class="name">Staff</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="stairway">
+        <img src="assets/cards-labeled/stairway.png" alt="Stairway" loading="lazy">
+        <figcaption>
+          <span class="num">#52</span>
+          <span class="name">Stairway</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="statue">
+        <img src="assets/cards-labeled/statue.png" alt="Statue" loading="lazy">
+        <figcaption>
+          <span class="num">#54</span>
+          <span class="name">Statue</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="tavern">
+        <img src="assets/cards-labeled/tavern.png" alt="Tavern" loading="lazy">
+        <figcaption>
+          <span class="num">#57</span>
+          <span class="name">Tavern</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="temple">
+        <img src="assets/cards-labeled/temple.png" alt="Temple" loading="lazy">
+        <figcaption>
+          <span class="num">#58</span>
+          <span class="name">Temple</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="tomb">
+        <img src="assets/cards-labeled/tomb.png" alt="Tomb" loading="lazy">
+        <figcaption>
+          <span class="num">#60</span>
+          <span class="name">Tomb</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="tower">
+        <img src="assets/cards-labeled/tower.png" alt="Tower" loading="lazy">
+        <figcaption>
+          <span class="num">#61</span>
+          <span class="name">Tower</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="tree">
+        <img src="assets/cards-labeled/tree.png" alt="Tree" loading="lazy">
+        <figcaption>
+          <span class="num">#62</span>
+          <span class="name">Tree</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="undead">
+        <img src="assets/cards-labeled/undead.png" alt="Undead" loading="lazy">
+        <figcaption>
+          <span class="num">#63</span>
+          <span class="name">Undead</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="warrior">
+        <img src="assets/cards-labeled/warrior.png" alt="Warrior" loading="lazy">
+        <figcaption>
+          <span class="num">#65</span>
+          <span class="name">Warrior</span>
+        </figcaption>
+      </figure>
+      <figure class="card" data-set="expansion" data-name="well">
+        <img src="assets/cards-labeled/well.png" alt="Well" loading="lazy">
+        <figcaption>
+          <span class="num">#66</span>
+          <span class="name">Well</span>
+        </figcaption>
+      </figure>
+      </div>
+    </section>
+  <script>
+    const input = document.getElementById('filter');
+    const cards = Array.from(document.querySelectorAll('.card'));
+    input.addEventListener('input', () => {
+      const q = input.value.trim().toLowerCase();
+      for (const c of cards) c.classList.toggle('hidden', q && !c.dataset.name.includes(q));
+    });
+  </script>
+</body>
+</html>
