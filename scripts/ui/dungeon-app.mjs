@@ -90,7 +90,16 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const sceneId = scene?.id ?? null;
     if (!sceneId) return { hasScene: false };
 
-    const state = getRunState(sceneId);
+    let state = getRunState(sceneId);
+    // A run created before physical scenes existed (Tier 1) has no
+    // physicalSlotByRoomId at all — it predates the shape this app now
+    // assumes, and there's no real geometry behind it to resume. Rather than
+    // crash on every render, clear it and let the GM start fresh.
+    if (state && !state.physicalSlotByRoomId) {
+      await abandonRun({ sceneId });
+      ui.notifications.info(game.i18n.localize('DOMMT.Dungeon.StaleRunCleared'));
+      state = null;
+    }
     if (!state) return { hasScene: true, hasRun: false, defaultRoomCount: 6 };
 
     const setpieces = await loadDungeonSetpieces();

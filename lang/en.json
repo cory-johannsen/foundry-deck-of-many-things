@@ -80,6 +80,7 @@
   "DOMMT.Dungeon.Title": "Dungeon Crawl",
   "DOMMT.Dungeon.GmOnlyWarning": "Only the GM can manage a dungeon crawl.",
   "DOMMT.Dungeon.NoSceneWarning": "There is no active scene to run a dungeon on.",
+  "DOMMT.Dungeon.StaleRunCleared": "This scene had a dungeon run from before the module supported real scenes — it's been cleared so you can start fresh.",
   "DOMMT.Dungeon.RoomCountLabel": "Number of rooms (including the goal room)",
   "DOMMT.Dungeon.StartButton": "Start Dungeon",
   "DOMMT.Dungeon.ProgressLabel": "Room {n} of {total}",
