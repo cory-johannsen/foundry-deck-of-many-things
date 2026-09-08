@@ -26,11 +26,23 @@
 
       {{#unless completed}}
         <p class="hint">{{localize "DOMMT.Dungeon.ThemeReminder" traits=traits excludeTraits=excludeTraits}}</p>
-        <footer>
-          <button type="button" data-action="runEncounter">{{localize "DOMMT.Dungeon.RunEncounterButton"}}</button>
-          <button type="button" data-action="succeed">{{localize "DOMMT.Dungeon.SucceedButton"}}</button>
-          <button type="button" data-action="fail">{{localize "DOMMT.Dungeon.FailButton"}}</button>
-        </footer>
+        {{#unless currentRoomResolved}}
+          <footer>
+            <button type="button" data-action="succeed">{{localize "DOMMT.Dungeon.SucceedButton"}}</button>
+            <button type="button" data-action="fail">{{localize "DOMMT.Dungeon.FailButton"}}</button>
+          </footer>
+        {{/unless}}
+        {{#if nextRoomPending}}
+          <p class="hint">{{localize "DOMMT.Dungeon.DoorLockedHint"}}</p>
+          <footer>
+            <button type="button" data-action="populateNext">{{localize "DOMMT.Dungeon.PopulateNextButton"}}</button>
+          </footer>
+        {{/if}}
+        {{#if canUndo}}
+          <footer>
+            <button type="button" data-action="undo">{{localize "DOMMT.Dungeon.UndoButton"}}</button>
+          </footer>
+        {{/if}}
       {{/unless}}
 
       {{#if history.length}}

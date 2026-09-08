@@ -58,6 +58,33 @@ export function freeSpot({ occupied = [], gx, gy, gw = 1, gh = 1, maxRing = 8 } 
 }
 
 /**
+ * The nearest empty place for a creature of this size, WITHIN a fixed
+ * rectangle — for dropping a dungeon encounter inside a specific generated
+ * room rather than beside a focus token. Searches outward from the rect's
+ * own center, same ring logic as freeSpot, but a candidate spot that would
+ * spill outside the rect's bounds is rejected outright rather than merely
+ * preferred against. Returns null when the room genuinely has no room left,
+ * same "place it anyway" contract as freeSpot.
+ */
+export function freeSpotInRect({ occupied = [], rect, gw = 1, gh = 1 } = {}) {
+  const cx = Math.round(rect.gx + rect.gw / 2);
+  const cy = Math.round(rect.gy + rect.gh / 2);
+  const maxRing = Math.max(rect.gw, rect.gh);
+  for (let r = 0; r <= maxRing; r += 1) {
+    for (let dy = -r; dy <= r; dy += 1) {
+      for (let dx = -r; dx <= r; dx += 1) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const spot = { gx: cx + dx, gy: cy + dy, gw, gh };
+        if (spot.gx < rect.gx || spot.gy < rect.gy
+          || spot.gx + gw > rect.gx + rect.gw || spot.gy + gh > rect.gy + rect.gh) continue;
+        if (!occupied.some((o) => overlaps(spot, o))) return spot;
+      }
+    }
+  }
+  return null;
+}
+
+/**
  * The party's level, for cards that threaten everyone rather than one person.
  *
  * PF2e keeps an actual party actor, which is the right source: it knows who is
