@@ -79,7 +79,7 @@ const macros = [
   },
   {
     _id: foundryId('macro-divine'),
-    name: 'DOMMT: Divine — Celtic Cross',
+    name: 'DOMMT: Divine',
     type: 'script',
     scope: 'global',
     author: null,
