@@ -415,7 +415,7 @@ export function makeFoundryApi() {
      * so a summons lands next to whoever drew rather than at the origin.
      */
     async spawnCreatures(entries, { nearActorId = null, disposition = -1, img = null,
-                                    imgFallback = null, place = 'beside' } = {}) {
+                                    imgFallback = null, place = 'beside', hidden = false } = {}) {
       const scene = canvas?.scene;
       if (!scene) throw new Error('No active scene to place creatures on');
       const grid = scene.grid?.size ?? 100;
@@ -487,9 +487,10 @@ export function makeFoundryApi() {
             : { x: originX + grid * (i + 1), y: originY };
         }
         occupied.push(footprint({ ...spot, width: tw, height: th }, grid));
-        const td = await actor.getTokenDocument({ ...spot, disposition });
+        const td = await actor.getTokenDocument({ ...spot, disposition, hidden });
         const obj = td.toObject();
         obj.disposition = disposition;
+        obj.hidden = hidden;
         await scene.createEmbeddedDocuments('Token', [obj]);
         created.push(actor.name);
       }

@@ -16,6 +16,7 @@ import {
   performDivinationOnTable,
   clearDivinationTable
 } from './scene-divination.mjs';
+import { generateEncounter } from './encounter-generator.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 
@@ -68,7 +69,8 @@ Hooks.once('ready', async () => {
       await game.settings.set(MODULE_ID, 'playDeck', state);
     },
     installMacros: () => ensureWorldMacros({ force: true }),
-    installDivinationScene: () => ensureDivinationScene()
+    installDivinationScene: () => ensureDivinationScene(),
+    generateEncounter: () => generateEncounter()
   };
   if (game.user.isGM) {
     try { await ensureWorldMacros(); } catch (e) { console.error(`${MODULE_ID} | ensureWorldMacros failed`, e); }
@@ -101,6 +103,11 @@ const MACRO_DEFS = [
     name: 'DOMMT: Reset Play Deck (GM)',
     img: `modules/${MODULE_ID}/assets/icons/macro-reset.webp`,
     command: `if (!game.user.isGM) return ui.notifications.warn('GM only');\nawait game.modules.get('${MODULE_ID}').api.resetDeck();\nui.notifications.info('Deck reset');`
+  },
+  {
+    name: 'DOMMT: Generate Encounter',
+    img: `modules/${MODULE_ID}/assets/icons/macro-encounter.webp`,
+    command: `game.modules.get('${MODULE_ID}').api.generateEncounter();`
   }
 ];
 
