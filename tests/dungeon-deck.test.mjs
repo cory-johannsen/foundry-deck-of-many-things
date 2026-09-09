@@ -4,7 +4,11 @@ import {
   resolveRoomOutcome,
   applySequenceMutation,
   findOutcomeTemplate,
-  OUTCOME_SLOT_TEMPLATES
+  OUTCOME_SLOT_TEMPLATES,
+  depthBiasFor,
+  MAX_DEPTH_BIAS,
+  locationTagAt,
+  LOCATION_TAGS
 } from '../scripts/dungeon-deck.mjs';
 
 describe('buildRoomSequence', () => {
@@ -44,6 +48,13 @@ describe('buildRoomSequence', () => {
     const rooms = buildRoomSequence({ seed: 'gamma', roomCount: 10 });
     for (const room of rooms.filter((r) => !r.isGoal)) {
       expect(findOutcomeTemplate(room.outcomeSlotId)).not.toBeNull();
+    }
+  });
+
+  it('gives every room a locationTag, including the goal room', () => {
+    const rooms = buildRoomSequence({ seed: 'epsilon', roomCount: 7 });
+    for (const room of rooms) {
+      expect(LOCATION_TAGS).toContain(room.locationTag);
     }
   });
 
@@ -99,9 +110,59 @@ describe('applySequenceMutation', () => {
     expect(after[2].isGoal).toBe(false);
   });
 
+  it('the inserted room carries a locationTag like any other room', () => {
+    const before = rooms();
+    const after = applySequenceMutation(before, 1, 'insert_after', { seed: 'seq' });
+    expect(LOCATION_TAGS).toContain(after[2].locationTag);
+  });
+
   it('an unrecognised mutation is a no-op', () => {
     const before = rooms();
     expect(applySequenceMutation(before, 0, null, { seed: 'seq' })).toBe(before);
     expect(applySequenceMutation(before, 0, 'rerun_encounter', { seed: 'seq' })).toBe(before);
+  });
+});
+
+describe('depthBiasFor', () => {
+  it('is zero at room 0', () => {
+    expect(depthBiasFor({ physicalSlot: 0, roomCount: 8, isGoal: false })).toBe(0);
+  });
+
+  it('always gives the goal room the maximum bias, regardless of dungeon length', () => {
+    expect(depthBiasFor({ physicalSlot: 1, roomCount: 2, isGoal: true })).toBe(MAX_DEPTH_BIAS);
+    expect(depthBiasFor({ physicalSlot: 19, roomCount: 20, isGoal: true })).toBe(MAX_DEPTH_BIAS);
+  });
+
+  it('is monotonically non-decreasing across a dungeon\'s non-goal rooms', () => {
+    const roomCount = 9;
+    let previous = -Infinity;
+    for (let slot = 0; slot < roomCount - 1; slot += 1) {
+      const bias = depthBiasFor({ physicalSlot: slot, roomCount, isGoal: false });
+      expect(bias).toBeGreaterThanOrEqual(previous);
+      previous = bias;
+    }
+  });
+
+  it('never exceeds MAX_DEPTH_BIAS', () => {
+    for (let slot = 0; slot < 10; slot += 1) {
+      expect(depthBiasFor({ physicalSlot: slot, roomCount: 10, isGoal: false })).toBeLessThanOrEqual(MAX_DEPTH_BIAS);
+    }
+  });
+});
+
+describe('locationTagAt', () => {
+  it('always returns a member of LOCATION_TAGS', () => {
+    for (let i = 0; i < 20; i += 1) {
+      expect(LOCATION_TAGS).toContain(locationTagAt('seed', i));
+    }
+  });
+
+  it('is deterministic for the same seed and index', () => {
+    expect(locationTagAt('alpha', 3)).toBe(locationTagAt('alpha', 3));
+  });
+
+  it('varies across indices (not the same tag every time)', () => {
+    const tags = new Set(Array.from({ length: 20 }, (_, i) => locationTagAt('alpha', i)));
+    expect(tags.size).toBeGreaterThan(1);
   });
 });

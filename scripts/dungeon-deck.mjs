@@ -60,6 +60,33 @@ export function findOutcomeTemplate(id) {
   return OUTCOME_SLOT_TEMPLATES.find((t) => t.id === id) ?? null;
 }
 
+// Tunable. +2 pushes an already-hard late creature slot from the top of the
+// normal spread (+2) to the edge of the XP table's meaningful range (+4) —
+// real escalation deeper into the dungeon without exceeding it.
+export const MAX_DEPTH_BIAS = 2;
+
+/**
+ * How much harder a combat room should run, purely from its position in the
+ * dungeon — a linear ramp from 0 at room 0 up to MAX_DEPTH_BIAS by the last
+ * room actually built. The goal room always gets the max regardless of where
+ * it lands (a short dungeon shouldn't have a soft final boss).
+ */
+export function depthBiasFor({ physicalSlot, roomCount, isGoal }) {
+  if (isGoal) return MAX_DEPTH_BIAS;
+  const fraction = physicalSlot / Math.max(1, roomCount - 1);
+  return Math.round(fraction * MAX_DEPTH_BIAS);
+}
+
+// Broad PF2e creature-type traits, deliberately common ones rather than
+// narrow subtypes, so a room's tag rarely starves the bestiary query to zero
+// once it's combined with whatever the dungeon-wide theme already asks for.
+export const LOCATION_TAGS = ['undead', 'beast', 'fiend', 'aberration', 'construct', 'elemental', 'plant', 'dragon'];
+
+/** Deterministic per-room pick, same seeded pattern as outcomeSlotAt/setpieceAt. */
+export function locationTagAt(seed, index) {
+  return pickAt(seed, `location-${index}`, LOCATION_TAGS.map((tag) => ({ tag }))).tag;
+}
+
 function weightedPick(items, r) {
   const weights = items.map((it) => it.weight ?? 1);
   const total = weights.reduce((a, b) => a + b, 0);
@@ -116,14 +143,18 @@ export function buildRoomSequence({ seed, roomCount, setpieceIds = [] }) {
     const kind = roomKindAt(seed, i);
     const setpieceId = kind === 'puzzle_or_trap' ? setpieceAt(seed, puzzleOccurrence++, setpieceIds) : null;
     const outcomeSlot = outcomeSlotAt(seed, i);
-    rooms.push({ id: `room-${i}`, kind, isGoal: false, setpieceId, outcomeSlotId: outcomeSlot.id });
+    rooms.push({
+      id: `room-${i}`, kind, isGoal: false, setpieceId, outcomeSlotId: outcomeSlot.id,
+      locationTag: locationTagAt(seed, i)
+    });
   }
   rooms.push({
     id: `room-${roomCount - 1}`,
     kind: 'combat',
     isGoal: true,
     setpieceId: null,
-    outcomeSlotId: null
+    outcomeSlotId: null,
+    locationTag: locationTagAt(seed, roomCount - 1)
   });
   return rooms;
 }
@@ -162,7 +193,8 @@ export function applySequenceMutation(rooms, currentIndex, mutation, { seed, set
       kind,
       isGoal: false,
       setpieceId,
-      outcomeSlotId: outcomeTemplate.id
+      outcomeSlotId: outcomeTemplate.id,
+      locationTag: locationTagAt(seed, salt)
     };
     return [...rooms.slice(0, currentIndex + 1), newRoom, ...rooms.slice(currentIndex + 1)];
   }
