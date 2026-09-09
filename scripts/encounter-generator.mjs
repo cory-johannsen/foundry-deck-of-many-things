@@ -107,7 +107,8 @@ async function spawnEncounterTokens(api, roster, partyMembers, { originArea = nu
 }
 
 export async function generateEncounter({
-  prefillTraits = [], prefillExcludeTraits = [], originArea = null, forceHidden = false, extraFlags = null
+  prefillTraits = [], prefillExcludeTraits = [], originArea = null, forceHidden = false, extraFlags = null,
+  levelOffsetBias = 0, locationTag = null
 } = {}) {
   if (!game.user.isGM) {
     ui.notifications.warn(game.i18n.localize('DOMMT.Encounter.GmOnlyWarning'));
@@ -139,7 +140,9 @@ export async function generateEncounter({
       api,
       partyLevel,
       traits: theme.traits,
-      excludeTraits: theme.excludeTraits
+      excludeTraits: theme.excludeTraits,
+      levelOffsetBias,
+      requireTrait: locationTag
     });
     const action = await showEncounterPreview(roster);
     if (action === 'accept') break;
