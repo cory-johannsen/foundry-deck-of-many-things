@@ -51,7 +51,9 @@ async function resolveCurrentRoom(succeeded) {
   if (!nextRoomId) return; // the goal room was just resolved — nothing more to build
 
   const nextRoom = state.rooms.find((r) => r.id === nextRoomId);
-  await buildRoomAtSlot(scene, nextPhysicalSlot, { isGoal: nextRoom.isGoal });
+  await buildRoomAtSlot(scene, nextPhysicalSlot, {
+    isGoal: nextRoom.isGoal, locationTag: nextRoom.locationTag, artVariant: nextRoom.artVariant
+  });
 
   if (nextRoom.kind === 'combat') {
     await populateSlotEncounter(scene, nextPhysicalSlot, {
@@ -154,7 +156,9 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     );
 
     const room0 = state.rooms[0];
-    await buildRoomAtSlot(scene, 0, { isGoal: room0.isGoal });
+    await buildRoomAtSlot(scene, 0, {
+      isGoal: room0.isGoal, locationTag: room0.locationTag, artVariant: room0.artVariant
+    });
     if (room0.kind === 'combat') {
       // Room 0 has no door to walk through to trigger a discovery reveal —
       // the party starts here, so its encounter (if any) spawns visible.

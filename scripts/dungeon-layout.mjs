@@ -76,9 +76,12 @@ export function roomEnclosureWalls(slot, { hasOutgoing }) {
 
 /**
  * Door + corridor geometry connecting `slot` to `slot + 1`. Returns the
- * single door segment (on slot's forward face) and every other plain solid
+ * single door segment (on slot's forward face), every other plain solid
  * segment needed (the wall flanking the door on either side, and the two
- * segments closing the long edges of the connecting corridor). `slot + 1`'s
+ * segments closing the long edges of the connecting corridor), and the
+ * corridor's own floor rect (`corridorRect`, for placing its art Tile) —
+ * always exactly one grid square (`CORRIDOR_LEN` × `DOOR_WIDTH`, both `1`),
+ * regardless of whether the connection runs east/west or south. `slot + 1`'s
  * facing side gets nothing — it's left open into the corridor.
  */
 export function buildConnectionGeometry(slot) {
@@ -86,6 +89,8 @@ export function buildConnectionGeometry(slot) {
   const { gx, gy, gw, gh } = slotRect(slot);
   const plainWalls = [];
   let doorWall;
+
+  let corridorRect;
 
   if (dir === 'east' || dir === 'west') {
     const faceX = dir === 'east' ? gx + gw : gx;
@@ -99,6 +104,7 @@ export function buildConnectionGeometry(slot) {
       { x1: faceX, y1: doorY0, x2: corridorEndX, y2: doorY0 },
       { x1: faceX, y1: doorY1, x2: corridorEndX, y2: doorY1 }
     );
+    corridorRect = { gx: Math.min(faceX, corridorEndX), gy: doorY0, gw: CORRIDOR_LEN, gh: DOOR_WIDTH };
   } else {
     // 'south'
     const faceY = gy + gh;
@@ -112,7 +118,8 @@ export function buildConnectionGeometry(slot) {
       { x1: doorX0, y1: faceY, x2: doorX0, y2: corridorEndY },
       { x1: doorX1, y1: faceY, x2: doorX1, y2: corridorEndY }
     );
+    corridorRect = { gx: doorX0, gy: faceY, gw: DOOR_WIDTH, gh: CORRIDOR_LEN };
   }
 
-  return { doorWall, plainWalls };
+  return { doorWall, plainWalls, corridorRect };
 }
