@@ -132,11 +132,15 @@ export function isSlotPopulated(scene, slot) {
  * preview — nothing about that flow changes, it's just handed a target room
  * instead of "near a focus token."
  */
-export async function populateSlotEncounter(scene, slot, { prefillTraits = [], prefillExcludeTraits = [], hidden = true } = {}) {
+export async function populateSlotEncounter(scene, slot, {
+  prefillTraits = [], prefillExcludeTraits = [], hidden = true, levelOffsetBias = 0, locationTag = null
+} = {}) {
   const rect = slotRect(slot);
   await generateEncounter({
     prefillTraits,
     prefillExcludeTraits,
+    levelOffsetBias,
+    locationTag,
     originArea: {
       x: toPixels(rect.gx), y: toPixels(rect.gy),
       width: toPixels(rect.gw), height: toPixels(rect.gh)

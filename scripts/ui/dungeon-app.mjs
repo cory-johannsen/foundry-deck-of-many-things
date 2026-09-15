@@ -3,6 +3,7 @@ import {
   getRunState, createRun, markRoomOutcome, abandonRun, canUndoRoomEntry
 } from '../dungeon-runner.mjs';
 import { parseTraitList } from '../encounter-generator.mjs';
+import { depthBiasFor } from '../dungeon-deck.mjs';
 import {
   createDungeonScene, buildRoomAtSlot, unlockDoorToSlot, populateSlotEncounter,
   isSlotPopulated, placePartyInSlot, undoRoomEntry
@@ -54,7 +55,9 @@ async function resolveCurrentRoom(succeeded) {
 
   if (nextRoom.kind === 'combat') {
     await populateSlotEncounter(scene, nextPhysicalSlot, {
-      prefillTraits: state.traits, prefillExcludeTraits: state.excludeTraits
+      prefillTraits: state.traits, prefillExcludeTraits: state.excludeTraits,
+      levelOffsetBias: depthBiasFor({ physicalSlot: nextPhysicalSlot, roomCount: state.rooms.length, isGoal: nextRoom.isGoal }),
+      locationTag: nextRoom.locationTag
     });
     // Only unlock once monsters are actually in place — a cancelled theme
     // dialog leaves the door locked rather than opening onto an empty room;
@@ -155,7 +158,11 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (room0.kind === 'combat') {
       // Room 0 has no door to walk through to trigger a discovery reveal —
       // the party starts here, so its encounter (if any) spawns visible.
-      await populateSlotEncounter(scene, 0, { prefillTraits: traits, prefillExcludeTraits: excludeTraits, hidden: false });
+      await populateSlotEncounter(scene, 0, {
+        prefillTraits: traits, prefillExcludeTraits: excludeTraits, hidden: false,
+        levelOffsetBias: depthBiasFor({ physicalSlot: 0, roomCount: state.rooms.length, isGoal: room0.isGoal }),
+        locationTag: room0.locationTag
+      });
     }
 
     const partyMembers = (game.actors?.party?.members ?? []).filter((m) => m.type === 'character');
@@ -172,12 +179,14 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const scene = canvas?.scene;
     const sceneId = scene?.id;
     const state = sceneId ? getRunState(sceneId) : null;
-    const nextRoomId = state?.rooms[state.currentIndex + 1]?.id;
-    const slot = nextRoomId ? state.physicalSlotByRoomId[nextRoomId] : null;
+    const nextRoom = state?.rooms[state.currentIndex + 1] ?? null;
+    const slot = nextRoom ? state.physicalSlotByRoomId[nextRoom.id] : null;
     if (slot == null) return;
 
     await populateSlotEncounter(scene, slot, {
-      prefillTraits: state.traits, prefillExcludeTraits: state.excludeTraits
+      prefillTraits: state.traits, prefillExcludeTraits: state.excludeTraits,
+      levelOffsetBias: depthBiasFor({ physicalSlot: slot, roomCount: state.rooms.length, isGoal: nextRoom.isGoal }),
+      locationTag: nextRoom.locationTag
     });
     if (isSlotPopulated(scene, slot)) await unlockDoorToSlot(scene, slot);
     this.render();

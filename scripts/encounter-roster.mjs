@@ -32,14 +32,29 @@ function xpFor(levelOffset) {
   return RELATIVE_XP[clamped] ?? 40;
 }
 
-async function pickCreature({ api, partyLevel, levelOffset, traits, excludeTraits, rng }) {
-  const minLevel = partyLevel + levelOffset - LEVEL_TOLERANCE;
-  const maxLevel = partyLevel + levelOffset + LEVEL_TOLERANCE;
+/**
+ * `levelOffsetBias` shifts the target level band — a dungeon room's
+ * depth-based difficulty ramp (see dungeon-deck.mjs's depthBiasFor).
+ * `requireTrait` is a single ANDed restriction — a dungeon room's own
+ * location flavor (dungeon-deck.mjs's locationTagAt) — layered on top of the
+ * broader any-of `traits` list. When both a theme and a location restriction
+ * are set and neither loosened attempt finds anything, the location tag is
+ * the one kept: it's the room's own specific identity, so the broader
+ * dungeon-wide theme yields first rather than starving the room to empty.
+ */
+async function pickCreature({
+  api, partyLevel, levelOffset, traits, excludeTraits, rng, levelOffsetBias = 0, requireTrait = null
+}) {
+  const minLevel = partyLevel + levelOffset + levelOffsetBias - LEVEL_TOLERANCE;
+  const maxLevel = partyLevel + levelOffset + levelOffsetBias + LEVEL_TOLERANCE;
   const excludeAll = [...new Set([...(excludeTraits ?? []), ...MANDATORY_EXCLUDE])];
-  const look = (packs) => api.findCreatures({ minLevel, maxLevel, traits, excludeTraits: excludeAll, packs });
+  const look = (packs, useTraits) => api.findCreatures({
+    minLevel, maxLevel, traits: useTraits ? traits : [], excludeTraits: excludeAll, packs, requireTrait
+  });
 
-  let pool = await look(MONSTER_CORE_PACKS);
-  if (!pool.length) pool = await look(null);
+  let pool = await look(MONSTER_CORE_PACKS, true);
+  if (!pool.length) pool = await look(null, true);
+  if (!pool.length && requireTrait) pool = await look(null, false);
   if (!pool.length) return null;
   return pool[Math.floor(rng() * pool.length)];
 }
@@ -60,63 +75,62 @@ async function pickCreature({ api, partyLevel, levelOffset, traits, excludeTrait
  * fallback the Dragon/Ooze/Monstrosity card handlers use.
  */
 export async function resolveEncounterRoster({
-  resolved, api, partyLevel, traits = [], excludeTraits = [], rng = Math.random
+  resolved, api, partyLevel, traits = [], excludeTraits = [], rng = Math.random,
+  levelOffsetBias = 0, requireTrait = null
 }) {
   const warnings = [];
   const groupChoice = new Map();
   let approxXp = 0;
 
+  const pick = (levelOffset) => pickCreature({
+    api, partyLevel, levelOffset, traits, excludeTraits, rng, levelOffsetBias, requireTrait
+  });
+
   async function choiceFor(slot) {
     if (slot.group) {
       if (groupChoice.has(slot.group)) return groupChoice.get(slot.group);
-      const chosen = await pickCreature({ api, partyLevel, levelOffset: slot.levelOffset, traits, excludeTraits, rng });
+      const chosen = await pick(slot.levelOffset);
       groupChoice.set(slot.group, chosen);
       return chosen;
     }
-    return pickCreature({ api, partyLevel, levelOffset: slot.levelOffset, traits, excludeTraits, rng });
+    return pick(slot.levelOffset);
   }
 
   const foes = [];
   for (const slot of resolved.foes ?? []) {
     const chosen = await choiceFor(slot);
     if (!chosen) {
-      warnings.push(`No creature found for a level ${partyLevel + slot.levelOffset} slot — place one yourself.`);
+      warnings.push(`No creature found for a level ${partyLevel + slot.levelOffset + levelOffsetBias} slot — place one yourself.`);
       continue;
     }
     const count = slot.countsAs ?? 1;
     foes.push({ pack: chosen.pack, id: chosen.id, name: chosen.name, level: chosen.level, count, group: slot.group ?? null });
-    approxXp += xpFor(slot.levelOffset) * count;
+    approxXp += xpFor(slot.levelOffset + levelOffsetBias) * count;
   }
 
   let friend = null;
   if (resolved.friend) {
-    const chosen = await pickCreature({
-      api, partyLevel, levelOffset: resolved.friend.levelOffset, traits, excludeTraits, rng
-    });
+    const chosen = await pick(resolved.friend.levelOffset);
     if (chosen) friend = { pack: chosen.pack, id: chosen.id, name: chosen.name, level: chosen.level };
     else warnings.push('No friendly creature found for the Friend card — place one yourself.');
   }
 
   let lurker = null;
   if (resolved.lurker) {
-    const chosen = await pickCreature({
-      api, partyLevel, levelOffset: resolved.lurker.levelOffset, traits, excludeTraits, rng
-    });
+    const chosen = await pick(resolved.lurker.levelOffset);
     if (chosen) {
       lurker = { pack: chosen.pack, id: chosen.id, name: chosen.name, level: chosen.level };
-      approxXp += xpFor(resolved.lurker.levelOffset);
+      approxXp += xpFor(resolved.lurker.levelOffset + levelOffsetBias);
     } else warnings.push('No lurking creature found for the Lurker card — place one yourself.');
   }
 
   let twins = null;
   if (resolved.twins) {
     const [first] = resolved.twins;
-    const chosen = await pickCreature({
-      api, partyLevel, levelOffset: first.levelOffset, traits, excludeTraits, rng
-    });
+    const chosen = await pick(first.levelOffset);
     if (chosen) {
       twins = resolved.twins.map(() => ({ pack: chosen.pack, id: chosen.id, name: chosen.name, level: chosen.level }));
-      approxXp += xpFor(first.levelOffset) * resolved.twins.length;
+      approxXp += xpFor(first.levelOffset + levelOffsetBias) * resolved.twins.length;
     } else warnings.push('No creature found for the Twin cards — place one yourself.');
   }
 

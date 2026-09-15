@@ -7,10 +7,15 @@ function makeStubApi(pool) {
     calls,
     async findCreatures(opts) {
       calls.push(opts);
-      return pool.filter((c) =>
-        (opts.minLevel == null || c.level >= opts.minLevel)
-        && (opts.maxLevel == null || c.level <= opts.maxLevel)
-        && !(opts.excludeTraits ?? []).some((t) => (c.traits ?? []).includes(t)));
+      return pool.filter((c) => {
+        const traits = c.traits ?? [];
+        if (opts.minLevel != null && c.level < opts.minLevel) return false;
+        if (opts.maxLevel != null && c.level > opts.maxLevel) return false;
+        if ((opts.excludeTraits ?? []).some((t) => traits.includes(t))) return false;
+        if ((opts.traits ?? []).length && !opts.traits.some((t) => traits.includes(t))) return false;
+        if (opts.requireTrait && !traits.includes(opts.requireTrait)) return false;
+        return true;
+      });
     }
   };
 }
@@ -99,5 +104,82 @@ describe('resolveEncounterRoster', () => {
     const roster = await resolveEncounterRoster({ resolved, api, partyLevel: 5 });
     expect(roster.noncombat).toEqual({ id: 'nc' });
     expect(roster.goal).toEqual({ id: 'g' });
+  });
+});
+
+describe('levelOffsetBias', () => {
+  it('shifts the queried level band', async () => {
+    const api = makeStubApi([{ pack: 'p', id: 'x', name: 'X', level: 8, traits: [] }]);
+    const resolved = { foes: [{ id: 's1', kind: 'creature', levelOffset: 0 }] };
+    await resolveEncounterRoster({ resolved, api, partyLevel: 5, levelOffsetBias: 3, rng: () => 0 });
+    expect(api.calls[0].minLevel).toBe(7);
+    expect(api.calls[0].maxLevel).toBe(9);
+  });
+
+  it('raises the reported approximate severity', async () => {
+    // Spans both the unbiased band ([4,6]) and the biased one ([6,8]) so
+    // both calls actually find a creature — approxXp is a function of the
+    // slot's levelOffset + bias, not of which creature happened to match.
+    const api = makeStubApi([
+      { pack: 'p', id: 'lo', name: 'Lo', level: 5, traits: [] },
+      { pack: 'p', id: 'hi', name: 'Hi', level: 8, traits: [] }
+    ]);
+    const resolved = { foes: [{ id: 's1', kind: 'creature', levelOffset: 0 }] };
+    const withoutBias = await resolveEncounterRoster({ resolved, api, partyLevel: 5, rng: () => 0 });
+    const withBias = await resolveEncounterRoster({ resolved, api, partyLevel: 5, levelOffsetBias: 2, rng: () => 0 });
+    expect(withoutBias.foes).toHaveLength(1);
+    expect(withBias.foes).toHaveLength(1);
+    expect(withBias.approxXp).toBeGreaterThan(withoutBias.approxXp);
+  });
+
+  it('applies uniformly to friend, lurker and twins, not just regular foes', async () => {
+    const api = makeStubApi([{ pack: 'p', id: 'x', name: 'X', level: 9, traits: [] }]);
+    const resolved = { foes: [], lurker: { id: 'l', kind: 'lurker', levelOffset: 0 } };
+    await resolveEncounterRoster({ resolved, api, partyLevel: 5, levelOffsetBias: 3, rng: () => 0 });
+    expect(api.calls[0].minLevel).toBe(7);
+  });
+});
+
+describe('requireTrait (per-location restriction)', () => {
+  it('is passed through to findCreatures as an ANDed filter', async () => {
+    const api = makeStubApi([{ pack: 'p', id: 'g', name: 'Ghoul', level: 5, traits: ['undead'] }]);
+    const resolved = { foes: [{ id: 's1', kind: 'creature', levelOffset: 0 }] };
+    await resolveEncounterRoster({ resolved, api, partyLevel: 5, requireTrait: 'undead', rng: () => 0 });
+    expect(api.calls[0].requireTrait).toBe('undead');
+  });
+
+  it('warns instead of throwing when nothing carries the required trait', async () => {
+    const api = makeStubApi([{ pack: 'p', id: 'g', name: 'Goblin', level: 5, traits: ['humanoid'] }]);
+    const resolved = { foes: [{ id: 's1', kind: 'creature', levelOffset: 0 }] };
+    const roster = await resolveEncounterRoster({ resolved, api, partyLevel: 5, requireTrait: 'undead', rng: () => 0 });
+    expect(roster.foes).toHaveLength(0);
+    expect(roster.warnings).toHaveLength(1);
+  });
+
+  it('drops the broader dungeon-wide traits before ever dropping the room\'s own required trait', async () => {
+    // Satisfies requireTrait only — incompatible with the dungeon-wide theme.
+    const api = makeStubApi([{ pack: 'p', id: 'g', name: 'Ghoul', level: 5, traits: ['undead'] }]);
+    const resolved = { foes: [{ id: 's1', kind: 'creature', levelOffset: 0 }] };
+    const roster = await resolveEncounterRoster({
+      resolved, api, partyLevel: 5, traits: ['dragon'], requireTrait: 'undead', rng: () => 0
+    });
+    expect(roster.foes).toHaveLength(1);
+    expect(roster.foes[0].id).toBe('g');
+    // Two failed attempts (Monster-Core-first, then full packs, both still
+    // requiring 'dragon') before the loosened final attempt succeeds.
+    expect(api.calls).toHaveLength(3);
+    expect(api.calls.at(-1).traits).toEqual([]);
+    expect(api.calls.at(-1).requireTrait).toBe('undead');
+  });
+
+  it('never loosens requireTrait itself, even as a last resort', async () => {
+    const api = makeStubApi([{ pack: 'p', id: 'g', name: 'Goblin', level: 5, traits: ['humanoid'] }]);
+    const resolved = { foes: [{ id: 's1', kind: 'creature', levelOffset: 0 }] };
+    const roster = await resolveEncounterRoster({
+      resolved, api, partyLevel: 5, traits: ['dragon'], requireTrait: 'undead', rng: () => 0
+    });
+    expect(roster.foes).toHaveLength(0);
+    expect(roster.warnings).toHaveLength(1);
+    expect(api.calls.every((c) => c.requireTrait === 'undead')).toBe(true);
   });
 });

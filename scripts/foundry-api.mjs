@@ -134,7 +134,7 @@ export function makeFoundryApi() {
      */
     async findCreatures({ minLevel = null, maxLevel = null, traits = [], namePattern = null,
                           minSize = null, excludeTraits = [], speaksLanguage = false,
-                          packs = null } = {}) {
+                          packs = null, requireTrait = null } = {}) {
       packs ??= game.packs
         .filter((p) => p.documentName === 'Actor' && CREATURE_PACK_PATTERN.test(p.collection))
         .map((p) => p.collection);
@@ -154,6 +154,10 @@ export function makeFoundryApi() {
           if (maxLevel != null && level > maxLevel) continue;
           const has = e.system?.traits?.value ?? [];
           if (traits.length && !traits.some((t) => has.includes(t))) continue;
+          // A second, ANDed filter — kept separate from `traits` (any-of) on
+          // purpose: folding a location's own required trait into that array
+          // would make the query broader (theme OR location), not narrower.
+          if (requireTrait && !has.includes(requireTrait)) continue;
           if (excludeTraits.some((t) => has.includes(t))) continue;
           if (re && !re.test(e.name)) continue;
           const size = e.system?.traits?.size?.value ?? 'med';
