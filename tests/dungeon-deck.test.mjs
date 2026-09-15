@@ -8,7 +8,9 @@ import {
   depthBiasFor,
   MAX_DEPTH_BIAS,
   locationTagAt,
-  LOCATION_TAGS
+  LOCATION_TAGS,
+  roomArtVariantAt,
+  ROOM_ART_VARIANTS
 } from '../scripts/dungeon-deck.mjs';
 
 describe('buildRoomSequence', () => {
@@ -55,6 +57,14 @@ describe('buildRoomSequence', () => {
     const rooms = buildRoomSequence({ seed: 'epsilon', roomCount: 7 });
     for (const room of rooms) {
       expect(LOCATION_TAGS).toContain(room.locationTag);
+    }
+  });
+
+  it('gives every room an artVariant in range, including the goal room', () => {
+    const rooms = buildRoomSequence({ seed: 'epsilon', roomCount: 7 });
+    for (const room of rooms) {
+      expect(room.artVariant).toBeGreaterThanOrEqual(0);
+      expect(room.artVariant).toBeLessThan(ROOM_ART_VARIANTS);
     }
   });
 
@@ -116,6 +126,13 @@ describe('applySequenceMutation', () => {
     expect(LOCATION_TAGS).toContain(after[2].locationTag);
   });
 
+  it('the inserted room carries an artVariant like any other room', () => {
+    const before = rooms();
+    const after = applySequenceMutation(before, 1, 'insert_after', { seed: 'seq' });
+    expect(after[2].artVariant).toBeGreaterThanOrEqual(0);
+    expect(after[2].artVariant).toBeLessThan(ROOM_ART_VARIANTS);
+  });
+
   it('an unrecognised mutation is a no-op', () => {
     const before = rooms();
     expect(applySequenceMutation(before, 0, null, { seed: 'seq' })).toBe(before);
@@ -164,5 +181,24 @@ describe('locationTagAt', () => {
   it('varies across indices (not the same tag every time)', () => {
     const tags = new Set(Array.from({ length: 20 }, (_, i) => locationTagAt('alpha', i)));
     expect(tags.size).toBeGreaterThan(1);
+  });
+});
+
+describe('roomArtVariantAt', () => {
+  it('always returns an index in [0, ROOM_ART_VARIANTS)', () => {
+    for (let i = 0; i < 20; i += 1) {
+      const variant = roomArtVariantAt('seed', i);
+      expect(variant).toBeGreaterThanOrEqual(0);
+      expect(variant).toBeLessThan(ROOM_ART_VARIANTS);
+    }
+  });
+
+  it('is deterministic for the same seed and index', () => {
+    expect(roomArtVariantAt('alpha', 3)).toBe(roomArtVariantAt('alpha', 3));
+  });
+
+  it('varies across indices (not the same variant every time)', () => {
+    const variants = new Set(Array.from({ length: 20 }, (_, i) => roomArtVariantAt('alpha', i)));
+    expect(variants.size).toBeGreaterThan(1);
   });
 });

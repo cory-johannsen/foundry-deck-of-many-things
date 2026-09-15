@@ -30,6 +30,16 @@ const REGION_ENTRY_SCRIPT =
   `const slot = region.getFlag('${MODULE_ID}', 'physicalSlot');\n` +
   `await game.modules.get('${MODULE_ID}').api.onDungeonRoomEnter(scene.id, event.data.token.id, slot);`;
 
+const ROOM_ART_DIR = `modules/${MODULE_ID}/assets/dungeon-rooms`;
+const CORRIDOR_ART_PATH = `${ROOM_ART_DIR}/corridor.webp`;
+
+/** The path to a room's background art — a dedicated image per locationTag
+ * for the goal room (there's only ever one), or one of its regular pool of
+ * pregenerated variants otherwise. */
+function roomArtPath({ locationTag, isGoal, artVariant }) {
+  return isGoal ? `${ROOM_ART_DIR}/${locationTag}-goal.webp` : `${ROOM_ART_DIR}/${locationTag}-${artVariant}.webp`;
+}
+
 function wallDoc({ x1, y1, x2, y2 }, { door = CONST.WALL_DOOR_TYPES.NONE, ds = CONST.WALL_DOOR_STATES.CLOSED, flags = null } = {}) {
   return {
     c: [toPixels(x1), toPixels(y1), toPixels(x2), toPixels(y2)],
@@ -73,26 +83,42 @@ export async function createDungeonScene() {
 /**
  * Build ONE physical room at `slot`. Connects it to `slot - 1` (door starts
  * LOCKED) unless `slot === 0`. `isGoal` suppresses the outgoing side — the
- * goal room has nowhere further to lead.
+ * goal room has nowhere further to lead. `locationTag`/`artVariant` (from the
+ * room's own data — see dungeon-deck.mjs) pick its background Tile; the
+ * connecting corridor, if any, gets its own Tile in the same pass, since it's
+ * always exactly one grid square regardless of which direction it runs.
  */
-export async function buildRoomAtSlot(scene, slot, { isGoal = false } = {}) {
+export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag = null, artVariant = 0 } = {}) {
   await ensureSceneCovers(scene, slot);
 
   const walls = roomEnclosureWalls(slot, { hasOutgoing: !isGoal }).map((side) => wallDoc(side));
+  const tiles = [];
 
   if (slot > 0) {
-    const { doorWall, plainWalls } = buildConnectionGeometry(slot - 1);
+    const { doorWall, plainWalls, corridorRect } = buildConnectionGeometry(slot - 1);
     walls.push(wallDoc(doorWall, {
       door: CONST.WALL_DOOR_TYPES.DOOR,
       ds: CONST.WALL_DOOR_STATES.LOCKED,
       flags: { [MODULE_ID]: { dungeonDoorToSlot: slot } }
     }));
     walls.push(...plainWalls.map((w) => wallDoc(w)));
+    tiles.push({
+      texture: { src: CORRIDOR_ART_PATH },
+      x: toPixels(corridorRect.gx), y: toPixels(corridorRect.gy),
+      width: toPixels(corridorRect.gw), height: toPixels(corridorRect.gh)
+    });
   }
 
   if (walls.length) await scene.createEmbeddedDocuments('Wall', walls);
 
   const rect = slotRect(slot);
+  tiles.push({
+    texture: { src: roomArtPath({ locationTag, isGoal, artVariant }) },
+    x: toPixels(rect.gx), y: toPixels(rect.gy),
+    width: toPixels(rect.gw), height: toPixels(rect.gh)
+  });
+  await scene.createEmbeddedDocuments('Tile', tiles);
+
   await scene.createEmbeddedDocuments('Region', [{
     name: `Room ${slot}`,
     shapes: [{

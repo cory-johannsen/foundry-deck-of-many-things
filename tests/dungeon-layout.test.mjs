@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  ROOM_SIZE, ROOMS_PER_ROW, CORRIDOR_LEN,
+  ROOM_SIZE, ROOMS_PER_ROW, CORRIDOR_LEN, DOOR_WIDTH,
   slotRowCol, slotRect, connectionDirection, roomEnclosureWalls, buildConnectionGeometry
 } from '../scripts/dungeon-layout.mjs';
 
@@ -103,6 +103,26 @@ describe('buildConnectionGeometry', () => {
     const rect = slotRect(wrapSlot);
     expect(doorWall.y1).toBe(rect.gy + rect.gh);
     expect(doorWall.y2).toBe(rect.gy + rect.gh);
+  });
+
+  it('gives an east/west connection a corridorRect one square wide, DOOR_WIDTH deep', () => {
+    const { corridorRect } = buildConnectionGeometry(0); // slot 0 -> east
+    expect(corridorRect.gw).toBe(CORRIDOR_LEN);
+    expect(corridorRect.gh).toBe(DOOR_WIDTH);
+  });
+
+  it('gives a south (row-wrap) connection a corridorRect one square tall, DOOR_WIDTH wide', () => {
+    const wrapSlot = ROOMS_PER_ROW - 1;
+    const { corridorRect } = buildConnectionGeometry(wrapSlot);
+    expect(corridorRect.gw).toBe(DOOR_WIDTH);
+    expect(corridorRect.gh).toBe(CORRIDOR_LEN);
+  });
+
+  it('places corridorRect flush against the door, with no gap or overlap into the room', () => {
+    const rect = slotRect(0);
+    const { corridorRect } = buildConnectionGeometry(0); // slot 0 -> east
+    // The corridor starts exactly at the room's east edge.
+    expect(corridorRect.gx).toBe(rect.gx + rect.gw);
   });
 
   it('never produces a door and a plain wall at the same coordinates', () => {

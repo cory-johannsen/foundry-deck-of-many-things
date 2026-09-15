@@ -87,6 +87,21 @@ export function locationTagAt(seed, index) {
   return pickAt(seed, `location-${index}`, LOCATION_TAGS.map((tag) => ({ tag }))).tag;
 }
 
+// How many pregenerated art variants exist per locationTag (see
+// dungeon-scene.mjs's roomArtPath) — tunable, not tied to any logic here.
+export const ROOM_ART_VARIANTS = 3;
+
+/**
+ * Deterministic per-room art variant index, same seeded-per-index pattern as
+ * the rest of this file. A plain uniform integer pick rather than routed
+ * through pickAt/weightedPick, since there's no weighting concept for "which
+ * copy of the same theme's art" — every variant is equally likely.
+ */
+export function roomArtVariantAt(seed, index) {
+  const r = splitmix32(seedFromString(`${seed}-art-${index}`))();
+  return Math.floor(r * ROOM_ART_VARIANTS);
+}
+
 function weightedPick(items, r) {
   const weights = items.map((it) => it.weight ?? 1);
   const total = weights.reduce((a, b) => a + b, 0);
@@ -145,7 +160,7 @@ export function buildRoomSequence({ seed, roomCount, setpieceIds = [] }) {
     const outcomeSlot = outcomeSlotAt(seed, i);
     rooms.push({
       id: `room-${i}`, kind, isGoal: false, setpieceId, outcomeSlotId: outcomeSlot.id,
-      locationTag: locationTagAt(seed, i)
+      locationTag: locationTagAt(seed, i), artVariant: roomArtVariantAt(seed, i)
     });
   }
   rooms.push({
@@ -154,7 +169,8 @@ export function buildRoomSequence({ seed, roomCount, setpieceIds = [] }) {
     isGoal: true,
     setpieceId: null,
     outcomeSlotId: null,
-    locationTag: locationTagAt(seed, roomCount - 1)
+    locationTag: locationTagAt(seed, roomCount - 1),
+    artVariant: roomArtVariantAt(seed, roomCount - 1)
   });
   return rooms;
 }
@@ -194,7 +210,8 @@ export function applySequenceMutation(rooms, currentIndex, mutation, { seed, set
       isGoal: false,
       setpieceId,
       outcomeSlotId: outcomeTemplate.id,
-      locationTag: locationTagAt(seed, salt)
+      locationTag: locationTagAt(seed, salt),
+      artVariant: roomArtVariantAt(seed, salt)
     };
     return [...rooms.slice(0, currentIndex + 1), newRoom, ...rooms.slice(currentIndex + 1)];
   }
