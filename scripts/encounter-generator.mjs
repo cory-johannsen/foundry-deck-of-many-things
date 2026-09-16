@@ -9,6 +9,8 @@
 import { makeFoundryApi } from './foundry-api.mjs';
 import { buildEncounterDeck, dealEncounter } from './encounter-deck.mjs';
 import { resolveEncounterRoster } from './encounter-roster.mjs';
+import { loadCreatureArt } from './data-loader.mjs';
+import { findCreatureArt, creatureArtPath } from './creature-art.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 
@@ -82,27 +84,38 @@ function findFocusActorId(partyMembers) {
   return partyMembers.find((m) => onScene.has(m.id))?.id ?? partyMembers[0]?.id ?? null;
 }
 
-async function spawnEncounterTokens(api, roster, partyMembers, { originArea = null, forceHidden = false, extraFlags = null } = {}) {
+/** Full module-relative art URL for a creature-art.json filename, or null. */
+function resolveArt(creatureArt, ref) {
+  const filename = findCreatureArt(creatureArt, ref);
+  return filename ? `modules/${MODULE_ID}/assets/${creatureArtPath(filename)}` : null;
+}
+
+async function spawnEncounterTokens(api, roster, partyMembers, {
+  originArea = null, forceHidden = false, extraFlags = null, creatureArt = []
+} = {}) {
   const nearActorId = findFocusActorId(partyMembers);
   const place = (hidden) => ({ nearActorId, originArea, extraFlags, hidden: hidden || forceHidden });
+  const withArt = (e) => ({ ...e, imgFallback: resolveArt(creatureArt, e) });
 
   if (roster.foes.length) {
-    const entries = roster.foes.flatMap((f) => Array(f.count ?? 1).fill({ pack: f.pack, id: f.id }));
+    const entries = roster.foes
+      .flatMap((f) => Array(f.count ?? 1).fill({ pack: f.pack, id: f.id }))
+      .map(withArt);
     await api.spawnCreatures(entries, { ...place(false), disposition: -1 });
   }
   if (roster.friend) {
-    await api.spawnCreatures([{ pack: roster.friend.pack, id: roster.friend.id }], { ...place(false), disposition: 1 });
+    const entries = [withArt({ pack: roster.friend.pack, id: roster.friend.id })];
+    await api.spawnCreatures(entries, { ...place(false), disposition: 1 });
   }
   if (roster.twins) {
-    const entries = roster.twins.map((t) => ({ pack: t.pack, id: t.id }));
+    const entries = roster.twins.map((t) => withArt({ pack: t.pack, id: t.id }));
     await api.spawnCreatures(entries, { ...place(false), disposition: -1 });
   }
   if (roster.lurker) {
     // Hidden: the book has the lurker ambush once the party is distracted, not
     // stand revealed on the table from the moment the encounter is generated.
-    await api.spawnCreatures([{ pack: roster.lurker.pack, id: roster.lurker.id }], {
-      ...place(true), disposition: -1
-    });
+    const entries = [withArt({ pack: roster.lurker.pack, id: roster.lurker.id })];
+    await api.spawnCreatures(entries, { ...place(true), disposition: -1 });
   }
 }
 
@@ -120,6 +133,7 @@ export async function generateEncounter({
   }
 
   const api = makeFoundryApi();
+  const creatureArt = await loadCreatureArt();
   const partyLevel = await api.partyLevel();
   const partyMembers = (game.actors?.party?.members ?? []).filter((m) => m.type === 'character');
   const partySize = Math.max(1, partyMembers.length);
@@ -151,5 +165,5 @@ export async function generateEncounter({
   }
 
   await postEncounterChatCard(api, roster);
-  await spawnEncounterTokens(api, roster, partyMembers, { originArea, forceHidden, extraFlags });
+  await spawnEncounterTokens(api, roster, partyMembers, { originArea, forceHidden, extraFlags, creatureArt });
 }

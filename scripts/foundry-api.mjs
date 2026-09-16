@@ -471,7 +471,13 @@ export function makeFoundryApi() {
         // would put one picture on every possible answer.
         const existing = doc.prototypeToken?.texture?.src ?? '';
         const bare = !existing || /mystery-man|default-icons|\.svg$/i.test(existing);
-        const art = img ?? (bare ? imgFallback : null);
+        // A per-entry img/imgFallback overrides the call-level default for
+        // just that one creature — needed because a single `foes` call can
+        // spawn several different creatures needing different art. Entries
+        // that set neither fall through to the call-level values unchanged.
+        const entryImg = entry.img ?? img;
+        const entryImgFallback = entry.imgFallback ?? imgFallback;
+        const art = entryImg ?? (bare ? entryImgFallback : null);
         const overrides = {
           'ownership.default': 0,
           'system.details.alliance': alliance,

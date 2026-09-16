@@ -1,0 +1,162 @@
+[
+  {
+    "id": "soulrider_fiend",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "sMemLmJWM0g0FxbZ",
+    "name": "Soulrider (Fiend)",
+    "level": -1,
+    "art": "soulrider-fiend.webp"
+  },
+  {
+    "id": "spawning_soulrider_fiend",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "8O1z1xSgpykJEUBI",
+    "name": "Spawning Soulrider (Fiend)",
+    "level": 1,
+    "art": "spawning-soulrider-fiend.webp"
+  },
+  {
+    "id": "homunculus",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "9wNjq9BirBoxyJVH",
+    "name": "Homunculus",
+    "level": 0,
+    "art": "homunculus.webp"
+  },
+  {
+    "id": "animated_armor",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "CFlx1tkRxKC9qAC7",
+    "name": "Animated Armor",
+    "level": 2,
+    "art": "animated-armor.webp"
+  },
+  {
+    "id": "clockwork_spy",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "9Uc7T3x3cxNo7lvY",
+    "name": "Clockwork Spy",
+    "level": -1,
+    "art": "clockwork-spy.webp"
+  },
+  {
+    "id": "wolf_skeleton",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "MTEuAbMboUe33rw1",
+    "name": "Wolf Skeleton",
+    "level": 0,
+    "art": "wolf-skeleton.webp"
+  },
+  {
+    "id": "ghoul_stalker",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "iLkQt8A99nQWUI8k",
+    "name": "Ghoul Stalker",
+    "level": 1,
+    "art": "ghoul-stalker.webp"
+  },
+  {
+    "id": "draugr",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "lCDygpomjUnutb5b",
+    "name": "Draugr",
+    "level": 2,
+    "art": "draugr.webp"
+  },
+  {
+    "id": "fire_wisp",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "micllXbcz1eBcAoz",
+    "name": "Fire Wisp",
+    "level": 0,
+    "art": "fire-wisp.webp"
+  },
+  {
+    "id": "icicle_snake",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "6sYj9SQRzKywNDOJ",
+    "name": "Icicle Snake",
+    "level": 2,
+    "art": "icicle-snake.webp"
+  },
+  {
+    "id": "grindylow",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "sC4B1pjGrKFXhjOQ",
+    "name": "Grindylow",
+    "level": 0,
+    "art": "grindylow.webp"
+  },
+  {
+    "id": "reefclaw",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "Rr1u6WvZEdPw1s6v",
+    "name": "Reefclaw",
+    "level": 1,
+    "art": "reefclaw.webp"
+  },
+  {
+    "id": "imp",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "yPYQC2bfOYmqcfIB",
+    "name": "Imp",
+    "level": 1,
+    "art": "imp.webp"
+  },
+  {
+    "id": "ort",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "kohQQtOfhwxbzWZB",
+    "name": "Ort",
+    "level": 0,
+    "art": "ort.webp"
+  },
+  {
+    "id": "leaf_leshy",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "v1UK3IwCB8wCbL3L",
+    "name": "Leaf Leshy",
+    "level": 0,
+    "art": "leaf-leshy.webp"
+  },
+  {
+    "id": "sprigjack",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "TElwkEGZy1zgwoVg",
+    "name": "Sprigjack",
+    "level": -1,
+    "art": "sprigjack.webp"
+  },
+  {
+    "id": "carbuncle",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "hXWykGzjb5RLkJvZ",
+    "name": "Carbuncle",
+    "level": 1,
+    "art": "carbuncle.webp"
+  },
+  {
+    "id": "kappa",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "hoqQ2x6x1tffC6wX",
+    "name": "Kappa",
+    "level": 2,
+    "art": "kappa.webp"
+  },
+  {
+    "id": "house_drake",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "Zh8awPHA7DZxTboc",
+    "name": "House Drake",
+    "level": 1,
+    "art": "house-drake.webp"
+  },
+  {
+    "id": "fey_dragonet",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "QIXc18xHrEWDmtKW",
+    "name": "Fey Dragonet",
+    "level": 2,
+    "art": "fey-dragonet.webp"
+  }
+]

@@ -3,6 +3,7 @@ const MODULE_ID = 'deck-of-many-more-things';
 let CARDS_CACHE = null;
 let POSITIONS_CACHE = null;
 let SETPIECES_CACHE = null;
+let CREATURE_ART_CACHE = null;
 
 export async function loadCards() {
   if (CARDS_CACHE) return CARDS_CACHE;
@@ -25,8 +26,16 @@ export async function loadDungeonSetpieces() {
   return SETPIECES_CACHE;
 }
 
+export async function loadCreatureArt() {
+  if (CREATURE_ART_CACHE) return CREATURE_ART_CACHE;
+  const res = await fetch(`modules/${MODULE_ID}/data/creature-art.json`);
+  CREATURE_ART_CACHE = await res.json();
+  return CREATURE_ART_CACHE;
+}
+
 export function invalidateCaches() {
   CARDS_CACHE = null;
   POSITIONS_CACHE = null;
   SETPIECES_CACHE = null;
+  CREATURE_ART_CACHE = null;
 }

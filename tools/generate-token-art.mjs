@@ -183,6 +183,122 @@ export const CREATURES = [
 ];
 
 /**
+ * Encounter-generator bestiary art (ITEM-2 of docs/backlog.md).
+ *
+ * The SRD/Monster Core bestiaries ship no token art for most entries, so a
+ * randomly-generated encounter mostly spawned the default silhouette. This is
+ * a prioritized first batch, not the whole bestiary — see the backlog item
+ * for the frequency methodology. Written to their own directory, separate
+ * from the hand-picked card-summon art above, since `data/creature-art.json`
+ * looks these up by bestiary {pack, docId} rather than by a card's own name.
+ *
+ * `homunculus` is deliberately absent here — the Monster Core bestiary entry
+ * is the same creature the Homunculus card already has art for above, so
+ * data/creature-art.json points it at that existing image instead of a
+ * second, near-duplicate generation.
+ */
+export const MONSTER_ART = [
+  { id: 'soulrider-fiend', file: 'soulrider-fiend', dir: 'assets/creature-art',
+    prompt: 'A reanimated corpse puppeteered from within by a small clawed red fiend nested in '
+      + 'its cracked-open ribcage, the corpse’s limbs hanging slack and jerking at odd '
+      + 'angles, hollow dead eyes, unnatural posture',
+    avoid: 'skeleton, zombie with visible rot, clean armor, living human expression' },
+  { id: 'spawning-soulrider-fiend', file: 'spawning-soulrider-fiend', dir: 'assets/creature-art',
+    prompt: 'A reanimated corpse riddled with small fiendish growths bursting from its skin, a '
+      + 'cluster of tiny red clawed fiends visible at its open chest cavity, limbs slack and '
+      + 'puppeted, hollow eyes',
+    avoid: 'skeleton, zombie with visible rot, clean armor, living human expression' },
+  { id: 'animated-armor', file: 'animated-armor', dir: 'assets/creature-art',
+    prompt: 'An empty suit of ornate steel plate armor standing upright with no one inside, the '
+      + 'closed visor’s slit glowing faint arcane blue from within, joints faintly wreathed '
+      + 'in animating magic',
+    avoid: 'person wearing it, visible face, knight, human hands' },
+  { id: 'clockwork-spy', file: 'clockwork-spy', dir: 'assets/creature-art', shapeless: true,
+    prompt: 'A small brass clockwork construct the size of a cat, a round segmented body '
+      + 'standing on six thin jointed insectoid mechanical legs like a spider, one glowing '
+      + 'camera-lens eye on a swiveling stalk, thin antenna probes, crouched low and watchful',
+    avoid: 'humanoid, robot person, large size, decorative trophy, lamp, urn, pedestal, table, '
+      + 'furniture, no legs visible, moon, pale circle, yellow circle, circular halo, circular '
+      + 'backdrop, sun, glowing disc' },
+  { id: 'wolf-skeleton', file: 'wolf-skeleton', dir: 'assets/creature-art',
+    prompt: 'A skeletal wolf, bare bone and a bared fanged skull, faint unholy violet light '
+      + 'glowing in its empty eye sockets, hackles of nothing but exposed rib',
+    avoid: 'fur, flesh, living wolf' },
+  { id: 'ghoul-stalker', file: 'ghoul-stalker', dir: 'assets/creature-art',
+    prompt: 'A crouched ghoul with grey rotting flesh stretched over long clawed hands, an '
+      + 'elongated fanged jaw, feral hunting stance, hungry red eyes',
+    avoid: 'circular halo, glowing ring, moon, full moon, circular border, vignette circle, '
+      + 'medallion, disc behind head' },
+  { id: 'draugr', file: 'draugr', dir: 'assets/creature-art',
+    prompt: 'A frost-rimed undead warrior in ancient corroded mail, matted hair over a frozen '
+      + 'blue-grey face split in a silent snarl, glowing cold pale eyes' },
+  { id: 'fire-wisp', file: 'fire-wisp', dir: 'assets/creature-art', shapeless: true,
+    prompt: 'A small drifting orb of living flame with a flickering white-hot inner core, '
+      + 'tendrils of fire trailing like hair, casting no shadow, alone in darkness' },
+  { id: 'icicle-snake', file: 'icicle-snake', dir: 'assets/creature-art',
+    prompt: 'A serpent of translucent blue ice, its coiled body faceted like carved crystal, '
+      + 'faint frost mist trailing from its fanged jaws, glowing pale eyes' },
+  { id: 'grindylow', file: 'grindylow', dir: 'assets/creature-art',
+    prompt: 'A small hunched aberration with slick green-grey amphibious skin, huge bulging '
+      + 'black eyes, webbed clawed hands, a wide lipless mouth of needle teeth, floating alone '
+      + 'against a background that is solid black with nothing else in it',
+    avoid: 'green background, colored background, tinted background, spotlight, vignette' },
+  { id: 'reefclaw', file: 'reefclaw', dir: 'assets/creature-art',
+    prompt: 'A crustacean-like aberration with a hard chitinous grey-blue shell, one oversized '
+      + 'crushing claw raised, small stalked black eyes, dripping with brine' },
+  { id: 'imp', file: 'imp', dir: 'assets/creature-art',
+    prompt: 'A small red-skinned devil with leathery bat wings, a barbed tail, sharp horns and '
+      + 'a wicked fanged grin, claws poised',
+    avoid: 'cute cartoon, human face' },
+  { id: 'ort', file: 'ort', dir: 'assets/creature-art', shapeless: true,
+    prompt: 'A writhing mass of tiny screeching devil-faces and grasping clawed hands fused '
+      + 'together into one gelatinous crawling shape, mindless and hungry',
+    avoid: 'single humanoid, single face' },
+  // A leshy is not a green man — see the leshy warrior's own note above. The
+  // first pass drew a human face wreathed in leaves and a pale backdrop, so
+  // both failures are named explicitly here.
+  { id: 'leaf-leshy', file: 'leaf-leshy', dir: 'assets/creature-art',
+    prompt: 'A small plant creature with no human skin anywhere, its entire head formed from '
+      + 'overlapping broad green leaves with two small glowing seed-pod eyes and no other '
+      + 'facial features, twig-like limbs, bark-textured torso, alone on a plain solid black '
+      + 'background',
+    avoid: 'human face, human skin, beard, moustache, antlers, laurel wreath, heraldic crest, '
+      + 'symmetrical emblem, coat of arms, pale background, white background, light background' },
+  { id: 'sprigjack', file: 'sprigjack', dir: 'assets/creature-art',
+    prompt: 'A single gangly fey plant creature standing alone, a spindly woven-twig body and '
+      + 'one oversized grinning wooden jack-o-lantern-shaped pumpkin head with a jagged carved '
+      + 'grin, thorny fingers, mischievous stance, isolated with nothing else in the frame',
+    avoid: 'multiple pumpkins, group of pumpkins, halloween scene, decorative border, vine '
+      + 'border, corner ornament, hanging ornaments, other creatures, jewelry' },
+  { id: 'carbuncle', file: 'carbuncle', dir: 'assets/creature-art',
+    prompt: 'A small fox-like beast with a glowing red gemstone embedded in its forehead, sleek '
+      + 'fur, alert pointed ears, watchful intelligent eyes' },
+  { id: 'kappa', file: 'kappa', dir: 'assets/creature-art',
+    prompt: 'A crouched humanoid turtle-beast standing upright on two legs, a hard shell on its '
+      + 'back, a clearly visible shallow bowl-shaped dish full of water set into the top of its '
+      + 'head, webbed clawed humanoid hands, a beaked turtle mouth, richly colored green-grey '
+      + 'scaled skin, alone against a background that is solid black with nothing else in it',
+    avoid: 'green background, colored background, tinted background, spotlight, vignette, '
+      + 'plain animal turtle, quadruped, grayscale, monochrome, black and white, line art, '
+      + 'water pool, reflection, wet ground, standing in water' },
+  // Echoes the existing 'drake' entry's framing and failure mode (a small
+  // coiled creature invites a circular border/roundel) — same avoid list,
+  // plus an explicit reptile-not-bird correction after the first pass drew a
+  // parrot: 'drake' alone was not enough to keep the model off a bird.
+  { id: 'house-drake', file: 'house-drake', dir: 'assets/creature-art',
+    prompt: 'A tiny reptilian dragon the size of a housecat, a scaled dragon body (not a bird), '
+      + 'lean and quick with glossy small scales, clawed feet, and stubby leathery bat-like '
+      + 'wings, perched and alert, head cocked curiously',
+    avoid: 'bird, beak, feathers, parrot, avian, plumage, circular border, ring, roundel, '
+      + 'medallion, decorative surround, wreath, coiled into a circle, ouroboros' },
+  { id: 'fey-dragonet', file: 'fey-dragonet', dir: 'assets/creature-art',
+    prompt: 'A tiny fey dragon no larger than a bird, delicate iridescent scales and gossamer '
+      + 'dragonfly-like wings, large luminous eyes, perched daintily',
+    avoid: 'circular border, ring, roundel, medallion, decorative surround, wreath, '
+      + 'coiled into a circle, ouroboros' }
+];
+
+/**
  * The macro icons the module installs onto the hotbar.
  *
  * They ship pointing at Foundry's own card-hand, eye and regen SVGs, which are
@@ -220,6 +336,7 @@ const negativeFor = (s) => {
 const ALL = [
   ...SUBJECTS.map((s) => ({ ...s, file: `warrior-${s.id}` })),
   ...CREATURES.map((c) => ({ ...c, file: c.file })),
+  ...MONSTER_ART,
   ...ICONS
 ];
 
