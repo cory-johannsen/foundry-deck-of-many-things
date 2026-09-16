@@ -1,13 +1,8 @@
 # Backlog
 
-_Last updated: 2026-09-15 (ITEM-4 done)_
+_Last updated: 2026-09-15 (ITEM-2 done)_
 
 ## Active
-
-### ITEM-2: Generated art for encounter opponents
-**State:** backlog
-**Blocked:** false
-**Summary:** Auto-generate token art (via the existing ComfyUI pipeline) for creatures spawned by the encounter generator — many bestiary entries, especially SRD ones, ship with no token art at all.
 
 ### ITEM-3: Expand trap/puzzle generation with realistic content
 **State:** backlog
@@ -15,6 +10,104 @@ _Last updated: 2026-09-15 (ITEM-4 done)_
 **Summary:** Grow `data/dungeon-setpieces.json` beyond the current 2 fully-transcribed puzzles + 3 stub traps into a fuller, more varied set of realistic traps and puzzles, and implement real generation/selection logic on top of it rather than a fixed small pool.
 
 ## Done
+
+### ITEM-2: Generated art for encounter opponents
+**State:** done
+**Blocked:** false
+**Summary:** Auto-generate token art (via the existing ComfyUI pipeline) for creatures spawned by the encounter generator — many bestiary entries, especially SRD ones, ship with no token art at all.
+
+#### Spec
+
+**Problem.** The `pf2e-data` skill's own documented finding — "SRD bestiaries ship no token art" — is already why the Dragon/Ooze/Monstrosity card handlers each needed an `imgFallback`. The encounter generator has no equivalent: `encounter-generator.mjs`'s `spawnEncounterTokens` calls `api.spawnCreatures(entries, {...place(...), disposition})` with no `img`/`imgFallback` at all. Since `pickCreature` (`encounter-roster.mjs`) prefers `MONSTER_CORE_PACKS` first, and Monster Core is exactly the pack family the `pf2e-data` skill flags as art-sparse, most creatures a generated encounter actually spawns likely render as Foundry's blank default silhouette today. This is a real, visible gap — not a handful of edge cases.
+
+**Goal.** Generate real per-creature token art for a **prioritized subset** of the bestiary, not an exhaustive pass — starting with the creatures a level 1 party is most likely to actually be shown by this module's own encounter generator, per the user's explicit prioritization: most frequently encountered first, starting at what a level 1 party faces.
+
+**Prioritization methodology (resolves "frequency" concretely, not by guessing at "iconic monsters" from memory).** Three filters, all directly computable against the live bestiary, all already load-bearing concepts elsewhere in this codebase:
+1. **Level band**: `CREATURE_SLOT_TEMPLATES` (`encounter-deck.mjs`) draws `levelOffset`s from -2 to +2, heavily weighted toward -1/0/+1 — so for a level 1 party (± `LEVEL_TOLERANCE`), the realistic common band is roughly creature level -2 to +2, weighted toward the low end. This is the *same* band the generator itself actually queries, not an invented threshold.
+2. **Pack**: Monster Core first (`MONSTER_CORE_PACKS`), matching `pickCreature`'s own preference order — these are the creatures a generated encounter reaches for before ever falling back to the wider bestiary.
+3. **"Frequently encountered" = eligible in the most draws**: within that level band, a creature that satisfies more of the 8 `locationTag`s (`LOCATION_TAGS`, from ITEM-1) is eligible for more of the encounter generator's actual queries (both the standalone macro's free-text `traits` and every dungeon room's `requireTrait` restriction) than one that only matches a single niche trait — so trait-breadth within the level band is a real, computable proxy for draw frequency, not a subjective ranking.
+4. Exclude `troop`/`swarm` (`MANDATORY_EXCLUDE`, already enforced everywhere else) and anything that already has real art (`isDefaultArt`, the same check `spawnCreatures` already uses for `imgFallback`) — the actual gap being closed.
+
+**Mechanism.**
+- New `data/creature-art.json` (+ schema + validator, same trio pattern as `cards.json`/`dungeon-setpieces.json`): each entry `{ id, pack, docId, name, level, art }` — `pack`+`docId` is the precise lookup key, matching `resolveEncounterRoster`'s own `{pack, id}` output exactly; `name`/`level` kept for human readability and schema cross-checks, not used at lookup time.
+- `foundry-api.mjs`'s `spawnCreatures` currently accepts only one call-level `img`/`imgFallback` for a whole `entries` array — real limitation here, since one `foes` call can contain several *different* creatures needing *different* art. Needs a small additive change: each `entries[]` item gains an optional `imgFallback` (and/or `img`) that overrides the call-level default for that one entry — backward compatible, every existing caller (Dragon/Ooze/Monstrosity, the encounter generator itself) is unaffected since none currently sets a per-entry image.
+- New small lookup (pure, keyed off the loaded `creature-art.json`): given `{pack, id}`, return the art path or `null`. `encounter-generator.mjs`'s `spawnEncounterTokens` calls it for every foe/friend/twin/lurker entry and attaches the result as that entry's `imgFallback`.
+- Art style matches the existing `assets/tokens/*.webp` convention already established in this module (dragon/ooze/monstrosity/warrior-by-ancestry images) — confirm the exact visual language against one of those at plan time before generating anything new.
+- Grows incrementally over time, same pattern as `dungeon-setpieces.json`'s 2-complete-plus-3-stub start — this pass covers a first batch (default proposal: 15-20 creatures, comparable in scope to ITEM-4's 33 images), not the whole bestiary.
+
+**Non-goals.** Covering the entire installed bestiary in one pass. Live-generating art on demand at encounter time (pregenerated only, matching ITEM-4's precedent). Changing `pickCreature`'s selection logic itself — this only affects what a *chosen* creature looks like once spawned, never which creature gets chosen.
+
+**Deferred to planning (needs the Foundry world back online).** The actual query — level -2..+2, Monster Core, art-missing, ranked by `locationTag` breadth — needs to run live to produce the real candidate list; nothing here should be treated as that list. Final batch size is a call to make once the query shows how many genuinely common, art-missing creatures exist in that band.
+
+#### Plan
+
+**Live query results** (both Monster Core packs, `foundry-rest` against the running world, level -2..+2, `troop`/`swarm` excluded, default/missing art only): 238 candidates total. Distribution by `locationTag` match count: 2 tags — 2 creatures (`Soulrider (Fiend)`, `Spawning Soulrider (Fiend)`, both `fiend`+`aberration`); 1 tag — 85 creatures; 0 tags — 151 (excluded — a creature matching none of the 8 tags is never reachable by a dungeon room's `requireTrait` restriction, only by the standalone macro's free-text theme, which is a weaker frequency signal). Per-tag candidate counts among the 1-and-2-tag group: construct 19, aberration 17, fiend 16, elemental 13, undead 12, beast 6, plant 3, dragon 3 — `plant`/`dragon`/`beast` are the scarcest, so the batch deliberately keeps at least 2 per tag rather than letting the naturally construct/aberration/fiend-heavy ranking crowd them out entirely.
+
+**Batch (20 creatures, all Monster Core, level -1 to 2, every one of the 8 `LOCATION_TAGS` covered by 2–3 creatures):**
+
+| name | pack | docId | level | tags |
+|---|---|---|---|---|
+| Soulrider (Fiend) | monster-core-2 | `sMemLmJWM0g0FxbZ` | -1 | fiend, aberration |
+| Spawning Soulrider (Fiend) | monster-core-2 | `8O1z1xSgpykJEUBI` | 1 | fiend, aberration |
+| Homunculus | monster-core | `9wNjq9BirBoxyJVH` | 0 | construct |
+| Animated Armor | monster-core | `CFlx1tkRxKC9qAC7` | 2 | construct |
+| Clockwork Spy | monster-core-2 | `9Uc7T3x3cxNo7lvY` | -1 | construct |
+| Wolf Skeleton | monster-core-2 | `MTEuAbMboUe33rw1` | 0 | undead |
+| Ghoul Stalker | monster-core | `iLkQt8A99nQWUI8k` | 1 | undead |
+| Draugr | monster-core-2 | `lCDygpomjUnutb5b` | 2 | undead |
+| Fire Wisp | monster-core-2 | `micllXbcz1eBcAoz` | 0 | elemental |
+| Icicle Snake | monster-core-2 | `6sYj9SQRzKywNDOJ` | 2 | elemental |
+| Grindylow | monster-core | `sC4B1pjGrKFXhjOQ` | 0 | aberration |
+| Reefclaw | monster-core | `Rr1u6WvZEdPw1s6v` | 1 | aberration |
+| Imp | monster-core | `yPYQC2bfOYmqcfIB` | 1 | fiend |
+| Ort | monster-core | `kohQQtOfhwxbzWZB` | 0 | fiend |
+| Leaf Leshy | monster-core | `v1UK3IwCB8wCbL3L` | 0 | plant |
+| Sprigjack | monster-core | `TElwkEGZy1zgwoVg` | -1 | plant |
+| Carbuncle | monster-core-2 | `hXWykGzjb5RLkJvZ` | 1 | beast |
+| Kappa | monster-core-2 | `hoqQ2x6x1tffC6wX` | 2 | beast |
+| House Drake | monster-core-2 | `Zh8awPHA7DZxTboc` | 1 | dragon |
+| Fey Dragonet | monster-core | `QIXc18xHrEWDmtKW` | 2 | dragon |
+
+`pack` in the table is short for readability; the actual data uses the full collection id (`pf2e.pathfinder-monster-core` / `pf2e.pathfinder-monster-core-2`), matching `resolveEncounterRoster`'s own `pack` field exactly.
+
+**Reuse, not regenerate.** `assets/tokens/homunculus.webp` (existing, used by `card-handlers-extra.mjs`'s Homunculus card) is visually the same creature as the bestiary's Monster Core `Homunculus` entry above — reused as-is rather than generating a near-duplicate. **19 new images generated**, 1 reused.
+
+**1. `data/creature-art.json` + `data/schema/creature-art.schema.json` + `tools/validate-creature-art.mjs`** — same trio pattern as `dungeon-setpieces.json`. Schema: array of `{ id, pack, docId, name, level, art }`, `additionalProperties: false`, `id` a slug (`^[a-z][a-z0-9_]*$`), `pack` one of the two Monster Core collection ids, `docId` non-empty string, `level` integer, `art` non-empty string (a bare filename under `assets/creature-art/`, e.g. `"imp.webp"` — not a full module path, matching how `dungeon-scene.mjs`'s `ROOM_ART_DIR` constant builds the full path rather than baking `modules/${MODULE_ID}/...` into the data file). Validator checks schema, duplicate `id`s, and duplicate `{pack, docId}` pairs (the actual lookup key — two entries for the same creature would be a silent bug at lookup time, worse than a duplicate `id`). `package.json` gains `"validate:creature-art": "node tools/validate-creature-art.mjs"`.
+
+**2. New `scripts/creature-art.mjs`** — pure, no Foundry deps (model: `dungeon-deck.mjs`):
+```js
+const ART_DIR = 'creature-art';
+export function findCreatureArt(list, { pack, id }) {
+  const entry = list.find((e) => e.pack === pack && e.docId === id);
+  return entry ? entry.art : null;
+}
+export function creatureArtPath(filename) {
+  return `${ART_DIR}/${filename}`;
+}
+```
+`creatureArtPath` is a plain string join, kept separate from the Foundry-touching `modules/${MODULE_ID}/...` prefix the same way `roomArtPath`'s directory constant is separated from `MODULE_ID` in `dungeon-scene.mjs` — the prefix is added once, at the actual `fetch`/asset-reference boundary.
+
+**3. `scripts/data-loader.mjs`** — add `CREATURE_ART_CACHE` + `loadCreatureArt()` (fetches `data/creature-art.json`, same shape as `loadDungeonSetpieces`), included in `invalidateCaches()`.
+
+**4. `scripts/foundry-api.mjs`'s `spawnCreatures`** — per-entry override, additive:
+```js
+const entryImg = entry.img ?? img;
+const entryImgFallback = entry.imgFallback ?? imgFallback;
+const art = entryImg ?? (bare ? entryImgFallback : null);
+```
+(replacing the current `const art = img ?? (bare ? imgFallback : null);`). Every existing caller passes plain `{pack, id}`/`{actorId}` entries with no `img`/`imgFallback` field, so `entryImg`/`entryImgFallback` fall through to the call-level values unchanged — this is a strict widening, not a behavior change, for every caller that doesn't opt in.
+
+**5. `scripts/encounter-generator.mjs`** — `generateEncounter` calls `loadCreatureArt()` once (alongside its existing setup, before building the deck) and passes the result to `spawnEncounterTokens`, which builds a small helper `withArt = (e) => ({ ...e, imgFallback: findCreatureArt(creatureArt, e) })` and maps it over every `entries` array right before each `api.spawnCreatures(...)` call (foes, friend, twins, lurker) — four one-line additions, no change to the roster-building logic above them.
+
+**6. Assets.** `assets/creature-art/<slug>.webp` for the 19 new creatures (slug = lowercase, hyphenated name — `imp.webp`, `wolf-skeleton.webp`, `soulrider-fiend.webp`, etc.), generated via the existing ComfyUI pipeline, matching the established `assets/tokens/*.webp` visual language (portrait-style single-creature token art, not a top-down map tile like ITEM-4's room art) — confirmed against `assets/tokens/imp`-adjacent existing art (dragon/ooze/monstrosity) before generating the batch. Each reviewed individually before acceptance, same discipline as ITEM-4's 33-image batch (that pass needed 3 redos after visual review; budget for the same here rather than treating generation as one-shot).
+
+**Tests:**
+- `tests/creature-art.test.mjs` (new): `findCreatureArt` — matches on `{pack, docId}` exactly (not `id` alone, not a partial match), returns `null` for no match; `creatureArtPath` — plain join.
+- Schema/validator exercised via `npm run validate:creature-art` (added to whatever aggregate `npm run validate` script, if any, chains the others — check `package.json` at implementation time; `validate`/`validate:dungeon` are currently separate scripts, not chained, so this likely stays a third standalone script rather than assuming a combined one exists).
+- `tests/foundry-api.test.mjs` (existing, if present — otherwise inline in whatever currently covers `spawnCreatures`): per-entry `img`/`imgFallback` overrides a call-level default; a call-level default still applies when an entry sets neither.
+- `tests/encounter-generator.test.mjs`/`encounter-roster.test.mjs` (existing): `spawnEncounterTokens` attaches the right `imgFallback` per entry from a stub creature-art list, and passes `null` through untouched for a creature not in the list (today's exact behavior, preserved for anything outside the batch).
+
+**Verification.** `npm test` — 512 passing, 21 new (`tests/creature-art.test.mjs`'s `findCreatureArt`/`creatureArtPath` suite, `tests/creature-art-assets.test.mjs`'s exhaustive asset-existence check across all 20 entries — Homunculus included, since it's now a copy of `assets/tokens/homunculus.webp` under `assets/creature-art/` too, keeping the lookup path convention uniform rather than special-casing one entry). `npm run validate:creature-art` — 20 entries, no duplicate lookup keys. All 19 new images generated via the existing `tools/generate-token-art.mjs` pipeline (extended with a `MONSTER_ART` list rather than a bespoke generation path) and reviewed individually — 7 of 19 needed at least one redo: `ghoul-stalker` and an early `clockwork-spy` attempt both grew the pipeline's known circular-halo/roundel artifact; `grindylow` and `kappa` came back on a solid colored (green) background that the automated brightness-based checker doesn't catch (a real gap in `tools/check-token-art.mjs`, worth a future fix — colored, non-black backgrounds aren't currently flagged, only pale/bright ones); `sprigjack` first came back as a cluttered multi-pumpkin scene with a decorative vine border; `leaf-leshy` repeated the exact human-face-and-pale-background failure mode the leshy *warrior* entry above it already documents; `house-drake` first came back as a literal bird. Every fix is recorded as an explicit `avoid`/prompt change in `tools/generate-token-art.mjs`, not just a reroll, so the fix persists if these are ever regenerated. `tools/check-token-art.mjs` extended to also scan `assets/creature-art/`. Live-verified via `foundry-rest` in a scratch scene (created and deleted within the same script): built an Actor from the real Imp bestiary document with the same `img`/`prototypeToken.texture.src`/alliance overrides the updated `spawnCreatures` applies, confirmed the resulting actor and token both carry the new art path and correct hostile disposition, then deleted the scratch actor and scene. The deployed world installs the module from GitHub rather than mounting this working tree, so the actual image bytes aren't fetch-reachable in-world until this merges and the module updates — not a defect, the same deployment-model caveat ITEM-4 already hit; the live check therefore verifies the document mechanics, not pixel rendering.
 
 ### ITEM-4: Environment art for dungeon rooms
 **State:** done

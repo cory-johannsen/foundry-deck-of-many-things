@@ -32,7 +32,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const dirs = ['assets/tokens', 'assets/icons'].map((d) => join(root, d));
+const dirs = ['assets/tokens', 'assets/icons', 'assets/creature-art'].map((d) => join(root, d));
 const PY = join(root, '.venv/bin/python3');
 
 /**
