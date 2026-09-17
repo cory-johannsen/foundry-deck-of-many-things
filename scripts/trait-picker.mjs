@@ -52,13 +52,17 @@ export function readTraitField(root, name) {
 
 async function openTraitPickerDialog({ title, traits, selected }) {
   const { DialogV2 } = foundry.applications.api;
+  // `size="16"` alone doesn't reliably grow a multi-select's rendered height
+  // in every browser — confirmed live it can render as a single 32px row
+  // regardless of `size`. An explicit `!important` inline height is the only
+  // thing that actually forced it to show more than one row.
   return DialogV2.wait({
     window: { title },
-    position: { width: 420 },
+    position: { width: 480 },
     content: `
       <form>
         <input type="text" class="dommt-trait-filter" data-for="picker" placeholder="Filter…" />
-        <select name="picker" multiple size="12" style="width:100%;">${traitOptionsHtml(traits, selected)}</select>
+        <select name="picker" multiple size="16" style="width:100%; height:420px !important;">${traitOptionsHtml(traits, selected)}</select>
       </form>`,
     render: (_event, dialog) => wireTraitFilters(dialog.element),
     buttons: [
