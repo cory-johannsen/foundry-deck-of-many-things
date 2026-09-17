@@ -1,13 +1,8 @@
 # Backlog
 
-_Last updated: 2026-09-16 (added ITEM-6)_
+_Last updated: 2026-09-17 (ITEM-6 done)_
 
 ## Active
-
-### ITEM-6: Wire combat encounters into Foundry's encounter tracker
-**State:** backlog
-**Blocked:** false
-**Summary:** Combat encounters currently bypass Foundry's Combat tracker entirely; spawned combat actors should be flagged as combatants, a real Combat encounter created, all combatants must roll initiative, and combat must proceed through the tracker. XP and loot rewards should be granted when the encounter ends (not before), and players must be blocked from advancing deeper into the dungeon until the combat is completed.
 
 ### ITEM-5: Refactor combat encounter difficulty scaling
 **State:** backlog
@@ -20,6 +15,197 @@ _Last updated: 2026-09-16 (added ITEM-6)_
 **Summary:** Grow `data/dungeon-setpieces.json` beyond the current 2 fully-transcribed puzzles + 3 stub traps into a fuller, more varied set of realistic traps and puzzles, and implement real generation/selection logic on top of it rather than a fixed small pool.
 
 ## Done
+
+### ITEM-6: Wire combat encounters into Foundry's encounter tracker
+**State:** done
+**Blocked:** false
+**Summary:** Combat encounters currently bypass Foundry's Combat tracker entirely; spawned combat actors should be flagged as combatants, a real Combat encounter created, all combatants must roll initiative, and combat must proceed through the tracker. XP and loot rewards should be granted when the encounter ends (not before), and players must be blocked from advancing deeper into the dungeon until the combat is completed.
+
+#### Spec
+
+**Problem.** Combat-kind dungeon rooms spawn monster tokens, but nothing else ties them into PF2e's actual combat rules: there's no `Combat` encounter, no initiative order, no per-creature defeated tracking — the GM manually clicks "Mark Succeeded"/"Mark Failed" (`dungeon-tracker.hbs`) whenever they judge the fight over, entirely independent of what's actually happening on the table. There's also no reward mechanism at all: the "Treasure" reward/ruin outcome (`dungeon-deck.mjs`'s `OUTCOME_SLOT_TEMPLATES`) is pure flavor text (`DOMMT.Dungeon.Effect.treasure`) with no `grantItems`/`addCoins` call behind it, and no XP is ever granted for combat — even though the roster already carries the exact per-creature level data (`roster.foes[].level` etc.) needed to compute it, since `encounter-roster.mjs`'s `RELATIVE_XP`/`xpFor` already exists for the "approximate severity" readout.
+
+**Goal.** Turn a combat room's encounter into a real, trackable PF2e Combat: combatants added and flagged, initiative rolled, the fight actually plays out in Foundry's own Combat Tracker. Room outcome (succeeded/failed) is derived from that Combat's actual resolution rather than a bare manual click. The party can't advance through the next room's door while combat is active. When combat resolves in the party's favor, real XP and loot are granted — not just a narrative chat line.
+
+**Scope.** Combat (`kind === 'combat'`) dungeon rooms only. Non-combat rooms (`skill_challenge`, `puzzle_or_trap`, `narrative`) keep today's manual Mark Succeeded/Failed flow entirely unchanged — there's no PF2e Combat construct to hang those on. The standalone "DOMMT: Generate Encounter" macro also gets a real Combat created for whatever it spawns (a natural, low-cost extension of the same mechanism, useful on its own outside a dungeon run too) — but "blocking further progress" obviously doesn't apply there, since there's no "next room" concept.
+
+**Mechanism.**
+1. **Combat creation.** As soon as a combat room's tokens become visible to the party — room 0's immediate spawn (`hidden:false`), or `revealSlotTokens` on room entry for every room after — create a `Combat` document on the scene, add every spawned encounter token (foes/friend/lurker/twins) *and* every party token as Combatants, flagged with which dungeon room/slot they belong to (same `{[MODULE_ID]: {dungeonSlot}}` convention `spawnCreatures`/tokens already use). Foundry's own token disposition (already set correctly today: `-1` hostile for foes/lurker/twins, `+1` friendly for friend/party) is reused as-is to tell hostile combatants from the party's side — no new bookkeeping needed for that distinction. Roll initiative for everyone and start the Combat.
+2. **Blocking progress.** The dungeon tracker's Succeed/Fail buttons (and the "Populate Next Room"/door-unlock flow that follows them) are gated off for a combat room whose linked Combat exists and hasn't ended yet — the party cannot advance until that Combat resolves. Rooms without a linked Combat are entirely unaffected.
+3. **Resolution.**
+   - **Victory (automatic):** once every hostile-disposition combatant is defeated (`Combatant#isDefeated`, confirmed to exist in this system), the Combat is treated as won — end it, resolve the room as succeeded through the same `markRoomOutcome` path used today, and grant rewards (below).
+   - **Defeat:** either automatic (every party-member combatant defeated — a TPK) or a manual GM escape hatch (an explicit "End Combat" tracker action, for retreat/negotiation/any other real-play ending that isn't a clean sweep) — both resolve the room as failed through the same `markRoomOutcome` path.
+   - Either way, the linked Combat is ended/deleted and the room's succeeded/failed resolution proceeds exactly as it does today from that point on (outcome slot, mutation, next room build/door unlock) — this item only changes *what decides* succeeded/failed for a combat room, not what happens afterward.
+4. **Rewards, granted only on victory, only now (never before the fight, never on defeat):**
+   - **XP:** sum `xpFor(levelOffset)` (the same GM Core relative-XP table already used for the severity readout) across every hostile combatant actually defeated, split evenly and added to each surviving party member's `system.details.xp.value` (confirmed live: a plain, directly-updatable number, e.g. `{value:0, min:0, max:1000, pct:0}`).
+   - **Loot:** a real item/coin grant (reusing the existing `api.grantItems`/`api.addCoins` primitives the card system's own treasure handlers already use) into the Party actor's shared inventory (`game.actors.party`, confirmed live to have a working `inventory`) rather than an individual character — avoids "who holds the loot" bookkeeping. Exact loot table/generosity is a planning-time call.
+   - The room's existing reward/ruin flavor text (`DOMMT.Dungeon.Effect.treasure` etc.) stays as the chat narration; this item makes "Treasure" (and a combat win generally) actually hand something over instead of just saying so.
+
+**Non-goals.** Changing anything about non-combat room resolution. A full PF2e "Reward XP" UI/tool (using whatever built-in party-sheet tooling the system may offer) instead of a direct XP-field update — start with the direct, scriptable approach; revisit only if it turns out to fight the system's own UI. Retroactively granting rewards for rooms already resolved before this ships. Loot *table* design (what specific items get granted) — this item wires the *mechanism*, not a content pass.
+
+**Deferred to planning (needs live Foundry access to exercise the exact API shapes).** Already confirmed live: `Combatant#isDefeated` exists as a getter, PF2e's `Combat#endCombat()` exists, `game.actors.party` has a working `inventory`, and `system.details.xp.value` is a plain updatable number. Still needed before locking the Plan: the precise `Combat.create`/`createEmbeddedDocuments('Combatant', ...)` payload shape built from existing scene tokens, how `combat.rollAll()` behaves and whether it needs a per-combatant fallback, and how the Combat Tracker UI actually reflects a scripted combat start/end (so the GM sees a normal-looking encounter, not something visibly hacked-together).
+
+#### Plan
+
+**Live research findings (all confirmed against the real PF2ETest world, scratch scene, cleaned up after).**
+- `Combat.create({ scene: sceneId })` then `combat.createEmbeddedDocuments('Combatant', [{ tokenId, sceneId }, ...])` is all that's needed — Foundry derives `actorId`/`name`/`img` from the token automatically.
+- **`combat.rollAll()` and even a bare `combat.rollInitiative([id])` hang indefinitely** (relay 502s waiting) — confirmed by inspecting PF2e's own `Combat#rollInitiative` source: it routes through `actor.initiative.roll({...options, combatant, ...})`, PF2e's normal Statistic-roll pipeline, which opens an interactive check dialog by default. **The fix, confirmed working live: `combat.rollInitiative(ids, { skipDialog: true })`** — rolls and commits initiative for every id with no dialog, no hang.
+- **`combat.endCombat()` also hangs** — it opens an "End Encounter?" confirmation dialog (confirmed live by finding that exact window open after the hang). The correct scripted equivalent is **`combat.delete()`** directly — confirmed live: clean, instant, no dialog.
+- `Combatant#isDefeated` is `this.defeated || actor.statuses.has(CONFIG.specialStatusEffects.DEFEATED)` (`DEFEATED` resolves to `'dead'` in this system) — confirmed live both that a plain `combatant.update({ defeated: true })` (the GM's own skull-icon toggle) flips it, and that this is the same getter the system itself relies on, so it also picks up an actor's own `'dead'` status automatically with no extra wiring.
+- `combatant.token.disposition` reliably distinguishes hostile (`-1`) from party (`+1`) combatants — matches the disposition already set correctly by today's `spawnCreatures`/`placePartyInSlot`, no new bookkeeping needed.
+- `game.actors.party.system.details.xp` doesn't exist — XP lives per-character (`actor.system.details.xp.value`, confirmed a plain `{value, min, max, pct}` object on a real party member); the Party actor's own `inventory` (confirmed present) is the right place for shared loot instead.
+
+**Refinement of the spec.** The Spec's "automatic victory / automatic-or-manual defeat" asymmetry turned out to have no real justification once the mechanism was designed — both directions need a human-override escape hatch for messy real play (a GM might declare victory on a fled-not-dead remnant, or defeat on a costly retreat). The Plan makes both directions symmetric: automatic detection for the clean case (every hostile down → victory, every party member down → defeat) *and* two manual GM buttons ("Declare Victory" / "Declare Defeat") always available while a combat room's Combat is active, both funneling into the exact same resolution path.
+
+**1. New `scripts/combat-rewards.mjs`** — pure, no Foundry deps (model: `dungeon-deck.mjs`):
+```js
+import { xpFor } from './encounter-roster.mjs'; // newly exported, see below
+
+export function totalCombatXp(defeatedHostileLevels, partyLevel) {
+  return defeatedHostileLevels.reduce((sum, level) => sum + xpFor(level - partyLevel), 0);
+}
+
+export function xpPerSurvivor(totalXp, partySize) {
+  return partySize > 0 ? Math.floor(totalXp / partySize) : 0;
+}
+
+// Placeholder heuristic, not a real treasure table — see the Spec's non-goals.
+// Roughly "loot scales with the XP just earned", nothing fancier than that.
+export const LOOT_GP_PER_XP = 1;
+export function lootGpForXp(totalXp) {
+  return totalXp * LOOT_GP_PER_XP;
+}
+```
+
+**2. `scripts/encounter-roster.mjs`** — export the already-existing `xpFor` (currently module-private); no behavior change, purely an added export.
+
+**3. New `scripts/dungeon-combat.mjs`** — Foundry-touching Combat orchestration (model: `dungeon-scene.mjs`; no unit tests, live-verify only, same as that file):
+```js
+const MODULE_ID = 'deck-of-many-more-things';
+
+/** Every token on `scene` carrying `flagKey === flagValue`, plus every current party token. */
+function combatantTokens(scene, flagKey, flagValue) {
+  const monsterTokens = scene.tokens.filter((t) => t.getFlag(MODULE_ID, flagKey) === flagValue);
+  const partyIds = new Set((game.actors?.party?.members ?? []).map((m) => m.id));
+  const partyTokens = scene.tokens.filter((t) => partyIds.has(t.actor?.id));
+  return [...monsterTokens, ...partyTokens];
+}
+
+async function startCombat(scene, flagKey, flagValue) {
+  const tokens = combatantTokens(scene, flagKey, flagValue);
+  if (!tokens.length) return null;
+  const combat = await Combat.create({ scene: scene.id });
+  await combat.setFlag(MODULE_ID, flagKey, flagValue);
+  const combatants = await combat.createEmbeddedDocuments(
+    'Combatant', tokens.map((t) => ({ tokenId: t.id, sceneId: scene.id }))
+  );
+  await combat.rollInitiative(combatants.map((c) => c.id), { skipDialog: true });
+  await combat.startCombat();
+  return combat;
+}
+
+export const startCombatForSlot = (scene, slot) => startCombat(scene, 'dungeonSlot', slot);
+export const startCombatForEncounterId = (scene, encounterId) => startCombat(scene, 'encounterId', encounterId);
+
+export function getCombatForSlot(scene, slot) {
+  return game.combats.find((c) => c.scene?.id === scene.id && c.getFlag(MODULE_ID, 'dungeonSlot') === slot) ?? null;
+}
+
+/** { hostilesDefeated, partyDefeated } — false/false while the fight's still going. */
+export function combatSideStatus(combat) {
+  const groups = { hostile: [], party: [] };
+  for (const c of combat.combatants) (c.token?.disposition === -1 ? groups.hostile : groups.party).push(c);
+  return {
+    hostilesDefeated: groups.hostile.length > 0 && groups.hostile.every((c) => c.isDefeated),
+    partyDefeated: groups.party.length > 0 && groups.party.every((c) => c.isDefeated)
+  };
+}
+
+/** Grants XP/loot on victory, then deletes the Combat either way. */
+async function resolveCombat(combat, outcome, api) {
+  if (outcome === 'victory') {
+    const hostileLevels = combat.combatants
+      .filter((c) => c.token?.disposition === -1)
+      .map((c) => c.actor?.system?.details?.level?.value ?? 0);
+    const partyLevel = await api.partyLevel();
+    const totalXp = totalCombatXp(hostileLevels, partyLevel);
+    const party = (game.actors?.party?.members ?? []).filter((m) => m.type === 'character');
+    const share = xpPerSurvivor(totalXp, party.length);
+    for (const member of party) {
+      await member.update({ 'system.details.xp.value': (member.system.details.xp.value ?? 0) + share });
+    }
+    if (game.actors.party) await api.addCoins(game.actors.party.id, { gp: lootGpForXp(totalXp) });
+  }
+  await combat.delete();
+}
+
+/** Shared by both the automatic hooks and the manual GM buttons. */
+export async function resolveSlotCombat(scene, slot, outcome, api) {
+  const combat = getCombatForSlot(scene, slot);
+  if (!combat) return;
+  await resolveCombat(combat, outcome, api);
+}
+
+async function autoResolveIfDecided(combat) {
+  if (!game.user.isGM || !game.combats.has(combat.id)) return; // already resolved by another update
+  const { hostilesDefeated, partyDefeated } = combatSideStatus(combat);
+  if (!hostilesDefeated && !partyDefeated) return;
+  const outcome = hostilesDefeated ? 'victory' : 'defeat';
+  const api = makeFoundryApi();
+  const dungeonSlot = combat.getFlag(MODULE_ID, 'dungeonSlot');
+  await resolveCombat(combat, outcome, api);
+  if (dungeonSlot != null) await resolveCurrentRoom(outcome === 'victory', { scene: combat.scene });
+}
+
+function isModuleCombat(c) {
+  return c.getFlag(MODULE_ID, 'dungeonSlot') != null || c.getFlag(MODULE_ID, 'encounterId') != null;
+}
+
+export function onActorUpdatedForCombat(actor) {
+  const combat = game.combats.find((c) => isModuleCombat(c) && c.combatants.some((cb) => cb.actorId === actor.id));
+  if (combat) autoResolveIfDecided(combat);
+}
+
+export function onCombatantUpdatedForCombat(combatant, changes) {
+  if (!('defeated' in changes)) return;
+  const combat = combatant.parent;
+  if (combat && isModuleCombat(combat)) {
+    autoResolveIfDecided(combat);
+  }
+}
+```
+(`makeFoundryApi`/`resolveCurrentRoom`/`totalCombatXp`/`xpPerSurvivor`/`lootGpForXp` imported at the top from their real homes — omitted above for length.)
+
+**4. `scripts/encounter-generator.mjs`.** `generateEncounter` generates a fresh `encounterId` (same `freshSeed()`-style helper already in this file) and merges it into every spawned token's flags alongside whatever `extraFlags` the caller passed (dungeon rooms already pass their own `dungeonSlot` via `extraFlags` — both flags coexist on the same tokens, no conflict). At the very end, **only when `!originArea`** (the existing, already-present signal that this call is the standalone macro, not a dungeon-room population — dungeon rooms always pass `originArea`, the standalone macro never does): `await startCombatForEncounterId(canvas.scene, encounterId)`. Dungeon rooms get their own combat-start call elsewhere (next), deliberately deferred past `generateEncounter` returning, since dungeon monsters spawn hidden and combat must wait for the room's actual reveal — starting it here would leak the fight's existence the moment the room is merely *built*, not yet entered.
+
+**5. `scripts/dungeon-scene.mjs`.**
+- `handleDungeonRoomEnter`: after `revealSlotTokens(scene, slot)`, look up the room's `kind` (`state.rooms.find(r => r.id === nextRoomId)`) and, if `'combat'`, `await startCombatForSlot(scene, slot)` — before `advanceToRoom`, so the fight is live the instant the room becomes current.
+
+**6. `scripts/ui/dungeon-app.mjs`.**
+- `#onStart`: inside the existing `if (room0.kind === 'combat')` block, right after `populateSlotEncounter(scene, 0, { hidden: false, ... })`, add `await startCombatForSlot(scene, 0)` — room 0 has no reveal step, so combat starts immediately, matching how its encounter already spawns visible.
+- `resolveCurrentRoom` (currently a private module-level function) gains an optional second parameter and is exported: `export async function resolveCurrentRoom(succeeded, { scene = canvas?.scene } = {})` — every internal use of `canvas?.scene` inside it becomes `scene`. Existing call sites (`#onSucceed`/`#onFail`) are unaffected (no args needed, same default). The new hook-driven auto-resolution path (`dungeon-combat.mjs`) calls it with an explicit `{ scene: combat.scene }`, since a hook can fire while the GM is looking at a different scene entirely.
+- `_prepareContext`: for a combat-kind `currentRoom`, look up `getCombatForSlot(scene, currentSlot)` and add `combatActive: !!combat` to the context (and, defensively, `combatMissing: room.kind==='combat' && !combat && currentSlot != null` for the same "something got interrupted" recovery case `#onPopulateNext` already exists for).
+- New static actions: `#onDeclareVictory` / `#onDeclareDefeat` → `resolveSlotCombat(scene, currentSlot, 'victory'|'defeat', makeFoundryApi())` → `resolveCurrentRoom(outcome === 'victory')` → `this.render()`. `#onStartCombatRecovery` → `startCombatForSlot(scene, currentSlot)` → `this.render()`. `#onOpenCombatTracker` → `ui.sidebar.activateTab('combat')`.
+
+**7. `templates/dungeon-tracker.hbs`.** The existing Succeed/Fail footer (inside `{{#unless currentRoomResolved}}`) becomes conditional: when `currentRoom.kind === 'combat'`, show combat-mode UI instead — a hint plus "Open Combat Tracker" (`data-action="openCombatTracker"`) and "Declare Victory"/"Declare Defeat" (`combatActive`), or a "Start Combat" recovery button (`combatMissing`). Every other room kind keeps today's plain Succeed/Fail buttons untouched.
+
+**8. `scripts/module.mjs`.** Register `Hooks.on('updateActor', onActorUpdatedForCombat)` and `Hooks.on('updateCombatant', onCombatantUpdatedForCombat)`, imported from `dungeon-combat.mjs` — same style as the existing `Hooks.on('renderChatMessageHTML', bindPendingDrawButton)`.
+
+**9. `lang/en.json`.** New `DOMMT.Dungeon.Combat*` keys: `InProgressHint`, `OpenTrackerButton`, `DeclareVictoryButton`, `DeclareDefeatButton`, `StartCombatButton`.
+
+**Known limitation, not blocking this item.** A still-hidden lurker (revealed by whatever separate mechanic reveals it) isn't a combatant at combat-start time and isn't retroactively added — pre-existing lurker-reveal behavior is untouched by this item, and a lurker ambushing mid-fight without formally joining the Combat is a real but pre-existing gap, not a regression. Worth a follow-up note if it turns out to matter in play.
+
+**Tests.**
+- `tests/combat-rewards.test.mjs` (new, pure): `totalCombatXp` sums `xpFor(level - partyLevel)` correctly across several hostile levels; `xpPerSurvivor` divides/floors correctly including a zero-party-size guard; `lootGpForXp` follows the documented placeholder multiplier.
+- `dungeon-combat.mjs` itself gets no unit tests — entirely Foundry/Combat-API-touching, same precedent as `dungeon-scene.mjs` (live-verify only).
+- Existing `tests/dungeon-runner.test.mjs`/`encounter-roster.test.mjs` untouched; `resolveCurrentRoom`'s signature change is additive (default parameter), so no existing call site needs updating.
+
+**Verification.** `npm test` — 528 passing, 8 new (`tests/combat-rewards.test.mjs`). `npm run validate`/`validate:dungeon`/`validate:creature-art` unaffected.
+
+**Implementation note — the hook handlers ended up returning data, not calling `resolveCurrentRoom` directly.** Writing `dungeon-combat.mjs` surfaced a real import cycle the code sketch above glossed over: `dungeon-scene.mjs` needs `startCombatForSlot` from `dungeon-combat.mjs`, and the sketch had `dungeon-combat.mjs` calling back into `resolveCurrentRoom` (which lives in `ui/dungeon-app.mjs`, itself importing from `dungeon-scene.mjs`) — a genuine cycle. Fixed by keeping `dungeon-combat.mjs` fully one-directional: its hook targets (renamed `maybeResolveCombatForActor`/`maybeResolveCombatForCombatant`) resolve the Combat (rewards + delete) and return `{ outcome, dungeonSlot, scene } | null` rather than advancing the room themselves. `module.mjs` — the composition root that already imports from every file in this chain — registers both hooks itself and calls `resolveCurrentRoom` when a result carries a `dungeonSlot`. Every other part of the Plan (the API sequence, the reward math, the manual GM buttons, the template gating) shipped exactly as designed.
+
+**Live end-to-end verification**, via `foundry-rest` in a scratch scene (created and torn down within the script): built a real Combat from a level-1 Imp (hostile) and the live world's actual Cleric party member (party) using the exact shipped sequence — `Combat.create` → `setFlag` → `createEmbeddedDocuments('Combatant', ...)` → `rollInitiative(ids, {skipDialog:true})` → `startCombat()` — confirmed `started:true`, 2 combatants, no hang. Marked the hostile `defeated:true`, confirmed `isDefeated` flips and `combatSideStatus` correctly reports `hostilesDefeated:true`. Ran the exact reward math live: level 1 vs level 1 → `xpFor(0) = 40` XP, granted to the Cleric's `system.details.xp.value` and confirmed landing (then reverted, leaving no lasting mark on the real party actor). `combat.delete()` confirmed clean, no dialog, no trace left in `game.combats`. Not yet exercised: the actual UI wiring (tracker buttons, template gating, the automatic-trigger hooks) — the deployed world is still on the pre-ITEM-6 module version, so that needs a live pass once this merges and updates, the same deployment-model caveat every prior item has hit.
+
 
 ### ITEM-2: Generated art for encounter opponents
 **State:** done

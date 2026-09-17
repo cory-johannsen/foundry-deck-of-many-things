@@ -19,6 +19,7 @@ import {
 import { freeSpotInRect } from './placement.mjs';
 import { generateEncounter } from './encounter-generator.mjs';
 import { getRunState, advanceToRoom, undoLastRoomEntry, canUndoRoomEntry } from './dungeon-runner.mjs';
+import { startCombatForSlot } from './dungeon-combat.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 const GRID_SIZE = 100;
@@ -295,6 +296,11 @@ export async function handleDungeonRoomEnter(sceneId, tokenId, slot) {
   if (!nextRoomId || state.physicalSlotByRoomId[nextRoomId] !== slot) return;
 
   const revealedTokenIds = await revealSlotTokens(scene, slot);
+  const nextRoom = state.rooms.find((r) => r.id === nextRoomId);
+  // Started here, not at populateSlotEncounter/build time — the room's
+  // monsters spawn hidden, and starting Combat before the room is actually
+  // entered would give away that a fight is coming.
+  if (nextRoom?.kind === 'combat') await startCombatForSlot(scene, slot);
   await advanceToRoom({ sceneId, roomId: nextRoomId, revealedTokenIds });
   focusCameraOnSlot(scene, slot);
 }

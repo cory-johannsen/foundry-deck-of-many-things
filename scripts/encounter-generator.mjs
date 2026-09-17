@@ -12,6 +12,7 @@ import { resolveEncounterRoster } from './encounter-roster.mjs';
 import { loadCreatureArt } from './data-loader.mjs';
 import { findCreatureArt, creatureArtPath } from './creature-art.mjs';
 import { traitFieldHtml, wireTraitPickerButtons, readTraitField } from './trait-picker.mjs';
+import { startCombatForEncounterId } from './dungeon-combat.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 
@@ -160,5 +161,19 @@ export async function generateEncounter({
   }
 
   await postEncounterChatCard(api, roster);
-  await spawnEncounterTokens(api, roster, partyMembers, { originArea, forceHidden, extraFlags, creatureArt });
+  // Every spawned token carries an encounterId flag alongside whatever the
+  // caller already asked for (a dungeon room's own dungeonSlot flag, say) —
+  // ITEM-6's Combat wiring needs a way to find "this encounter's tokens"
+  // that works even outside a dungeon room, where there's no slot at all.
+  const encounterId = freshSeed();
+  const flags = foundry.utils.mergeObject({ [MODULE_ID]: { encounterId } }, extraFlags ?? {}, { inplace: false });
+  await spawnEncounterTokens(api, roster, partyMembers, { originArea, forceHidden, extraFlags: flags, creatureArt });
+  // Dungeon rooms (identified by `originArea`, which only a dungeon-room
+  // population call ever sets) start their own Combat later, once the room
+  // is actually revealed — starting it here would leak a hidden room's fight
+  // the moment it's merely built. The standalone macro has no such reveal
+  // step, so it starts Combat immediately for whatever just spawned.
+  if (!originArea) {
+    await startCombatForEncounterId(canvas.scene, encounterId);
+  }
 }
