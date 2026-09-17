@@ -27,7 +27,10 @@ const LEVEL_TOLERANCE = 1;
 // approximate severity, nothing is gated on it.
 const RELATIVE_XP = { '-4': 10, '-3': 15, '-2': 20, '-1': 30, 0: 40, 1: 60, 2: 80, 3: 120, 4: 160 };
 
-function xpFor(levelOffset) {
+// Exported for combat-rewards.mjs — the same relative-level XP a combat
+// room's advisory severity readout already uses is also the real XP a
+// victory grants (see ITEM-6 in docs/backlog.md).
+export function xpFor(levelOffset) {
   const clamped = Math.max(-4, Math.min(4, levelOffset ?? 0));
   return RELATIVE_XP[clamped] ?? 40;
 }

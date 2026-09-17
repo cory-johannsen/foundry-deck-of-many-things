@@ -9,6 +9,7 @@ import {
   createDungeonScene, buildRoomAtSlot, unlockDoorToSlot, populateSlotEncounter,
   isSlotPopulated, placePartyInSlot, undoRoomEntry, focusCameraOnSlot
 } from '../dungeon-scene.mjs';
+import { startCombatForSlot, getCombatForSlot, resolveSlotCombat } from '../dungeon-combat.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -38,10 +39,13 @@ const EFFECT_KEYS = {
  * Build+populate+unlock whatever room follows the one just resolved. Not a
  * class method — it only touches globals and the dungeon-scene/runner
  * modules, so the two action handlers below can call it directly rather than
- * needing `this` threaded through a shared private static method.
+ * needing `this` threaded through a shared private static method. Exported
+ * (with an explicit `scene` override) because dungeon-combat.mjs's automatic
+ * combat-resolution hooks need to call this too, and a hook can fire while
+ * the GM is looking at a different scene entirely — `canvas?.scene` alone
+ * isn't reliable there the way it is for a button click inside this app.
  */
-async function resolveCurrentRoom(succeeded) {
-  const scene = canvas?.scene;
+export async function resolveCurrentRoom(succeeded, { scene = canvas?.scene } = {}) {
   if (!scene) return;
   const setpieces = await loadDungeonSetpieces();
   const { state, mutation, nextRoomId, nextPhysicalSlot } = await markRoomOutcome(
@@ -83,7 +87,11 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       fail: DungeonApp.#onFail,
       populateNext: DungeonApp.#onPopulateNext,
       undo: DungeonApp.#onUndo,
-      abandon: DungeonApp.#onAbandon
+      abandon: DungeonApp.#onAbandon,
+      declareVictory: DungeonApp.#onDeclareVictory,
+      declareDefeat: DungeonApp.#onDeclareDefeat,
+      startCombatRecovery: DungeonApp.#onStartCombatRecovery,
+      openCombatTracker: DungeonApp.#onOpenCombatTracker
     }
   };
 
@@ -132,19 +140,30 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const nextRoomPending = !!(nextRoom && nextRoom.kind === 'combat'
       && nextSlot != null && !isSlotPopulated(scene, nextSlot));
 
+    const currentSlot = currentRoom ? state.physicalSlotByRoomId[currentRoom.id] : null;
+    const isCombatRoom = currentRoom?.kind === 'combat' && !currentRoomResolved;
+    const activeCombat = isCombatRoom && currentSlot != null ? getCombatForSlot(scene, currentSlot) : null;
+
     return {
       hasScene: true,
       hasRun: true,
       sceneId,
-      currentSlot: currentRoom ? state.physicalSlotByRoomId[currentRoom.id] : null,
+      currentSlot,
       completed: state.completed,
       roomNumber: state.currentIndex + 1,
       roomTotal: state.rooms.length,
       currentRoomResolved,
       nextRoomPending,
       canUndo: canUndoRoomEntry(state),
+      // A combat room never uses the plain Succeed/Fail buttons — it's
+      // either mid-fight (combatActive) or something interrupted Combat's
+      // own creation and needs the recovery button (combatMissing).
+      isCombatRoom,
+      combatActive: !!activeCombat,
+      combatMissing: isCombatRoom && !activeCombat,
       currentRoom: currentRoom && {
         isGoal: currentRoom.isGoal,
+        kind: currentRoom.kind,
         kindLabel: game.i18n.localize(ROOM_KIND_KEYS[currentRoom.kind] ?? currentRoom.kind),
         setpiece: setpiece && { name: setpiece.name, summary: setpiece.summary, complete: setpiece.complete }
       },
@@ -194,6 +213,9 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
         levelOffsetBias: depthBiasFor({ physicalSlot: 0, roomCount: state.rooms.length, isGoal: room0.isGoal }),
         locationTag: room0.locationTag
       });
+      // Room 0 has no reveal step either — its fight is visible from the
+      // start, so Combat starts right away instead of waiting for entry.
+      await startCombatForSlot(scene, 0);
     }
 
     const partyMembers = (game.actors?.party?.members ?? []).filter((m) => m.type === 'character');
@@ -211,6 +233,44 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #onSucceed() { await resolveCurrentRoom(true); this.render(); }
   static async #onFail() { await resolveCurrentRoom(false); this.render(); }
+
+  /** Manual GM override — always available while a combat room's Combat is
+   * active, alongside the automatic all-one-side-defeated detection.
+   * `DungeonApp.#resolveCombatRoom(this, ...)`, not `this.constructor...` —
+   * a private static called this way is a plain function call, so `this`
+   * has to be threaded through explicitly rather than relying on the
+   * instance binding Foundry's action dispatcher gives #onDeclareVictory
+   * itself. */
+  static async #onDeclareVictory() { await DungeonApp.#resolveCombatRoom(this, true); }
+  static async #onDeclareDefeat() { await DungeonApp.#resolveCombatRoom(this, false); }
+
+  static async #resolveCombatRoom(app, succeeded) {
+    const scene = canvas?.scene;
+    const sceneId = scene?.id;
+    const state = sceneId ? getRunState(sceneId) : null;
+    const currentRoom = state?.rooms[state.currentIndex];
+    const slot = currentRoom ? state.physicalSlotByRoomId[currentRoom.id] : null;
+    if (slot == null) return;
+    await resolveSlotCombat(scene, slot, succeeded ? 'victory' : 'defeat', makeFoundryApi());
+    await resolveCurrentRoom(succeeded);
+    app.render();
+  }
+
+  /** Recovery-only — mirrors #onPopulateNext's own safety-net precedent for
+   * when something (a reload mid-flow, say) left a combat room without a
+   * Combat despite its monsters already being visible. */
+  static async #onStartCombatRecovery() {
+    const scene = canvas?.scene;
+    const sceneId = scene?.id;
+    const state = sceneId ? getRunState(sceneId) : null;
+    const currentRoom = state?.rooms[state.currentIndex];
+    const slot = currentRoom ? state.physicalSlotByRoomId[currentRoom.id] : null;
+    if (slot == null) return;
+    await startCombatForSlot(scene, slot);
+    this.render();
+  }
+
+  static #onOpenCombatTracker() { ui.sidebar.activateTab('combat'); }
 
   static async #onPopulateNext() {
     const scene = canvas?.scene;

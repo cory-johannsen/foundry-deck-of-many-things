@@ -26,12 +26,28 @@
 
       {{#unless completed}}
         <p class="hint">{{localize "DOMMT.Dungeon.ThemeReminder" traits=traits excludeTraits=excludeTraits}}</p>
-        {{#unless currentRoomResolved}}
-          <footer>
-            <button type="button" data-action="succeed">{{localize "DOMMT.Dungeon.SucceedButton"}}</button>
-            <button type="button" data-action="fail">{{localize "DOMMT.Dungeon.FailButton"}}</button>
-          </footer>
-        {{/unless}}
+        {{#if isCombatRoom}}
+          {{#if combatActive}}
+            <p class="hint">{{localize "DOMMT.Dungeon.Combat.InProgressHint"}}</p>
+            <footer>
+              <button type="button" data-action="openCombatTracker">{{localize "DOMMT.Dungeon.Combat.OpenTrackerButton"}}</button>
+              <button type="button" data-action="declareVictory">{{localize "DOMMT.Dungeon.Combat.DeclareVictoryButton"}}</button>
+              <button type="button" data-action="declareDefeat">{{localize "DOMMT.Dungeon.Combat.DeclareDefeatButton"}}</button>
+            </footer>
+          {{/if}}
+          {{#if combatMissing}}
+            <footer>
+              <button type="button" data-action="startCombatRecovery">{{localize "DOMMT.Dungeon.Combat.StartCombatButton"}}</button>
+            </footer>
+          {{/if}}
+        {{else}}
+          {{#unless currentRoomResolved}}
+            <footer>
+              <button type="button" data-action="succeed">{{localize "DOMMT.Dungeon.SucceedButton"}}</button>
+              <button type="button" data-action="fail">{{localize "DOMMT.Dungeon.FailButton"}}</button>
+            </footer>
+          {{/unless}}
+        {{/if}}
         {{#if nextRoomPending}}
           <p class="hint">{{localize "DOMMT.Dungeon.DoorLockedHint"}}</p>
           <footer>

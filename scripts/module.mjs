@@ -17,9 +17,10 @@ import {
   clearDivinationTable
 } from './scene-divination.mjs';
 import { generateEncounter } from './encounter-generator.mjs';
-import { DungeonApp } from './ui/dungeon-app.mjs';
+import { DungeonApp, resolveCurrentRoom } from './ui/dungeon-app.mjs';
 import { abandonRun } from './dungeon-runner.mjs';
 import { handleDungeonRoomEnter } from './dungeon-scene.mjs';
+import { maybeResolveCombatForActor, maybeResolveCombatForCombatant } from './dungeon-combat.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 
@@ -213,6 +214,21 @@ Hooks.once('ready', registerChoiceSocket);
 Hooks.once('ready', registerChargeSound);
 
 Hooks.on('renderChatMessageHTML', bindPendingDrawButton);
+
+/**
+ * Advances a dungeon room the instant its Combat auto-resolves (every
+ * hostile or every party combatant defeated) — dungeon-combat.mjs only ever
+ * hands back plain data here rather than calling resolveCurrentRoom itself,
+ * to avoid an import cycle between it and ui/dungeon-app.mjs/dungeon-scene.mjs.
+ * See ITEM-6 in docs/backlog.md.
+ */
+async function onCombatAutoResolved(result) {
+  if (result?.dungeonSlot != null) await resolveCurrentRoom(result.outcome === 'victory', { scene: result.scene });
+}
+
+Hooks.on('updateActor', async (actor) => onCombatAutoResolved(await maybeResolveCombatForActor(actor)));
+Hooks.on('updateCombatant', async (combatant, changes) =>
+  onCombatAutoResolved(await maybeResolveCombatForCombatant(combatant, changes)));
 
 Hooks.on('getSceneControlButtons', (controls) => {
   const tokenControl = controls.find?.((c) => c.name === 'token') ?? controls.token;
