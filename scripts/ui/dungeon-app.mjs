@@ -4,7 +4,7 @@ import {
 } from '../dungeon-runner.mjs';
 import { depthBiasFor } from '../dungeon-deck.mjs';
 import { makeFoundryApi } from '../foundry-api.mjs';
-import { traitPickerFieldHtml, wireTraitFilters, selectedTraits } from '../trait-picker.mjs';
+import { traitFieldHtml, wireTraitPickerButtons, readTraitField } from '../trait-picker.mjs';
 import {
   createDungeonScene, buildRoomAtSlot, unlockDoorToSlot, populateSlotEncounter,
   isSlotPopulated, placePartyInSlot, undoRoomEntry, focusCameraOnSlot
@@ -109,14 +109,14 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!state) {
       const availableTraits = await makeFoundryApi().listCreatureTraits();
       return {
-        hasScene: true, hasRun: false, defaultRoomCount: 6,
-        traitsFieldHtml: traitPickerFieldHtml({
+        hasScene: true, hasRun: false, defaultRoomCount: 6, availableTraits,
+        traitsFieldHtml: traitFieldHtml({
           name: 'traits', label: game.i18n.localize('DOMMT.Encounter.ThemeLabel'),
-          placeholder: game.i18n.localize('DOMMT.Encounter.ThemePlaceholder'), traits: availableTraits
+          buttonLabel: game.i18n.localize('DOMMT.Encounter.ChooseTraitsButton')
         }),
-        excludeTraitsFieldHtml: traitPickerFieldHtml({
+        excludeTraitsFieldHtml: traitFieldHtml({
           name: 'excludeTraits', label: game.i18n.localize('DOMMT.Encounter.ExcludeTraitsLabel'),
-          placeholder: game.i18n.localize('DOMMT.Encounter.ExcludeTraitsPlaceholder'), traits: availableTraits
+          buttonLabel: game.i18n.localize('DOMMT.Encounter.ChooseTraitsButton')
         })
       };
     }
@@ -158,14 +158,14 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   _onRender(context, options) {
     super._onRender(context, options);
-    wireTraitFilters(this.element);
+    wireTraitPickerButtons(this.element, context.availableTraits ?? []);
   }
 
   static async #onStart() {
     const form = this.element.querySelector('form');
     const roomCount = Math.max(2, parseInt(form?.querySelector('[name="roomCount"]')?.value ?? '6', 10));
-    const traits = selectedTraits(this.element, 'traits');
-    const excludeTraits = selectedTraits(this.element, 'excludeTraits');
+    const traits = readTraitField(this.element, 'traits');
+    const excludeTraits = readTraitField(this.element, 'excludeTraits');
 
     const scene = await createDungeonScene();
     const setpieces = await loadDungeonSetpieces();

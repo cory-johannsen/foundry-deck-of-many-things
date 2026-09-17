@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { traitOptionsHtml, traitPickerFieldHtml } from '../scripts/trait-picker.mjs';
+import { traitOptionsHtml, traitFieldHtml } from '../scripts/trait-picker.mjs';
 
 describe('traitOptionsHtml', () => {
   it('renders one option per trait', () => {
@@ -19,18 +19,28 @@ describe('traitOptionsHtml', () => {
   });
 });
 
-describe('traitPickerFieldHtml', () => {
-  it('includes the label, filter input and select with the given name', () => {
-    const html = traitPickerFieldHtml({ name: 'traits', label: 'Favor', traits: ['undead'] });
+describe('traitFieldHtml', () => {
+  it('includes the label, choose button and a hidden input with the given name', () => {
+    const html = traitFieldHtml({ name: 'traits', label: 'Favor', buttonLabel: 'Choose traits…', selected: [] });
     expect(html).toContain('<label>Favor</label>');
     expect(html).toContain('data-for="traits"');
-    expect(html).toContain('<select name="traits"');
-    expect(html).toContain('<option value="undead">undead</option>');
+    expect(html).toContain('>Choose traits…</button>');
+    expect(html).toContain('<input type="hidden" name="traits" value="" />');
   });
 
-  it('threads selected traits through to the rendered options', () => {
-    const html = traitPickerFieldHtml({ name: 'excludeTraits', label: 'Exclude', traits: ['undead', 'fiend'], selected: ['fiend'] });
-    expect(html).toContain('<option value="fiend" selected>fiend</option>');
-    expect(html).toContain('<option value="undead">undead</option>');
+  it('shows a placeholder dash when nothing is selected', () => {
+    const html = traitFieldHtml({ name: 'traits', label: 'Favor', buttonLabel: 'Choose', selected: [] });
+    expect(html).toContain('>—</span>');
+  });
+
+  it('shows the joined selection and threads it into the hidden input', () => {
+    const html = traitFieldHtml({ name: 'excludeTraits', label: 'Exclude', buttonLabel: 'Choose', selected: ['undead', 'fiend'] });
+    expect(html).toContain('>undead, fiend</span>');
+    expect(html).toContain('value="undead,fiend"');
+  });
+
+  it('carries the label through as the popup dialog\'s title', () => {
+    const html = traitFieldHtml({ name: 'traits', label: 'Traits to favor', buttonLabel: 'Choose', selected: [] });
+    expect(html).toContain('data-title="Traits to favor"');
   });
 });

@@ -84,3 +84,7 @@
 .dommt-dungeon__history { max-height: 220px; overflow-y: auto; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.3rem; }
 .dommt-dungeon__history-entry { display: flex; gap: 0.5rem; font-size: 0.85em; padding: 0.15rem 0; }
 .dommt-dungeon__history-outcome { font-weight: 600; min-width: 5em; }
+
+/* ----- Trait picker (encounter theme + dungeon-start forms) ----- */
+.dommt-trait-field { display: flex; align-items: center; gap: 0.5rem; }
+.dommt-trait-field__summary { flex: 1; font-style: italic; opacity: 0.8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
