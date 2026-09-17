@@ -1,8 +1,14 @@
 # Backlog
 
-_Last updated: 2026-09-17 (ITEM-6 done)_
+_Last updated: 2026-09-17 (ITEM-9 done)_
 
 ## Active
+
+### ITEM-8: Automate non-player turns in combat
+**State:** backlog
+**Blocked:** false
+**Depends-on:** ITEM-6
+**Summary:** When a non-player-controlled combatant (foe/friend/lurker/twin) comes up in the Combat Tracker's initiative order, it should act automatically according to its default behavior instead of waiting on a GM to manually run its turn.
 
 ### ITEM-5: Refactor combat encounter difficulty scaling
 **State:** backlog
@@ -15,6 +21,88 @@ _Last updated: 2026-09-17 (ITEM-6 done)_
 **Summary:** Grow `data/dungeon-setpieces.json` beyond the current 2 fully-transcribed puzzles + 3 stub traps into a fuller, more varied set of realistic traps and puzzles, and implement real generation/selection logic on top of it rather than a fixed small pool.
 
 ## Done
+
+### ITEM-9: Randomize door placement so rooms don't align
+**State:** done
+**Blocked:** false
+**Summary:** Each room's own door (both the outgoing door a room's builder places and the incoming opening the next room gets) is independently randomized along the connecting wall, instead of both always sitting dead-center facing each other — so lines of sight and approach angles vary room to room instead of every connection looking the same.
+
+#### Spec
+
+**Problem/Goal.** Today `buildConnectionGeometry` centers a connection's one door on both rooms' facing walls (as of ITEM-7, on an integer-aligned near-center square, but always the *same* offset mirrored on both sides). The user wants each room's door position picked independently at random, so the two ends of a connection often don't line up — approach angles and sightlines through a doorway should vary dynamically rather than every corridor being a straight, predictable poke between two centered doors.
+
+**Design decision (user-selected): an L-shaped dogleg, not a longer corridor.** `CORRIDOR_LEN` stays `1` — the gap between rooms doesn't grow. When the two doors land on different rows/columns, the connecting space becomes a `1`-square-wide gallery spanning the *entire* connecting face (not just the door row), naturally enclosed by each room's own wall (solid except for its own door/opening) with two short fixed caps closing the very top/bottom (or left/right) of that gallery. No dependency on how far apart the two doors are — the geometry is exactly as simple whether they align or sit at opposite corners.
+
+**Mechanism.**
+1. **Two independent per-slot door offsets**, both integers in `[0, ROOM_SIZE - DOOR_WIDTH]`, seeded off the run's own seed (deterministic, reproducible, same pattern as `locationTagAt`): the *outgoing* offset (slot's own door, into the connection to slot+1) and the *incoming* offset (slot's own opening, on the face receiving the connection from slot-1). A room's incoming face and outgoing face are almost always different sides, so these are genuinely two separate values per room, not one reused twice.
+2. **Only the outgoing side is a real, lockable Foundry door** (`door:1`, starts `LOCKED`, gated by the GM exactly as today). The incoming side is just an opening — a gap left in an otherwise-solid wall, no door object, always passable — matching today's "later room's facing side gets no wall" spirit, except now it's "no wall *at one specific, independently-random spot*" instead of "no wall at all." This keeps the GM's existing single lock/unlock action working completely unchanged; nothing about the progress-gating mechanism needs to learn about two doors.
+3. **Each room's own flanking wall segments span its full connecting face** (solid the whole height/width of the room, minus its own one-square gap) — not just short segments framing the door the way a single centered door needed. Two fixed capping segments (independent of either offset) close the very top/bottom (east/west) or left/right (south) of the shared 1-square-wide gap column, so nothing can wander past the ends of it. Worked through concretely: with those pieces in place, the gap column is already fully enclosed by the combination of the two rooms' own gapped walls — nothing needs to change size or position based on how far apart the two offsets land.
+4. **Corridor floor art**: the existing `corridor.webp` is a small self-contained "box" texture, checked directly — stretching it to a tall/wide strip looks wrong (baked-in wall lines would distort). Instead of one stretched tile, place the *same* unstretched square tile once per grid square along the now-taller/wider gap (`ROOM_SIZE` placements instead of `1`) — reuses the existing asset with zero distortion, and reads as a proper connecting gallery rather than one warped image.
+
+**Non-goals.** Changing `CORRIDOR_LEN`, `ROOM_SIZE`, or `DOOR_WIDTH`. Making the incoming side a second lockable door — it's deliberately a plain opening. Trimming the gap-column art/walls down to just the row/column span between the two offsets — the full-face gallery approach was chosen for its fixed, offset-independent simplicity (and reads as a feature: extra tactical space near a doorway, not wasted space).
+
+#### Plan
+
+**1. `scripts/dungeon-layout.mjs`.**
+- Import `splitmix32`/`seedFromString` from `./prng.mjs` (this file had no prng dependency before — first one, matching `dungeon-deck.mjs`'s existing pattern).
+- New `export function doorOffsetAt(seed, slot, role)` (`role` is `'outgoing'` or `'incoming'`) — `Math.floor(splitmix32(seedFromString(`${seed}-door-${role}-${slot}`))() * (ROOM_SIZE - DOOR_WIDTH + 1))`, same seeded-per-index convention as `locationTagAt`.
+- `buildConnectionGeometry(slot, seed)` gains the `seed` parameter. Computes `outgoingOffset = doorOffsetAt(seed, slot, 'outgoing')` (slot's own door) and `incomingOffset = doorOffsetAt(seed, slot + 1, 'incoming')` (slot+1's own opening). Both branches (east/west and south) rebuilt per the Spec's Mechanism: `doorWall` uses `outgoingOffset`; a second pair of flanking segments for slot+1's face uses `incomingOffset` (spanning slot+1's *full* height/width minus its own gap, not just a short frame); two fixed cap segments at the room's own top/bottom (or left/right) edges close the shared gap column. `corridorRect` becomes `{ gx, gy, gw: CORRIDOR_LEN, gh: ROOM_SIZE }` for east/west (transposed for south) — always the full connecting face, never dependent on either offset.
+- `roomEnclosureWalls` needs no change — its existing incoming/outgoing exclusion already defers exactly the two faces `buildConnectionGeometry` now fully owns.
+
+**2. `scripts/dungeon-scene.mjs`.**
+- `buildRoomAtSlot` gains a `seed` parameter, passed through to `buildConnectionGeometry(slot - 1, seed)`.
+- Corridor tile placement changes from one tile to a loop over `corridorRect`'s now-larger footprint: `for (let dx = 0; dx < corridorRect.gw; dx++) for (let dy = 0; dy < corridorRect.gh; dy++)` pushing one `1×1` `CORRIDOR_ART_PATH` tile per square — works unchanged for both orientations since exactly one of `gw`/`gh` is always `1`.
+
+**3. `scripts/ui/dungeon-app.mjs`.** Every existing `buildRoomAtSlot(scene, slot, {...})` call site (`#onStart`, `resolveCurrentRoom`, `#onPopulateNext`) adds `seed: state.seed` — already in scope at each site (the run's own persisted seed), no new plumbing needed.
+
+**Tests.** `tests/dungeon-layout.test.mjs` rewritten for the new contract: `doorOffsetAt` — deterministic per seed/slot/role, varies across slots/roles, always in bounds. `buildConnectionGeometry(slot, seed)` — every call site updated to pass a seed; the old "exact/near center" assertions replaced with: door and opening are each independently within `[0, ROOM_SIZE-DOOR_WIDTH]` of their own face; different seeds produce different offsets (not always centered); `corridorRect` is always `{gw:1, gh:ROOM_SIZE}` (or transposed) regardless of offsets; still-integer coordinates (ITEM-7 must not regress); no duplicate wall segments between the door/opening flanking pairs and the two fixed caps.
+
+**Verification.** `npm test` — 537 passing, 7 new (`doorOffsetAt`'s determinism/bounds/variation, `buildConnectionGeometry`'s corridor-always-spans-the-full-face invariant across seeds, the degenerate-zero-length-segment drop). `npm run validate`/`validate:dungeon`/`validate:creature-art` unaffected. Found and fixed one thing the tests caught before shipping: an offset landing at either extreme (`0` or `ROOM_SIZE - DOOR_WIDTH`) leaves no room for the flanking segment on that side, producing a zero-length `plainWalls` entry — filtered out before returning rather than handed to Foundry as a degenerate Wall.
+
+**Live end-to-end verification**, via `foundry-rest` in a scratch scene (built and torn down within the script, replicating the exact shipped `dungeon-layout.mjs` + `dungeon-scene.mjs` logic since the module isn't deployed yet): built one real connection end to end — `outgoingOffset:4`, `incomingOffset:5`, confirmed genuinely different (the two doors don't line up); 6 Wall documents created (one real door plus the flanking/capping segments, one degenerate segment correctly dropped); 6 separate `100×100`px corridor Tiles placed (not one stretched tile), each confirmed `anchorX:0, anchorY:0` and exactly `1×1` grid squares; scratch scene cleaned up after.
+
+
+### ITEM-7: Fix half-grid-square door/corridor misalignment
+**State:** done
+**Blocked:** false
+**Summary:** The door/corridor connector tile between two dungeon rooms is offset by half a grid square from the scene's grid lines, so the door sits straddling a grid line instead of flush inside one cell — breaking token movement snapping and wall/line-of-sight alignment through that doorway.
+
+#### Spec
+
+**Problem (confirmed via screenshot `Screenshot 2026-09-17 153607.png`).** The door tile between two rooms visibly straddles a grid line instead of sitting flush inside a single grid cell, and the highlighted door tile's bounding box is centered on a grid line rather than aligned to a cell edge.
+
+**Root cause.** `scripts/dungeon-layout.mjs`'s `buildConnectionGeometry` (lines 87-125) computes the door's offset within a room face as `(gh - DOOR_WIDTH) / 2` for east/west connections (line 98, assigned to `doorY0`) and `(gw - DOOR_WIDTH) / 2` for south connections (line 112, assigned to `doorX0`). With the module's actual constants — `ROOM_SIZE = 6` and `DOOR_WIDTH = 1` (`dungeon-layout.mjs:23-26`) — this evaluates to `(6 - 1) / 2 = 2.5`, a fractional grid coordinate, because `ROOM_SIZE - DOOR_WIDTH` (5) is odd and doesn't divide evenly by 2. That `2.5` flows unchanged into `corridorRect.gx`/`gy` (lines 107/121) and from there into `dungeon-scene.mjs`'s `toPixels(gridVal) = gridVal * GRID_SIZE` (`dungeon-scene.mjs:28`), which is a plain scalar multiply with no origin snapping — `toPixels(2.5)` with `GRID_SIZE = 100` yields `250`, i.e. `x*100 + 50`, landing the door wall and corridor Tile exactly 50px (half a grid square) off every grid line. `toPixels` and the Tile/Wall document builders (`dungeon-scene.mjs:112-126`, `:46`) are not themselves buggy — they faithfully place whatever grid coordinate they're handed; the fractional coordinate originates in `buildConnectionGeometry`'s door-centering arithmetic.
+
+**Goal.** The door wall, the door's Region/Tile, and the corridor Tile should always land on integer grid coordinates so they align exactly with the scene's grid lines, restoring correct token-movement snapping and correct wall/line-of-sight geometry through every door.
+
+**Scope.** `buildConnectionGeometry`'s door-centering math (`dungeon-layout.mjs`) for both the east/west and south branches. Likely also touches whichever of `ROOM_SIZE`/`DOOR_WIDTH` is adjusted, or the rounding applied to `doorY0`/`doorX0`, plus every derived rect (`corridorRect`, the door wall segment, `plainWalls`) that depends on those two values — all of dungeon layout is seeded off the same room/door constants, so a change here needs re-verification against every existing dungeon-layout test, not just a patch to the two offending lines.
+
+**Candidate fixes (to weigh at planning time, not decided here).** (a) Round/floor the door offset to the nearest integer grid unit (simplest, smallest diff, but shifts the door slightly off perfect visual center within the wall — likely imperceptible at `DOOR_WIDTH = 1`). (b) Change `ROOM_SIZE` and/or `DOOR_WIDTH` so `ROOM_SIZE - DOOR_WIDTH` is always even (guarantees exact centering, but `ROOM_SIZE` is already load-bearing across the whole dungeon layout/art system — e.g. ITEM-4's fixed 600×600px room art assumes `ROOM_SIZE = 6` — so this option needs a fuller impact check before committing to it).
+
+**Non-goals.** Redesigning room/corridor sizing generally. Any change to `toPixels` or the Tile/Wall document builders — they are not the source of the bug and don't need touching.
+
+#### Plan
+
+**Chosen fix: candidate (a).** `ROOM_SIZE = 6` is load-bearing well beyond this file — ITEM-4's 33 room-art assets are baked at the exact 600×600px this constant implies, and a "make `ROOM_SIZE - DOOR_WIDTH` even" change (candidate b) would mean either resizing every existing room-art asset or widening the door to 2 grid squares (a real gameplay-visible change to what a doorway looks like, not just a coordinate fix). Flooring the door offset to the nearest integer grid unit is the minimal, correct fix: the door stays exactly `DOOR_WIDTH` (1) square wide and fully inside the room's face, just very slightly off perfect center (2 squares of wall above/left of the door, 3 below/right, instead of 2.5/2.5) — imperceptible at this scale, and exactly what the Spec already flagged as the lower-risk option.
+
+**1. `scripts/dungeon-layout.mjs`.** In `buildConnectionGeometry`, both branches gain a `Math.floor`:
+```js
+// east/west branch
+const doorY0 = gy + Math.floor((gh - DOOR_WIDTH) / 2);
+// south branch
+const doorX0 = gx + Math.floor((gw - DOOR_WIDTH) / 2);
+```
+Nothing else in the function changes — `doorY1`/`doorX1`, `corridorRect`, and every `plainWalls` segment are already derived from `doorY0`/`doorX0`, so they inherit the integer alignment automatically. `roomEnclosureWalls` and `slotRect` don't touch door positioning at all and need no change.
+
+**2. `tests/dungeon-layout.test.mjs`.** The existing "places an east-facing door on the room's east edge, centered" test asserts the door's midpoint exactly equals the room's geometric midpoint (`toBeCloseTo`, effectively exact) — true today only because the fractional `2.5` happened to average out perfectly; it will legitimately fail once the offset floors to `2`. Replace that exact-center assertion with what actually matters: the door sits fully inside the room's face and lands on integer coordinates. New/updated assertions:
+- `doorY0`/`doorX0` (and therefore `doorWall`'s and `corridorRect`'s coordinates) are integers, for every slot in a multi-row dungeon — the actual bug being fixed, so this is the one existing test-file gap that let it ship unnoticed.
+- The door remains within `[gy, gy + gh - DOOR_WIDTH]` (or the `gx` equivalent) — still fully inside the room's face, never spilling past a corner.
+- Keep a "close to center" check but with a tolerance of `DOOR_WIDTH` grid units rather than exact equality, so it still catches a wildly-off-center regression without re-baking in the exact fractional value that was the bug.
+
+**Tests.** `npm test` — every existing `dungeon-layout.test.mjs`/`dungeon-deck.test.mjs` case re-run (this touches shared, heavily-depended-on geometry, per the Spec's own scope note), plus the new integer-coordinate assertions.
+
+**Verification.** `npm test` — 530 passing, 2 new in `dungeon-layout.test.mjs` (the exact-center assertion loosened to a `DOOR_WIDTH` tolerance, plus new integer-coordinate and within-bounds checks across every slot in a two-row dungeon). `npm run validate`/`validate:dungeon`/`validate:creature-art` unaffected. Confirmed directly (pure function, no Foundry needed): `buildConnectionGeometry(0)` (east) now returns `doorWall {x1:6,y1:2,x2:6,y2:3}`, `corridorRect {gx:6,gy:2,gw:1,gh:1}`; `buildConnectionGeometry(4)` (the row-wrap, south) returns `doorWall {x1:30,y1:6,x2:31,y2:6}`, `corridorRect {gx:30,gy:6,gw:1,gh:1}` — every value an integer, where the east one previously carried a `.5`. A live spot-check (build a fresh dungeon room in the test world once this ships) is still worth doing to visually confirm the door now sits flush on a grid line, matching the screenshot that reported this.
+
 
 ### ITEM-6: Wire combat encounters into Foundry's encounter tracker
 **State:** done

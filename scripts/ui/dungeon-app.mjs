@@ -57,7 +57,7 @@ export async function resolveCurrentRoom(succeeded, { scene = canvas?.scene } = 
 
   const nextRoom = state.rooms.find((r) => r.id === nextRoomId);
   await buildRoomAtSlot(scene, nextPhysicalSlot, {
-    isGoal: nextRoom.isGoal, locationTag: nextRoom.locationTag, artVariant: nextRoom.artVariant
+    isGoal: nextRoom.isGoal, locationTag: nextRoom.locationTag, artVariant: nextRoom.artVariant, seed: state.seed
   });
 
   if (nextRoom.kind === 'combat') {
@@ -203,7 +203,7 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     const room0 = state.rooms[0];
     await buildRoomAtSlot(scene, 0, {
-      isGoal: room0.isGoal, locationTag: room0.locationTag, artVariant: room0.artVariant
+      isGoal: room0.isGoal, locationTag: room0.locationTag, artVariant: room0.artVariant, seed: state.seed
     });
     if (room0.kind === 'combat') {
       // Room 0 has no door to walk through to trigger a discovery reveal —

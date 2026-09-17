@@ -85,35 +85,38 @@ export async function createDungeonScene() {
  * Build ONE physical room at `slot`. Connects it to `slot - 1` (door starts
  * LOCKED) unless `slot === 0`. `isGoal` suppresses the outgoing side — the
  * goal room has nowhere further to lead. `locationTag`/`artVariant` (from the
- * room's own data — see dungeon-deck.mjs) pick its background Tile; the
- * connecting corridor, if any, gets its own Tile in the same pass, since it's
- * always exactly one grid square regardless of which direction it runs.
+ * room's own data — see dungeon-deck.mjs) pick its background Tile. `seed`
+ * (the run's own seed) drives the connecting door/opening's independently
+ * random placement on each side (ITEM-9) — deterministic per run, so it
+ * needs threading through from the caller like `locationTag`/`artVariant`.
  */
-export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag = null, artVariant = 0 } = {}) {
+export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag = null, artVariant = 0, seed = '' } = {}) {
   await ensureSceneCovers(scene, slot);
 
   const walls = roomEnclosureWalls(slot, { hasOutgoing: !isGoal }).map((side) => wallDoc(side));
   const tiles = [];
 
   if (slot > 0) {
-    const { doorWall, plainWalls, corridorRect } = buildConnectionGeometry(slot - 1);
+    const { doorWall, plainWalls, corridorRect } = buildConnectionGeometry(slot - 1, seed);
     walls.push(wallDoc(doorWall, {
       door: CONST.WALL_DOOR_TYPES.DOOR,
       ds: CONST.WALL_DOOR_STATES.LOCKED,
       flags: { [MODULE_ID]: { dungeonDoorToSlot: slot } }
     }));
     walls.push(...plainWalls.map((w) => wallDoc(w)));
-    tiles.push({
-      // anchorX/Y default to 0.5 (center) — Foundry positions the mesh at
-      // (x,y) without compensating, so an unanchored tile renders centered
-      // on its own top-left corner instead of filling the (x,y)-to-
-      // (x+width,y+height) box, leaving most of it showing scene background.
-      // Confirmed live: only anchorX:0, anchorY:0 makes the mesh's actual
-      // position/anchor match the document's declared box.
-      texture: { src: CORRIDOR_ART_PATH, anchorX: 0, anchorY: 0 },
-      x: toPixels(corridorRect.gx), y: toPixels(corridorRect.gy),
-      width: toPixels(corridorRect.gw), height: toPixels(corridorRect.gh)
-    });
+    // corridorRect now spans the whole connecting face (ITEM-9), not just one
+    // square — corridor.webp is a small self-contained "box" texture that
+    // looks wrong stretched, so it's tiled once per grid square instead.
+    // anchorX/Y:0 — see the room-art Tile below for why that's required.
+    for (let dx = 0; dx < corridorRect.gw; dx += 1) {
+      for (let dy = 0; dy < corridorRect.gh; dy += 1) {
+        tiles.push({
+          texture: { src: CORRIDOR_ART_PATH, anchorX: 0, anchorY: 0 },
+          x: toPixels(corridorRect.gx + dx), y: toPixels(corridorRect.gy + dy),
+          width: toPixels(1), height: toPixels(1)
+        });
+      }
+    }
   }
 
   if (walls.length) await scene.createEmbeddedDocuments('Wall', walls);
