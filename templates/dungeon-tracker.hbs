@@ -66,14 +66,8 @@
         {{localize "DOMMT.Dungeon.RoomCountLabel"}}
         <input type="number" name="roomCount" min="2" max="20" value="{{defaultRoomCount}}" />
       </label>
-      <label>
-        {{localize "DOMMT.Encounter.ThemeLabel"}}
-        <input type="text" name="traits" placeholder="{{localize 'DOMMT.Encounter.ThemePlaceholder'}}" />
-      </label>
-      <label>
-        {{localize "DOMMT.Encounter.ExcludeTraitsLabel"}}
-        <input type="text" name="excludeTraits" />
-      </label>
+      {{{traitsFieldHtml}}}
+      {{{excludeTraitsFieldHtml}}}
       <footer>
         <button type="button" data-action="start">{{localize "DOMMT.Dungeon.StartButton"}}</button>
       </footer>

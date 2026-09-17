@@ -28,9 +28,14 @@ import { freeSpot, freeSpotInRect, footprint, partyLevelFrom } from './placement
 
 export const CREATURE_PACK_PATTERN = /bestiary|monster-core|npc-core|npc-gallery/i;
 
-export const READ_METHODS = ['findItems', 'findCreatures', 'listItems', 'findWorldActors',
-                             'listLanguages', 'getCoins', 'listGear', 'ancestrySpeed',
-                             'partyLevel'];
+export const READ_METHODS = ['findItems', 'findCreatures', 'listCreatureTraits', 'listItems',
+                             'findWorldActors', 'listLanguages', 'getCoins', 'listGear',
+                             'ancestrySpeed', 'partyLevel'];
+
+// Module-scope, not per-`makeFoundryApi()` call — the theme dialog calls
+// `listCreatureTraits` fresh every time it opens, and re-scanning ~60 packs
+// on every open would make the dialog noticeably slow to appear.
+let CREATURE_TRAITS_CACHE = null;
 
 /**
  * PF2e's size codes, smallest first, with the words a card is likely to use.
@@ -168,6 +173,32 @@ export function makeFoundryApi() {
         }
       }
       return found;
+    },
+
+    /**
+     * Every distinct trait carried by an npc in the same creature packs
+     * `findCreatures` searches — so the encounter generator's theme picker
+     * can only ever offer a trait something actually has, rather than a free
+     * text field where a typo or a setting word (e.g. "castle", not a
+     * creature trait at all) silently matches nothing.
+     *
+     * Cached at module scope: a pack's own index is already cached internally
+     * by Foundry once fetched, but the union scan across ~60 packs is still
+     * real work worth doing once per session rather than on every dialog open.
+     */
+    async listCreatureTraits() {
+      if (CREATURE_TRAITS_CACHE) return CREATURE_TRAITS_CACHE;
+      const packs = game.packs.filter((p) => p.documentName === 'Actor' && CREATURE_PACK_PATTERN.test(p.collection));
+      const traits = new Set();
+      for (const pack of packs) {
+        const index = await pack.getIndex({ fields: ['type', 'system.traits.value'] });
+        for (const e of index) {
+          if (e.type !== 'npc') continue;
+          for (const t of e.system?.traits?.value ?? []) traits.add(t);
+        }
+      }
+      CREATURE_TRAITS_CACHE = [...traits].sort();
+      return CREATURE_TRAITS_CACHE;
     },
 
     /**
