@@ -135,6 +135,25 @@ export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag
   }]);
 }
 
+/**
+ * Centers this client's camera on slot's room. `createDungeonScene` pre-sizes
+ * the scene with headroom for the first two rows of rooms so `buildRoomAtSlot`
+ * isn't resizing the canvas on every single room — but that leaves the one
+ * room actually built looking tiny and stuck in a corner of a mostly-empty
+ * canvas until something pans there, since Foundry's default view on
+ * activation just centers on the whole (oversized) scene.
+ */
+export function focusCameraOnSlot(scene, slot) {
+  if (canvas?.scene?.id !== scene.id) return;
+  const rect = slotRect(slot);
+  canvas.animatePan({
+    x: toPixels(rect.gx + rect.gw / 2),
+    y: toPixels(rect.gy + rect.gh / 2),
+    scale: 1,
+    duration: 250
+  });
+}
+
 export async function unlockDoorToSlot(scene, slot) {
   const wall = scene.walls.find((w) => w.getFlag(MODULE_ID, 'dungeonDoorToSlot') === slot);
   if (wall) await wall.update({ ds: CONST.WALL_DOOR_STATES.CLOSED });
@@ -249,6 +268,7 @@ export async function handleDungeonRoomEnter(sceneId, tokenId, slot) {
 
   const revealedTokenIds = await revealSlotTokens(scene, slot);
   await advanceToRoom({ sceneId, roomId: nextRoomId, revealedTokenIds });
+  focusCameraOnSlot(scene, slot);
 }
 
 /** Reverses the most recent automatic entry: re-hides what was revealed,
