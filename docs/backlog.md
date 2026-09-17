@@ -1,8 +1,13 @@
 # Backlog
 
-_Last updated: 2026-09-16 (added ITEM-5)_
+_Last updated: 2026-09-16 (added ITEM-6)_
 
 ## Active
+
+### ITEM-6: Wire combat encounters into Foundry's encounter tracker
+**State:** backlog
+**Blocked:** false
+**Summary:** Combat encounters currently bypass Foundry's Combat tracker entirely; spawned combat actors should be flagged as combatants, a real Combat encounter created, all combatants must roll initiative, and combat must proceed through the tracker. XP and loot rewards should be granted when the encounter ends (not before), and players must be blocked from advancing deeper into the dungeon until the combat is completed.
 
 ### ITEM-5: Refactor combat encounter difficulty scaling
 **State:** backlog
