@@ -11,7 +11,7 @@ import { buildEncounterDeck, dealEncounter } from './encounter-deck.mjs';
 import { resolveEncounterRoster } from './encounter-roster.mjs';
 import { loadCreatureArt } from './data-loader.mjs';
 import { findCreatureArt, creatureArtPath } from './creature-art.mjs';
-import { traitPickerFieldHtml, wireTraitFilters, selectedTraits } from './trait-picker.mjs';
+import { traitFieldHtml, wireTraitPickerButtons, readTraitField } from './trait-picker.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 
@@ -26,24 +26,24 @@ async function chooseThemeAndSize({ api, prefillTraits = [], prefillExcludeTrait
     window: { title: game.i18n.localize('DOMMT.Encounter.Title') },
     content: `
       <form>
-        ${traitPickerFieldHtml({
+        ${traitFieldHtml({
           name: 'traits', label: game.i18n.localize('DOMMT.Encounter.ThemeLabel'),
-          placeholder: game.i18n.localize('DOMMT.Encounter.ThemePlaceholder'), traits, selected: prefillTraits
+          buttonLabel: game.i18n.localize('DOMMT.Encounter.ChooseTraitsButton'), selected: prefillTraits
         })}
-        ${traitPickerFieldHtml({
+        ${traitFieldHtml({
           name: 'excludeTraits', label: game.i18n.localize('DOMMT.Encounter.ExcludeTraitsLabel'),
-          placeholder: game.i18n.localize('DOMMT.Encounter.ExcludeTraitsPlaceholder'), traits, selected: prefillExcludeTraits
+          buttonLabel: game.i18n.localize('DOMMT.Encounter.ChooseTraitsButton'), selected: prefillExcludeTraits
         })}
       </form>`,
-    render: (_event, dialog) => wireTraitFilters(dialog.element),
+    render: (_event, dialog) => wireTraitPickerButtons(dialog.element, traits),
     buttons: [
       {
         action: 'generate',
         label: game.i18n.localize('DOMMT.Encounter.GenerateButton'),
         default: true,
         callback: (_event, _button, dialog) => ({
-          traits: selectedTraits(dialog.element, 'traits'),
-          excludeTraits: selectedTraits(dialog.element, 'excludeTraits')
+          traits: readTraitField(dialog.element, 'traits'),
+          excludeTraits: readTraitField(dialog.element, 'excludeTraits')
         })
       },
       { action: 'cancel', label: 'Cancel' }

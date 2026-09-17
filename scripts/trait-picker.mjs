@@ -1,27 +1,18 @@
 /**
- * A filterable multi-select for picking real creature traits, instead of a
- * free-text field. A typed word that isn't an actual trait (e.g. "castle", a
- * setting rather than a creature trait) used to silently match nothing —
- * this makes an invalid pick impossible instead of failing quietly later.
+ * A "Choose traits…" button that pops up a searchable multi-select dialog,
+ * instead of an inline filterable list embedded directly in the form. The
+ * inline version (still used inside the popup itself) turned out to be too
+ * much — the full trait list runs to 200+ entries, and an 8-row `<select>`
+ * sitting in the middle of the main dialog crowded out everything else.
  *
- * Plain `<select multiple>` plus a text filter that hides non-matching
- * `<option>`s, wired up post-render (DialogV2's `render` hook and
- * ApplicationV2's `_onRender` both hand back the live element the same way
- * every other dialog in this module already reads form values from).
+ * A typed word that isn't an actual trait (e.g. "castle", a setting rather
+ * than a creature trait) is still impossible to submit — the popup only ever
+ * offers real traits, exactly the same guarantee the inline version had.
  */
 export function traitOptionsHtml(traits, selected = []) {
   return traits
     .map((t) => `<option value="${t}"${selected.includes(t) ? ' selected' : ''}>${t}</option>`)
     .join('');
-}
-
-export function traitPickerFieldHtml({ name, label, placeholder = '', traits, selected = [] }) {
-  return `
-    <div class="form-group">
-      <label>${label}</label>
-      <input type="text" class="dommt-trait-filter" data-for="${name}" placeholder="${placeholder}" />
-      <select name="${name}" multiple size="8" style="width:100%;">${traitOptionsHtml(traits, selected)}</select>
-    </div>`;
 }
 
 export function wireTraitFilters(root) {
@@ -35,7 +26,67 @@ export function wireTraitFilters(root) {
   });
 }
 
-export function selectedTraits(root, name) {
-  const select = root.querySelector(`select[name="${name}"]`);
-  return select ? Array.from(select.selectedOptions).map((o) => o.value) : [];
+function summaryText(selected) {
+  return selected.length ? selected.join(', ') : '—';
+}
+
+/** The field as it appears in the main form: a label, a read-only summary of
+ * what's picked, a button that opens the picker, and a hidden input carrying
+ * the comma-joined value other code reads back with `readTraitField`. */
+export function traitFieldHtml({ name, label, buttonLabel, selected = [] }) {
+  return `
+    <div class="form-group">
+      <label>${label}</label>
+      <div class="dommt-trait-field">
+        <span class="dommt-trait-field__summary" data-for="${name}">${summaryText(selected)}</span>
+        <button type="button" class="dommt-trait-choose" data-for="${name}" data-title="${label}">${buttonLabel}</button>
+      </div>
+      <input type="hidden" name="${name}" value="${selected.join(',')}" />
+    </div>`;
+}
+
+export function readTraitField(root, name) {
+  const hidden = root.querySelector(`input[type="hidden"][name="${name}"]`);
+  return hidden?.value ? hidden.value.split(',').filter(Boolean) : [];
+}
+
+async function openTraitPickerDialog({ title, traits, selected }) {
+  const { DialogV2 } = foundry.applications.api;
+  return DialogV2.wait({
+    window: { title },
+    position: { width: 420 },
+    content: `
+      <form>
+        <input type="text" class="dommt-trait-filter" data-for="picker" placeholder="Filter…" />
+        <select name="picker" multiple size="12" style="width:100%;">${traitOptionsHtml(traits, selected)}</select>
+      </form>`,
+    render: (_event, dialog) => wireTraitFilters(dialog.element),
+    buttons: [
+      {
+        action: 'ok',
+        label: 'OK',
+        default: true,
+        callback: (_event, _button, dialog) =>
+          Array.from(dialog.element.querySelector('select[name="picker"]').selectedOptions).map((o) => o.value)
+      },
+      { action: 'cancel', label: 'Cancel' }
+    ],
+    rejectClose: false
+  });
+}
+
+/** Wires every `.dommt-trait-choose` button under `root` to open the popup
+ * picker (fed by `traits`, the full available list) and write its result
+ * back into that field's hidden input and summary text. */
+export function wireTraitPickerButtons(root, traits) {
+  root.querySelectorAll('.dommt-trait-choose').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const name = button.dataset.for;
+      const current = readTraitField(root, name);
+      const result = await openTraitPickerDialog({ title: button.dataset.title, traits, selected: current });
+      if (!result || result === 'cancel') return;
+      root.querySelector(`input[type="hidden"][name="${name}"]`).value = result.join(',');
+      root.querySelector(`.dommt-trait-field__summary[data-for="${name}"]`).textContent = summaryText(result);
+    });
+  });
 }
