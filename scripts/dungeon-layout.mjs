@@ -14,11 +14,14 @@
  * of when a slot gets built.
  *
  * A connection's door lives on exactly ONE wall: the earlier room's
- * forward-facing side. The later room's facing side gets no wall at all —
- * it opens straight into the connecting corridor. That keeps "a room has at
- * most one outgoing door and never an incoming one" literally true and
- * means every connection is purely additive: nothing is ever replaced.
+ * forward-facing side, at its own independently-randomized offset. The
+ * later room's facing side isn't wall-less any more (ITEM-9) — it gets a
+ * plain opening (no door object, always passable) at its *own* independently
+ * random offset, so the two ends of a connection often don't line up. The
+ * shared 1-square-wide gap between them is enclosed by each room's own
+ * gapped wall plus two fixed caps — see buildConnectionGeometry's docblock.
  */
+import { splitmix32, seedFromString } from './prng.mjs';
 
 export const ROOM_SIZE = 6;
 export const ROOMS_PER_ROW = 5;
@@ -74,52 +77,92 @@ export function roomEnclosureWalls(slot, { hasOutgoing }) {
     .map(([dir, c]) => ({ dir, ...c }));
 }
 
+const MAX_DOOR_OFFSET = ROOM_SIZE - DOOR_WIDTH;
+
 /**
- * Door + corridor geometry connecting `slot` to `slot + 1`. Returns the
- * single door segment (on slot's forward face), every other plain solid
- * segment needed (the wall flanking the door on either side, and the two
- * segments closing the long edges of the connecting corridor), and the
- * corridor's own floor rect (`corridorRect`, for placing its art Tile) —
- * always exactly one grid square (`CORRIDOR_LEN` × `DOOR_WIDTH`, both `1`),
- * regardless of whether the connection runs east/west or south. `slot + 1`'s
- * facing side gets nothing — it's left open into the corridor.
+ * Deterministic offset (integer grid units, `[0, ROOM_SIZE - DOOR_WIDTH]`)
+ * for one room's own door/opening along a connecting face. `role` is
+ * `'outgoing'` (a room's own lockable door, into its connection to the next
+ * slot) or `'incoming'` (a room's own plain opening, on the face receiving
+ * the connection from the previous slot) — a room's incoming and outgoing
+ * faces are almost always different sides, so these are two independent
+ * seeded picks, same per-index convention as dungeon-deck.mjs's
+ * `locationTagAt` — not two reads of the same value.
  */
-export function buildConnectionGeometry(slot) {
+export function doorOffsetAt(seed, slot, role) {
+  const r = splitmix32(seedFromString(`${seed}-door-${role}-${slot}`))();
+  return Math.floor(r * (MAX_DOOR_OFFSET + 1));
+}
+
+/**
+ * Door + gap geometry connecting `slot` to `slot + 1`, each end at its own
+ * independent offset (`doorOffsetAt`) so the two doors often don't line up.
+ *
+ * Only `slot`'s side is a real Foundry door (`doorWall`, locked/unlocked by
+ * the GM as today). `slot + 1`'s side is a plain opening — no door object,
+ * just a gap left in an otherwise-solid wall — so the existing single
+ * lock/unlock action still gates the whole connection with no change.
+ *
+ * Both rooms' flanking wall segments span their *entire* connecting face
+ * (solid for the room's full height/width, minus that room's own one-square
+ * gap), not just a short frame around a centered door. Combined with two
+ * fixed segments capping the very top/bottom (east/west) or left/right
+ * (south) of the shared gap column, the two rooms' own gapped walls already
+ * fully enclose it — nothing needs to change shape based on how far apart
+ * the two offsets land. `corridorRect` is correspondingly always the full
+ * connecting face (`CORRIDOR_LEN` × `ROOM_SIZE`, transposed for south),
+ * never just `DOOR_WIDTH` deep — dungeon-scene.mjs tiles it with repeated
+ * floor art rather than stretching one tile across it.
+ */
+export function buildConnectionGeometry(slot, seed) {
   const dir = connectionDirection(slot);
   const { gx, gy, gw, gh } = slotRect(slot);
+  const outgoingOffset = doorOffsetAt(seed, slot, 'outgoing');
+  const incomingOffset = doorOffsetAt(seed, slot + 1, 'incoming');
   const plainWalls = [];
   let doorWall;
-
   let corridorRect;
 
   if (dir === 'east' || dir === 'west') {
     const faceX = dir === 'east' ? gx + gw : gx;
     const corridorEndX = dir === 'east' ? faceX + CORRIDOR_LEN : faceX - CORRIDOR_LEN;
-    const doorY0 = gy + (gh - DOOR_WIDTH) / 2;
+    const doorY0 = gy + outgoingOffset;
     const doorY1 = doorY0 + DOOR_WIDTH;
+    const gapY0 = gy + incomingOffset;
+    const gapY1 = gapY0 + DOOR_WIDTH;
     doorWall = { x1: faceX, y1: doorY0, x2: faceX, y2: doorY1 };
     plainWalls.push(
       { x1: faceX, y1: gy, x2: faceX, y2: doorY0 },
       { x1: faceX, y1: doorY1, x2: faceX, y2: gy + gh },
-      { x1: faceX, y1: doorY0, x2: corridorEndX, y2: doorY0 },
-      { x1: faceX, y1: doorY1, x2: corridorEndX, y2: doorY1 }
+      { x1: corridorEndX, y1: gy, x2: corridorEndX, y2: gapY0 },
+      { x1: corridorEndX, y1: gapY1, x2: corridorEndX, y2: gy + gh },
+      { x1: Math.min(faceX, corridorEndX), y1: gy, x2: Math.max(faceX, corridorEndX), y2: gy },
+      { x1: Math.min(faceX, corridorEndX), y1: gy + gh, x2: Math.max(faceX, corridorEndX), y2: gy + gh }
     );
-    corridorRect = { gx: Math.min(faceX, corridorEndX), gy: doorY0, gw: CORRIDOR_LEN, gh: DOOR_WIDTH };
+    corridorRect = { gx: Math.min(faceX, corridorEndX), gy, gw: CORRIDOR_LEN, gh };
   } else {
     // 'south'
     const faceY = gy + gh;
     const corridorEndY = faceY + CORRIDOR_LEN;
-    const doorX0 = gx + (gw - DOOR_WIDTH) / 2;
+    const doorX0 = gx + outgoingOffset;
     const doorX1 = doorX0 + DOOR_WIDTH;
+    const gapX0 = gx + incomingOffset;
+    const gapX1 = gapX0 + DOOR_WIDTH;
     doorWall = { x1: doorX0, y1: faceY, x2: doorX1, y2: faceY };
     plainWalls.push(
       { x1: gx, y1: faceY, x2: doorX0, y2: faceY },
       { x1: doorX1, y1: faceY, x2: gx + gw, y2: faceY },
-      { x1: doorX0, y1: faceY, x2: doorX0, y2: corridorEndY },
-      { x1: doorX1, y1: faceY, x2: doorX1, y2: corridorEndY }
+      { x1: gx, y1: corridorEndY, x2: gapX0, y2: corridorEndY },
+      { x1: gapX1, y1: corridorEndY, x2: gx + gw, y2: corridorEndY },
+      { x1: gx, y1: Math.min(faceY, corridorEndY), x2: gx, y2: Math.max(faceY, corridorEndY) },
+      { x1: gx + gw, y1: Math.min(faceY, corridorEndY), x2: gx + gw, y2: Math.max(faceY, corridorEndY) }
     );
-    corridorRect = { gx: doorX0, gy: faceY, gw: DOOR_WIDTH, gh: CORRIDOR_LEN };
+    corridorRect = { gx, gy: Math.min(faceY, corridorEndY), gw, gh: CORRIDOR_LEN };
   }
 
-  return { doorWall, plainWalls, corridorRect };
+  // A door/opening offset landing at either extreme (0 or MAX_DOOR_OFFSET)
+  // leaves no room for the flanking segment on that side — drop the
+  // resulting zero-length segment rather than create a degenerate Wall.
+  const nonDegenerate = plainWalls.filter((w) => w.x1 !== w.x2 || w.y1 !== w.y2);
+  return { doorWall, plainWalls: nonDegenerate, corridorRect };
 }
