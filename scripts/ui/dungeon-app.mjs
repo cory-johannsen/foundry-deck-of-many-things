@@ -7,7 +7,7 @@ import { makeFoundryApi } from '../foundry-api.mjs';
 import { traitPickerFieldHtml, wireTraitFilters, selectedTraits } from '../trait-picker.mjs';
 import {
   createDungeonScene, buildRoomAtSlot, unlockDoorToSlot, populateSlotEncounter,
-  isSlotPopulated, placePartyInSlot, undoRoomEntry
+  isSlotPopulated, placePartyInSlot, undoRoomEntry, focusCameraOnSlot
 } from '../dungeon-scene.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
@@ -191,6 +191,12 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const partyMembers = (game.actors?.party?.members ?? []).filter((m) => m.type === 'character');
     await placePartyInSlot(scene, 0, partyMembers);
     await scene.activate();
+    // The canvas doesn't finish switching to the new scene the instant
+    // activate() resolves — animatePan needs a beat to land on it, same
+    // settling delay scene-divination.mjs already relies on for its own
+    // post-activate scene work.
+    await new Promise((r) => setTimeout(r, 400));
+    focusCameraOnSlot(scene, 0);
 
     this.render();
   }
