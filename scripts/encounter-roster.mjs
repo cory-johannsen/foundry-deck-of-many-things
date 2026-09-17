@@ -41,6 +41,13 @@ function xpFor(levelOffset) {
  * are set and neither loosened attempt finds anything, the location tag is
  * the one kept: it's the room's own specific identity, so the broader
  * dungeon-wide theme yields first rather than starving the room to empty.
+ *
+ * The final fallback drops `traits` entirely and always runs, even with no
+ * `requireTrait` to fall back on — the free-text theme field on the
+ * standalone macro takes any word a GM types, not just real trait tags, and
+ * a word that matches nothing (e.g. "castle", a setting rather than a
+ * creature trait) used to leave every single slot empty rather than falling
+ * back to an untraited pick.
  */
 async function pickCreature({
   api, partyLevel, levelOffset, traits, excludeTraits, rng, levelOffsetBias = 0, requireTrait = null
@@ -54,7 +61,7 @@ async function pickCreature({
 
   let pool = await look(MONSTER_CORE_PACKS, true);
   if (!pool.length) pool = await look(null, true);
-  if (!pool.length && requireTrait) pool = await look(null, false);
+  if (!pool.length) pool = await look(null, false);
   if (!pool.length) return null;
   return pool[Math.floor(rng() * pool.length)];
 }

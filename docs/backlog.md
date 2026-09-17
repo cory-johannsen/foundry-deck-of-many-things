@@ -1,8 +1,13 @@
 # Backlog
 
-_Last updated: 2026-09-15 (ITEM-2 done)_
+_Last updated: 2026-09-16 (added ITEM-5)_
 
 ## Active
+
+### ITEM-5: Refactor combat encounter difficulty scaling
+**State:** backlog
+**Blocked:** false
+**Summary:** Dungeon crawl encounters, traps, and puzzles should start easy (scaled to party level) at the first room and increase in difficulty each subsequent room; players must always be able to flee backward to a previously completed room; dungeons with more than 6 rooms get a safe resting room in the middle.
 
 ### ITEM-3: Expand trap/puzzle generation with realistic content
 **State:** backlog

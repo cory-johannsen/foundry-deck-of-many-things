@@ -74,6 +74,21 @@ describe('resolveEncounterRoster', () => {
     expect(roster.warnings).toHaveLength(1);
   });
 
+  it('falls back to dropping the theme traits entirely when nothing matches them, even with no requireTrait', async () => {
+    // "castle" is a setting, not a real creature trait — nothing will ever
+    // carry it, so every slot used to come back empty even though the
+    // bestiary has plenty of creatures at this level.
+    const api = makeStubApi([{ pack: 'p', id: 'g', name: 'Goblin', level: 5, traits: ['humanoid'] }]);
+    const resolved = { foes: [{ id: 's1', kind: 'creature', levelOffset: 0 }] };
+    const roster = await resolveEncounterRoster({
+      resolved, api, partyLevel: 5, traits: ['castle'], rng: () => 0
+    });
+    expect(roster.foes).toHaveLength(1);
+    expect(roster.foes[0].id).toBe('g');
+    expect(roster.warnings).toHaveLength(0);
+    expect(api.calls.at(-1).traits).toEqual([]);
+  });
+
   it('resolves friend, lurker and twins into their own roster slots', async () => {
     const api = makeStubApi([
       { pack: 'p', id: 'ally', name: 'Wandering Cleric', level: 4, traits: [] },

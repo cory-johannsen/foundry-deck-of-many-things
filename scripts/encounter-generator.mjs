@@ -11,6 +11,7 @@ import { buildEncounterDeck, dealEncounter } from './encounter-deck.mjs';
 import { resolveEncounterRoster } from './encounter-roster.mjs';
 import { loadCreatureArt } from './data-loader.mjs';
 import { findCreatureArt, creatureArtPath } from './creature-art.mjs';
+import { traitPickerFieldHtml, wireTraitFilters, selectedTraits } from './trait-picker.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 
@@ -18,37 +19,31 @@ function freshSeed() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function parseTraitList(text) {
-  return String(text ?? '')
-    .split(',')
-    .map((t) => t.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-async function chooseThemeAndSize({ prefillTraits = [], prefillExcludeTraits = [] } = {}) {
+async function chooseThemeAndSize({ api, prefillTraits = [], prefillExcludeTraits = [] } = {}) {
   const { DialogV2 } = foundry.applications.api;
+  const traits = await api.listCreatureTraits();
   return DialogV2.wait({
     window: { title: game.i18n.localize('DOMMT.Encounter.Title') },
     content: `
       <form>
-        <div class="form-group">
-          <label>${game.i18n.localize('DOMMT.Encounter.ThemeLabel')}</label>
-          <input type="text" name="traits" placeholder="${game.i18n.localize('DOMMT.Encounter.ThemePlaceholder')}"
-                 value="${prefillTraits.join(', ')}" />
-        </div>
-        <div class="form-group">
-          <label>${game.i18n.localize('DOMMT.Encounter.ExcludeTraitsLabel')}</label>
-          <input type="text" name="excludeTraits" value="${prefillExcludeTraits.join(', ')}" />
-        </div>
+        ${traitPickerFieldHtml({
+          name: 'traits', label: game.i18n.localize('DOMMT.Encounter.ThemeLabel'),
+          placeholder: game.i18n.localize('DOMMT.Encounter.ThemePlaceholder'), traits, selected: prefillTraits
+        })}
+        ${traitPickerFieldHtml({
+          name: 'excludeTraits', label: game.i18n.localize('DOMMT.Encounter.ExcludeTraitsLabel'),
+          placeholder: game.i18n.localize('DOMMT.Encounter.ExcludeTraitsPlaceholder'), traits, selected: prefillExcludeTraits
+        })}
       </form>`,
+    render: (_event, dialog) => wireTraitFilters(dialog.element),
     buttons: [
       {
         action: 'generate',
         label: game.i18n.localize('DOMMT.Encounter.GenerateButton'),
         default: true,
         callback: (_event, _button, dialog) => ({
-          traits: parseTraitList(dialog.element.querySelector('[name="traits"]').value),
-          excludeTraits: parseTraitList(dialog.element.querySelector('[name="excludeTraits"]').value)
+          traits: selectedTraits(dialog.element, 'traits'),
+          excludeTraits: selectedTraits(dialog.element, 'excludeTraits')
         })
       },
       { action: 'cancel', label: 'Cancel' }
@@ -141,7 +136,7 @@ export async function generateEncounter({
     ui.notifications.warn(game.i18n.localize('DOMMT.Encounter.PartyTooSmall'));
   }
 
-  const theme = await chooseThemeAndSize({ prefillTraits, prefillExcludeTraits });
+  const theme = await chooseThemeAndSize({ api, prefillTraits, prefillExcludeTraits });
   if (!theme || theme === 'cancel') return;
 
   let seed = freshSeed();
