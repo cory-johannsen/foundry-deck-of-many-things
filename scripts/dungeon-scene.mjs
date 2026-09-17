@@ -103,7 +103,13 @@ export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag
     }));
     walls.push(...plainWalls.map((w) => wallDoc(w)));
     tiles.push({
-      texture: { src: CORRIDOR_ART_PATH },
+      // anchorX/Y default to 0.5 (center) — Foundry positions the mesh at
+      // (x,y) without compensating, so an unanchored tile renders centered
+      // on its own top-left corner instead of filling the (x,y)-to-
+      // (x+width,y+height) box, leaving most of it showing scene background.
+      // Confirmed live: only anchorX:0, anchorY:0 makes the mesh's actual
+      // position/anchor match the document's declared box.
+      texture: { src: CORRIDOR_ART_PATH, anchorX: 0, anchorY: 0 },
       x: toPixels(corridorRect.gx), y: toPixels(corridorRect.gy),
       width: toPixels(corridorRect.gw), height: toPixels(corridorRect.gh)
     });
@@ -113,7 +119,7 @@ export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag
 
   const rect = slotRect(slot);
   tiles.push({
-    texture: { src: roomArtPath({ locationTag, isGoal, artVariant }) },
+    texture: { src: roomArtPath({ locationTag, isGoal, artVariant }), anchorX: 0, anchorY: 0 },
     x: toPixels(rect.gx), y: toPixels(rect.gy),
     width: toPixels(rect.gw), height: toPixels(rect.gh)
   });
@@ -136,20 +142,42 @@ export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag
 }
 
 /**
- * Centers this client's camera on slot's room. `createDungeonScene` pre-sizes
- * the scene with headroom for the first two rows of rooms so `buildRoomAtSlot`
- * isn't resizing the canvas on every single room — but that leaves the one
- * room actually built looking tiny and stuck in a corner of a mostly-empty
- * canvas until something pans there, since Foundry's default view on
- * activation just centers on the whole (oversized) scene.
+ * Centers this client's camera on slot's room, zoomed to actually fit it.
+ * `createDungeonScene` pre-sizes the scene with headroom for the first two
+ * rows of rooms so `buildRoomAtSlot` isn't resizing the canvas on every
+ * single room — but that leaves the one room actually built looking tiny and
+ * stuck in a corner of a mostly-empty canvas until something pans there,
+ * since Foundry's default view on activation just centers on the whole
+ * (oversized) scene.
+ *
+ * The scale is fit to the actual viewport rather than a fixed 1 — a fixed
+ * zoom can leave the room's far edge past the visible area on a smaller
+ * browser window, which looks exactly like the room's art doesn't reach the
+ * walls and tokens are standing outside it, when really the camera just
+ * isn't framing the whole room.
+ *
+ * Called both by the automatic room-entry trigger (which only fires once,
+ * for whichever single party token happens to trip it first — with five
+ * party tokens crossing one door, the other four's own tokenEnter events
+ * find `currentIndex` already advanced and bail out before ever reaching a
+ * camera pan) and by the tracker UI's own render, so simply having the
+ * tracker window open keeps the view honest regardless of whether that
+ * one-shot trigger happened to fire this time.
  */
 export function focusCameraOnSlot(scene, slot) {
   if (canvas?.scene?.id !== scene.id) return;
   const rect = slotRect(slot);
+  const roomPixelSize = Math.max(toPixels(rect.gw), toPixels(rect.gh));
+  const [screenWidth, screenHeight] = canvas.screenDimensions ?? [1000, 1000];
+  // Fit the room's footprint plus a 30% margin into whichever screen
+  // dimension is tighter, clamped so a huge or tiny monitor doesn't zoom to
+  // an unreasonable extreme.
+  const fitScale = Math.min(screenWidth, screenHeight) / (roomPixelSize * 1.3);
+  const scale = Math.min(1.5, Math.max(0.3, fitScale));
   canvas.animatePan({
     x: toPixels(rect.gx + rect.gw / 2),
     y: toPixels(rect.gy + rect.gh / 2),
-    scale: 1,
+    scale,
     duration: 250
   });
 }

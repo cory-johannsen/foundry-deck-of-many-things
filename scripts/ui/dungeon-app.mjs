@@ -135,6 +135,8 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     return {
       hasScene: true,
       hasRun: true,
+      sceneId,
+      currentSlot: currentRoom ? state.physicalSlotByRoomId[currentRoom.id] : null,
       completed: state.completed,
       roomNumber: state.currentIndex + 1,
       roomTotal: state.rooms.length,
@@ -159,6 +161,12 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
   _onRender(context, options) {
     super._onRender(context, options);
     wireTraitPickerButtons(this.element, context.availableTraits ?? []);
+    // Re-frame the current room on every render, not just on the one-shot
+    // automatic room-entry trigger — see focusCameraOnSlot's own docs for why
+    // that trigger alone isn't reliable with a five-token party.
+    if (context.currentSlot != null && canvas?.scene?.id === context.sceneId) {
+      focusCameraOnSlot(canvas.scene, context.currentSlot);
+    }
   }
 
   static async #onStart() {
