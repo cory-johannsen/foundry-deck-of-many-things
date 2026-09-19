@@ -144,15 +144,24 @@ export function setpieceAt(seed, occurrenceIndex, setpieceIds) {
 
 /**
  * Build a fresh linear room sequence. `roomCount` includes the goal room, so
- * it must be at least 2. The last room is always a combat room flagged
- * `isGoal: true` with no outcome slot — the climactic fight, and the end of
- * the line for reward/ruin resolution.
+ * it must be at least 2 — it does NOT include the safe entry room prepended
+ * below, which is always there in addition to `roomCount`, not counted
+ * against it. The last room is always a combat room flagged `isGoal: true`
+ * with no outcome slot — the climactic fight, and the end of the line for
+ * reward/ruin resolution.
  */
 export function buildRoomSequence({ seed, roomCount, setpieceIds = [] }) {
   if (!Number.isInteger(roomCount) || roomCount < 2) {
     throw new Error('roomCount must be an integer of at least 2 (rooms plus a goal room)');
   }
-  const rooms = [];
+  // The entry: always safe (no encounter, trap or puzzle — no outcomeSlotId
+  // at all, so there's nothing for markRoomOutcome to resolve), always first,
+  // never counted against roomCount. Its own exit is unlocked immediately at
+  // Start rather than waiting on a GM's Mark Succeeded — see dungeon-app.mjs.
+  const rooms = [{
+    id: 'room-entry', kind: 'safe_entry', isGoal: false, setpieceId: null, outcomeSlotId: null,
+    locationTag: locationTagAt(seed, 'entry'), artVariant: roomArtVariantAt(seed, 'entry')
+  }];
   let puzzleOccurrence = 0;
   for (let i = 0; i < roomCount - 1; i += 1) {
     const kind = roomKindAt(seed, i);

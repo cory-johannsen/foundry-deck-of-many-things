@@ -18,7 +18,8 @@ const ROOM_KIND_KEYS = {
   combat: 'DOMMT.Dungeon.Kind.combat',
   skill_challenge: 'DOMMT.Dungeon.Kind.skill_challenge',
   puzzle_or_trap: 'DOMMT.Dungeon.Kind.puzzle_or_trap',
-  narrative: 'DOMMT.Dungeon.Kind.narrative'
+  narrative: 'DOMMT.Dungeon.Kind.narrative',
+  safe_entry: 'DOMMT.Dungeon.Kind.safe_entry'
 };
 
 const EFFECT_KEYS = {
@@ -36,14 +37,41 @@ const EFFECT_KEYS = {
 };
 
 /**
- * Build+populate+unlock whatever room follows the one just resolved. Not a
- * class method — it only touches globals and the dungeon-scene/runner
- * modules, so the two action handlers below can call it directly rather than
- * needing `this` threaded through a shared private static method. Exported
- * (with an explicit `scene` override) because dungeon-combat.mjs's automatic
- * combat-resolution hooks need to call this too, and a hook can fire while
- * the GM is looking at a different scene entirely — `canvas?.scene` alone
- * isn't reliable there the way it is for a button click inside this app.
+ * Build+populate+unlock one room at its physical slot. Shared by both the
+ * normal outcome-resolution path below and #onStart's auto-advance past the
+ * safe entry room (which has nothing to resolve, so nothing ever calls
+ * resolveCurrentRoom for it — see dungeon-deck.mjs's buildRoomSequence).
+ */
+async function buildPopulateAndUnlockRoom(scene, state, room, physicalSlot) {
+  await buildRoomAtSlot(scene, physicalSlot, {
+    isGoal: room.isGoal, locationTag: room.locationTag, artVariant: room.artVariant, seed: state.seed
+  });
+
+  if (room.kind === 'combat') {
+    await populateSlotEncounter(scene, physicalSlot, {
+      prefillTraits: state.traits, prefillExcludeTraits: state.excludeTraits,
+      levelOffsetBias: depthBiasFor({ physicalSlot, roomCount: state.rooms.length, isGoal: room.isGoal }),
+      locationTag: room.locationTag
+    });
+    // Only unlock once monsters are actually in place — a cancelled theme
+    // dialog leaves the door locked rather than opening onto an empty room;
+    // the GM retries via the "Populate Next Room" button.
+    if (isSlotPopulated(scene, physicalSlot)) await unlockDoorToSlot(scene, physicalSlot);
+  } else {
+    await unlockDoorToSlot(scene, physicalSlot);
+  }
+}
+
+/**
+ * Resolve the current room's outcome and build+populate+unlock whatever
+ * follows. Not a class method — it only touches globals and the
+ * dungeon-scene/runner modules, so the two action handlers below can call it
+ * directly rather than needing `this` threaded through a shared private
+ * static method. Exported (with an explicit `scene` override) because
+ * dungeon-combat.mjs's automatic combat-resolution hooks need to call this
+ * too, and a hook can fire while the GM is looking at a different scene
+ * entirely — `canvas?.scene` alone isn't reliable there the way it is for a
+ * button click inside this app.
  */
 export async function resolveCurrentRoom(succeeded, { scene = canvas?.scene } = {}) {
   if (!scene) return;
@@ -56,23 +84,7 @@ export async function resolveCurrentRoom(succeeded, { scene = canvas?.scene } = 
   if (!nextRoomId) return; // the goal room was just resolved — nothing more to build
 
   const nextRoom = state.rooms.find((r) => r.id === nextRoomId);
-  await buildRoomAtSlot(scene, nextPhysicalSlot, {
-    isGoal: nextRoom.isGoal, locationTag: nextRoom.locationTag, artVariant: nextRoom.artVariant, seed: state.seed
-  });
-
-  if (nextRoom.kind === 'combat') {
-    await populateSlotEncounter(scene, nextPhysicalSlot, {
-      prefillTraits: state.traits, prefillExcludeTraits: state.excludeTraits,
-      levelOffsetBias: depthBiasFor({ physicalSlot: nextPhysicalSlot, roomCount: state.rooms.length, isGoal: nextRoom.isGoal }),
-      locationTag: nextRoom.locationTag
-    });
-    // Only unlock once monsters are actually in place — a cancelled theme
-    // dialog leaves the door locked rather than opening onto an empty room;
-    // the GM retries via the "Populate Next Room" button.
-    if (isSlotPopulated(scene, nextPhysicalSlot)) await unlockDoorToSlot(scene, nextPhysicalSlot);
-  } else {
-    await unlockDoorToSlot(scene, nextPhysicalSlot);
-  }
+  await buildPopulateAndUnlockRoom(scene, state, nextRoom, nextPhysicalSlot);
 }
 
 export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -142,6 +154,7 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     const currentSlot = currentRoom ? state.physicalSlotByRoomId[currentRoom.id] : null;
     const isCombatRoom = currentRoom?.kind === 'combat' && !currentRoomResolved;
+    const isSafeEntry = currentRoom?.kind === 'safe_entry';
     const activeCombat = isCombatRoom && currentSlot != null ? getCombatForSlot(scene, currentSlot) : null;
 
     return {
@@ -150,11 +163,15 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       sceneId,
       currentSlot,
       completed: state.completed,
-      roomNumber: state.currentIndex + 1,
-      roomTotal: state.rooms.length,
+      // The safe entry (always rooms[0]) doesn't count toward the room
+      // total the GM asked for — currentIndex 1 is real room 1 of roomTotal,
+      // not room 2 of roomTotal+1.
+      roomNumber: state.currentIndex,
+      roomTotal: state.rooms.length - 1,
       currentRoomResolved,
       nextRoomPending,
       canUndo: canUndoRoomEntry(state),
+      isSafeEntry,
       // A combat room never uses the plain Succeed/Fail buttons — it's
       // either mid-fight (combatActive) or something interrupted Combat's
       // own creation and needs the recovery button (combatMissing).
@@ -201,21 +218,20 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       { setpieceIds: setpieces.map((s) => s.id) }
     );
 
-    const room0 = state.rooms[0];
+    // Room 0 is always the safe entry — no encounter, trap or puzzle ever
+    // spawns there (see dungeon-deck.mjs's buildRoomSequence).
+    const entryRoom = state.rooms[0];
     await buildRoomAtSlot(scene, 0, {
-      isGoal: room0.isGoal, locationTag: room0.locationTag, artVariant: room0.artVariant, seed: state.seed
+      isGoal: entryRoom.isGoal, locationTag: entryRoom.locationTag, artVariant: entryRoom.artVariant, seed: state.seed
     });
-    if (room0.kind === 'combat') {
-      // Room 0 has no door to walk through to trigger a discovery reveal —
-      // the party starts here, so its encounter (if any) spawns visible.
-      await populateSlotEncounter(scene, 0, {
-        prefillTraits: traits, prefillExcludeTraits: excludeTraits, hidden: false,
-        levelOffsetBias: depthBiasFor({ physicalSlot: 0, roomCount: state.rooms.length, isGoal: room0.isGoal }),
-        locationTag: room0.locationTag
-      });
-      // Room 0 has no reveal step either — its fight is visible from the
-      // start, so Combat starts right away instead of waiting for entry.
-      await startCombatForSlot(scene, 0);
+
+    // The entry has nothing to resolve, so — unlike every other room — its
+    // own exit is built, populated (if the first real room needs it) and
+    // unlocked immediately, with no GM click required: "the exit from this
+    // room is always visible."
+    const firstRealRoom = state.rooms[1];
+    if (firstRealRoom) {
+      await buildPopulateAndUnlockRoom(scene, state, firstRealRoom, 1);
     }
 
     const partyMembers = (game.actors?.party?.members ?? []).filter((m) => m.type === 'character');

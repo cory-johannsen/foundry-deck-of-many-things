@@ -90,6 +90,8 @@
   "DOMMT.Dungeon.Kind.puzzle_or_trap": "Puzzle or Trap",
   "DOMMT.Dungeon.Kind.narrative": "Narrative",
   "DOMMT.Dungeon.Kind.goal": "Goal Room",
+  "DOMMT.Dungeon.Kind.safe_entry": "The Entry",
+  "DOMMT.Dungeon.SafeEntryHint": "A safe room — no encounter, trap or puzzle. The way onward is already open.",
   "DOMMT.Dungeon.SucceedButton": "Mark Succeeded",
   "DOMMT.Dungeon.FailButton": "Mark Failed",
   "DOMMT.Dungeon.Combat.InProgressHint": "Combat is underway — the party can't move on until it's resolved.",

@@ -44,6 +44,18 @@ export async function createRun(
 ) {
   const runSeed = seed ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const rooms = buildRoomSequence({ seed: runSeed, roomCount, setpieceIds });
+  // Room 0 is where the party starts — built and occupied at Start, before
+  // any resolution happens, so it's the only slot normally assigned up
+  // front. The one exception: room 0 is always the safe entry, which has
+  // nothing to resolve (no outcomeSlotId — markRoomOutcome never runs for
+  // it), so the room right after it also needs its physical slot assigned
+  // here rather than waiting on a markRoomOutcome call that will never come.
+  const physicalSlotByRoomId = { [rooms[0].id]: 0 };
+  let nextPhysicalSlot = 1;
+  if (rooms[0].kind === 'safe_entry' && rooms[1]) {
+    physicalSlotByRoomId[rooms[1].id] = 1;
+    nextPhysicalSlot = 2;
+  }
   const state = {
     seed: runSeed,
     createdAt: Date.now(),
@@ -53,10 +65,8 @@ export async function createRun(
     currentIndex: 0,
     completed: false,
     history: [],
-    // Room 0 is where the party starts — built and occupied at Start, before
-    // any resolution happens, so it's the only slot assigned up front.
-    physicalSlotByRoomId: { [rooms[0].id]: 0 },
-    nextPhysicalSlot: 1,
+    physicalSlotByRoomId,
+    nextPhysicalSlot,
     lastAutoEntry: null
   };
   return persist(sceneId, state, settingsRef);
@@ -86,6 +96,15 @@ export async function markRoomOutcome(
   }
 
   const room = state.rooms[state.currentIndex];
+  // A "safe" room (the entry — see buildRoomSequence) has no outcome slot
+  // and nothing to resolve; its own transition happens automatically
+  // (createRun/dungeon-app.mjs's Start flow), never through here. Guard
+  // rather than crash on findOutcomeTemplate(null) if this is ever somehow
+  // reached anyway.
+  if (!room.isGoal && room.outcomeSlotId == null) {
+    return { state, effectKey: null, mutation: null, nextRoomId: null, nextPhysicalSlot: null };
+  }
+
   const base = {
     roomId: room.id,
     kind: room.kind,

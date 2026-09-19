@@ -23,10 +23,21 @@ describe('buildRoomSequence', () => {
     expect(goal.setpieceId).toBeNull();
   });
 
-  it('respects roomCount, including the goal room', () => {
+  it('respects roomCount, including the goal room but not the prepended safe entry', () => {
     const rooms = buildRoomSequence({ seed: 'alpha', roomCount: 4 });
-    expect(rooms).toHaveLength(4);
-    expect(rooms.slice(0, 3).every((r) => !r.isGoal)).toBe(true);
+    expect(rooms).toHaveLength(5); // 4 + the entry
+    expect(rooms.slice(1, 4).every((r) => !r.isGoal)).toBe(true);
+  });
+
+  it('always starts with a safe entry room, never counted in roomCount', () => {
+    const rooms = buildRoomSequence({ seed: 'alpha', roomCount: 4 });
+    const entry = rooms[0];
+    expect(entry.kind).toBe('safe_entry');
+    expect(entry.isGoal).toBe(false);
+    expect(entry.outcomeSlotId).toBeNull();
+    expect(entry.setpieceId).toBeNull();
+    // roomCount real rooms follow it, unaffected by its presence.
+    expect(rooms.length - 1).toBe(4);
   });
 
   it('rejects a roomCount below 2', () => {
@@ -46,9 +57,9 @@ describe('buildRoomSequence', () => {
     expect(a).not.toEqual(b);
   });
 
-  it('every non-goal room carries an outcome slot that resolves to a real template', () => {
+  it('every non-goal, non-entry room carries an outcome slot that resolves to a real template', () => {
     const rooms = buildRoomSequence({ seed: 'gamma', roomCount: 10 });
-    for (const room of rooms.filter((r) => !r.isGoal)) {
+    for (const room of rooms.filter((r) => !r.isGoal && r.kind !== 'safe_entry')) {
       expect(findOutcomeTemplate(room.outcomeSlotId)).not.toBeNull();
     }
   });

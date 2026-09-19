@@ -12,15 +12,29 @@ function makeSettingsStub(initial = {}) {
   };
 }
 
+/** Moves currentIndex from the safe entry (room 0) to the first real room
+ * (room 1) — its physical slot is already assigned by createRun, so this
+ * never needs markRoomOutcome, matching how the real door-open trigger
+ * reaches it. */
+async function advancePastEntry(sceneId, settingsRef) {
+  const state = getRunState(sceneId, { settingsRef });
+  return advanceToRoom({ sceneId, roomId: state.rooms[1].id }, { settingsRef });
+}
+
 describe('createRun / getRunState', () => {
-  it('creates a fresh run scoped to a scene, room 0 already physically placed', async () => {
+  it('creates a fresh run scoped to a scene: a safe entry room prepended, not counted in roomCount', async () => {
     const settingsRef = makeSettingsStub();
     const state = await createRun({ sceneId: 'scene-1', roomCount: 5 }, { settingsRef });
-    expect(state.rooms).toHaveLength(5);
+    // roomCount (5) + the prepended entry room.
+    expect(state.rooms).toHaveLength(6);
+    expect(state.rooms[0].kind).toBe('safe_entry');
+    expect(state.rooms[0].outcomeSlotId).toBeNull();
     expect(state.currentIndex).toBe(0);
     expect(state.completed).toBe(false);
-    expect(state.physicalSlotByRoomId).toEqual({ [state.rooms[0].id]: 0 });
-    expect(state.nextPhysicalSlot).toBe(1);
+    // The entry has nothing to resolve, so the first real room's slot is
+    // also pre-assigned — see dungeon-runner.mjs's createRun.
+    expect(state.physicalSlotByRoomId).toEqual({ [state.rooms[0].id]: 0, [state.rooms[1].id]: 1 });
+    expect(state.nextPhysicalSlot).toBe(2);
     expect(state.lastAutoEntry).toBeNull();
     expect(getRunState('scene-1', { settingsRef })).toEqual(state);
   });
@@ -36,41 +50,55 @@ describe('createRun / getRunState', () => {
     await createRun({ sceneId: 'scene-b', roomCount: 6, seed: 'b' }, { settingsRef });
     const a = getRunState('scene-a', { settingsRef });
     const b = getRunState('scene-b', { settingsRef });
-    expect(a.rooms).toHaveLength(3);
-    expect(b.rooms).toHaveLength(6);
+    expect(a.rooms).toHaveLength(4); // 3 + entry
+    expect(b.rooms).toHaveLength(7); // 6 + entry
     expect(a.seed).toBe('a');
     expect(b.seed).toBe('b');
   });
 });
 
 describe('markRoomOutcome', () => {
+  it('is a no-op on the safe entry room — nothing to resolve, no crash on a null outcome slot', async () => {
+    const settingsRef = makeSettingsStub();
+    await createRun({ sceneId: 's', roomCount: 5, seed: 'fixed' }, { settingsRef });
+    const before = getRunState('s', { settingsRef });
+    const result = await markRoomOutcome({ sceneId: 's', succeeded: true }, { settingsRef });
+    expect(result.effectKey).toBeNull();
+    expect(result.mutation).toBeNull();
+    expect(result.nextRoomId).toBeNull();
+    expect(result.state).toEqual(before); // untouched — no history entry, no mutation
+  });
+
   it('does not move currentIndex, and reports the next room + its assigned physical slot', async () => {
     const settingsRef = makeSettingsStub();
     await createRun({ sceneId: 's', roomCount: 5, seed: 'fixed' }, { settingsRef });
+    await advancePastEntry('s', settingsRef);
     const before = getRunState('s', { settingsRef });
     const { state, nextRoomId, nextPhysicalSlot } = await markRoomOutcome({ sceneId: 's', succeeded: true }, { settingsRef });
     expect(state.currentIndex).toBe(before.currentIndex);
     expect(state.history).toHaveLength(1);
-    expect(nextRoomId).toBe(state.rooms[1].id);
-    expect(nextPhysicalSlot).toBe(1);
-    expect(state.physicalSlotByRoomId[nextRoomId]).toBe(1);
-    expect(state.nextPhysicalSlot).toBe(2);
+    expect(nextRoomId).toBe(state.rooms[2].id);
+    expect(nextPhysicalSlot).toBe(2); // slot 0: entry, slot 1: first real room, slot 2: this one
+    expect(state.physicalSlotByRoomId[nextRoomId]).toBe(2);
+    expect(state.nextPhysicalSlot).toBe(3);
   });
 
   it('assigns each newly-reached room the next slot number in order', async () => {
     const settingsRef = makeSettingsStub();
     await createRun({ sceneId: 's', roomCount: 5, seed: 'fixed' }, { settingsRef });
+    await advancePastEntry('s', settingsRef);
     const r1 = await markRoomOutcome({ sceneId: 's', succeeded: true }, { settingsRef });
     await advanceToRoom({ sceneId: 's', roomId: r1.nextRoomId }, { settingsRef });
     const r2 = await markRoomOutcome({ sceneId: 's', succeeded: true }, { settingsRef });
-    expect(r2.nextPhysicalSlot).toBe(2);
+    expect(r2.nextPhysicalSlot).toBe(3);
   });
 
   it('marks the run completed when the goal room is resolved, with no next room', async () => {
     const settingsRef = makeSettingsStub();
     await createRun({ sceneId: 's', roomCount: 2, seed: 'fixed' }, { settingsRef });
+    await advancePastEntry('s', settingsRef);
     await markRoomOutcome({ sceneId: 's', succeeded: true }, { settingsRef });
-    await advanceToRoom({ sceneId: 's', roomId: getRunState('s', { settingsRef }).rooms[1].id }, { settingsRef });
+    await advanceToRoom({ sceneId: 's', roomId: getRunState('s', { settingsRef }).rooms[2].id }, { settingsRef });
     const { state, effectKey, nextRoomId } = await markRoomOutcome({ sceneId: 's', succeeded: true }, { settingsRef });
     expect(state.completed).toBe(true);
     expect(effectKey).toBe('goal_cleared');
@@ -80,8 +108,9 @@ describe('markRoomOutcome', () => {
   it('reports goal_failed on a failed goal room', async () => {
     const settingsRef = makeSettingsStub();
     await createRun({ sceneId: 's', roomCount: 2, seed: 'fixed' }, { settingsRef });
+    await advancePastEntry('s', settingsRef);
     await markRoomOutcome({ sceneId: 's', succeeded: true }, { settingsRef });
-    await advanceToRoom({ sceneId: 's', roomId: getRunState('s', { settingsRef }).rooms[1].id }, { settingsRef });
+    await advanceToRoom({ sceneId: 's', roomId: getRunState('s', { settingsRef }).rooms[2].id }, { settingsRef });
     const { effectKey } = await markRoomOutcome({ sceneId: 's', succeeded: false }, { settingsRef });
     expect(effectKey).toBe('goal_failed');
   });
@@ -89,8 +118,9 @@ describe('markRoomOutcome', () => {
   it('is a no-op once the run is completed', async () => {
     const settingsRef = makeSettingsStub();
     await createRun({ sceneId: 's', roomCount: 2, seed: 'fixed' }, { settingsRef });
+    await advancePastEntry('s', settingsRef);
     await markRoomOutcome({ sceneId: 's', succeeded: true }, { settingsRef });
-    await advanceToRoom({ sceneId: 's', roomId: getRunState('s', { settingsRef }).rooms[1].id }, { settingsRef });
+    await advanceToRoom({ sceneId: 's', roomId: getRunState('s', { settingsRef }).rooms[2].id }, { settingsRef });
     await markRoomOutcome({ sceneId: 's', succeeded: true }, { settingsRef });
     const completedState = getRunState('s', { settingsRef });
     const again = await markRoomOutcome({ sceneId: 's', succeeded: true }, { settingsRef });
@@ -107,14 +137,24 @@ describe('markRoomOutcome', () => {
 });
 
 describe('advanceToRoom', () => {
-  it('advances currentIndex and records lastAutoEntry when the roomId matches the true next room', async () => {
+  it('advances currentIndex and records lastAutoEntry straight from the entry room, no markRoomOutcome needed', async () => {
     const settingsRef = makeSettingsStub();
-    await createRun({ sceneId: 's', roomCount: 5, seed: 'fixed' }, { settingsRef });
-    const { nextRoomId } = await markRoomOutcome({ sceneId: 's', succeeded: true }, { settingsRef });
+    const created = await createRun({ sceneId: 's', roomCount: 5, seed: 'fixed' }, { settingsRef });
+    const nextRoomId = created.rooms[1].id; // slot already assigned by createRun
     const { ok, state } = await advanceToRoom({ sceneId: 's', roomId: nextRoomId, revealedTokenIds: ['t1'] }, { settingsRef });
     expect(ok).toBe(true);
     expect(state.currentIndex).toBe(1);
     expect(state.lastAutoEntry).toEqual({ roomId: nextRoomId, fromIndex: 0, toIndex: 1, revealedTokenIds: ['t1'] });
+  });
+
+  it('advances a second time, past a real room, the normal markRoomOutcome-driven way', async () => {
+    const settingsRef = makeSettingsStub();
+    await createRun({ sceneId: 's', roomCount: 5, seed: 'fixed' }, { settingsRef });
+    await advancePastEntry('s', settingsRef);
+    const { nextRoomId } = await markRoomOutcome({ sceneId: 's', succeeded: true }, { settingsRef });
+    const { ok, state } = await advanceToRoom({ sceneId: 's', roomId: nextRoomId }, { settingsRef });
+    expect(ok).toBe(true);
+    expect(state.currentIndex).toBe(2);
   });
 
   it('rejects a roomId that is not genuinely the next room, without mutating state', async () => {
@@ -136,10 +176,10 @@ describe('advanceToRoom', () => {
 });
 
 describe('canUndoRoomEntry / undoLastRoomEntry', () => {
-  it('can undo right after an automatic entry', async () => {
+  it('can undo right after the automatic entry-to-first-room transition', async () => {
     const settingsRef = makeSettingsStub();
-    await createRun({ sceneId: 's', roomCount: 5, seed: 'fixed' }, { settingsRef });
-    const { nextRoomId } = await markRoomOutcome({ sceneId: 's', succeeded: true }, { settingsRef });
+    const created = await createRun({ sceneId: 's', roomCount: 5, seed: 'fixed' }, { settingsRef });
+    const nextRoomId = created.rooms[1].id;
     await advanceToRoom({ sceneId: 's', roomId: nextRoomId }, { settingsRef });
     expect(canUndoRoomEntry(getRunState('s', { settingsRef }))).toBe(true);
 
@@ -152,8 +192,8 @@ describe('canUndoRoomEntry / undoLastRoomEntry', () => {
 
   it('cannot undo once the entered room has already been judged', async () => {
     const settingsRef = makeSettingsStub();
-    await createRun({ sceneId: 's', roomCount: 5, seed: 'fixed' }, { settingsRef });
-    const { nextRoomId } = await markRoomOutcome({ sceneId: 's', succeeded: true }, { settingsRef });
+    const created = await createRun({ sceneId: 's', roomCount: 5, seed: 'fixed' }, { settingsRef });
+    const nextRoomId = created.rooms[1].id;
     await advanceToRoom({ sceneId: 's', roomId: nextRoomId }, { settingsRef });
     await markRoomOutcome({ sceneId: 's', succeeded: true }, { settingsRef });
     expect(canUndoRoomEntry(getRunState('s', { settingsRef }))).toBe(false);

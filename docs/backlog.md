@@ -1,8 +1,13 @@
 # Backlog
 
-_Last updated: 2026-09-18 (ITEM-10 done)_
+_Last updated: 2026-09-18 (ITEM-11 done, added ITEM-12)_
 
 ## Active
+
+### ITEM-12: Make adjacent hallway connectors read as one continuous corridor
+**State:** backlog
+**Blocked:** false
+**Summary:** Hallway rooms should have at least one open wall on the sides that open to other hallways, so that the dungeon appears as a linear sequence of connected rooms instead of several disparate, disconnected rooms that are actually connected.
 
 ### ITEM-8: Automate non-player turns in combat
 **State:** backlog
@@ -21,6 +26,29 @@ _Last updated: 2026-09-18 (ITEM-10 done)_
 **Summary:** Grow `data/dungeon-setpieces.json` beyond the current 2 fully-transcribed puzzles + 3 stub traps into a fuller, more varied set of realistic traps and puzzles, and implement real generation/selection logic on top of it rather than a fixed small pool.
 
 ## Done
+
+### ITEM-11: Prepend a safe entry room, exit always unlocked
+**State:** done
+**Blocked:** false
+**Summary:** The first room of a dungeon crawl is always a safe room with no encounter, trap or puzzle — an entry vestibule that doesn't count toward the dungeon's room count, whose exit door is unlocked immediately rather than gated behind a GM click.
+
+#### Spec
+
+**Problem/Goal.** Every room (including the original room 0) drew from the same weighted kind pool, so a dungeon could — and often would — open directly into a fight. The user wants the party to always start somewhere safe: no encounter, trap, or puzzle, an entry the party can freely walk out of without any GM action, and this entry shouldn't count against the room count the GM actually asked for (a 6-room dungeon should still mean 6 real rooms, plus the entry).
+
+**Mechanism.**
+1. `dungeon-deck.mjs`'s `buildRoomSequence` always prepends one `kind: 'safe_entry'` room (`id: 'room-entry'`, `outcomeSlotId: null`, `setpieceId: null`) ahead of the `roomCount` real rooms it already built — `roomCount`'s own meaning and validation are unchanged, the entry is purely additive.
+2. `dungeon-runner.mjs`'s `createRun` pre-assigns the *first real room's* physical slot (1) right away, alongside the entry's own slot 0 — normally a room's slot is only assigned when `markRoomOutcome` resolves the room before it, but the entry has nothing to resolve (`markRoomOutcome` itself now guards against being called on a room with no `outcomeSlotId` and no goal, returning a no-op instead of crashing on a null outcome template).
+3. `dungeon-app.mjs`'s `#onStart` builds the entry room (always safe, so the old `if (room0.kind === 'combat')` special-case is dead code and removed) and then immediately builds, populates (if needed) and unlocks the *first real room* too, using a helper (`buildPopulateAndUnlockRoom`) factored out of `resolveCurrentRoom` so both paths share the exact same build/populate/unlock logic. `currentIndex` stays at 0 (the party is still standing in the entry) until they actually walk to and open the first real room's own reveal door (ITEM-10's existing mechanism, unchanged) — only the *gate* door's unlock is moved earlier, from "after a GM clicks Mark Succeeded" to "immediately at Start."
+4. The tracker UI shows neither the plain Succeed/Fail buttons nor the combat UI while standing in the entry (a new `isSafeEntry` flag) — just a hint that the way onward is already open. The room-count display (`roomNumber`/`roomTotal`) is computed to exclude the entry, so a GM sees "room 1 of 6," not "room 2 of 7."
+
+**Non-goals.** Any kind of resolution/outcome for the entry room — it deliberately has none. Changing anything about how the first *real* room's own discovery (reveal door) works — only its gate door's timing changes.
+
+#### Plan
+
+Implemented directly (composes entirely out of already-existing, already-verified primitives — `buildRoomAtSlot`/`populateSlotEncounter`/`unlockDoorToSlot`, all unchanged): `dungeon-deck.mjs` (entry room prepend), `dungeon-runner.mjs` (`createRun`'s pre-assignment, `markRoomOutcome`'s no-op guard), `dungeon-app.mjs` (`buildPopulateAndUnlockRoom` extraction, `#onStart`'s auto-advance, `_prepareContext`'s `isSafeEntry`/adjusted room-count display), `dungeon-tracker.hbs` (safe-entry branch), `lang/en.json` (two new keys). `tests/dungeon-deck.test.mjs` and `tests/dungeon-runner.test.mjs` both updated substantially for the new room-count-plus-one, pre-assigned-slot-1, and no-op-on-the-entry contracts.
+
+**Verification.** `npm test` — 542 passing. `npm run validate`/`validate:dungeon`/`validate:creature-art` unaffected. Live-verified via `foundry-rest` in a scratch scene: a door created `LOCKED` (matching how `buildRoomAtSlot` always creates a gate door) is confirmed unlocked to `CLOSED` by the same update `buildPopulateAndUnlockRoom`'s non-combat branch performs, with no GM click in between, and a player can then open it — directly confirming "the exit from this room is always visible." The higher-level orchestration (which room gets auto-advanced, when) is unit-tested rather than re-verified live, since it's pure composition of primitives already live-verified in ITEM-6/9/10.
 
 ### ITEM-10: Trigger room discovery by opening a real door, not walking in
 **State:** done
