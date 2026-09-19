@@ -1,6 +1,6 @@
 # Backlog
 
-_Last updated: 2026-09-19 (ITEM-23 spec'd)_
+_Last updated: 2026-09-19 (ITEM-17 done, ITEM-20 reopened, ITEM-18 prompts preconstructed for the entire remaining worklist, ITEM-23 spec'd)_
 
 ## Active
 
@@ -120,6 +120,16 @@ No mechanism to design — this item is pure content volume against ITEM-2's alr
 3. **Pre-wrote all 38 remaining level -1 creatures' `MONSTER_ART` entries** (completing that whole priority tier), each grounded in a live `foundry-rest` lookup of the real bestiary entry's traits/size/`publicNotes` rather than assumed from memory, and each `avoid` list trimmed to only the risks specific to that one creature — the recurring cross-cutting failures no longer need repeating per entry now that they're global.
 
 No images generated yet for this batch — that's the next step, separately, once there's GPU time to spend; `docs/creature-art-todo.csv` is unchanged (still 1,589 rows) since nothing has actually been produced or validated against disk yet. `npm test` still 573 passing (no new art means no new asset-existence tests yet); confirmed the updated file still imports cleanly and has no duplicate `MONSTER_ART` ids.
+
+**Full-worklist prompt preconstruction (this PR) — every remaining creature now has a written prompt.** Per the resume plan's explicit ask, prompts were preconstructed for the entire rest of the worklist (levels 0–25, 1,551 creatures) before resuming any more generation, so every future generation batch going forward is just "run the generator, review, wire in, ship" with no research/writing pause in between.
+
+Worked in an isolated git worktree, split `docs/creature-art-todo.csv`'s remaining rows into 15 level-banded chunks (one per level for 0–10, then 11–13/14–16/17–19/20–25), and ran 15 parallel subagents — one per chunk — each grounding every prompt in a live `foundry-rest` lookup of that creature's real `system.traits.value`/`system.traits.size.value`/`system.details.publicNotes` (never guessed from name alone) and following this file's own prompt-authoring checklist. All 1,551 rows resolved cleanly against the live world — 0 skipped, no renamed/missing docIds encountered. Merged all 15 chunks' output into `MONSTER_ART`: 1,628 total entries (77 pre-existing + 1,551 new), all ids verified unique, `node --check` and `npm test` (590 passing, unchanged — no new art means no new asset-existence tests) both clean.
+
+Cross-cutting notes from the parallel run: 6 true creature-name collisions turned up across the whole worklist (`barghest`, `giant-mantis`, `quatoid`, `quelaunt`, `tripkee-scout`, and a cross-pack `melody-on-the-wind`), each disambiguated with a short pack suffix (e.g. `barghest-mc`/`barghest-b1`) per chunk. A recurring data gap: many `pathfinder-npc-core` profession NPCs and a handful of high-level fiends/undead have thin or empty `publicNotes` with no physical description — those were grounded in the creature's real `traits`/`size` plus (for NPCs) role/gear implied by the text, never invented from the name, and flagged individually by the agent that hit them. Several chunks also caught and fixed source-text similes ("cross between a shark and a seal", "shark-toothed") that would have violated checklist rule 2 if copied verbatim from `publicNotes`.
+
+`docs/creature-art-todo.csv` is unchanged (still 1,589 rows, including the 38 level -1 rows whose prompts already existed pre-this-PR) — rows only come out once art is actually generated and validated, not when a prompt is written. Every remaining row (and the 38 level -1 rows from batch 2) now has a `MONSTER_ART` entry ready to generate. `module.json` bumped to 0.43.0.
+
+**Next up:** resume actual generation batch-by-batch (see the Plan's per-batch steps below), starting from the top of `docs/creature-art-todo.csv` (level -1). ITEM-18 stays `in-progress` until that CSV is empty.
 
 ### ITEM-15: Randomly place destructible cover items in rooms
 **State:** backlog
