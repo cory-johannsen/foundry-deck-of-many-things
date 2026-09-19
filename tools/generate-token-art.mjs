@@ -295,7 +295,121 @@ export const MONSTER_ART = [
     prompt: 'A tiny fey dragon no larger than a bird, delicate iridescent scales and gossamer '
       + 'dragonfly-like wings, large luminous eyes, perched daintily',
     avoid: 'circular border, ring, roundel, medallion, decorative surround, wreath, '
-      + 'coiled into a circle, ouroboros' }
+      + 'coiled into a circle, ouroboros' },
+
+  // ITEM-18 batch 1 (docs/backlog.md) — the first 20 of 1,609 remaining
+  // core-bestiary creatures, lowest level and least rare first
+  // (docs/creature-art-todo.csv). All level -1, all common.
+  { id: 'adept', file: 'adept', dir: 'assets/creature-art',
+    prompt: 'A human occult adept in plain hooded robes, holding a small glowing sigil-carved '
+      + 'talisman close to the chest, watchful eyes catching a faint arcane glow, quiet and '
+      + 'unassuming',
+    avoid: 'circular halo, moon, full moon, circular border, starry background, stars, '
+      + 'constellation, glowing ring, mystical circle behind subject, arch, archway, doorway, '
+      + 'window, gothic frame, portal, stained glass' },
+  { id: 'animated-broom', file: 'animated-broom', dir: 'assets/creature-art', shapeless: true,
+    prompt: 'An ordinary wooden broom animated by household magic, its handle upright and '
+      + 'frayed straw bristles raised defensively like a weapon, faint magical shimmer along '
+      + 'the wood, floating with no one holding it',
+    avoid: 'person holding it, witch, cartoon, cute face, googly eyes' },
+  { id: 'apothecary', file: 'apothecary', dir: 'assets/creature-art',
+    prompt: 'A human apothecary in a stained leather apron over plain robes, holding a small '
+      + 'corked glass vial of glowing green tincture up to the light, worn hands, a bundle of '
+      + 'dried herbs at the belt' },
+  { id: 'apprentice', file: 'apprentice', dir: 'assets/creature-art',
+    prompt: 'A young human apprentice cartographer in simple travel-worn clothes, a leather '
+      + 'satchel of scrolls and a rolled map tube slung across the back, ink-stained fingers, '
+      + 'eager watchful expression' },
+  { id: 'barrister', file: 'barrister', dir: 'assets/creature-art',
+    prompt: 'A human barrister in formal dark robes with a stiff white collar, an ornate '
+      + 'wax-sealed scroll of legal parchment held in one hand, sharp calculating eyes, '
+      + 'groomed and composed',
+    avoid: 'circular halo, moon, full moon, circular border, glowing ring, white circle, '
+      + 'pale disc behind subject' },
+  { id: 'beggar', file: 'beggar', dir: 'assets/creature-art',
+    prompt: 'A gaunt human beggar in ragged patched clothes, a chipped wooden begging bowl '
+      + 'cupped in thin hands, hollow watchful eyes, matted hair, worn down by hard years on '
+      + 'the street, full color illustration',
+    avoid: 'black and white, monochrome, grayscale, line art, woodcut, engraving, ornate '
+      + 'circular border, decorative border, medallion, coin, frame, sepia' },
+  // Bloodseeker is PF2e's stirge — a mosquito-like blood drinker, not a bat
+  // or spider despite the "seeker" name inviting either.
+  { id: 'bloodseeker', file: 'bloodseeker', dir: 'assets/creature-art', shapeless: true,
+    prompt: 'A tiny blood-drinking swamp creature resembling a monstrous mosquito, a long '
+      + 'needle-like proboscis extended forward, thin leathery wings, a swollen abdomen, '
+      + 'floating alone with nothing around it',
+    avoid: 'humanoid, bat, spider, cute, cartoon, ground, floor, horizon, water, reflection, '
+      + 'gradient background, fog, mist, swamp scenery, landscape' },
+  { id: 'common-eurypterid', file: 'common-eurypterid', dir: 'assets/creature-art',
+    prompt: 'A large aquatic arthropod resembling an armored sea scorpion, segmented '
+      + 'chitinous plates, several jointed legs, a pair of large pincer-claws raised, a '
+      + 'paddle-like tail, wet glistening carapace',
+    avoid: 'crab, lobster, humanoid, land animal, dry ground' },
+  { id: 'commoner', file: 'commoner', dir: 'assets/creature-art',
+    prompt: 'A weary human commoner in coarse homespun clothes, calloused hands resting on a '
+      + 'simple wooden tool, a plain undyed tunic, tired resigned expression, full color '
+      + 'illustration',
+    avoid: 'black and white, monochrome, grayscale, line art, woodcut, engraving, ornate '
+      + 'circular border, decorative border, medallion, coin, frame, sepia' },
+  { id: 'compsognathus', file: 'compsognathus', dir: 'assets/creature-art',
+    prompt: 'A small swift bipedal dinosaur the size of a chicken, sleek scaled hide, sharp '
+      + 'darting eyes, jaws parted baring tiny venomous teeth, poised mid-dart',
+    avoid: 'large dinosaur, t-rex scale, cartoon, feathers like a bird, cute' },
+  { id: 'court-historian', file: 'court-historian', dir: 'assets/creature-art',
+    prompt: 'A human court historian in fine ink-stained scholarly robes, an open '
+      + 'leather-bound tome cradled in one arm, a quill tucked behind the ear, sharp '
+      + 'observant eyes missing nothing',
+    avoid: 'circular halo, moon, full moon, circular border, glowing ring, white circle, '
+      + 'pale disc behind subject' },
+  { id: 'crawling-hand', file: 'crawling-hand', dir: 'assets/creature-art', shapeless: true,
+    prompt: 'Extreme close-up of a single severed ordinary human hand only, nothing else in '
+      + 'the frame, pale grey rotting undead flesh, a jagged stump of bone at the wrist, '
+      + 'blunt human fingernails, crooked human fingers curled inward, faint sickly green '
+      + 'necrotic glow, floating alone in plain empty black space',
+    avoid: 'full body, forearm, arm, wrist guard, armor, full skeleton, face, demon hand, '
+      + 'monster claws, purple skin, reptilian skin, long claw-like fingernails, talons, '
+      + 'clean skin, healthy skin, spider, insect, moon, full moon, forest, trees, '
+      + 'landscape, scenery, night sky, stars, other creatures, animal' },
+  { id: 'eagle', file: 'eagle', dir: 'assets/creature-art',
+    prompt: 'A great bird of prey with golden-brown plumage, a sharp hooked beak, fierce '
+      + 'piercing eyes, powerful talons extended, wings half-spread as if landing',
+    avoid: 'cartoon, cute, human, songbird' },
+  { id: 'flash-beetle', file: 'flash-beetle', dir: 'assets/creature-art',
+    prompt: 'A three-foot-long armored beetle with a pair of glowing bioluminescent organs on '
+      + 'its abdomen casting soft light, a thick chitinous shell, mandibles raised, antennae '
+      + 'alert',
+    avoid: 'cute, cartoon, ladybug pattern, firefly, humanoid' },
+  { id: 'giant-centipede', file: 'giant-centipede', dir: 'assets/creature-art',
+    prompt: 'A giant segmented centipede, glossy chitinous plates, dozens of clawed legs '
+      + 'rippling along its length, curved venomous mandibles bared, coiled and aggressive',
+    avoid: 'cute, cartoon, snake, worm, no legs' },
+  { id: 'giant-rat', file: 'giant-rat', dir: 'assets/creature-art',
+    prompt: 'An oversized filthy sewer rat the size of a large dog, matted mangy fur, bared '
+      + 'yellow incisors, beady red eyes, a long scarred tail, hunched and feral',
+    avoid: 'cute, cartoon, pet, clean fur, mouse' },
+  { id: 'gnome-philomath', file: 'gnome-philomath', dir: 'assets/creature-art',
+    prompt: 'A gnome philomath, small and wiry with an oversized head, enormous curious eyes '
+      + 'and wild brightly-colored hair, surrounded by loose pages tucked into their coat, a '
+      + 'magnifying lens held up, sharp inquisitive expression, full color illustration, '
+      + 'isolated on a plain solid black background with nothing else in it',
+    avoid: 'black and white, monochrome, grayscale, line art, woodcut, engraving, sepia, '
+      + 'teal background, green background, mint background, colored background, tinted '
+      + 'background, solid color background, studio backdrop' },
+  { id: 'goblin-warrior', file: 'goblin-warrior', dir: 'assets/creature-art',
+    prompt: 'A goblin warrior, small with green-grey mottled skin, an oversized head and wide '
+      + 'pointed ears, jagged crude armor scraps, a notched blade held ready, wide grin of '
+      + 'sharp teeth' },
+  { id: 'grimple', file: 'grimple', dir: 'assets/creature-art', shapeless: true,
+    prompt: 'A tiny malicious fey gremlin, wiry grey-green skin, oversized bat-like ears, a '
+      + 'mischievous gap-toothed grin, clawed fingers caught mid-prank, crouched and gleeful '
+      + 'in darkness',
+    avoid: 'cute, goblin, humanoid child, fairy wings, pixie' },
+  { id: 'guard-dog', file: 'guard-dog', dir: 'assets/creature-art',
+    prompt: 'A sturdy alert guard dog, short bristling fur, ears pricked forward, teeth bared '
+      + 'in a low warning snarl, a muscular stance, a plain leather collar',
+    avoid: 'cute, puppy, cartoon, wagging tail, friendly, circular border, ring, roundel, '
+      + 'medallion, decorative surround, wreath, coiled into a circle, ouroboros, chain '
+      + 'border, spiked ring' }
 ];
 
 /**
