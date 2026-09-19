@@ -7,7 +7,7 @@ import { makeFoundryApi } from '../foundry-api.mjs';
 import { traitFieldHtml, wireTraitPickerButtons, readTraitField } from '../trait-picker.mjs';
 import {
   createDungeonScene, buildRoomAtSlot, unlockDoorToSlot, populateSlotEncounter,
-  isSlotPopulated, placePartyInSlot, undoRoomEntry, focusCameraOnSlot
+  isSlotPopulated, placePartyInSlot, undoRoomEntry, focusCameraOnSlot, teardownDungeonRun
 } from '../dungeon-scene.mjs';
 import { startCombatForSlot, getCombatForSlot, resolveSlotCombat } from '../dungeon-combat.mjs';
 
@@ -210,11 +210,15 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const roomCount = Math.max(2, parseInt(form?.querySelector('[name="roomCount"]')?.value ?? '6', 10));
     const traits = readTraitField(this.element, 'traits');
     const excludeTraits = readTraitField(this.element, 'excludeTraits');
+    // Wherever the GM/party were right before starting — teardownDungeonRun
+    // (ITEM-18) sends them back here if this run is later abandoned.
+    // Captured before createDungeonScene/activate ever touch canvas.scene.
+    const previousSceneId = canvas?.scene?.id ?? null;
 
     const scene = await createDungeonScene();
     const setpieces = await loadDungeonSetpieces();
     const state = await createRun(
-      { sceneId: scene.id, roomCount, traits, excludeTraits },
+      { sceneId: scene.id, roomCount, traits, excludeTraits, previousSceneId },
       { setpieceIds: setpieces.map((s) => s.id) }
     );
 
@@ -312,10 +316,28 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     this.render();
   }
 
+  /**
+   * Cancels the run (ITEM-18): confirms first — this now does far more than
+   * clear a settings entry, it moves the party out, deletes every NPC actor
+   * the run's encounters spawned, and deletes the dungeon scene itself, none
+   * of which is undoable — then hands off to teardownDungeonRun and closes
+   * the app, since its whole scene is gone by the time that returns.
+   */
   static async #onAbandon() {
-    const sceneId = canvas?.scene?.id;
+    const scene = canvas?.scene;
+    const sceneId = scene?.id;
     if (!sceneId) return;
+
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window: { title: game.i18n.localize('DOMMT.Dungeon.AbandonButton') },
+      content: `<p>${game.i18n.localize('DOMMT.Dungeon.AbandonConfirm')}</p>`,
+      rejectClose: false
+    });
+    if (!confirmed) return;
+
+    const state = getRunState(sceneId);
     await abandonRun({ sceneId });
-    this.render();
+    await teardownDungeonRun(scene, { previousSceneId: state?.previousSceneId ?? null });
+    this.close();
   }
 }

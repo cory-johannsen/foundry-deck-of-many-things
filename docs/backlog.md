@@ -1,6 +1,6 @@
 # Backlog
 
-_Last updated: 2026-09-18 (ITEM-18 added)_
+_Last updated: 2026-09-18 (ITEM-19 done)_
 
 ## Active
 
@@ -57,6 +57,40 @@ _Last updated: 2026-09-18 (ITEM-18 added)_
 **Summary:** Grow `data/dungeon-setpieces.json` beyond the current 2 fully-transcribed puzzles + 3 stub traps into a fuller, more varied set of realistic traps and puzzles, and implement real generation/selection logic on top of it rather than a fixed small pool.
 
 ## Done
+
+### ITEM-19: Clean up a dungeon run when it's cancelled
+**State:** done
+**Blocked:** false
+**Summary:** Abandoning a dungeon run only cleared its in-memory tracker state — the party's tokens stayed marooned in the deleted-in-spirit dungeon scene, the scene itself was never removed, and every NPC actor the run's encounters had spawned was left behind permanently. The world had accumulated 72 such orphaned NPC actors before this shipped.
+
+#### Spec
+
+**Problem.** `abandonRun` (`dungeon-runner.mjs`) only deleted the run's entry from the `dungeonRuns` world setting — a bookkeeping-only reset. Nothing moved the party's tokens anywhere, nothing deleted the dungeon `Scene`, and nothing touched the NPC `Actor` documents `foundry-api.mjs`'s `spawnCreatures`/`spawnBuiltCreature` create for every single monster/friend/twin/lurker an encounter spawns (`Actor.createDocuments`, confirmed live — a real, permanent world Actor, not an unlinked token-only copy). Investigating the live world turned up 77 total NPC actors, 72 of them with zero tokens anywhere — pure leftovers from past encounters (dungeon or otherwise) whose tokens were long gone but whose Actor record never was.
+
+**Goal.** Cancelling a dungeon run (the tracker's "Abandon Dungeon" button, or the `resetDungeon` API) should: move the party's tokens back to whatever scene they were on before the run started, or Foundry's own built-in "Foundry Virtual Tabletop" default scene if that prior scene is itself gone; delete every NPC actor the run's own encounters spawned; then delete the dungeon scene itself.
+
+**Non-goals.** Auto-teardown on *successful* completion (reaching and resolving the goal room) — only explicit cancellation is in scope; a GM may want to linger in a finished dungeon before leaving. Retroactively fixing every other place this module spawns actors (standalone card-drawn Allies/Enemies via the same `spawnCreatures` primitive) — those are permanent-by-design, not dungeon-run-scoped, and must never be swept up by this. The one-time cleanup of the 77 already-accumulated actors was handled directly, live, rather than through new product code — see Verification.
+
+#### Plan
+
+**1. `dungeon-runner.mjs`.** `createRun` gains `previousSceneId` (default `null`), stored on the run state as `state.previousSceneId` — the scene the GM was viewing right before Start, so a later cancel knows where to send the party back.
+
+**2. `dungeon-scene.mjs`.**
+- Extracted `removeActorTokensFromAllScenes(actorId)` from `placePartyInSlot`'s inline loop (an actor should only ever have one token in the world at a time) — now shared with the new teardown path, not duplicated.
+- New `placePartyNearSceneCenter(destScene, partyMembers)` — clusters the party near an arbitrary destination scene's own center, using *that* scene's own `grid.size` rather than this module's fixed `GRID_SIZE` constant, since `destScene` (the party's regular scene, or Foundry's default one) is never a scene this module built and can't be assumed to share its grid.
+- New exported `teardownDungeonRun(scene, { previousSceneId })`: collects every non-party token's actor id on `scene` (the NPC actors to delete), resolves the destination scene (`previousSceneId` if it still exists, else the scene literally named `'Foundry Virtual Tabletop'`), moves the party there and activates it, deletes the collected NPC actors, then deletes `scene` itself.
+
+**3. `scripts/ui/dungeon-app.mjs`.** `#onStart` captures `canvas?.scene?.id` as `previousSceneId` before `createDungeonScene`/`activate` ever touch `canvas.scene`, threading it into `createRun`. `#onAbandon` now: shows a `DialogV2.confirm` (this got a lot more destructive than a settings-clear, so it needed one — no prior confirm existed), then `abandonRun` (clears the settings entry) followed by `teardownDungeonRun`, then `this.close()` — the app's whole scene context is gone by the time that returns, so re-rendering it doesn't make sense.
+
+**4. `scripts/module.mjs`.** `module.api.resetDungeon` (the scriptable equivalent of the Abandon button) updated to run the same `abandonRun` + `teardownDungeonRun` sequence instead of just `abandonRun`.
+
+**5. `lang/en.json`.** New `DOMMT.Dungeon.AbandonConfirm` key spelling out exactly what's about to happen (party moved, monsters deleted, scene deleted, irreversible).
+
+**Tests.** `tests/dungeon-runner.test.mjs`: two new assertions — `createRun` defaults `previousSceneId` to `null`, and threads through an explicit one when given. `dungeon-scene.mjs`'s new functions get no unit tests — entirely Foundry-document-touching, same precedent as the rest of that file (live-verify only).
+
+**Verification.** `npm test` — 551 passing (1 new). `npm run validate`/`validate:dungeon` unaffected. Live via `foundry-rest`, in two parts:
+- **The one-time cleanup**, run directly against the live world rather than through new code: enumerated all 77 non-party NPC actors, cross-referenced against every token in every scene, found 72 with no token anywhere (all clearly `spawnCreatures` leftovers — `ownership.default:0`, `system.details.alliance` set exactly per its override, names matching the deck's own creature roster or bare bestiary copies). Re-verified the same criteria at delete time (a second live query, immediately before deleting) and removed exactly those 72, leaving only the 5 actors backing the world's currently-live encounter.
+- **The new `teardownDungeonRun` logic**, replicated faithfully against fully scratch fixtures (a throwaway dungeon-like Scene, a throwaway NPC actor+token on it, a throwaway `character` actor standing in for a party member — the real party and the real active run were never touched): confirmed the NPC actor was correctly identified and deleted, confirmed the party stand-in landed in the destination scene at its computed center (using *that* scene's own grid size, 70, not this module's 100 — the math came out exactly `centerX - grid.size` for the single-member case), confirmed it had exactly one token across every scene afterward (no duplicate left behind), and confirmed the scratch dungeon scene was actually deleted. All scratch fixtures removed afterward; confirmed clean.
 
 ### ITEM-14: Token vision is clipped by the scene background instead of actual walls
 **State:** done
