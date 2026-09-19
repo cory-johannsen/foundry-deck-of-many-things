@@ -1,13 +1,8 @@
 # Backlog
 
-_Last updated: 2026-09-18 (ITEM-13 done)_
+_Last updated: 2026-09-18 (ITEM-12 done)_
 
 ## Active
-
-### ITEM-12: Make adjacent hallway connectors read as one continuous corridor
-**State:** backlog
-**Blocked:** false
-**Summary:** Hallway rooms should have at least one open wall on the sides that open to other hallways, so that the dungeon appears as a linear sequence of connected rooms instead of several disparate, disconnected rooms that are actually connected.
 
 ### ITEM-14: Token vision is clipped by the scene background instead of actual walls
 **State:** backlog
@@ -41,6 +36,42 @@ _Last updated: 2026-09-18 (ITEM-13 done)_
 **Summary:** Grow `data/dungeon-setpieces.json` beyond the current 2 fully-transcribed puzzles + 3 stub traps into a fuller, more varied set of realistic traps and puzzles, and implement real generation/selection logic on top of it rather than a fixed small pool.
 
 ## Done
+
+### ITEM-12: Make adjacent hallway connectors read as one continuous corridor
+**State:** done
+**Blocked:** false
+**Summary:** Hallway rooms should have at least one open wall on the sides that open to other hallways, so that the dungeon appears as a linear sequence of connected rooms instead of several disparate, disconnected rooms that are actually connected.
+
+#### Spec
+
+**Problem (confirmed via screenshot `Screenshot 2026-09-18 171616.png`, the same one that motivated ITEM-13).** The gap between two rooms is tiled with `corridor.webp`, one copy per grid square. `corridor.webp` (`assets/dungeon-rooms/corridor.webp`, confirmed by direct inspection) is a small self-contained "box" texture — a floor with a wall painted on all four sides, designed to depict one isolated 1x1 alcove. Tiling that same fully-walled box repeatedly to fill a multi-square gallery (ITEM-9's L-shaped dogleg, still present after ITEM-13 trimmed its length) makes every square show walls on its own top and bottom (or left/right) edges, even on the sides that face the next corridor square and have no real Wall there — the art claims a boundary the Wall geometry doesn't have. The result reads as a stack of separate boxed rooms stitched together, not one hallway, exactly as the screenshot shows and as the item's own summary describes.
+
+**Goal.** A multi-square corridor gallery should read as one continuous hallway: walled along its two real, fixed sides (the sides that back onto each room's own perimeter wall) the whole way through, and open at the seams between consecutive squares — walled only at its two true ends (where the outer cap walls from `buildConnectionGeometry` actually are).
+
+**Scope.** The corridor art and the tile-placement loop in `dungeon-scene.mjs`'s `buildRoomAtSlot` for any gallery longer than one square. A single-square gallery (both doors aligned) keeps using plain `corridor.webp` unchanged — a fully-boxed alcove is correct there, since both of its short ends really are walled. Reconciled with ITEM-13 (already shipped) rather than the other way around, per ITEM-13's own scope note — ITEM-13's trimmed `corridorRect` is exactly the span this item now tiles.
+
+**Non-goals.** Redesigning the room art or door art. Changing `buildConnectionGeometry`'s wall geometry itself — it's already correct (confirmed by ITEM-9/ITEM-13); only the *art* misrepresented it.
+
+#### Plan
+
+**Chosen mechanism.** Derive two new open-sided art assets from the existing `corridor.webp` (same floor style, no new generation) rather than hand-drawing or prompting new art:
+- `corridor-mid.webp` — walled only on its left/right, open top and bottom (floor extends edge-to-edge vertically). Used for every tile strictly between the two ends of a gallery.
+- `corridor-end.webp` — keeps the top wall, opens the bottom. Used for the two end tiles, each of which needs a wall against the real outer cap and an open side facing inward.
+
+Both are built once in a canonical "wall on top" orientation; `dungeon-scene.mjs` places them with Foundry's own Tile `rotation` (already used elsewhere in this codebase, e.g. `scene-divination.mjs`) to cover all four orientations needed — no extra image files for the rotated cases.
+
+**1. `tools/derive-corridor-connector-art.py`** (new, PIL, mirrors `compose_cards.py`'s ad-hoc-tool precedent — run once, output checked in, not part of the runtime or `npm run art`). Crops the few px of white margin baked into `corridor.webp` (confirmed present at the pixel level, left in it would show as a visible seam every time a tile repeats) and rescales back to 512x512; then, against that clean image, stretches the floor band (found by sampling brightness along the center row/column for the wall/floor shadow line, ~118px wall band on a now-margin-free 512px image) to fill the bottom wall band (`corridor-end.webp`) or both the top and bottom bands (`corridor-mid.webp`), while leaving the left/right wall columns untouched. Run via `.venv/bin/python3 tools/derive-corridor-connector-art.py`, writing `assets/dungeon-rooms/corridor-end.webp` and `corridor-mid.webp` directly (`corridor.webp` itself untouched).
+
+**2. `scripts/dungeon-layout.mjs`** — new pure, unit-tested `corridorTileVariant(index, length, vertical)`, alongside `buildConnectionGeometry` (same pure/no-Foundry-dependency split this file already keeps): `length <= 1` → `{variant:'single', rotation:0}` (plain `corridor.webp`, unchanged behavior). Otherwise `index === 0` or `index === length - 1` → `{variant:'end', rotation}` (0°/180° for a vertical — east/west-connection — gallery, 270°/90° for a horizontal — south-connection — one, rotating the canonical top-wall onto the near/far real wall). Every other index → `{variant:'mid', rotation}` (0° vertical, 90° horizontal — `mid`'s own left/right walls are symmetric, so 90°/270° are equivalent).
+
+**3. `scripts/dungeon-scene.mjs`** — `buildRoomAtSlot`'s corridor-tiling loop replaced: determine `vertical = corridorRect.gh >= corridorRect.gw` and `length` (whichever of `gw`/`gh` is the varying one), call `corridorTileVariant(i, length, vertical)` per tile, and place it with the matching asset (`CORRIDOR_ART_BY_VARIANT` map) and `rotation`. `dx`/`dy` stepping switched from a double loop to a single loop along the gallery's one varying axis (the other axis is always exactly `CORRIDOR_LEN` = 1, so no dimension was lost).
+
+**Tests.**
+- `tests/dungeon-layout.test.mjs`: `corridorTileVariant` — length-1 always `single`; length-2 vertical/horizontal both ends, no mid; a longer gallery sandwiches the right count of `mid` tiles between exactly two `end` tiles, for both orientations; swept across every length 1–`ROOM_SIZE` for an exact-count invariant (`endCount === 2`, `midCount === length - 2` for `length > 1`).
+- `tests/dungeon-room-art.test.mjs`: `corridor-end.webp`/`corridor-mid.webp` added to the on-disk existence sweep (the "guard on the guard" count bumped by 2).
+- `dungeon-scene.mjs`'s own tiling loop gets no unit test — Foundry/`CONST`-touching, same precedent as the rest of that file.
+
+**Verification.** `npm test` — 550 passing (33 in `dungeon-layout.test.mjs`, 6 new for `corridorTileVariant`; 36 in `dungeon-room-art.test.mjs`, 2 new for the derived assets). `npm run validate`/`validate:dungeon` unaffected. Visually verified by rendering the derived assets at actual in-game tile scale (100x100px) in composited preview strips before and after generation: a 4-tile vertical gallery (`end, mid, mid, end` rotated 180°) reads as one continuous walled hallway open at every internal seam, closed only at its two true ends; a 2-tile gallery (both `end`, no `mid`) likewise; a 3-tile horizontal gallery, rotated for a south/row-wrap connection, confirms the rotation mapping holds on that axis too. Confirmed directly against real seeded geometry: `buildConnectionGeometry(0, 'demo2').corridorRect` (`{gx:6, gy:2, gw:1, gh:2}`) fed through the new loop's own `vertical`/`length` derivation produces exactly `[{variant:'end',rotation:0}, {variant:'end',rotation:180}]`, matching the 2-tile case with no `mid` tile.
 
 ### ITEM-13: Corridor tile count should match the actual door-to-door gap
 **State:** done
