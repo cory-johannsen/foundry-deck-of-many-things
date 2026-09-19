@@ -1,6 +1,6 @@
 # Backlog
 
-_Last updated: 2026-09-19 (ITEM-20 reopened, ITEM-18 batch 2 prompts preconstructed)_
+_Last updated: 2026-09-19 (ITEM-17 done, ITEM-20 reopened, ITEM-18 batch 2 prompts preconstructed)_
 
 ## Active
 
@@ -94,11 +94,6 @@ No mechanism to design — this item is pure content volume against ITEM-2's alr
 
 No images generated yet for this batch — that's the next step, separately, once there's GPU time to spend; `docs/creature-art-todo.csv` is unchanged (still 1,589 rows) since nothing has actually been produced or validated against disk yet. `npm test` still 573 passing (no new art means no new asset-existence tests yet); confirmed the updated file still imports cleanly and has no duplicate `MONSTER_ART` ids.
 
-### ITEM-17: Randomize room size between small and large
-**State:** backlog
-**Blocked:** false
-**Summary:** Room sizes should be randomized between small (6x6 tiles / 30'x30' in-game) and large (12x12 tiles / 60'x60' in-game), instead of every room using the current fixed `ROOM_SIZE`.
-
 ### ITEM-15: Randomly place destructible cover items in rooms
 **State:** backlog
 **Blocked:** false
@@ -110,6 +105,39 @@ No images generated yet for this batch — that's the next step, separately, onc
 **Summary:** Grow `data/dungeon-setpieces.json` beyond the current 2 fully-transcribed puzzles + 3 stub traps into a fuller, more varied set of realistic traps and puzzles, and implement real generation/selection logic on top of it rather than a fixed small pool.
 
 ## Done
+
+### ITEM-17: Randomize room size between small and large
+**State:** done
+**Blocked:** false
+**Summary:** Room sizes should be randomized between small (6x6 tiles / 30'x30' in-game) and large (12x12 tiles / 60'x60' in-game), instead of every room using the current fixed `ROOM_SIZE`.
+
+#### Spec
+
+**Problem.** Every room used the same hardcoded `ROOM_SIZE` (6). The GM wants tactical/spatial variety: some rooms should feel cramped, others should feel genuinely large (60'x60'), at random.
+
+**Why this was a bigger change than it sounds.** `ROOM_SIZE` wasn't just a room's own footprint — it was load-bearing across the *layout* (every room positioned by a uniform `slot * stride` formula, assuming every room the same size) and the *room art* (33 pre-generated assets baked at a fixed 600x600px, per ITEM-7's own prior note). Before committing to an architecture, both were checked directly rather than assumed:
+- **Art:** a quick side-by-side (stretching the existing 6x6 art 2x linearly vs. tiling it 2x2) showed stretching looks completely fine — a stylized top-down room with a beveled border scales cleanly, with none of the obvious seams/repetition tiling produced. Foundry Tile documents already render room art at whatever pixel size `slotRect`'s `gw`/`gh` specify (`width: toPixels(rect.gw)`, already fully dynamic) — so **no new art assets were needed at all**, only correct layout math.
+- **Layout:** this was the real work. Every room is square (small or large, never rectangular), so a room's width always equals its height — but positioning stopped being a simple formula once rooms could differ in size, because of one specific invariant this module already promised: "a row's last room and the next row's first room always share a grid column — the wrap between rows is a plain straight corridor, never a jog" (`dungeon-layout.mjs`'s own docblock, predating this item). Working through several candidate designs (independent per-row column widths, a shared max-size-per-column grid reserving unused margin around small rooms) — all either broke that wrap guarantee or reintroduced long, ugly, variable-length corridors from unused reserved space. The design that actually preserves the guarantee *and* keeps corridors tight: positions are a **cumulative walk in slot order** (0, 1, 2, ...) rather than an O(1) formula — see Mechanism.
+
+**Goal.** Every room is independently, deterministically (per-run-seed) either `ROOM_SIZE_SMALL` (6) or `ROOM_SIZE_LARGE` (12), with correct walls/doors/corridors/lighting regardless of which size a room or its neighbor turned out to be, and the boustrophedon wrap's "never a jog" guarantee intact.
+
+**Non-goals.** New/dedicated "large room" art — the existing pool, scaled, already looks right (see above). Letting a room be anything other than square, or any size besides these two. A GM-facing size-weighting control — a fixed 3:1 small:large weight, matching this module's existing convention of picking reasonable fixed weights with no source-material anchor (`ROOM_KIND_WEIGHTS`, etc.).
+
+#### Plan
+
+**Mechanism — `slotRect(seed, slot)` becomes a cumulative walk, not `slot * stride`:**
+1. `roomSizeAt(seed, slot)` — new seeded weighted pick (3:1 small:large), same per-index convention as every other seeded pick in this module.
+2. Walking from slot 0 up to the target slot, tracking `gx`/`gy`: an **east** step advances `gx` by the *departing* room's own width + `CORRIDOR_LEN`; a **west** step advances it by the *arriving* room's own width + `CORRIDOR_LEN` (subtracted); gy is untouched either way — every room in a row shares its top edge ("top-aligned," not centered), so a large room in an otherwise-small row simply extends further down than its neighbours. A **south** step (the row wrap) carries `gx` forward **completely unchanged** — not recomputed from either room's width — which is exactly what guarantees the wrap-connected rooms share a column no matter how different their sizes are; `gy` advances by the departing room's own height + `CORRIDOR_LEN`.
+3. `doorOffsetAt` gains a `roomSize` parameter (previously read a module-level `ROOM_SIZE` constant) — the offset is bounded by *whichever room the door/opening actually sits on*, not a shared assumption.
+4. `buildConnectionGeometry` now fetches **both** ends' own rects (`slotRect(seed, slot)` and `slotRect(seed, slot + 1)`) and builds each room's own wall segments from its own rect — previously it read one room's `gy`/`gh` and reused it for both sides, silently correct only because every room was the same size before this item. Confirmed live this was a real, would-have-shipped bug: a scratch two-room connection with a 12-room next to a 6-room produced each side's wall spanning that side's own actual full height (0-9 and 10-12 for the 12-room; 0-4 and 5-6 for the 6-room) rather than reusing one room's height for both.
+5. **A second real bug caught live, not in review:** the cumulative walk can legitimately produce a *negative* `gx` — a west-moving row can walk backward by its own full width, and nothing else bounds `gx` from below (unlike `gy`, which only ever increases). Confirmed directly: a 2-row scratch dungeon (an all-small east row followed by an all-large west row) drove `gx` to -6. Fixed with `INITIAL_GX` (300) — every room's `gx` is offset by this from the start, comfortably past the worst realistic drift for this module's own 20-room cap (confirmed empirically: a 2000-seed × 24-slot sweep never went below 264; a 3000-seed × 60-slot sweep — well past any dungeon this module can actually build — never went below 234).
+6. **A third bug, also only found live:** `dungeon-scene.mjs`'s `requiredDimensions` (which pre-sizes the scene and grows it before every room build) computed width from the *old* `slot * stride` assumption and had no idea about `INITIAL_GX` — so a scene could be sized too narrow to contain the now-offset content. Confirmed directly: an under-sized scratch scene silently misplaced a Tile whose `x` exceeded the scene's own declared width. Fixed by adding `INITIAL_GX` into `requiredDimensions`'s width term (re-exported from `dungeon-layout.mjs`); re-verified the exact same scenario with a correctly-sized scene and got exactly the expected coordinates.
+7. Room lighting (ITEM-14) and pre-sizing (ITEM-20) both already used `ROOM_SIZE` as a fixed constant for radius/stride math — both now derive from the room's own actual size at build time: light radii scale via `roomLightRadii(roomSizeSquares)` (reproduces the exact original bright:22/dim:40 for a small room, scales up for large), and `requiredDimensions`'s stride uses `ROOM_SIZE_LARGE` as a safe worst-case upper bound (an all-small dungeon just leaves some of that headroom unused, same over-provisioning this module already accepted post-ITEM-20).
+8. `seed` had to be threaded through several `dungeon-scene.mjs` functions that call `slotRect` but didn't previously need it (`focusCameraOnSlot`, `populateSlotEncounter`, `placePartyInSlot`, `moveTokensToSlot`) — mechanical plumbing from callers that already had `state.seed` in scope, including a new `seed` field on `DungeonApp`'s render context (unused by the template itself, only by `_onRender`'s own `focusCameraOnSlot` call).
+
+**Tests.** `tests/dungeon-layout.test.mjs` substantially rewritten for the new (seed, slot) signatures throughout, plus new coverage specific to this item: `roomSizeAt` determinism/range/variety; every room square and matching `roomSizeAt`; the wrap-alignment guarantee explicitly re-verified *across five different seeds* (not just the one it happened to hold for); same-row top-alignment holding even when sizes differ; a 200-seed × 24-slot sweep asserting `gx`/`gy` never go negative (the exact bug class caught live); `buildConnectionGeometry` building each side's wall segments from that side's own rect when a search finds a genuinely different-sized connected pair.
+
+**Verification.** `npm test` — 590 passing. `npm run validate`/`validate:dungeon` unaffected. Live via `foundry-rest`, entirely against scratch scenes (never the real active run): reproduced and fixed the negative-`gx` bug and the under-sized-scene bug (both described above, both confirmed only by actually running the code, not by review); then built the exact previously-broken scenario (a 12-room connected to a 6-room, real coordinates traced by hand first via a plain Node script importing the pure `dungeon-layout.mjs` module directly) end to end in a correctly-sized scratch scene and confirmed every one of the 8 created Walls and 8 created Tiles landed at exactly the expected coordinates/sizes — including each room's own wall spanning its own full height, the trimmed corridor span, and both doors. All scratch scenes deleted immediately after each check; confirmed none left behind.
 
 ### ITEM-5: Refactor combat encounter difficulty scaling
 **State:** done

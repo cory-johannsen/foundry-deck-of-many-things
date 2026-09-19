@@ -145,6 +145,9 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       hasRun: true,
       sceneId,
       currentSlot,
+      // Not rendered — just threaded to _onRender's own focusCameraOnSlot
+      // call, which needs it to know the current room's actual size (ITEM-17).
+      seed: state.seed,
       completed: state.completed,
       // Neither the entry nor a mid-dungeon rest room (ITEM-5) count toward
       // the room total the GM asked for — currentIndex 1 is real room 1 of
@@ -188,7 +191,7 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // automatic room-entry trigger — see focusCameraOnSlot's own docs for why
     // that trigger alone isn't reliable with a five-token party.
     if (context.currentSlot != null && canvas?.scene?.id === context.sceneId) {
-      focusCameraOnSlot(canvas.scene, context.currentSlot);
+      focusCameraOnSlot(canvas.scene, context.currentSlot, context.seed);
     }
   }
 
@@ -226,14 +229,14 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     const partyMembers = (game.actors?.party?.members ?? []).filter((m) => m.type === 'character');
-    await placePartyInSlot(scene, 0, partyMembers);
+    await placePartyInSlot(scene, 0, partyMembers, state.seed);
     await scene.activate();
     // The canvas doesn't finish switching to the new scene the instant
     // activate() resolves — animatePan needs a beat to land on it, same
     // settling delay scene-divination.mjs already relies on for its own
     // post-activate scene work.
     await new Promise((r) => setTimeout(r, 400));
-    focusCameraOnSlot(scene, 0);
+    focusCameraOnSlot(scene, 0, state.seed);
 
     this.render();
   }
@@ -290,7 +293,7 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     await populateSlotEncounter(scene, slot, {
       prefillTraits: state.traits, prefillExcludeTraits: state.excludeTraits,
       levelOffsetBias: depthBiasFor({ physicalSlot: slot, roomCount: state.rooms.length, isGoal: nextRoom.isGoal }),
-      locationTag: nextRoom.locationTag
+      locationTag: nextRoom.locationTag, seed: state.seed
     });
     if (isSlotPopulated(scene, slot)) await unlockDoorToSlot(scene, slot);
     this.render();
