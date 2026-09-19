@@ -318,5 +318,301 @@
     "name": "Guard Dog",
     "level": -1,
     "art": "guard-dog.webp"
+  },
+  {
+    "id": "gutter_ooze",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "TzBUcMwhCNZ012sR",
+    "name": "Gutter Ooze",
+    "level": -1,
+    "art": "gutter-ooze.webp"
+  },
+  {
+    "id": "haniver",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "wlfPfrgdsHhXhQYZ",
+    "name": "Haniver",
+    "level": -1,
+    "art": "haniver.webp"
+  },
+  {
+    "id": "harrow_reader",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "taNAx8xPuOJ3EmxC",
+    "name": "Harrow Reader",
+    "level": -1,
+    "art": "harrow-reader.webp"
+  },
+  {
+    "id": "judge",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "vfFB2za4zaQnXYIa",
+    "name": "Judge",
+    "level": -1,
+    "art": "judge.webp"
+  },
+  {
+    "id": "kobold_warrior",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "BIZfjoz8DZt75EDn",
+    "name": "Kobold Warrior",
+    "level": -1,
+    "art": "kobold-warrior.webp"
+  },
+  {
+    "id": "librarian",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "GkatOjGPdFT9z0od",
+    "name": "Librarian",
+    "level": -1,
+    "art": "librarian.webp"
+  },
+  {
+    "id": "merchant",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "qCKNT6U8O0su578A",
+    "name": "Merchant",
+    "level": -1,
+    "art": "merchant.webp"
+  },
+  {
+    "id": "mitflit",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "kkAllKGsVCZVGFpf",
+    "name": "Mitflit",
+    "level": -1,
+    "art": "mitflit.webp"
+  },
+  {
+    "id": "monkey",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "pFUv7BzSjYTOo5mO",
+    "name": "Monkey",
+    "level": -1,
+    "art": "monkey.webp"
+  },
+  {
+    "id": "nyktera",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "9SW7NWlTisAjNwAu",
+    "name": "Nyktera",
+    "level": -1,
+    "art": "nyktera.webp"
+  },
+  {
+    "id": "obsessive_researcher",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "DPSvIsPlVrlx7Q8V",
+    "name": "Obsessive Researcher",
+    "level": -1,
+    "art": "obsessive-researcher.webp"
+  },
+  {
+    "id": "phantasmal_minion",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "j7NNPfZwD19BwSEZ",
+    "name": "Phantasmal Minion",
+    "level": -1,
+    "art": "phantasmal-minion.webp"
+  },
+  {
+    "id": "physician",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "GXmIABEvzmySOHRH",
+    "name": "Physician",
+    "level": -1,
+    "art": "physician.webp"
+  },
+  {
+    "id": "pufferfish",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "9rugdliEg2udjROC",
+    "name": "Pufferfish",
+    "level": -1,
+    "art": "pufferfish.webp"
+  },
+  {
+    "id": "red_fox",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "nr8EXKLSejspbb3d",
+    "name": "Red Fox",
+    "level": -1,
+    "art": "red-fox.webp"
+  },
+  {
+    "id": "root_leshy_groundskeeper",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "vRMKs6dHHWzQ1k62",
+    "name": "Root Leshy Groundskeeper",
+    "level": -1,
+    "art": "root-leshy-groundskeeper.webp"
+  },
+  {
+    "id": "servant",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "mgEMfxh0VUbBepc2",
+    "name": "Servant",
+    "level": -1,
+    "art": "servant.webp"
+  },
+  {
+    "id": "server",
+    "pack": "pf2e.npc-gallery",
+    "docId": "OSCpJYTr6xNIxqZi",
+    "name": "Server",
+    "level": -1,
+    "art": "server.webp"
+  },
+  {
+    "id": "severed_head",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "B1ZWz3rJ6VBYVH1U",
+    "name": "Severed Head",
+    "level": -1,
+    "art": "severed-head.webp"
+  },
+  {
+    "id": "skeleton_guard",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "trchDxbDR2TiPMxT",
+    "name": "Skeleton Guard",
+    "level": -1,
+    "art": "skeleton-guard.webp"
+  },
+  {
+    "id": "skunk",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "CFzeAzMfGHkzCF7h",
+    "name": "Skunk",
+    "level": -1,
+    "art": "skunk.webp"
+  },
+  {
+    "id": "snapping_turtle",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "UcUlBj3brC80A8gq",
+    "name": "Snapping Turtle",
+    "level": -1,
+    "art": "snapping-turtle.webp"
+  },
+  {
+    "id": "soulrider_celestial",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "GXBGUQRKarLhmtoj",
+    "name": "Soulrider (Celestial)",
+    "level": -1,
+    "art": "soulrider-celestial.webp"
+  },
+  {
+    "id": "soulrider_monitor",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "7ZCO51Bt6ulKHaSr",
+    "name": "Soulrider (Monitor)",
+    "level": -1,
+    "art": "soulrider-monitor.webp"
+  },
+  {
+    "id": "sprite",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "lUBkzsSqMfQBczU1",
+    "name": "Sprite",
+    "level": -1,
+    "art": "sprite.webp"
+  },
+  {
+    "id": "tax_collector",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "Xxnho8AZopSuhgHP",
+    "name": "Tax Collector",
+    "level": -1,
+    "art": "tax-collector.webp"
+  },
+  {
+    "id": "teacher",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "EuDz8wgZY3nxyBTr",
+    "name": "Teacher",
+    "level": -1,
+    "art": "teacher.webp"
+  },
+  {
+    "id": "three_toed_sloth",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "MtCiCanKa8EgZOm9",
+    "name": "Three-Toed Sloth",
+    "level": -1,
+    "art": "three-toed-sloth.webp"
+  },
+  {
+    "id": "tooth_fairy",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "q95mjOkL678a1Wnt",
+    "name": "Tooth Fairy",
+    "level": -1,
+    "art": "tooth-fairy.webp"
+  },
+  {
+    "id": "trained_raven",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "WzHEogHdIeOWUnfe",
+    "name": "Trained Raven",
+    "level": -1,
+    "art": "trained-raven.webp"
+  },
+  {
+    "id": "trilobite",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "VhO8zvcp0K23bC2x",
+    "name": "Trilobite",
+    "level": -1,
+    "art": "trilobite.webp"
+  },
+  {
+    "id": "urchin",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "a36bfgbqp1lt2bik",
+    "name": "Urchin",
+    "level": -1,
+    "art": "urchin.webp"
+  },
+  {
+    "id": "viper",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "1uVwkGlqYzyWaDMy",
+    "name": "Viper",
+    "level": -1,
+    "art": "viper.webp"
+  },
+  {
+    "id": "weasel",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "aepfNXXy2juozgzB",
+    "name": "Weasel",
+    "level": -1,
+    "art": "weasel.webp"
+  },
+  {
+    "id": "yellow_musk_thrall",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "0rhltfBkQtYkCwXd",
+    "name": "Yellow Musk Thrall",
+    "level": -1,
+    "art": "yellow-musk-thrall.webp"
+  },
+  {
+    "id": "zombie_shambler",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "Xo4IGzw28hivgMmM",
+    "name": "Zombie Shambler",
+    "level": -1,
+    "art": "zombie-shambler.webp"
+  },
+  {
+    "id": "pilgrim_of_irori",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "zUTlzjTKLyOc8bRM",
+    "name": "Pilgrim of Irori",
+    "level": -1,
+    "art": "pilgrim-of-irori.webp"
   }
 ]

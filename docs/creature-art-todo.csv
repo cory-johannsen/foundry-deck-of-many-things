@@ -1,42 +1,5 @@
 level,rarity,pack,docId,name
--1,common,pf2e.pathfinder-monster-core-2,TzBUcMwhCNZ012sR,Gutter Ooze
 -1,common,pf2e.pathfinder-monster-core,FWLTPQZzrVsokXHb,Halfling Street Watcher
--1,common,pf2e.pathfinder-monster-core-2,wlfPfrgdsHhXhQYZ,Haniver
--1,common,pf2e.pathfinder-npc-core,taNAx8xPuOJ3EmxC,Harrow Reader
--1,common,pf2e.pathfinder-npc-core,vfFB2za4zaQnXYIa,Judge
--1,common,pf2e.pathfinder-monster-core,BIZfjoz8DZt75EDn,Kobold Warrior
--1,common,pf2e.pathfinder-npc-core,GkatOjGPdFT9z0od,Librarian
--1,common,pf2e.pathfinder-npc-core,qCKNT6U8O0su578A,Merchant
--1,common,pf2e.pathfinder-monster-core,kkAllKGsVCZVGFpf,Mitflit
--1,common,pf2e.pathfinder-bestiary-3,pFUv7BzSjYTOo5mO,Monkey
--1,common,pf2e.pathfinder-bestiary-3,9SW7NWlTisAjNwAu,Nyktera
--1,common,pf2e.pathfinder-npc-core,DPSvIsPlVrlx7Q8V,Obsessive Researcher
--1,common,pf2e.pathfinder-bestiary,j7NNPfZwD19BwSEZ,Phantasmal Minion
--1,common,pf2e.pathfinder-npc-core,GXmIABEvzmySOHRH,Physician
--1,common,pf2e.pathfinder-npc-core,zUTlzjTKLyOc8bRM,Pilgrim of Irori
--1,common,pf2e.pathfinder-bestiary-3,9rugdliEg2udjROC,Pufferfish
--1,common,pf2e.pathfinder-bestiary-3,nr8EXKLSejspbb3d,Red Fox
--1,common,pf2e.pathfinder-npc-core,vRMKs6dHHWzQ1k62,Root Leshy Groundskeeper
--1,common,pf2e.pathfinder-npc-core,mgEMfxh0VUbBepc2,Servant
--1,common,pf2e.npc-gallery,OSCpJYTr6xNIxqZi,Server
--1,common,pf2e.pathfinder-monster-core-2,B1ZWz3rJ6VBYVH1U,Severed Head
--1,common,pf2e.pathfinder-monster-core,trchDxbDR2TiPMxT,Skeleton Guard
--1,common,pf2e.pathfinder-bestiary-3,CFzeAzMfGHkzCF7h,Skunk
--1,common,pf2e.pathfinder-bestiary-2,UcUlBj3brC80A8gq,Snapping Turtle
--1,common,pf2e.pathfinder-monster-core-2,GXBGUQRKarLhmtoj,Soulrider (Celestial)
--1,common,pf2e.pathfinder-monster-core-2,7ZCO51Bt6ulKHaSr,Soulrider (Monitor)
--1,common,pf2e.pathfinder-monster-core,lUBkzsSqMfQBczU1,Sprite
--1,common,pf2e.pathfinder-npc-core,Xxnho8AZopSuhgHP,Tax Collector
--1,common,pf2e.pathfinder-npc-core,EuDz8wgZY3nxyBTr,Teacher
--1,common,pf2e.pathfinder-bestiary-3,MtCiCanKa8EgZOm9,Three-Toed Sloth
--1,common,pf2e.pathfinder-monster-core,q95mjOkL678a1Wnt,Tooth Fairy
--1,common,pf2e.pathfinder-monster-core-2,WzHEogHdIeOWUnfe,Trained Raven
--1,common,pf2e.pathfinder-monster-core-2,VhO8zvcp0K23bC2x,Trilobite
--1,common,pf2e.pathfinder-npc-core,a36bfgbqp1lt2bik,Urchin
--1,common,pf2e.pathfinder-monster-core,1uVwkGlqYzyWaDMy,Viper
--1,common,pf2e.pathfinder-bestiary-3,aepfNXXy2juozgzB,Weasel
--1,common,pf2e.pathfinder-bestiary-2,0rhltfBkQtYkCwXd,Yellow Musk Thrall
--1,common,pf2e.pathfinder-monster-core,Xo4IGzw28hivgMmM,Zombie Shambler
 0,common,pf2e.pathfinder-monster-core-2,Q6oMLXjmGqF6dxzp,Air Wisp
 0,common,pf2e.pathfinder-npc-core,9p0WMNDYyeW5sqGX,Aiuvarin Translator
 0,common,pf2e.pathfinder-monster-core,ZXiFjrQbhvboEZTL,Azarketi Crab Catcher
