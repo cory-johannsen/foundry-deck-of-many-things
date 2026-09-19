@@ -127,7 +127,14 @@ export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag
     // repeating the fully-walled box, so it reads as one continuous hallway
     // rather than a stack of separate boxed alcoves (ITEM-12) — see
     // corridorTileVariant's docblock for which tile/rotation goes where.
-    // anchorX/Y:0 — see the room-art Tile below for why that's required.
+    // Unlike the room-art Tile below, these can be rotated (ITEM-12), so
+    // they must NOT use anchorX/Y:0 — rotation pivots around the texture
+    // anchor, and an anchor pinned to the top-left corner spins a rotated
+    // tile out of its own grid cell into a neighboring one (confirmed live:
+    // a 180°-rotated tile with anchorX/Y:0 rendered one cell up-and-left of
+    // its declared position). Leaving anchorX/Y at Foundry's own default
+    // (center) and passing the cell's center, not its corner, matches how
+    // scene-divination.mjs already places its own rotated card Tiles.
     const vertical = corridorRect.gh >= corridorRect.gw;
     const length = vertical ? corridorRect.gh : corridorRect.gw;
     for (let i = 0; i < length; i += 1) {
@@ -135,8 +142,9 @@ export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag
       const dy = vertical ? i : 0;
       const { variant, rotation } = corridorTileVariant(i, length, vertical);
       tiles.push({
-        texture: { src: CORRIDOR_ART_BY_VARIANT[variant], anchorX: 0, anchorY: 0 },
-        x: toPixels(corridorRect.gx + dx), y: toPixels(corridorRect.gy + dy),
+        texture: { src: CORRIDOR_ART_BY_VARIANT[variant] },
+        x: toPixels(corridorRect.gx + dx) + toPixels(1) / 2,
+        y: toPixels(corridorRect.gy + dy) + toPixels(1) / 2,
         width: toPixels(1), height: toPixels(1),
         rotation
       });
