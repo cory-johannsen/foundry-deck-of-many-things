@@ -294,6 +294,16 @@ function partyActorIds() {
   return new Set((game.actors?.party?.members ?? []).map((m) => m.id));
 }
 
+/** An actor should only ever have one token in the world at a time (the party
+ * moves as a unit between the dungeon and wherever they came from) — used by
+ * both placePartyInSlot and teardownDungeonRun's return-trip placement. */
+async function removeActorTokensFromAllScenes(actorId) {
+  for (const s of game.scenes) {
+    const existing = s.tokens.filter((t) => t.actor?.id === actorId);
+    if (existing.length) await s.deleteEmbeddedDocuments('Token', existing.map((t) => t.id));
+  }
+}
+
 /** Start-of-run: place the party's tokens inside slot, removing any of their
  * tokens elsewhere in the world first. */
 export async function placePartyInSlot(scene, slot, partyMembers) {
@@ -301,10 +311,7 @@ export async function placePartyInSlot(scene, slot, partyMembers) {
   const occupied = [];
   const createdIds = [];
   for (const actor of partyMembers) {
-    for (const s of game.scenes) {
-      const existing = s.tokens.filter((t) => t.actor?.id === actor.id);
-      if (existing.length) await s.deleteEmbeddedDocuments('Token', existing.map((t) => t.id));
-    }
+    await removeActorTokensFromAllScenes(actor.id);
     const spot = freeSpotInRect({ occupied, rect, gw: 1, gh: 1 }) ?? { gx: rect.gx, gy: rect.gy, gw: 1, gh: 1 };
     occupied.push(spot);
     const td = await actor.getTokenDocument({ x: toPixels(spot.gx), y: toPixels(spot.gy) });
@@ -312,6 +319,65 @@ export async function placePartyInSlot(scene, slot, partyMembers) {
     createdIds.push(created.id);
   }
   return createdIds;
+}
+
+/**
+ * End-of-run return trip (ITEM-18's teardownDungeonRun): cluster the party
+ * near a scene's own center, in that scene's own grid units rather than this
+ * module's fixed GRID_SIZE — `destScene` is an arbitrary scene this module
+ * never built (the party's own regular scene, or Foundry's built-in default),
+ * so it can't be assumed to share the dungeon's grid size.
+ */
+async function placePartyNearSceneCenter(destScene, partyMembers) {
+  const spacing = Math.max(destScene.grid?.size ?? 100, 50);
+  const centerX = (destScene.width ?? spacing * 10) / 2;
+  const centerY = (destScene.height ?? spacing * 10) / 2;
+  const perRow = 3;
+  const createdIds = [];
+  for (const [i, actor] of partyMembers.entries()) {
+    await removeActorTokensFromAllScenes(actor.id);
+    const col = i % perRow;
+    const row = Math.floor(i / perRow);
+    const x = centerX + (col - 1) * spacing;
+    const y = centerY + row * spacing;
+    const td = await actor.getTokenDocument({ x, y });
+    const [created] = await destScene.createEmbeddedDocuments('Token', [td.toObject()]);
+    createdIds.push(created.id);
+  }
+  return createdIds;
+}
+
+/**
+ * Full teardown for a cancelled dungeon run (ITEM-18). Moves the party back
+ * to `previousSceneId` (wherever they were before the run started — see
+ * dungeon-runner.mjs's createRun) if that scene still exists, or Foundry's
+ * own built-in "Foundry Virtual Tabletop" default scene otherwise. Deletes
+ * every NPC actor this run's encounters ever spawned — any non-party token
+ * still on the scene when it's torn down, since `spawnCreatures`/
+ * `spawnBuiltCreature` (foundry-api.mjs) always create a real, permanent
+ * world Actor that otherwise outlives its token forever (confirmed live: 72
+ * such orphaned actors had accumulated in this world before this existed).
+ * Then deletes the dungeon scene itself.
+ */
+export async function teardownDungeonRun(scene, { previousSceneId = null } = {}) {
+  const partyIds = partyActorIds();
+  const npcActorIds = [...new Set(
+    scene.tokens.filter((t) => t.actor?.id && !partyIds.has(t.actor.id)).map((t) => t.actor.id)
+  )];
+  const partyMembers = (game.actors?.party?.members ?? []).filter((m) => partyIds.has(m.id));
+
+  let destScene = previousSceneId ? game.scenes.get(previousSceneId) : null;
+  if (!destScene) destScene = game.scenes.find((s) => s.name === 'Foundry Virtual Tabletop') ?? null;
+
+  if (destScene && partyMembers.length) {
+    await placePartyNearSceneCenter(destScene, partyMembers);
+    await destScene.activate();
+  }
+
+  if (npcActorIds.length) await Actor.deleteDocuments(npcActorIds);
+  await scene.delete();
+
+  return { destSceneId: destScene?.id ?? null, deletedNpcActorCount: npcActorIds.length };
 }
 
 /** Move already-placed tokens into slot — for undo, stepping the party back. */

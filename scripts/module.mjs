@@ -18,8 +18,8 @@ import {
 } from './scene-divination.mjs';
 import { generateEncounter } from './encounter-generator.mjs';
 import { DungeonApp, resolveCurrentRoom } from './ui/dungeon-app.mjs';
-import { abandonRun } from './dungeon-runner.mjs';
-import { handleDungeonDoorOpened } from './dungeon-scene.mjs';
+import { abandonRun, getRunState } from './dungeon-runner.mjs';
+import { handleDungeonDoorOpened, teardownDungeonRun } from './dungeon-scene.mjs';
 import { maybeResolveCombatForActor, maybeResolveCombatForCombatant } from './dungeon-combat.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
@@ -86,9 +86,17 @@ Hooks.once('ready', async () => {
       if (!game.user.isGM) return ui.notifications.warn(game.i18n.localize('DOMMT.Dungeon.GmOnlyWarning'));
       return new DungeonApp().render(true);
     },
+    // Same cancellation teardown the tracker's Abandon button runs (ITEM-18)
+    // — party moved out, every NPC actor the run spawned deleted, scene
+    // deleted — for GMs who'd rather script it than click through the app.
     resetDungeon: async (sceneId) => {
       if (!game.user.isGM) return ui.notifications.warn(game.i18n.localize('DOMMT.Dungeon.GmOnlyWarning'));
-      await abandonRun({ sceneId: sceneId ?? canvas?.scene?.id });
+      const targetSceneId = sceneId ?? canvas?.scene?.id;
+      if (!targetSceneId) return;
+      const scene = game.scenes.get(targetSceneId);
+      const state = getRunState(targetSceneId);
+      await abandonRun({ sceneId: targetSceneId });
+      if (scene) await teardownDungeonRun(scene, { previousSceneId: state?.previousSceneId ?? null });
     }
   };
   if (game.user.isGM) {

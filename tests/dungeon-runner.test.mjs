@@ -36,7 +36,17 @@ describe('createRun / getRunState', () => {
     expect(state.physicalSlotByRoomId).toEqual({ [state.rooms[0].id]: 0, [state.rooms[1].id]: 1 });
     expect(state.nextPhysicalSlot).toBe(2);
     expect(state.lastAutoEntry).toBeNull();
+    expect(state.previousSceneId).toBeNull();
     expect(getRunState('scene-1', { settingsRef })).toEqual(state);
+  });
+
+  it('records the scene the party started from, for teardownDungeonRun to return them to (ITEM-18)', async () => {
+    const settingsRef = makeSettingsStub();
+    const state = await createRun(
+      { sceneId: 'scene-1', roomCount: 5, previousSceneId: 'tavern-scene' },
+      { settingsRef }
+    );
+    expect(state.previousSceneId).toBe('tavern-scene');
   });
 
   it('returns null for a scene with no run', () => {

@@ -39,7 +39,7 @@ export function getRunState(sceneId, { settingsRef = defaultSettingsRef() } = {}
 }
 
 export async function createRun(
-  { sceneId, roomCount, traits = [], excludeTraits = [], seed = null },
+  { sceneId, roomCount, traits = [], excludeTraits = [], seed = null, previousSceneId = null },
   { settingsRef = defaultSettingsRef(), setpieceIds = [] } = {}
 ) {
   const runSeed = seed ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -67,7 +67,11 @@ export async function createRun(
     history: [],
     physicalSlotByRoomId,
     nextPhysicalSlot,
-    lastAutoEntry: null
+    lastAutoEntry: null,
+    // The scene the party was viewing right before this run started (ITEM-18)
+    // — where to send them back to if the run is later cancelled. Null if
+    // they started with no scene active at all.
+    previousSceneId
   };
   return persist(sceneId, state, settingsRef);
 }
