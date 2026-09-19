@@ -194,31 +194,42 @@ describe('buildConnectionGeometry', () => {
     expect(Math.max(...closureXs)).toBe(rect.gx + rect.gw + CORRIDOR_LEN);
   });
 
-  it('gives an east/west connection a corridorRect spanning the whole connecting face (ITEM-9)', () => {
-    const { corridorRect } = buildConnectionGeometry(0, 'seed-a'); // slot 0 -> east
-    expect(corridorRect.gw).toBe(CORRIDOR_LEN);
-    expect(corridorRect.gh).toBe(ROOM_SIZE);
-  });
-
-  it('gives a south (row-wrap) connection a corridorRect spanning the whole connecting face (ITEM-9)', () => {
-    const wrapSlot = ROOMS_PER_ROW - 1;
-    const { corridorRect } = buildConnectionGeometry(wrapSlot, 'seed-a');
-    expect(corridorRect.gw).toBe(ROOM_SIZE);
-    expect(corridorRect.gh).toBe(CORRIDOR_LEN);
-  });
-
-  it('is independent of either door offset (always the full face regardless of seed)', () => {
-    for (const seed of ['seed-a', 'seed-b', 'seed-c', 'seed-d']) {
-      const { corridorRect } = buildConnectionGeometry(0, seed);
-      expect(corridorRect).toEqual({ gx: 6, gy: 0, gw: CORRIDOR_LEN, gh: ROOM_SIZE });
+  it('gives an east/west connection a corridorRect exactly as tall as the door-to-door span (ITEM-13)', () => {
+    for (let slot = 0; slot < ROOMS_PER_ROW - 1; slot += 1) {
+      const outgoing = doorOffsetAt('seed-a', slot, 'outgoing');
+      const incoming = doorOffsetAt('seed-a', slot + 1, 'incoming');
+      const { corridorRect } = buildConnectionGeometry(slot, 'seed-a');
+      expect(corridorRect.gw).toBe(CORRIDOR_LEN);
+      expect(corridorRect.gh).toBe(Math.max(outgoing, incoming) + DOOR_WIDTH - Math.min(outgoing, incoming));
     }
   });
 
-  it('places corridorRect flush against the room, spanning its full height', () => {
+  it('gives a south (row-wrap) connection a corridorRect exactly as wide as the door-to-door span (ITEM-13)', () => {
+    const wrapSlot = ROOMS_PER_ROW - 1;
+    const outgoing = doorOffsetAt('seed-a', wrapSlot, 'outgoing');
+    const incoming = doorOffsetAt('seed-a', wrapSlot + 1, 'incoming');
+    const { corridorRect } = buildConnectionGeometry(wrapSlot, 'seed-a');
+    expect(corridorRect.gh).toBe(CORRIDOR_LEN);
+    expect(corridorRect.gw).toBe(Math.max(outgoing, incoming) + DOOR_WIDTH - Math.min(outgoing, incoming));
+  });
+
+  it('tracks the offsets: closely-offset doors give a short corridor, far-apart doors give a long one (ITEM-13)', () => {
+    const sizes = new Set();
+    for (const seed of ['seed-a', 'seed-b', 'seed-c', 'seed-d', 'seed-e']) {
+      const { corridorRect } = buildConnectionGeometry(0, seed);
+      expect(corridorRect.gh).toBeGreaterThanOrEqual(DOOR_WIDTH);
+      expect(corridorRect.gh).toBeLessThanOrEqual(ROOM_SIZE);
+      sizes.add(corridorRect.gh);
+    }
+    expect(sizes.size).toBeGreaterThan(1);
+  });
+
+  it('always keeps corridorRect flush against the outgoing room, within its face', () => {
     const rect = slotRect(0);
     const { corridorRect } = buildConnectionGeometry(0, 'seed-a'); // slot 0 -> east
     expect(corridorRect.gx).toBe(rect.gx + rect.gw);
-    expect(corridorRect.gy).toBe(rect.gy);
+    expect(corridorRect.gy).toBeGreaterThanOrEqual(rect.gy);
+    expect(corridorRect.gy + corridorRect.gh).toBeLessThanOrEqual(rect.gy + rect.gh);
   });
 
   it('never produces a door and a plain wall at the same coordinates', () => {

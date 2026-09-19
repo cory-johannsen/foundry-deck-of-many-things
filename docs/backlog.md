@@ -1,6 +1,6 @@
 # Backlog
 
-_Last updated: 2026-09-18 (ITEM-11 done, added ITEM-12)_
+_Last updated: 2026-09-18 (ITEM-13 done)_
 
 ## Active
 
@@ -8,6 +8,21 @@ _Last updated: 2026-09-18 (ITEM-11 done, added ITEM-12)_
 **State:** backlog
 **Blocked:** false
 **Summary:** Hallway rooms should have at least one open wall on the sides that open to other hallways, so that the dungeon appears as a linear sequence of connected rooms instead of several disparate, disconnected rooms that are actually connected.
+
+### ITEM-14: Token vision is clipped by the scene background instead of actual walls
+**State:** backlog
+**Blocked:** false
+**Summary:** Selecting a player token collapses most of the visible dungeon into darkness, with only a narrow wedge of vision remaining that cuts across tiles at an angle — as if the scene background art is being read as vision-blocking geometry, rather than the dungeon's own generated walls.
+
+#### Spec
+
+**Problem (confirmed via screenshots `Screenshot 2026-09-18 171956.png` and `Screenshot 2026-09-18 172111.png`, same moment in the same scene).** With no player token selected, the full revealed portion of the dungeon (entry room, puzzle room, and junk/treasure room, all three connected) renders normally under grey fog-of-war-explored shading. The instant a party token is selected (token-vision mode engages), nearly the entire scene goes black except for a narrow triangular vision wedge radiating from the selected token — and that wedge's edge cuts diagonally across grid tiles that are otherwise part of the same open, walked dungeon floor, well short of the room boundaries the party has already explored. The cutoff line doesn't correspond to any door, corridor, or room wall visible in the unselected view — it looks like it's being cast from something in the scene's background image/tile rather than from the dungeon's actual generated `Wall` documents.
+
+**Suspected root cause (needs live confirmation, not yet verified).** Foundry's vision system computes sightlines from placed `Wall` documents, not from image content — so either (a) a background Tile/image is unintentionally flagged to block vision/light (e.g. an "overhead"/occlusion tile, or a Tile with `restrictions.light`/`vision` set), or (b) stray/duplicate Wall documents exist at the background image's edges (left over from scene setup, a bad batch of `roomEnclosureWalls`/corridor walls, or geometry from an earlier dungeon layout that wasn't cleaned up), or (c) the scene's base background image itself has baked-in wall-like art that a Wall layer was traced over to match, and that trace is wrong. Needs to be root-caused live (inspect the scene's Wall layer and any Tile occlusion/vision flags) before picking a fix.
+
+**Goal.** A selected player token's vision should extend exactly as far as the dungeon's actual walls/doors allow — matching what's already shown as explored/visible in the no-selection (GM) view — with no extra clipping introduced by background art or stray geometry.
+
+**Non-goals.** Redesigning fog-of-war or token vision behavior generally; this is a correctness fix for one specific scene's wall/tile geometry (and, if the root cause turns out to be structural, the dungeon-generation code that produces it — e.g. `dungeon-scene.mjs`'s wall/tile builders).
 
 ### ITEM-8: Automate non-player turns in combat
 **State:** backlog
@@ -26,6 +41,39 @@ _Last updated: 2026-09-18 (ITEM-11 done, added ITEM-12)_
 **Summary:** Grow `data/dungeon-setpieces.json` beyond the current 2 fully-transcribed puzzles + 3 stub traps into a fuller, more varied set of realistic traps and puzzles, and implement real generation/selection logic on top of it rather than a fixed small pool.
 
 ## Done
+
+### ITEM-13: Corridor tile count should match the actual door-to-door gap
+**State:** done
+**Blocked:** false
+**Summary:** The hallway between two rooms is always rendered as a full room-face's worth of corridor tiles (6, at current constants), regardless of how far apart the two rooms' doors actually are — a screenshot shows a 6-tile hallway between two doors that sit only ~1-2 tiles apart. Corridor tile count should equal the real door-to-door offset.
+
+#### Spec
+
+**Problem (confirmed via screenshot `Screenshot 2026-09-18 171616.png`).** The corridor between two rooms renders as 6 stacked grid tiles, but the two rooms' doors are visibly close together near the top of their shared wall — only about 1-2 grid units apart. The corridor art doesn't reflect the actual passable gap between the doors.
+
+**Root cause.** Two independent pieces of geometry are conflated:
+1. **Door position varies per room.** `dungeon-layout.mjs`'s `doorOffsetAt(seed, slot, direction)` independently randomizes each room's door offset along its connecting wall, in `[0, ROOM_SIZE - DOOR_WIDTH]` (`[0,5]` at current constants) — by design, "so the two doors often don't line up" (per the function's own docblock). `buildConnectionGeometry` uses `outgoingOffset`/`incomingOffset` to place each room's own door wall segment correctly.
+2. **Corridor art ignores door position entirely.** `corridorRect` (also from `buildConnectionGeometry`) is always sized to the *entire* connecting face — `corridorRect.gw = ROOM_SIZE` for a south connection (`dungeon-layout.mjs:167`), `CORRIDOR_LEN` deep — not to the span between the two actual door offsets. `dungeon-scene.mjs`'s `buildRoomAtSlot` (lines ~122-130) then double-loops `dx`/`dy` over the full `corridorRect.gw × corridorRect.gh`, stamping one `corridor.webp` Tile per grid square across the whole face — 6 tiles wide regardless of where the two doors actually sit within that face.
+
+The result: the corridor's rendered width/length is tied to the fixed `ROOM_SIZE` constant, while the real passable door-to-door distance is tied to the two independently-random `doorOffsetAt` values — two unrelated code paths that were never reconciled.
+
+**Goal.** The visible corridor art (and, if relevant, its walkable footprint) should span only the actual gap between the outgoing door and the incoming door, not the full room face — so a dungeon with doors close together shows a short hallway, and doors far apart show a longer one, matching what the player can actually see and walk through.
+
+**Scope.** `buildConnectionGeometry`'s `corridorRect` computation (`dungeon-layout.mjs`) for both east/west and south connections, and the corridor-tiling loop in `dungeon-scene.mjs`'s `buildRoomAtSlot`. Needs to account for both doors' offsets (`outgoingOffset`/`incomingOffset`) when sizing/positioning the corridor rect, not just the fixed room/corridor constants. Also needs to be checked against ITEM-7 (half-grid-square door misalignment) and ITEM-12 (adjacent hallway connectors reading as one continuous corridor) — all three touch the same `buildConnectionGeometry`/corridor-tiling code and should be reconciled together rather than patched independently, to avoid one fix re-breaking another.
+
+**Non-goals.** Changing how door offsets are randomized (`doorOffsetAt` itself) — the per-room randomization is intentional; only how the corridor art responds to it needs to change. Wall/collision geometry beyond what's needed to keep the corridor visually and mechanically consistent — full re-validation of wall placement is part of the fix, not a scope expansion.
+
+#### Plan
+
+**Chosen fix.** `buildConnectionGeometry`'s room-perimeter wall segments (each room's own solid wall minus its own door/gap) already correctly span the *entire* connecting face regardless of the other side's offset — that part is correct and unchanged; a room's own wall shouldn't depend on where the neighboring room's door sits. What was wrong was the shared 1-square-wide *gap column* between the two faces: it was always capped at the room's own top/bottom (or left/right) edges (`gy`/`gy+gh`, or `gx`/`gx+gw`), rather than at the actual span the two doors need. Fix: compute `spanY0 = Math.min(doorY0, gapY0)` / `spanY1 = Math.max(doorY1, gapY1)` (transposed to `spanX0`/`spanX1` for a south connection) and use those — instead of the room's own face bounds — for (a) the two capping wall segments that close off the gap column, and (b) `corridorRect`'s position/size. No other geometry (door walls, reveal-door walls, room-perimeter `plainWalls` segments, `roomEnclosureWalls`) needed to change. `dungeon-scene.mjs`'s corridor-tiling loop already iterates generically over `corridorRect.gw × corridorRect.gh`, so it needed no change at all — it now simply tiles a smaller (or larger) rect automatically.
+
+**1. `scripts/dungeon-layout.mjs`.** In `buildConnectionGeometry`, both branches (east/west and south) gain the `spanY0`/`spanY1` (or `spanX0`/`spanX1`) computation right after the door/gap coordinates, and the two cap-wall segments plus `corridorRect` are rebuilt from those spans instead of `gy`/`gy+gh` (or `gx`/`gx+gw`). Docblock updated to describe the trimmed-gap-column behavior instead of ITEM-9's "always the full face" description.
+
+**2. `tests/dungeon-layout.test.mjs`.** Three tests that encoded the old "always full face regardless of seed" contract were rewritten: `corridorRect`'s height/width now asserted to equal `max(outgoing,incoming)+DOOR_WIDTH-min(outgoing,incoming)` rather than a fixed `ROOM_SIZE`; a new test confirms the size actually varies across seeds (closely-offset vs. far-apart doors); the "flush against the room" test loosened from "spans full height" to "stays within the room's face." No other existing test needed to change — the door/reveal-door placement, integer-coordinate, degenerate-segment-dropping, and no-duplicate-segment tests all still hold under the trimmed geometry.
+
+**Non-goals unaffected.** `doorOffsetAt`'s randomization itself, and all wall/collision geometry outside the gap column, are untouched, matching the Spec. ITEM-7 (integer alignment) isn't disturbed — both span bounds are sums of already-integer offsets. ITEM-12 (adjacent hallways reading as one corridor) remains a separate, unimplemented backlog item; this change doesn't block or interact with it since ITEM-12 hasn't touched this code yet.
+
+**Verification.** `npm test` — 542 passing (27 in `dungeon-layout.test.mjs`, 3 rewritten + 2 new for the trimmed-span contract). `npm run validate`/`validate:dungeon` unaffected (no dungeon-layout dependency). Confirmed directly via a scratch `buildConnectionGeometry(0, 'demo')` call: offsets `outgoing:3, incoming:4` (adjacent) now produce `corridorRect: {gx:6, gy:3, gw:1, gh:2}` — a 2-tile hallway — with cap walls at `y=3` and `y=5` sealing off the unused gallery space, instead of the old fixed `gh:6` spanning the whole room face.
 
 ### ITEM-11: Prepend a safe entry room, exit always unlocked
 **State:** done
