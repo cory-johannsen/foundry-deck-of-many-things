@@ -1,10 +1,36 @@
 # Backlog
 
-_Last updated: 2026-09-18 (ITEM-17 added)_
+_Last updated: 2026-09-18 (ITEM-18 added)_
 
 ## Active
 
-### ITEM-17: Randomize room size between small and large
+### ITEM-18: Generate token art for the full core bestiary
+**State:** spec
+**Blocked:** false
+**Depends-on:** ITEM-2
+**Summary:** Extend ITEM-2's token-art batch from a 20-creature sample to full coverage of every art-missing NPC in the module's core bestiary packs (1,609 remaining), generated in priority order: lowest level first, and within a level, least-rare rarity first.
+
+#### Spec
+
+**Problem.** ITEM-2 shipped art for 20 creatures, deliberately described as "a first batch... not the whole bestiary" (its own non-goal: "Covering the entire installed bestiary in one pass"). `pickCreature` (`encounter-roster.mjs`) can draw from far more than those 20 — any NPC in any pack matching `CREATURE_PACK_PATTERN` once its Monster Core-first/traited search comes up empty. The user now wants the actual remaining gap closed: a full, ordered worklist covering every creature the encounter generator could plausibly hand a player with no real token art.
+
+**Scope decision.** "All enemies available in-game for encounters" is scoped to the **core, non-adventure-specific bestiary packs** — `pf2e.pathfinder-monster-core`, `pf2e.pathfinder-monster-core-2`, `pf2e.pathfinder-bestiary`, `pf2e.pathfinder-bestiary-2`, `pf2e.pathfinder-bestiary-3`, `pf2e.pathfinder-npc-core`, `pf2e.npc-gallery` — matching this module's own already-documented preference (`pickCreature`'s `MONSTER_CORE_PACKS`-first order, and the `pf2e-data` skill's explicit "prefer Monster Core over adventure bestiaries when picking at random: the adventure packs are full of named characters with a place in someone's plot"). Confirmed via user choice over the alternative (every pack `pickCreature` can technically fall back to, including all 55 adventure-path bestiaries — 6,095 art-missing creatures, an order of magnitude larger and full of one-off plot NPCs this module already avoids handing the party at random).
+
+**Live query (confirmed via `foundry-rest` against the running world, 2026-09-18).** Across the 7 core packs: 1,705 total NPC entries, 76 excluded as `troop`/`swarm` (`MANDATORY_EXCLUDE`, per existing convention), 1,629 with default/missing art (`isDefaultArt` check, same pattern `findWorldActors`/`spawnCreatures` already use). Of those, 20 are already covered by ITEM-2's `data/creature-art.json` (confirmed by exact `{pack, docId}` match) — **1,609 remaining**.
+
+**Full ordered list.** `docs/creature-art-todo.csv` (1,609 rows, columns `level,rarity,pack,docId,name`), sorted by `level` ascending, then `rarity` ascending (`common < uncommon < rare < unique`, the same `RARITY_ORDER` already defined in `foundry-api.mjs`), then `name` for stable ordering within a level+rarity tie. Distribution:
+- **Level range:** -1 to 25.
+- **Rarity totals:** common 1,225, uncommon 265, rare 112, unique 7.
+- First few rows (L-1, common): Adept, Animated Broom, Apothecary, Apprentice, Barrister, Beggar, Bloodseeker, Common Eurypterid, Commoner, Compsognathus, Court Historian, Crawling Hand.
+- Last few rows (L23-25, rare/unique): Jabberwock (L23, rare), Solar (L23, rare), Green Man (L24, rare), Hekatonkheires Titan (L24, rare), Sorvuth-Ka (L24, unique), Treerazer (L25, unique).
+
+**Goal.** Work through `docs/creature-art-todo.csv` top to bottom, generating one `assets/creature-art/<slug>.webp` and one `data/creature-art.json` entry per row (same shape/pipeline ITEM-2 already established: `tools/generate-token-art.mjs`'s `MONSTER_ART` list, reviewed individually, checked with `tools/check-token-art.mjs`), same lookup/`imgFallback` wiring already in place from ITEM-2 (`findCreatureArt`, `spawnCreatures`'s per-entry override) — no new mechanism needed, this item is pure content volume against ITEM-2's already-shipped plumbing.
+
+**Non-goals.** The 55 adventure-path bestiaries (a separate, explicitly-deferred future scope if ever wanted). Changing `pickCreature`'s pack preference or `LEVEL_TOLERANCE`. Re-generating any of the 20 creatures ITEM-2 already covered. A live re-query at implementation time is expected before generating each sub-batch, since the bestiary can change between now and then (new packs installed, existing art added) — `docs/creature-art-todo.csv` is a snapshot, not a live view.
+
+**Scale note.** 1,609 creatures is roughly 80x ITEM-2's batch (which itself needed individual review and several redo cycles per creature). This is a multi-session content-generation effort, not a single pass — expect it to be worked in sub-batches (e.g. by level band or rarity tier, following the CSV's own priority order) rather than closed in one PR.
+
+
 **State:** backlog
 **Blocked:** false
 **Summary:** Room sizes should be randomized between small (6x6 tiles / 30'x30' in-game) and large (12x12 tiles / 60'x60' in-game), instead of every room using the current fixed `ROOM_SIZE`.
@@ -13,21 +39,6 @@ _Last updated: 2026-09-18 (ITEM-17 added)_
 **State:** backlog
 **Blocked:** false
 **Summary:** Rooms should randomly get destructible cover items (e.g. crates, barrels, rubble) placed in them for tactical cover during encounters.
-
-### ITEM-14: Token vision is clipped by the scene background instead of actual walls
-**State:** backlog
-**Blocked:** false
-**Summary:** Selecting a player token collapses most of the visible dungeon into darkness, with only a narrow wedge of vision remaining that cuts across tiles at an angle — as if the scene background art is being read as vision-blocking geometry, rather than the dungeon's own generated walls.
-
-#### Spec
-
-**Problem (confirmed via screenshots `Screenshot 2026-09-18 171956.png` and `Screenshot 2026-09-18 172111.png`, same moment in the same scene).** With no player token selected, the full revealed portion of the dungeon (entry room, puzzle room, and junk/treasure room, all three connected) renders normally under grey fog-of-war-explored shading. The instant a party token is selected (token-vision mode engages), nearly the entire scene goes black except for a narrow triangular vision wedge radiating from the selected token — and that wedge's edge cuts diagonally across grid tiles that are otherwise part of the same open, walked dungeon floor, well short of the room boundaries the party has already explored. The cutoff line doesn't correspond to any door, corridor, or room wall visible in the unselected view — it looks like it's being cast from something in the scene's background image/tile rather than from the dungeon's actual generated `Wall` documents.
-
-**Suspected root cause (needs live confirmation, not yet verified).** Foundry's vision system computes sightlines from placed `Wall` documents, not from image content — so either (a) a background Tile/image is unintentionally flagged to block vision/light (e.g. an "overhead"/occlusion tile, or a Tile with `restrictions.light`/`vision` set), or (b) stray/duplicate Wall documents exist at the background image's edges (left over from scene setup, a bad batch of `roomEnclosureWalls`/corridor walls, or geometry from an earlier dungeon layout that wasn't cleaned up), or (c) the scene's base background image itself has baked-in wall-like art that a Wall layer was traced over to match, and that trace is wrong. Needs to be root-caused live (inspect the scene's Wall layer and any Tile occlusion/vision flags) before picking a fix.
-
-**Goal.** A selected player token's vision should extend exactly as far as the dungeon's actual walls/doors allow — matching what's already shown as explored/visible in the no-selection (GM) view — with no extra clipping introduced by background art or stray geometry.
-
-**Non-goals.** Redesigning fog-of-war or token vision behavior generally; this is a correctness fix for one specific scene's wall/tile geometry (and, if the root cause turns out to be structural, the dungeon-generation code that produces it — e.g. `dungeon-scene.mjs`'s wall/tile builders).
 
 ### ITEM-8: Automate non-player turns in combat
 **State:** backlog
@@ -46,6 +57,29 @@ _Last updated: 2026-09-18 (ITEM-17 added)_
 **Summary:** Grow `data/dungeon-setpieces.json` beyond the current 2 fully-transcribed puzzles + 3 stub traps into a fuller, more varied set of realistic traps and puzzles, and implement real generation/selection logic on top of it rather than a fixed small pool.
 
 ## Done
+
+### ITEM-14: Token vision is clipped by the scene background instead of actual walls
+**State:** done
+**Blocked:** false
+**Summary:** Selecting a player token collapses most of the visible dungeon into darkness, with only a narrow wedge of vision remaining that cuts across tiles at an angle — as if the scene background art is being read as vision-blocking geometry, rather than the dungeon's own generated walls.
+
+#### Spec
+
+**Problem (confirmed via screenshots `Screenshot 2026-09-18 171956.png` and `Screenshot 2026-09-18 172111.png`, same moment in the same scene).** With no player token selected, the full revealed portion of the dungeon renders normally under grey fog-of-war-explored shading. The instant a party token is selected, nearly the entire scene goes black except a narrow wedge around the token.
+
+**Root cause (revised from the original "background/wall geometry" hypothesis — confirmed live via `foundry-rest` against the actual affected scene, module v0.37.0).** The wall/tile geometry was checked exhaustively and is **not** the problem: every Tile in the scene has no vision/light-blocking flags (`occlusion.mode:0`, no `restrictions`), every Wall is exactly where `dungeon-layout.mjs`/`dungeon-scene.mjs` should have put it (no stray or duplicate segments), and a party token's actual computed line-of-sight polygon correctly spans the entire built dungeon area with no unexpected cutoff. The real cause: the scene had **zero `AmbientLight` documents** — nothing ever placed a real Foundry light source, even though every room's painted art shows lit torches (baked into the image, not a light Foundry's engine knows about). Combined with PF2e's Rules-Based Vision (enabled in the live world) giving a non-darkvision character a computed vision **radius of 0** (confirmed live on the party's own Cleric token, a Leshy with low-light vision — not even darkvision-equipped characters were exempt), a party member standing in a fully-built, fully-walled room had no way to actually see it: the walls were correct, but nothing was lighting the room they enclosed.
+
+**Goal.** A party member without darkvision can see the room they're standing in (and a reasonable amount beyond it) once it's built/revealed, without needing the wall geometry itself to change.
+
+**Non-goals.** Redesigning fog-of-war or token vision behavior generally. Matching each room art variant's painted torch positions exactly — checked several variants directly and torch presence/position is inconsistent across them (e.g. the `construct` line has none at all), so a generic centered room light was chosen over trying to track per-image art.
+
+#### Plan
+
+**Mechanism.** `buildRoomAtSlot` (`dungeon-scene.mjs`) now creates one `AmbientLight` document centered on every room it builds, alongside the walls/tiles it already creates. Sized off the room's own geometry: `ROOM_SIZE` (6 squares) at this scene's 5ft/square grid makes a 30x30ft room whose half-diagonal (center to corner) is ~21.2ft, so `ROOM_LIGHT_BRIGHT = 22` reaches every corner at full brightness and `ROOM_LIGHT_DIM = 40` gives a generous soft falloff beyond the room into its connecting corridor — both expressed in scene units (feet), matching how Foundry's `AmbientLight.config.dim/bright` are defined. A warm torch-like color/alpha (`#ff8844`, `0.35`) matches the painted-torch aesthetic without literally trying to reposition per that art.
+
+**Tests.** No new unit test — like the rest of `dungeon-scene.mjs`'s Foundry-document-building code, this has no pure-function surface to assert against (same precedent as the corridor-tiling loop). `npm test` re-run to confirm no regression (550 passing, unchanged — expected).
+
+**Verification.** Live via `foundry-rest` against the real, currently-active `xrPSYLalV2uwizn4` scene: (1) confirmed zero `AmbientLight` documents existed before this fix; (2) confirmed `rulesBasedVision: true` and the Cleric's live `token.vision.radius === 0` despite having low-light vision, with `scene.environment.darknessLevel === 0`; (3) confirmed the LOS polygon computed for that same token already spans the full built area (`0,0` to `700,600`) — independently ruling out the wall geometry as a contributing factor; (4) added the two lights the fixed code would now generate for this scene's two already-built rooms (center of each, matching `ROOM_LIGHT_*` constants) directly via the relay, repairing the live scene the same way ITEM-16 did. Point-by-point `canvas.visibility.testVisibility` probing (used successfully to verify ITEM-16's mesh positioning) turned out **not** to be a reliable oracle for the *lighting* half of this fix specifically — it returned the same (visible) result with and without the lights present when driven through a GM-context script, most likely because a scripted `token.control()` doesn't fully replicate the render pass a real client-side token selection triggers. The wall-blocking half of the same tool remained trustworthy throughout (it correctly reported a corridor point shadowed by a real wall as not visible). Given that residual gap in tooling, this item's final confirmation is a visual one — ask for a fresh screenshot with a token selected on the now-lit scene.
 
 ### ITEM-16: Rotated corridor tiles render one cell off from their declared position
 **State:** done
@@ -461,6 +495,7 @@ export function onCombatantUpdatedForCombat(combatant, changes) {
 ### ITEM-2: Generated art for encounter opponents
 **State:** done
 **Blocked:** false
+**Required-by:** ITEM-18
 **Summary:** Auto-generate token art (via the existing ComfyUI pipeline) for creatures spawned by the encounter generator — many bestiary entries, especially SRD ones, ship with no token art at all.
 
 #### Spec

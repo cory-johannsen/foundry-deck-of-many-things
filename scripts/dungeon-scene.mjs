@@ -42,6 +42,16 @@ const CORRIDOR_ART_BY_VARIANT = {
   mid: `${ROOM_ART_DIR}/corridor-mid.webp`
 };
 
+// A room's own light (ITEM-14) — see buildRoomAtSlot. A room is ROOM_SIZE
+// (6) squares across; at this scene's 5ft/square grid that's a 30x30ft room
+// whose half-diagonal (center to corner) is ~21.2ft, so ROOM_LIGHT_BRIGHT
+// reaches every corner at full brightness, with ROOM_LIGHT_DIM giving a
+// generous soft falloff beyond the room into its connecting corridor.
+const ROOM_LIGHT_BRIGHT = 22;
+const ROOM_LIGHT_DIM = 40;
+const ROOM_LIGHT_COLOR = '#ff8844';
+const ROOM_LIGHT_ALPHA = 0.35;
+
 /** The path to a room's background art — a dedicated image per locationTag
  * for the goal room (there's only ever one), or one of its regular pool of
  * pregenerated variants otherwise. */
@@ -160,6 +170,22 @@ export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag
     width: toPixels(rect.gw), height: toPixels(rect.gh)
   });
   await scene.createEmbeddedDocuments('Tile', tiles);
+
+  // Every room's art paints lit torches in its corners, but painted torches
+  // aren't real Foundry light sources — nothing here ever placed an
+  // AmbientLight to match, so a party with no darkvision (rules-based vision
+  // gives a non-darkvision PC a vision radius of 0, confirmed live) couldn't
+  // actually see the room they were standing in (ITEM-14). One centered
+  // light per room, radius generous enough to reach every corner (a room is
+  // ROOM_SIZE squares across — half its diagonal, in this scene's 5ft/square
+  // grid, is comfortably under 25ft — see ROOM_LIGHT_BRIGHT/DIM) plus a bit
+  // of dim falloff into the connecting corridor, fixes that without needing
+  // per-room-art torch positions (inconsistent across variants — e.g.
+  // construct art has none at all).
+  await scene.createEmbeddedDocuments('AmbientLight', [{
+    x: toPixels(rect.gx + rect.gw / 2), y: toPixels(rect.gy + rect.gh / 2),
+    config: { dim: ROOM_LIGHT_DIM, bright: ROOM_LIGHT_BRIGHT, color: ROOM_LIGHT_COLOR, alpha: ROOM_LIGHT_ALPHA }
+  }]);
 }
 
 /**
