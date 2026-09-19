@@ -117,3 +117,142 @@ export function maybeResolveCombatForCombatant(combatant, changes) {
   const combat = combatant.parent;
   return combat && isModuleCombat(combat) ? autoResolveIfDecided(combat) : null;
 }
+
+// --- ITEM-8: automating a non-player combatant's own turn ---------------
+
+const AUTO_PLAY_DELAY_MS = 700;
+
+/** Every other still-alive combatant on the opposing side (token disposition
+ * differs from `combatant`'s own) — "opposing side" here is just disposition,
+ * the same two-bucket split combatSideStatus already uses. */
+function combatantOpponents(combat, combatant) {
+  const mySide = combatant.token?.disposition;
+  return combat.combatants.filter(
+    (c) => c.id !== combatant.id && !c.isDefeated && c.token && c.token.disposition !== mySide
+  );
+}
+
+/** Chebyshev (8-directional) grid distance between two tokens' positions, in
+ * squares — matches how this module already measures everything else
+ * (dungeon-layout.mjs's grid-unit geometry), not true PF2e diagonal-cost
+ * movement rules. */
+function chebyshevSquares(a, b, gridSize) {
+  return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) / gridSize;
+}
+
+/** The closest opposing combatant, or null if none remain. */
+function nearestOpponent(combat, combatant) {
+  const gridSize = combat.scene?.grid?.size ?? 100;
+  const me = combatant.token;
+  let best = null;
+  let bestDistance = Infinity;
+  for (const opponent of combatantOpponents(combat, combatant)) {
+    const distance = chebyshevSquares(me, opponent.token, gridSize);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = opponent;
+    }
+  }
+  return best ? { combatant: best, distanceSquares: bestDistance } : null;
+}
+
+const MELEE_REACH_SQUARES = 1;
+
+/**
+ * Moves `combatant`'s token in a straight 8-directional line toward
+ * `target`'s token, up to its own speed, stopping once adjacent
+ * (MELEE_REACH_SQUARES) — no wall-avoidance, no real pathfinding, an
+ * explicitly accepted simplification (ITEM-8's own Non-goals). A no-op if
+ * already adjacent or if the combatant has no speed to move with.
+ */
+async function stepToward(combat, combatant, target, distanceSquares) {
+  if (distanceSquares <= MELEE_REACH_SQUARES) return;
+  const gridSize = combat.scene?.grid?.size ?? 100;
+  const gridDistanceFt = combat.scene?.grid?.distance ?? 5;
+  // Confirmed live: an NPC's land speed lives at system.movement.speeds.land,
+  // not system.attributes.speed (which doesn't exist) — the wrong path
+  // silently gave 0 in an earlier version of this function, so nothing ever
+  // moved.
+  const speedFt = combatant.actor?.system?.movement?.speeds?.land?.value ?? 0;
+  const speedSquares = Math.floor(speedFt / gridDistanceFt);
+  const steps = Math.min(speedSquares, Math.floor(distanceSquares - MELEE_REACH_SQUARES));
+  if (steps <= 0) return;
+
+  const me = combatant.token;
+  const dest = target.token;
+  const dx = Math.sign(dest.x - me.x);
+  const dy = Math.sign(dest.y - me.y);
+  await me.update({ x: me.x + dx * gridSize * steps, y: me.y + dy * gridSize * steps });
+}
+
+/**
+ * Rolls `combatant`'s first ready strike against `target` and, on a hit,
+ * rolls and applies damage — confirmed live (see ITEM-8 in docs/backlog.md):
+ * a strike's own roll()/damage() never forwards a skipDialog option, so the
+ * *user's* own showCheckDialogs/showDamageDialogs flags are toggled off for
+ * the duration and always restored in the finally, even on error. `{document:
+ * target.token}` as the roll target works with no dependency on which scene
+ * is currently rendered on this client's canvas.
+ */
+async function rollAndApplyStrike(combatant, target) {
+  const strike = combatant.actor?.system?.actions?.find((a) => a.type === 'strike' && a.ready !== false);
+  if (!strike) return null;
+
+  const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
+  const prevShowDamage = game.user.flags?.pf2e?.settings?.showDamageDialogs;
+  await game.user.update({
+    'flags.pf2e.settings.showCheckDialogs': false,
+    'flags.pf2e.settings.showDamageDialogs': false
+  });
+
+  try {
+    const targetRef = { document: target.token };
+    await strike.variants[0].roll({ target: targetRef, createMessage: true });
+    const outcome = game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
+    if (outcome === 'success' || outcome === 'criticalSuccess') {
+      const damageRoll = await strike.damage({ target: targetRef, outcome, createMessage: true });
+      if (damageRoll) await target.actor.applyDamage({ damage: damageRoll, token: target.token, outcome });
+    }
+    return outcome;
+  } finally {
+    await game.user.update({
+      'flags.pf2e.settings.showCheckDialogs': prevShowCheck,
+      'flags.pf2e.settings.showDamageDialogs': prevShowDamage
+    });
+  }
+}
+
+/**
+ * Hook target for `updateCombat` — module.mjs registers this whenever the
+ * turn or round changes. Plays the current combatant's turn automatically if
+ * it isn't a real party member: move adjacent to the nearest opponent if not
+ * already, strike once, apply the result, advance the turn. A player-owned
+ * combatant (an actual party character) is left entirely alone. If the next
+ * combatant is also non-player-owned, this fires again naturally off that
+ * same `nextTurn()` call — no explicit recursion needed here.
+ */
+export async function autoPlayCombatantTurnIfDue(combat) {
+  if (!game.user.isGM || !isModuleCombat(combat)) return;
+  const combatant = combat.combatant;
+  if (!combatant || combatant.actor?.hasPlayerOwner) return;
+
+  if (combatant.isDefeated) {
+    await combat.nextTurn();
+    return;
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, AUTO_PLAY_DELAY_MS));
+  // Another client (or the combat auto-resolving mid-wait) may have already
+  // moved things on — don't act on a stale turn.
+  if (!game.combats.has(combat.id) || combat.combatant?.id !== combatant.id) return;
+
+  const target = nearestOpponent(combat, combatant);
+  if (target) {
+    await stepToward(combat, combatant, target.combatant, target.distanceSquares);
+    await rollAndApplyStrike(combatant, target.combatant);
+  }
+
+  if (game.combats.has(combat.id) && combat.combatant?.id === combatant.id) {
+    await combat.nextTurn();
+  }
+}
