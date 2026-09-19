@@ -184,3 +184,28 @@ export function buildConnectionGeometry(slot, seed) {
   const nonDegenerate = plainWalls.filter((w) => w.x1 !== w.x2 || w.y1 !== w.y2);
   return { doorWall, revealDoorWall, plainWalls: nonDegenerate, corridorRect };
 }
+
+/**
+ * Which corridor art tile — and what rotation — belongs at `index` (0-based)
+ * of a `length`-tile gallery (ITEM-12). `corridor.webp` is a fully-walled 1x1
+ * box, correct on its own only for a single-tile gallery (`length <= 1`,
+ * `'single'`, unrotated). A longer gallery is 1 square wide the whole way,
+ * with real walls only along its two long sides (east/west, for a vertical
+ * i.e. east/west-connection gallery; north/south, for a horizontal
+ * south-connection one) — dungeon-scene.mjs's corridor-mid/-end assets are
+ * built "wall on top" in that canonical orientation, so:
+ * - the two end tiles (`index` 0 and `length - 1`) use `'end'` (wall on one
+ *   side, open on the other, facing inward) — unrotated for the near end of
+ *   a vertical gallery, 180° for its far end; 270°/90° for a horizontal
+ *   gallery's near/far end (rotating the canonical top-wall onto the left,
+ *   then the right).
+ * - every tile in between uses `'mid'` (walled on both long sides, open on
+ *   both ends) — unrotated for a vertical gallery, 90° for a horizontal one
+ *   (its own walls are symmetric, so 90° and 270° are equivalent here).
+ */
+export function corridorTileVariant(index, length, vertical) {
+  if (length <= 1) return { variant: 'single', rotation: 0 };
+  if (index === 0) return { variant: 'end', rotation: vertical ? 0 : 270 };
+  if (index === length - 1) return { variant: 'end', rotation: vertical ? 180 : 90 };
+  return { variant: 'mid', rotation: vertical ? 0 : 90 };
+}

@@ -24,11 +24,14 @@ describe('dungeon room art assets exist on disk', () => {
     }
     cases.push(`${tag}-goal.webp`);
   }
-  cases.push('corridor.webp');
+  // corridor-end/-mid (ITEM-12): the open-sided tiles used for any gallery
+  // longer than one square, so it reads as one continuous hallway instead of
+  // a stack of separate boxed alcoves — see corridorTileVariant.
+  cases.push('corridor.webp', 'corridor-end.webp', 'corridor-mid.webp');
 
   it('finds every expected filename to check at all', () => {
-    // A guard on the guard: LOCATION_TAGS.length * (ROOM_ART_VARIANTS + 1) + 1.
-    expect(cases.length).toBe(LOCATION_TAGS.length * (ROOM_ART_VARIANTS + 1) + 1);
+    // A guard on the guard: LOCATION_TAGS.length * (ROOM_ART_VARIANTS + 1) + 3.
+    expect(cases.length).toBe(LOCATION_TAGS.length * (ROOM_ART_VARIANTS + 1) + 3);
   });
 
   it.each(cases)('%s exists', (filename) => {

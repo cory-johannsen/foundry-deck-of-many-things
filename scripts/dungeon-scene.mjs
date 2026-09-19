@@ -21,7 +21,7 @@
  */
 import {
   ROOM_SIZE, ROOMS_PER_ROW, CORRIDOR_LEN,
-  slotRect, slotRowCol, roomEnclosureWalls, buildConnectionGeometry
+  slotRect, slotRowCol, roomEnclosureWalls, buildConnectionGeometry, corridorTileVariant
 } from './dungeon-layout.mjs';
 import { freeSpotInRect } from './placement.mjs';
 import { generateEncounter } from './encounter-generator.mjs';
@@ -36,6 +36,11 @@ const toPixels = (gridVal) => gridVal * GRID_SIZE;
 
 const ROOM_ART_DIR = `modules/${MODULE_ID}/assets/dungeon-rooms`;
 const CORRIDOR_ART_PATH = `${ROOM_ART_DIR}/corridor.webp`;
+const CORRIDOR_ART_BY_VARIANT = {
+  single: CORRIDOR_ART_PATH,
+  end: `${ROOM_ART_DIR}/corridor-end.webp`,
+  mid: `${ROOM_ART_DIR}/corridor-mid.webp`
+};
 
 /** The path to a room's background art — a dedicated image per locationTag
  * for the goal room (there's only ever one), or one of its regular pool of
@@ -115,18 +120,26 @@ export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag
       flags: { [MODULE_ID]: { dungeonRevealDoorForSlot: slot } }
     }));
     walls.push(...plainWalls.map((w) => wallDoc(w)));
-    // corridorRect now spans the whole connecting face (ITEM-9), not just one
-    // square — corridor.webp is a small self-contained "box" texture that
-    // looks wrong stretched, so it's tiled once per grid square instead.
+    // corridorRect is tiled once per grid square rather than stretching one
+    // image across it — corridor.webp is a small self-contained "box"
+    // texture that looks wrong scaled. A gallery longer than one tile
+    // (ITEM-9/13) uses the open-sided corridor-end/-mid variants instead of
+    // repeating the fully-walled box, so it reads as one continuous hallway
+    // rather than a stack of separate boxed alcoves (ITEM-12) — see
+    // corridorTileVariant's docblock for which tile/rotation goes where.
     // anchorX/Y:0 — see the room-art Tile below for why that's required.
-    for (let dx = 0; dx < corridorRect.gw; dx += 1) {
-      for (let dy = 0; dy < corridorRect.gh; dy += 1) {
-        tiles.push({
-          texture: { src: CORRIDOR_ART_PATH, anchorX: 0, anchorY: 0 },
-          x: toPixels(corridorRect.gx + dx), y: toPixels(corridorRect.gy + dy),
-          width: toPixels(1), height: toPixels(1)
-        });
-      }
+    const vertical = corridorRect.gh >= corridorRect.gw;
+    const length = vertical ? corridorRect.gh : corridorRect.gw;
+    for (let i = 0; i < length; i += 1) {
+      const dx = vertical ? 0 : i;
+      const dy = vertical ? i : 0;
+      const { variant, rotation } = corridorTileVariant(i, length, vertical);
+      tiles.push({
+        texture: { src: CORRIDOR_ART_BY_VARIANT[variant], anchorX: 0, anchorY: 0 },
+        x: toPixels(corridorRect.gx + dx), y: toPixels(corridorRect.gy + dy),
+        width: toPixels(1), height: toPixels(1),
+        rotation
+      });
     }
   }
 

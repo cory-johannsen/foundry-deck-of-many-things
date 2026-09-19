@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   ROOM_SIZE, ROOMS_PER_ROW, CORRIDOR_LEN, DOOR_WIDTH,
   slotRowCol, slotRect, connectionDirection, roomEnclosureWalls,
-  buildConnectionGeometry, doorOffsetAt
+  buildConnectionGeometry, doorOffsetAt, corridorTileVariant
 } from '../scripts/dungeon-layout.mjs';
 
 describe('slotRowCol / slotRect', () => {
@@ -269,5 +269,53 @@ describe('buildConnectionGeometry', () => {
       positions.add(doorWall.y1);
     }
     expect(positions.size).toBeGreaterThan(1);
+  });
+});
+
+describe('corridorTileVariant', () => {
+  it('always uses the single fully-walled tile for a length-1 gallery', () => {
+    expect(corridorTileVariant(0, 1, true)).toEqual({ variant: 'single', rotation: 0 });
+    expect(corridorTileVariant(0, 1, false)).toEqual({ variant: 'single', rotation: 0 });
+  });
+
+  it('a length-2 vertical gallery is two open-sided ends, no mid tile', () => {
+    expect(corridorTileVariant(0, 2, true)).toEqual({ variant: 'end', rotation: 0 });
+    expect(corridorTileVariant(1, 2, true)).toEqual({ variant: 'end', rotation: 180 });
+  });
+
+  it('a length-2 horizontal gallery mirrors that, rotated for its own axis', () => {
+    expect(corridorTileVariant(0, 2, false)).toEqual({ variant: 'end', rotation: 270 });
+    expect(corridorTileVariant(1, 2, false)).toEqual({ variant: 'end', rotation: 90 });
+  });
+
+  it('a longer vertical gallery sandwiches mid tiles between two ends', () => {
+    expect(corridorTileVariant(0, 4, true)).toEqual({ variant: 'end', rotation: 0 });
+    expect(corridorTileVariant(1, 4, true)).toEqual({ variant: 'mid', rotation: 0 });
+    expect(corridorTileVariant(2, 4, true)).toEqual({ variant: 'mid', rotation: 0 });
+    expect(corridorTileVariant(3, 4, true)).toEqual({ variant: 'end', rotation: 180 });
+  });
+
+  it('a longer horizontal gallery sandwiches rotated mid tiles between two rotated ends', () => {
+    expect(corridorTileVariant(0, 4, false)).toEqual({ variant: 'end', rotation: 270 });
+    expect(corridorTileVariant(1, 4, false)).toEqual({ variant: 'mid', rotation: 90 });
+    expect(corridorTileVariant(2, 4, false)).toEqual({ variant: 'mid', rotation: 90 });
+    expect(corridorTileVariant(3, 4, false)).toEqual({ variant: 'end', rotation: 90 });
+  });
+
+  it('every tile in a gallery of any length gets exactly one variant assignment', () => {
+    for (let length = 1; length <= ROOM_SIZE; length += 1) {
+      for (const vertical of [true, false]) {
+        const variants = [];
+        for (let i = 0; i < length; i += 1) variants.push(corridorTileVariant(i, length, vertical).variant);
+        const endCount = variants.filter((v) => v === 'end').length;
+        const midCount = variants.filter((v) => v === 'mid').length;
+        if (length === 1) {
+          expect(variants).toEqual(['single']);
+        } else {
+          expect(endCount).toBe(2);
+          expect(midCount).toBe(length - 2);
+        }
+      }
+    }
   });
 });
