@@ -1,6 +1,6 @@
 # Backlog
 
-_Last updated: 2026-09-18 (ITEM-8 done)_
+_Last updated: 2026-09-19 (ITEM-18 batch 1 of 1,609 done)_
 
 ## Active
 
@@ -10,7 +10,7 @@ _Last updated: 2026-09-18 (ITEM-8 done)_
 **Summary:** Common dungeon-crawl events — doors (open/locked/unlock), attacks/strikes, a creature's death, trap triggers, and other frequent actions/outcomes — should have sound effects that play automatically when the triggering event happens, the same way card draws already do (`card-sound.mjs`/`audio.mjs`'s `playSound`).
 
 ### ITEM-18: Generate token art for the full core bestiary
-**State:** spec
+**State:** in-progress
 **Blocked:** false
 **Depends-on:** ITEM-2
 **Summary:** Extend ITEM-2's token-art batch from a 20-creature sample to full coverage of every art-missing NPC in the module's core bestiary packs (1,609 remaining), generated in priority order: lowest level first, and within a level, least-rare rarity first.
@@ -35,6 +35,15 @@ _Last updated: 2026-09-18 (ITEM-8 done)_
 
 **Scale note.** 1,609 creatures is roughly 80x ITEM-2's batch (which itself needed individual review and several redo cycles per creature). This is a multi-session content-generation effort, not a single pass — expect it to be worked in sub-batches (e.g. by level band or rarity tier, following the CSV's own priority order) rather than closed in one PR.
 
+#### Plan
+
+No mechanism to design — this item is pure content volume against ITEM-2's already-shipped plumbing (`findCreatureArt`, `data-loader.mjs`'s `loadCreatureArt`, `spawnCreatures`'s per-entry `imgFallback`, all unchanged). Each sub-batch: pick the next N rows off the top of `docs/creature-art-todo.csv`, write matching entries into `tools/generate-token-art.mjs`'s `MONSTER_ART` list (prompt + `avoid` list per creature, `shapeless: true` for bodiless/non-bust subjects), run `node tools/generate-token-art.mjs <ids...>`, review every image individually against `node tools/check-token-art.mjs`'s automated background check *and* by eye (the checker only catches bright/pale backgrounds — it does not catch off-style monochrome/woodcut drift, wrong-subject drift, or a solid-colored non-black background, all of which showed up in batch 1 and needed a manual catch + prompt fix + redo), add the corresponding `data/creature-art.json` entries, `npm run validate:creature-art`, `npm test`, remove each finished sub-batch's rows from `docs/creature-art-todo.csv` (progress tracking — the file is a live worklist, not a frozen snapshot once work starts), bump `module.json`.
+
+**Batch 1 (20 creatures, all level -1 common, this PR).** Adept, Animated Broom, Apothecary, Apprentice, Barrister, Beggar, Bloodseeker, Common Eurypterid, Commoner, Compsognathus, Court Historian, Crawling Hand, Eagle, Flash Beetle, Giant Centipede, Giant Rat, Gnome Philomath, Goblin Warrior, Grimple, Guard Dog. `data/schema/creature-art.schema.json`'s `pack` enum widened from the 2 Monster Core packs to all 7 core packs this item's Scope decision covers (`pf2e.pathfinder-bestiary`/`-2`/`-3`, `pf2e.pathfinder-npc-core`, `pf2e.npc-gallery`) — the first batch to actually need a pack outside Monster Core.
+
+**Redo tally (7 of 20 needed at least one redo, matching ITEM-2's own "budget for redos, not a one-shot" precedent):** `adept` and `barrister` both drew a bright halo/arch motif behind the subject that `backgroundScore`'s edge-ring heuristic didn't catch (inset, not touching the very edge) — fixed by naming the artifact in `avoid` (circular halo, moon, arch, archway, gothic frame, etc.), a failure mode not previously documented for humanoid/robed prompts. `beggar`, `commoner`, and an early `gnome-philomath` attempt all drifted into a monochrome woodcut/engraving style with an ornate circular frame, entirely off the module's full-color aesthetic — fixed by adding "full color illustration" to the prompt and naming the monochrome/frame failure in `avoid`. `crawling-hand` first drew a demonic purple clawed hand (wrong subject), then — after `avoid`ing "like spider legs" from the prompt's own wording — a full moonlit-forest-with-a-spider scene (the comparison phrase had been read as literal scenery); fixed by rewriting the prompt as an extreme-close-up with an explicit "nothing else in frame" and a long list of named scenery/creature exclusions. `gnome-philomath` also needed a second redo for a solid teal background (the same "colored, non-black background" gap ITEM-2's own Verification section already flagged as unfixed in `check-token-art.mjs`) before landing clean. `guard-dog` drew a decorative metal ring border — traced to the prompt's own "a metal ring" collar detail being read as a decorative frame; fixed by dropping that phrase and naming ring/roundel motifs in `avoid`. `bloodseeker`'s first accepted image passed `backgroundScore` (65, under the generator's own keep-best fallback) but failed `check-token-art.mjs`'s stricter standalone check over a faint ground/horizon gradient — redone with explicit ground/horizon/water exclusions.
+
+**Verification.** `npm test` — 573 passing, 47 in the two creature-art suites (6 `findCreatureArt`/`creatureArtPath`, 41 asset-existence — up from 20 to 40 entries). `npm run validate:creature-art` — 40 entries, no duplicate lookup keys. `node tools/check-token-art.mjs` — 38 of 40 creature-art images report `clean`; one pre-existing ITEM-2 image (`ghoul-stalker`) and one from this batch (`grimple`, a faint floor-gradient the checker's edge-ring measure is sensitive to at this margin) report `borderline` rather than `clean` — neither hits the tool's own `BACKGROUND`/needs-regenerating tier, and both were accepted on individual visual review (matches the Spec's own point that the checker catches brightness, not every subjective flaw). `npm run validate`/`validate:dungeon` unaffected. Implemented in an isolated git worktree; `docs/creature-art-todo.csv` updated to remove these 20 rows (1,589 remaining).
 
 ### ITEM-17: Randomize room size between small and large
 **State:** backlog

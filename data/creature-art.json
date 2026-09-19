@@ -158,5 +158,165 @@
     "name": "Fey Dragonet",
     "level": 2,
     "art": "fey-dragonet.webp"
+  },
+  {
+    "id": "adept",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "PBb2WprHhEIQE9jN",
+    "name": "Adept",
+    "level": -1,
+    "art": "adept.webp"
+  },
+  {
+    "id": "animated_broom",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "ybkelAOtSIA06fnj",
+    "name": "Animated Broom",
+    "level": -1,
+    "art": "animated-broom.webp"
+  },
+  {
+    "id": "apothecary",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "h4gPulyY9uzkAbyo",
+    "name": "Apothecary",
+    "level": -1,
+    "art": "apothecary.webp"
+  },
+  {
+    "id": "apprentice",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "STds4rxF5ESFLLML",
+    "name": "Apprentice",
+    "level": -1,
+    "art": "apprentice.webp"
+  },
+  {
+    "id": "barrister",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "HbYwSi428oXESdNh",
+    "name": "Barrister",
+    "level": -1,
+    "art": "barrister.webp"
+  },
+  {
+    "id": "beggar",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "d47PtIdozWwSOtur",
+    "name": "Beggar",
+    "level": -1,
+    "art": "beggar.webp"
+  },
+  {
+    "id": "bloodseeker",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "HpD0BTfid3hnUEWj",
+    "name": "Bloodseeker",
+    "level": -1,
+    "art": "bloodseeker.webp"
+  },
+  {
+    "id": "common_eurypterid",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "fViWNHKjjL7fYbjW",
+    "name": "Common Eurypterid",
+    "level": -1,
+    "art": "common-eurypterid.webp"
+  },
+  {
+    "id": "commoner",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "APn9B54hhRtr0oCQ",
+    "name": "Commoner",
+    "level": -1,
+    "art": "commoner.webp"
+  },
+  {
+    "id": "compsognathus",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "uzH85ifDz5GU525p",
+    "name": "Compsognathus",
+    "level": -1,
+    "art": "compsognathus.webp"
+  },
+  {
+    "id": "court_historian",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "UWBT8xEvGfHaAj0U",
+    "name": "Court Historian",
+    "level": -1,
+    "art": "court-historian.webp"
+  },
+  {
+    "id": "crawling_hand",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "KH1GkazaI59zftst",
+    "name": "Crawling Hand",
+    "level": -1,
+    "art": "crawling-hand.webp"
+  },
+  {
+    "id": "eagle",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "WBPEvEqIGvxeQKlp",
+    "name": "Eagle",
+    "level": -1,
+    "art": "eagle.webp"
+  },
+  {
+    "id": "flash_beetle",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "E2XL2egIA3QaSDBM",
+    "name": "Flash Beetle",
+    "level": -1,
+    "art": "flash-beetle.webp"
+  },
+  {
+    "id": "giant_centipede",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "NRBgcu0LkXXp8mtp",
+    "name": "Giant Centipede",
+    "level": -1,
+    "art": "giant-centipede.webp"
+  },
+  {
+    "id": "giant_rat",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "iIJPJcDT8wlJ8z5M",
+    "name": "Giant Rat",
+    "level": -1,
+    "art": "giant-rat.webp"
+  },
+  {
+    "id": "gnome_philomath",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "UmzCDlvwqNbF9qwH",
+    "name": "Gnome Philomath",
+    "level": -1,
+    "art": "gnome-philomath.webp"
+  },
+  {
+    "id": "goblin_warrior",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "fLLKuOXwPq1Iq0U4",
+    "name": "Goblin Warrior",
+    "level": -1,
+    "art": "goblin-warrior.webp"
+  },
+  {
+    "id": "grimple",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "IErCbIpdYOBQHNmN",
+    "name": "Grimple",
+    "level": -1,
+    "art": "grimple.webp"
+  },
+  {
+    "id": "guard_dog",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "KHTYbQgR5hnFZdGL",
+    "name": "Guard Dog",
+    "level": -1,
+    "art": "guard-dog.webp"
   }
 ]
