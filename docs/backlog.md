@@ -1,8 +1,26 @@
 # Backlog
 
-_Last updated: 2026-09-18 (ITEM-19 done)_
+_Last updated: 2026-09-18 (ITEM-20 done, ITEM-18 header restored)_
 
 ## Active
+
+### ITEM-21: Starting a dungeon re-prompts the encounter theme dialog it just collected
+**State:** spec
+**Blocked:** false
+**Summary:** Clicking "Start Dungeon" already collects theme/exclude traits on its own form, but immediately pops up the separate "DOMMT: Generate Encounter" theme dialog again (for the first real room, if it's a combat room) — a redundant, unexpected extra prompt right after the GM just filled in the same fields.
+
+#### Spec
+
+**Problem.** Clicking "Start Dungeon" (`DungeonApp.#onStart`, `dungeon-app.mjs:208`) reads `traits`/`excludeTraits` off its own form and passes them into `createRun`, then immediately builds and populates the first real room via `buildPopulateAndUnlockRoom` → `populateSlotEncounter`. If that first room is a combat room, this chain ends up calling `generateEncounter()` (`encounter-generator.mjs:117`), which **unconditionally** opens `chooseThemeAndSize`'s `DialogV2` (`encounter-generator.mjs:22`, titled `DOMMT.Encounter.Title` — the same "Generate Encounter" theme dialog the standalone macro uses) before it will generate anything — even though `populateSlotEncounter` already passed the just-collected `state.traits`/`state.excludeTraits` in as `prefillTraits`/`prefillExcludeTraits`. Prefilling only pre-checks the dialog's own trait pickers; it doesn't skip the dialog. The GM sees: fill in traits on the Start form → click Start → immediately get asked to fill in (the same, already-checked) traits again in a second popup before the dungeon actually starts.
+
+**Root cause.** `generateEncounter` was designed for the standalone "DOMMT: Generate Encounter" macro, where there's no prior context and the theme dialog is the *entire* point. `populateSlotEncounter` (`dungeon-scene.mjs:279`) reuses `generateEncounter` wholesale for dungeon-room population, and its own docblock says this was a deliberate choice ("The GM still gets the existing theme dialog + Accept/Reroll preview — nothing about that flow changes"). But ITEM-1's own Spec already documents the actual intended design as the opposite: traits are "captured once at 'Start Dungeon' and reused unchanged for every room" — `generateEncounter` never got a way to honor that once prefill values are already known, so every dungeon-room population (Start, "Populate Next Room", combat recovery) re-prompts for input the run already has.
+
+**Goal.** Starting a dungeon run should not re-ask for theme traits it was just given. Once traits/excludeTraits are set at Start, populating a combat room during that run should proceed straight to the Accept/Reroll encounter preview using those already-known traits, with no intermediate theme dialog.
+
+**Scope.** `generateEncounter`/`chooseThemeAndSize` (`encounter-generator.mjs`) and `populateSlotEncounter`'s call into it (`dungeon-scene.mjs`). Likely needs a way for a caller that already has final traits (not just a prefill suggestion) to skip `chooseThemeAndSize` entirely and go straight to dealing/previewing the encounter.
+
+**Non-goals.** The standalone "DOMMT: Generate Encounter" macro keeps its theme dialog exactly as-is — it has no prior run context to draw traits from, so the prompt is doing real work there. Removing the Accept/Reroll preview dialog — that one stays for every path, dungeon or standalone; only the *theme* prompt is redundant when a run already supplied it. Whether "Populate Next Room" should ever let a GM change theme mid-run per room (a real, separate question ITEM-1 already gestures at) — out of scope here; this item only removes the *redundant* re-ask of information already given, not a deliberate later re-ask.
+
 
 ### ITEM-18: Generate token art for the full core bestiary
 **State:** spec
@@ -31,6 +49,7 @@ _Last updated: 2026-09-18 (ITEM-19 done)_
 **Scale note.** 1,609 creatures is roughly 80x ITEM-2's batch (which itself needed individual review and several redo cycles per creature). This is a multi-session content-generation effort, not a single pass — expect it to be worked in sub-batches (e.g. by level band or rarity tier, following the CSV's own priority order) rather than closed in one PR.
 
 
+### ITEM-17: Randomize room size between small and large
 **State:** backlog
 **Blocked:** false
 **Summary:** Room sizes should be randomized between small (6x6 tiles / 30'x30' in-game) and large (12x12 tiles / 60'x60' in-game), instead of every room using the current fixed `ROOM_SIZE`.
@@ -57,6 +76,35 @@ _Last updated: 2026-09-18 (ITEM-19 done)_
 **Summary:** Grow `data/dungeon-setpieces.json` beyond the current 2 fully-transcribed puzzles + 3 stub traps into a fuller, more varied set of realistic traps and puzzles, and implement real generation/selection logic on top of it rather than a fixed small pool.
 
 ## Done
+
+### ITEM-20: Frontier room's open outgoing face leaks vision/light past its walls
+**State:** done
+**Blocked:** false
+**Summary:** The room a party currently occupies is only walled on the sides that already connect to a built room — its not-yet-connected outgoing face has no wall at all until the next room is built, so a selected token's vision (and the room's own light) spills unobstructed across the entire rest of the pre-sized scene canvas instead of stopping at the room's boundary.
+
+#### Spec
+
+**Problem, in three stages (confirmed via `Screenshot 2026-09-18 183347.png`, `183412.png`, `183648.png`, same dungeon run).** (1) GM view, no token selected: two built rooms render normally, rest of the canvas is plain grey/unexplored — looks correct. (2) A party token in the second (rightmost, currently-occupied) room is selected: nearly everything goes dark except a narrow vision wedge that reaches far past both rooms into open canvas well beyond any wall or built geometry — this was mistakenly attributed to the scene's 25ft padding and "fixed" by removing the padding. (3) With padding removed: the occupied room itself now renders fully and correctly, but the vision wedge still extends across the *entire* rest of the scene canvas — a large, still-mostly-empty area with no rooms in it at all — instead of stopping where the built dungeon ends. Padding wasn't the (whole) cause; it just changed how far past the room the leak reached.
+
+**Root cause, confirmed live via `foundry-rest` against the actual affected scene (`I3D5ksi6MRWKJGj8`).** `buildRoomAtSlot` (`dungeon-scene.mjs:114`) builds a room's own perimeter via `roomEnclosureWalls(slot, { hasOutgoing: !isGoal })` — which deliberately *excludes* the wall on a room's outgoing-connection side, on the assumption that `buildConnectionGeometry` will fill it in with the real door-plus-opening geometry once the connection is built. But that connection geometry is only ever added when the *next* room is built (`buildRoomAtSlot`'s `if (slot > 0) { const {...} = buildConnectionGeometry(slot - 1, seed); ... }`, run for `slot`, not `slot - 1`) — so between "this room is built and occupied" and "the next room is built," the occupied room's own far face has **zero wall segments**, confirmed directly: a live wall dump of the affected scene shows walls only spanning `x:0` to `x:1300` (the two built rooms, each 600px/6 squares wide, joined by a corridor), with the second room's east face (`x:1300`) completely absent — nothing stops a sightline there. Combined with the scene being deliberately pre-sized with headroom for two rows of rooms before any of that space is built (`focusCameraOnSlot`'s own docblock, `dungeon-scene.mjs:193-198`, confirms this is intentional canvas pre-sizing, not a leftover bug) — this scene is `3600x1500`, more than 5x the width the two built rooms actually occupy — an unwalled outgoing face doesn't just leak a few feet, it leaks across nearly the whole rest of the canvas.
+
+**Goal.** A room's walls should always fully enclose it the moment it's built, on every side, including the side that will eventually connect to a not-yet-built room — so a token's vision and a room's own light (ITEM-14) never extend past the room's actual boundary just because the next room hasn't been built yet.
+
+**Scope.** `roomEnclosureWalls`/`buildRoomAtSlot`'s wall-building sequence (`dungeon-layout.mjs`, `dungeon-scene.mjs`) for the outgoing-connection side specifically — the three already-walled sides (incoming, and the two non-connecting sides) are unaffected; this is purely about the gap between "room built" and "next room built."
+
+**Non-goals.** Anything about ITEM-14's lighting fix (AmbientLight per room) — that fix is correct and unrelated; this item is purely about wall/vision-blocking geometry. Changing how/when the *next* room gets built (ITEM-11's pre-build-first-real-room behavior, or whatever currently triggers building room N+1) — this item only needs the *currently frontier* room to be fully enclosed in the meantime, regardless of when the next build happens.
+
+#### Plan
+
+**Chosen fix: candidate (a) from the Spec.** `roomEnclosureWalls` keeps excluding the outgoing side exactly as before (it's still correct that the room's *static* perimeter shouldn't include connection-specific geometry), but `buildRoomAtSlot` now always fills that gap with a temporary, full-face placeholder wall the instant a non-goal room is built — then the *next* room's own build step deletes that placeholder before adding the real trimmed door/opening/`plainWalls` geometry for the same connection, so the two never coexist. Mirrors `relockDoorToSlot`'s existing precedent of a later step mutating an earlier room's already-created walls.
+
+**1. `dungeon-layout.mjs`.** `roomEnclosureWalls`'s inline `sides` object factored into a shared `roomSides(slot)` helper (no behavior change). New exported `outgoingFaceWall(slot)` returns the full, unsplit segment on `slot`'s own outgoing face — `{ dir, ...roomSides(slot)[dir] }`, `dir = connectionDirection(slot)` — i.e. exactly the segment `roomEnclosureWalls` excludes when `hasOutgoing` is true.
+
+**2. `dungeon-scene.mjs`.** `buildRoomAtSlot`: (a) when `slot > 0`, before building the new connection geometry, finds and deletes any wall flagged `dungeonFrontierWallForSlot === slot - 1` (the previous room's placeholder, now superseded); (b) when `!isGoal`, after the room's own enclosure walls, adds `outgoingFaceWall(slot)` as a plain solid wall flagged `{ dungeonFrontierWallForSlot: slot }`. A goal room needs neither — its outgoing side is already a normal wall from `roomEnclosureWalls` (nothing excluded there, since `hasOutgoing` is false for a goal room), and it never gets a "next room" to build against it.
+
+**Tests.** `tests/dungeon-layout.test.mjs`: `outgoingFaceWall` — proven equal to exactly the segment `roomEnclosureWalls` drops when going from `hasOutgoing:false` to `hasOutgoing:true`, across several slots including a row-wrap; confirmed it spans the room's *full* face (not a trimmed door-width segment). `dungeon-scene.mjs`'s own sequencing gets no unit test — Foundry-document-touching, same precedent as the rest of that file (live-verify only).
+
+**Verification.** `npm test` — 553 passing (2 new). `npm run validate`/`validate:dungeon` unaffected. Live via `foundry-rest`, module not yet deployed with this change so replicated faithfully against a scratch scene (production constants: `ROOM_SIZE:6, CORRIDOR_LEN:1, DOOR_WIDTH:1, GRID_SIZE:100`): built "room 0" alone — confirmed exactly one frontier-flagged wall exists, spanning its *entire* east face (`600,0`–`600,600`, blocking that whole side, where before this fix there would have been zero wall segments there at all); built "room 1" next — confirmed room 0's placeholder is gone (not just covered), a real `LOCKED` door now sits at the same face flanked by the connection's `plainWalls`, and room 1 gets its own new frontier placeholder on *its* east face (`1300,0`–`1300,600`) — exactly the hand-off the fix is meant to produce. Scratch scene deleted after.
 
 ### ITEM-19: Clean up a dungeon run when it's cancelled
 **State:** done
