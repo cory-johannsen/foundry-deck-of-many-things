@@ -21,7 +21,7 @@
  */
 import {
   ROOM_SIZE, ROOMS_PER_ROW, CORRIDOR_LEN,
-  slotRect, slotRowCol, roomEnclosureWalls, buildConnectionGeometry, corridorTileVariant
+  slotRect, slotRowCol, roomEnclosureWalls, buildConnectionGeometry, corridorTileVariant, outgoingFaceWall
 } from './dungeon-layout.mjs';
 import { freeSpotInRect } from './placement.mjs';
 import { generateEncounter } from './encounter-generator.mjs';
@@ -102,11 +102,14 @@ export async function createDungeonScene() {
 /**
  * Build ONE physical room at `slot`. Connects it to `slot - 1` (door starts
  * LOCKED) unless `slot === 0`. `isGoal` suppresses the outgoing side — the
- * goal room has nowhere further to lead. `locationTag`/`artVariant` (from the
- * room's own data — see dungeon-deck.mjs) pick its background Tile. `seed`
- * (the run's own seed) drives the connecting door/opening's independently
- * random placement on each side (ITEM-9) — deterministic per run, so it
- * needs threading through from the caller like `locationTag`/`artVariant`.
+ * goal room has nowhere further to lead; every other room gets a temporary
+ * full-face placeholder wall there instead (ITEM-20) until the next room's
+ * own build swaps it for the real door/opening geometry — see
+ * outgoingFaceWall's docblock. `locationTag`/`artVariant` (from the room's
+ * own data — see dungeon-deck.mjs) pick its background Tile. `seed` (the
+ * run's own seed) drives the connecting door/opening's independently random
+ * placement on each side (ITEM-9) — deterministic per run, so it needs
+ * threading through from the caller like `locationTag`/`artVariant`.
  */
 export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag = null, artVariant = 0, seed = '' } = {}) {
   await ensureSceneCovers(scene, slot);
@@ -115,6 +118,13 @@ export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag
   const tiles = [];
 
   if (slot > 0) {
+    // Supersede slot - 1's own temporary frontier placeholder (ITEM-20,
+    // below) with the real, precisely-cut door/opening geometry this room's
+    // build now provides for that connection — delete first so a stray solid
+    // segment doesn't sit exactly under the new door.
+    const placeholder = scene.walls.filter((w) => w.getFlag(MODULE_ID, 'dungeonFrontierWallForSlot') === slot - 1);
+    if (placeholder.length) await scene.deleteEmbeddedDocuments('Wall', placeholder.map((w) => w.id));
+
     const { doorWall, revealDoorWall, plainWalls, corridorRect } = buildConnectionGeometry(slot - 1, seed);
     walls.push(wallDoc(doorWall, {
       door: CONST.WALL_DOOR_TYPES.DOOR,
@@ -159,6 +169,18 @@ export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag
         rotation
       });
     }
+  }
+
+  if (!isGoal) {
+    // Frontier placeholder (ITEM-20): this room has no outgoing connection
+    // built yet, so without a wall here it's open on that entire face until
+    // the next room is built — vision, light, and movement all leak straight
+    // across the rest of the scene's pre-sized canvas. Deleted and replaced
+    // by the real door/opening geometry above the moment that next room
+    // actually gets built.
+    walls.push(wallDoc(outgoingFaceWall(slot), {
+      flags: { [MODULE_ID]: { dungeonFrontierWallForSlot: slot } }
+    }));
   }
 
   if (walls.length) await scene.createEmbeddedDocuments('Wall', walls);

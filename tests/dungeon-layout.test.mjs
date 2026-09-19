@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   ROOM_SIZE, ROOMS_PER_ROW, CORRIDOR_LEN, DOOR_WIDTH,
   slotRowCol, slotRect, connectionDirection, roomEnclosureWalls,
-  buildConnectionGeometry, doorOffsetAt, corridorTileVariant
+  buildConnectionGeometry, doorOffsetAt, corridorTileVariant, outgoingFaceWall
 } from '../scripts/dungeon-layout.mjs';
 
 describe('slotRowCol / slotRect', () => {
@@ -78,6 +78,30 @@ describe('roomEnclosureWalls', () => {
     const dirs = walls.map((w) => w.dir);
     expect(dirs).not.toContain('west');
     expect(dirs.sort()).toEqual(['east', 'north', 'south'].sort());
+  });
+});
+
+describe('outgoingFaceWall', () => {
+  it('is the full, unsplit segment on the outgoing side — exactly what roomEnclosureWalls excludes there', () => {
+    for (const slot of [0, 1, 2, ROOMS_PER_ROW - 1, ROOMS_PER_ROW]) {
+      const dir = connectionDirection(slot);
+      const withOutgoing = roomEnclosureWalls(slot, { hasOutgoing: true });
+      const withoutOutgoing = roomEnclosureWalls(slot, { hasOutgoing: false });
+      const missing = withoutOutgoing.find((w) => w.dir === dir && !withOutgoing.some((v) => v.dir === dir));
+      expect(missing).toBeDefined();
+      const wall = outgoingFaceWall(slot);
+      expect(wall).toEqual(missing);
+    }
+  });
+
+  it('spans the room\'s full face, not a trimmed door-width segment', () => {
+    const rect = slotRect(0); // slot 0 -> east
+    const wall = outgoingFaceWall(0);
+    expect(wall.dir).toBe('east');
+    expect(wall.x1).toBe(rect.gx + rect.gw);
+    expect(wall.x2).toBe(rect.gx + rect.gw);
+    expect(Math.min(wall.y1, wall.y2)).toBe(rect.gy);
+    expect(Math.max(wall.y1, wall.y2)).toBe(rect.gy + rect.gh);
   });
 });
 

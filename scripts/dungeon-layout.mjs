@@ -53,6 +53,16 @@ export function connectionDirection(slot) {
   return row % 2 === 0 ? 'east' : 'west';
 }
 
+function roomSides(slot) {
+  const { gx, gy, gw, gh } = slotRect(slot);
+  return {
+    north: { x1: gx, y1: gy, x2: gx + gw, y2: gy },
+    south: { x1: gx, y1: gy + gh, x2: gx + gw, y2: gy + gh },
+    west: { x1: gx, y1: gy, x2: gx, y2: gy + gh },
+    east: { x1: gx + gw, y1: gy, x2: gx + gw, y2: gy + gh }
+  };
+}
+
 /**
  * The room's own enclosing walls, as compass-labelled grid-unit segments,
  * excluding whichever side(s) face a connection. The incoming side (shared
@@ -65,16 +75,27 @@ export function roomEnclosureWalls(slot, { hasOutgoing }) {
   if (slot > 0) excluded.add(OPPOSITE[connectionDirection(slot - 1)]);
   if (hasOutgoing) excluded.add(connectionDirection(slot));
 
-  const { gx, gy, gw, gh } = slotRect(slot);
-  const sides = {
-    north: { x1: gx, y1: gy, x2: gx + gw, y2: gy },
-    south: { x1: gx, y1: gy + gh, x2: gx + gw, y2: gy + gh },
-    west: { x1: gx, y1: gy, x2: gx, y2: gy + gh },
-    east: { x1: gx + gw, y1: gy, x2: gx + gw, y2: gy + gh }
-  };
-  return Object.entries(sides)
+  return Object.entries(roomSides(slot))
     .filter(([dir]) => !excluded.has(dir))
     .map(([dir, c]) => ({ dir, ...c }));
+}
+
+/**
+ * The full, unsplit wall segment on slot's own outgoing-connection face
+ * (ITEM-20) — a temporary placeholder dungeon-scene.mjs's buildRoomAtSlot
+ * creates the instant a non-goal room is built, since roomEnclosureWalls
+ * deliberately excludes this side (buildConnectionGeometry supplies the real,
+ * precisely-cut door/opening geometry there, but only once the *next* room is
+ * actually built). Without it, a room's outgoing face has zero wall segments
+ * — and therefore blocks nothing — for however long the party sits in it
+ * before the next room exists, leaking vision/light (and movement) straight
+ * across the rest of the scene's pre-sized canvas. Superseded — deleted, not
+ * merely covered — by buildConnectionGeometry's own plainWalls the moment
+ * that next room's build step runs; see buildRoomAtSlot.
+ */
+export function outgoingFaceWall(slot) {
+  const dir = connectionDirection(slot);
+  return { dir, ...roomSides(slot)[dir] };
 }
 
 const MAX_DOOR_OFFSET = ROOM_SIZE - DOOR_WIDTH;
