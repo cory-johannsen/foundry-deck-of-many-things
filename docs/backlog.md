@@ -1,6 +1,6 @@
 # Backlog
 
-_Last updated: 2026-09-19 (ITEM-18 batch 1 of 1,609 done)_
+_Last updated: 2026-09-19 (ITEM-5 done, ITEM-18 batch 1 of 1,609 done)_
 
 ## Active
 
@@ -55,17 +55,48 @@ No mechanism to design — this item is pure content volume against ITEM-2's alr
 **Blocked:** false
 **Summary:** Rooms should randomly get destructible cover items (e.g. crates, barrels, rubble) placed in them for tactical cover during encounters.
 
-### ITEM-5: Refactor combat encounter difficulty scaling
-**State:** backlog
-**Blocked:** false
-**Summary:** Dungeon crawl encounters, traps, and puzzles should start easy (scaled to party level) at the first room and increase in difficulty each subsequent room; players must always be able to flee backward to a previously completed room; dungeons with more than 6 rooms get a safe resting room in the middle.
-
 ### ITEM-3: Expand trap/puzzle generation with realistic content
 **State:** backlog
 **Blocked:** false
 **Summary:** Grow `data/dungeon-setpieces.json` beyond the current 2 fully-transcribed puzzles + 3 stub traps into a fuller, more varied set of realistic traps and puzzles, and implement real generation/selection logic on top of it rather than a fixed small pool.
 
 ## Done
+
+### ITEM-5: Refactor combat encounter difficulty scaling
+**State:** done
+**Blocked:** false
+**Summary:** Dungeon crawl encounters, traps, and puzzles should start easy (scaled to party level) at the first room and increase in difficulty each subsequent room; players must always be able to flee backward to a previously completed room; dungeons with more than 6 rooms get a safe resting room in the middle.
+
+#### Spec
+
+**Problem, broken into its three real parts (only one of which was actually missing).**
+1. **Difficulty scaling.** `depthBiasFor` (`dungeon-deck.mjs`) already existed and already does exactly this for combat rooms — a linear ramp from 0 at the first real room to `MAX_DEPTH_BIAS` at the goal, fed into `resolveEncounterRoster` as `levelOffsetBias` every time a combat room is populated (Start, room-to-room progression, "Populate Next Room" recovery — confirmed by tracing every `populateSlotEncounter` call site, same audit ITEM-21 already did for the theme-dialog fix). Already covered by its own existing tests (`depthBiasFor`'s zero-at-start/max-at-goal/monotonic-ramp assertions). Trap/puzzle difficulty has no equivalent because there's no *content* to scale yet — `data/dungeon-setpieces.json` is still ITEM-3's "2 fully-transcribed puzzles + 3 stub traps," with no difficulty axis at all to bias. Scaling a pool that small would be cosmetic, not real difficulty control.
+2. **Backward retreat.** Audited every call site of `relockDoorToSlot` (the only function that ever re-locks a progress-gate door): it's called exactly once, from `undoRoomEntry` (a GM-only undo action), never as part of normal forward progression. A door, once unlocked, stays unlocked — the party can already always walk back to any previously-cleared room. Nothing was broken here.
+3. **Mid-dungeon rest room.** The actual gap. No room kind existed for "safe, no encounter, encountered partway through" — only the entry (`safe_entry`, always room 0, always built and unlocked at Start) had that treatment. A long dungeon had no breather.
+
+**Goal.** Close gap 3 without disturbing 1 or 2: a dungeon requested with more than 6 rooms gets exactly one additional safe rest room, inserted near the midpoint of the sequence, never counted against the GM's own requested room count (matching how the entry is already "free"), reached through the normal door-reveal flow (not a Start-time special case like the entry) and auto-advanced past the instant it's revealed, exactly like the entry's own "the way onward is already open."
+
+**Scope.** `buildRoomSequence` (`dungeon-deck.mjs`) for inserting the room; `markRoomOutcome` (`dungeon-runner.mjs`) for advancing past it with no reward/ruin to resolve; `handleDungeonDoorOpened` (`dungeon-scene.mjs`) for triggering that advance the moment it's revealed; the tracker UI (`ui/dungeon-app.mjs`/`dungeon-tracker.hbs`) for showing it correctly (no Succeed/Fail buttons, a distinct hint, room numbering that still lines up with the GM's requested total).
+
+**Non-goals.** Trap/puzzle-specific difficulty scaling — deferred to ITEM-3; there's no content there yet worth scaling. Changing `depthBiasFor`'s own ramp shape or `MAX_DEPTH_BIAS` — already correct, untouched. Any new mechanism for backward retreat — already guaranteed by existing design, verified rather than changed. Letting the GM configure the rest-room threshold or position — a fixed `MID_DUNGEON_REST_THRESHOLD` (6) and a fixed "nearest the midpoint" placement, matching the item's own plain wording.
+
+#### Plan
+
+**1. `scripts/dungeon-deck.mjs`.** New `MID_DUNGEON_REST_THRESHOLD = 6`. `buildRoomSequence` computes `restAfterIndex` (the loop index nearest the midpoint of the real, non-goal rooms) whenever `roomCount > MID_DUNGEON_REST_THRESHOLD`, and inserts a `{ kind: 'safe_rest', isGoal: false, setpieceId: null, outcomeSlotId: null, ... }` room right after it — same shape as the entry room, just reached mid-run instead of at Start.
+
+**2. `scripts/dungeon-runner.mjs`.** `markRoomOutcome`'s existing "nothing to resolve" guard (`!room.isGoal && room.outcomeSlotId == null`) now excludes `kind === 'safe_rest'` from the early return — a rest room still needs the *slot-assignment* half of this function (so the room after it gets built), just not the reward/ruin half. A new `effectKey: 'rest_room_passed'` (`mutation: null`) stands in for `resolveRoomOutcome`'s normal result when the current room is `safe_rest`, so history still gets a sensible entry instead of `findOutcomeTemplate(null)` crashing.
+
+**3. `scripts/dungeon-scene.mjs`.** `buildPopulateAndUnlockRoom` — previously a private helper duplicated in `ui/dungeon-app.mjs` — **moved here and exported**, since `handleDungeonDoorOpened` now needs it too and this file deliberately never imports from `ui/dungeon-app.mjs` (existing architectural rule, see `dungeon-combat.mjs`'s own docblock). `handleDungeonDoorOpened`: after `advanceToRoom` lands the party on a freshly-revealed room, if that room is `kind === 'safe_rest'`, immediately calls `markRoomOutcome({succeeded: true})` and `buildPopulateAndUnlockRoom` for whatever comes after it — the same "way forward already open, no GM click" treatment the entry gets, just triggered by discovery instead of Start.
+
+**4. `scripts/ui/dungeon-app.mjs`.** Its own private `buildPopulateAndUnlockRoom` deleted, replaced by importing the one now in `dungeon-scene.mjs` (still used by `#onStart` and `resolveCurrentRoom`'s normal path, unchanged behavior). `ROOM_KIND_KEYS`/`EFFECT_KEYS` gain `safe_rest`/`rest_room_passed`. `roomNumber`/`roomTotal` generalized from "subtract 1 for the entry" to "count only rooms outside `UNCOUNTED_ROOM_KINDS` (`safe_entry`, `safe_rest`)" — a strict generalization that produces identical numbers when no rest room exists (verified: old formula was exactly this new one specialized to a set of size 1). New `isSafeRest`/`isSafeRoom` context flags alongside the existing `isSafeEntry`.
+
+**5. `templates/dungeon-tracker.hbs`.** The progress-label line and the Succeed/Fail-hiding branch both switch from `{{#if isSafeEntry}}` to `{{#if isSafeRoom}}`, with the progress label itself simplified to reuse `currentRoom.kindLabel` (already resolves to the same string `{{localize "DOMMT.Dungeon.Kind.safe_entry"}}` did) instead of a hardcoded key, so it renders correctly for either safe kind with no new template branch; the hint text still branches on `isSafeEntry` vs. not, since the two moments read differently ("you've arrived" vs. "you may rest here").
+
+**6. `lang/en.json`.** New `DOMMT.Dungeon.Kind.safe_rest`, `DOMMT.Dungeon.SafeRestHint`, `DOMMT.Dungeon.Effect.rest_room_passed`.
+
+**Tests.** `tests/dungeon-deck.test.mjs`: no rest room at or below the threshold (room count unchanged, `roomCount + 1` total); exactly one rest room above it, uncounted (`roomCount + 2` total), with `outcomeSlotId`/`setpieceId` both null; lands strictly between the entry and the goal, within 2 rooms of dead-center; the goal room and overall shape are unaffected. `tests/dungeon-runner.test.mjs`: a real run walked forward (via the actual `markRoomOutcome`/`advanceToRoom` — not mocked) until `currentIndex` lands on the rest room, then `markRoomOutcome` there is asserted to return `effectKey: 'rest_room_passed'`, `mutation: null`, a real `nextRoomId` with its physical slot correctly assigned, and a matching history entry — exercising the exact production code path, not a replica.
+
+**Verification.** `npm test` — 558 passing (5 new: 4 in `dungeon-deck.test.mjs`, 1 in `dungeon-runner.test.mjs`; one pre-existing test's non-entry filter widened to also exclude `safe_rest`, since `roomCount: 10` now legitimately produces one). `npm run validate`/`validate:dungeon` unaffected. `node --check` clean on all four touched files; confirmed no new import cycle (`dungeon-scene.mjs`'s two new imports — `depthBiasFor` from the already-leaf `dungeon-deck.mjs`, `markRoomOutcome` from `dungeon-runner.mjs`, which itself only imports `dungeon-deck.mjs` — neither imports back). The rest room reuses the entry's own art-selection convention (`locationTagAt(seed, 'rest')`, same `LOCATION_TAGS` pool every other room draws from), so it needs no new art assets. Difficulty scaling (part 1) and backward retreat (part 2) were verified by tracing existing code, not changed — see Spec.
 
 ### ITEM-8: Automate non-player turns in combat
 **State:** done

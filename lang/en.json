@@ -91,7 +91,9 @@
   "DOMMT.Dungeon.Kind.narrative": "Narrative",
   "DOMMT.Dungeon.Kind.goal": "Goal Room",
   "DOMMT.Dungeon.Kind.safe_entry": "The Entry",
+  "DOMMT.Dungeon.Kind.safe_rest": "A Resting Room",
   "DOMMT.Dungeon.SafeEntryHint": "A safe room — no encounter, trap or puzzle. The way onward is already open.",
+  "DOMMT.Dungeon.SafeRestHint": "A safe place to rest partway through the dungeon — no encounter, trap or puzzle. The way onward is already open.",
   "DOMMT.Dungeon.SucceedButton": "Mark Succeeded",
   "DOMMT.Dungeon.FailButton": "Mark Failed",
   "DOMMT.Dungeon.Combat.InProgressHint": "Combat is underway — the party can't move on until it's resolved.",
@@ -118,6 +120,7 @@
   "DOMMT.Dungeon.Effect.exhaustion": "Exhaustion — the party is worn down by the ordeal.",
   "DOMMT.Dungeon.Effect.goal_cleared": "The dungeon is cleared!",
   "DOMMT.Dungeon.Effect.goal_failed": "The dungeon claimed the party.",
+  "DOMMT.Dungeon.Effect.rest_room_passed": "The party rests before pressing onward.",
   "DOMMT.Dungeon.Outcome.succeeded": "Succeeded",
   "DOMMT.Dungeon.Outcome.failed": "Failed"
 }

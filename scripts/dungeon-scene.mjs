@@ -25,7 +25,8 @@ import {
 } from './dungeon-layout.mjs';
 import { freeSpotInRect } from './placement.mjs';
 import { generateEncounter } from './encounter-generator.mjs';
-import { getRunState, advanceToRoom, undoLastRoomEntry, canUndoRoomEntry } from './dungeon-runner.mjs';
+import { getRunState, advanceToRoom, undoLastRoomEntry, canUndoRoomEntry, markRoomOutcome } from './dungeon-runner.mjs';
+import { depthBiasFor } from './dungeon-deck.mjs';
 import { startCombatForSlot } from './dungeon-combat.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
@@ -420,6 +421,37 @@ export async function moveTokensToSlot(scene, tokenIds, slot) {
 }
 
 /**
+ * Build+populate+unlock one room at its physical slot. Shared by
+ * ui/dungeon-app.mjs's normal outcome-resolution path, its #onStart's
+ * auto-advance past the safe entry room, and handleDungeonDoorOpened's own
+ * auto-advance past a mid-dungeon rest room below — none of which have
+ * anything to resolve, so nothing ever calls resolveCurrentRoom for them
+ * (see dungeon-deck.mjs's buildRoomSequence). Lives here rather than in
+ * ui/dungeon-app.mjs because handleDungeonDoorOpened needs it too, and this
+ * file deliberately never imports from ui/dungeon-app.mjs (see this file's
+ * own docblock).
+ */
+export async function buildPopulateAndUnlockRoom(scene, state, room, physicalSlot) {
+  await buildRoomAtSlot(scene, physicalSlot, {
+    isGoal: room.isGoal, locationTag: room.locationTag, artVariant: room.artVariant, seed: state.seed
+  });
+
+  if (room.kind === 'combat') {
+    await populateSlotEncounter(scene, physicalSlot, {
+      prefillTraits: state.traits, prefillExcludeTraits: state.excludeTraits,
+      levelOffsetBias: depthBiasFor({ physicalSlot, roomCount: state.rooms.length, isGoal: room.isGoal }),
+      locationTag: room.locationTag
+    });
+    // Only unlock once monsters are actually in place — a cancelled theme
+    // dialog leaves the door locked rather than opening onto an empty room;
+    // the GM retries via the "Populate Next Room" button.
+    if (isSlotPopulated(scene, physicalSlot)) await unlockDoorToSlot(scene, physicalSlot);
+  } else {
+    await unlockDoorToSlot(scene, physicalSlot);
+  }
+}
+
+/**
  * Called from module.mjs's `updateWall` hook whenever any door's state
  * changes to OPEN — ignores anything that isn't the true frontier room's own
  * reveal door (`dungeonRevealDoorForSlot`), so a plain scenery door, an
@@ -446,8 +478,20 @@ export async function handleDungeonDoorOpened(sceneId, wallId) {
   // monsters spawn hidden, and starting Combat before the door is actually
   // opened would give away that a fight is coming.
   if (nextRoom?.kind === 'combat') await startCombatForSlot(scene, slot);
-  await advanceToRoom({ sceneId, roomId: nextRoomId, revealedTokenIds });
+  const { state: advancedState } = await advanceToRoom({ sceneId, roomId: nextRoomId, revealedTokenIds });
   focusCameraOnSlot(scene, slot);
+
+  // A rest room (ITEM-5) is safe and has nothing to resolve — like the
+  // entry, its own way forward opens immediately, no GM click required,
+  // instead of leaving the party stuck with no Succeed/Fail button to press.
+  if (nextRoom?.kind === 'safe_rest' && advancedState) {
+    const { state: resolvedState, nextRoomId: afterRestId, nextPhysicalSlot: afterRestSlot } =
+      await markRoomOutcome({ sceneId, succeeded: true });
+    if (afterRestId && afterRestSlot != null) {
+      const afterRestRoom = resolvedState.rooms.find((r) => r.id === afterRestId);
+      await buildPopulateAndUnlockRoom(scene, resolvedState, afterRestRoom, afterRestSlot);
+    }
+  }
 }
 
 /** Reverses the most recent automatic entry: re-hides what was revealed,

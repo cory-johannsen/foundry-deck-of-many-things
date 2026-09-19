@@ -144,6 +144,32 @@ describe('markRoomOutcome', () => {
     expect(result.state).toBeNull();
     expect(result.nextRoomId).toBeNull();
   });
+
+  it('auto-advances past a mid-dungeon rest room (ITEM-5): no reward/ruin, but still assigns the next room its slot', async () => {
+    const settingsRef = makeSettingsStub();
+    // roomCount 10 always gets a rest room (above MID_DUNGEON_REST_THRESHOLD).
+    await createRun({ sceneId: 's', roomCount: 10, seed: 'rest-runner' }, { settingsRef });
+    await advancePastEntry('s', settingsRef);
+
+    // Walk forward, resolving each room in turn, until currentIndex itself
+    // lands on the rest room.
+    let state = getRunState('s', { settingsRef });
+    while (state.rooms[state.currentIndex].kind !== 'safe_rest') {
+      const { nextRoomId } = await markRoomOutcome({ sceneId: 's', succeeded: true }, { settingsRef });
+      await advanceToRoom({ sceneId: 's', roomId: nextRoomId }, { settingsRef });
+      state = getRunState('s', { settingsRef });
+    }
+
+    const before = state;
+    const { state: after, effectKey, mutation, nextRoomId, nextPhysicalSlot } =
+      await markRoomOutcome({ sceneId: 's', succeeded: true }, { settingsRef });
+    expect(effectKey).toBe('rest_room_passed');
+    expect(mutation).toBeNull();
+    expect(nextRoomId).toBe(before.rooms[before.currentIndex + 1].id);
+    expect(nextPhysicalSlot).toBeTypeOf('number');
+    expect(after.physicalSlotByRoomId[nextRoomId]).toBe(nextPhysicalSlot);
+    expect(after.history.at(-1)).toMatchObject({ roomId: before.rooms[before.currentIndex].id, effectKey: 'rest_room_passed' });
+  });
 });
 
 describe('advanceToRoom', () => {

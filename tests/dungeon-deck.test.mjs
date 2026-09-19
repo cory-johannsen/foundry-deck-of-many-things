@@ -10,7 +10,8 @@ import {
   locationTagAt,
   LOCATION_TAGS,
   roomArtVariantAt,
-  ROOM_ART_VARIANTS
+  ROOM_ART_VARIANTS,
+  MID_DUNGEON_REST_THRESHOLD
 } from '../scripts/dungeon-deck.mjs';
 
 describe('buildRoomSequence', () => {
@@ -57,11 +58,55 @@ describe('buildRoomSequence', () => {
     expect(a).not.toEqual(b);
   });
 
-  it('every non-goal, non-entry room carries an outcome slot that resolves to a real template', () => {
+  it('every non-goal, non-entry, non-rest room carries an outcome slot that resolves to a real template', () => {
     const rooms = buildRoomSequence({ seed: 'gamma', roomCount: 10 });
-    for (const room of rooms.filter((r) => !r.isGoal && r.kind !== 'safe_entry')) {
+    for (const room of rooms.filter((r) => !r.isGoal && r.kind !== 'safe_entry' && r.kind !== 'safe_rest')) {
       expect(findOutcomeTemplate(room.outcomeSlotId)).not.toBeNull();
     }
+  });
+
+  describe('mid-dungeon rest room (ITEM-5)', () => {
+    it('adds no rest room at or below the threshold', () => {
+      for (const roomCount of [2, 4, MID_DUNGEON_REST_THRESHOLD]) {
+        const rooms = buildRoomSequence({ seed: 'rest-a', roomCount });
+        expect(rooms.some((r) => r.kind === 'safe_rest')).toBe(false);
+        // Not counted against roomCount either way — entry + roomCount rooms.
+        expect(rooms).toHaveLength(roomCount + 1);
+      }
+    });
+
+    it('adds exactly one safe rest room above the threshold, uncounted against roomCount', () => {
+      for (const roomCount of [MID_DUNGEON_REST_THRESHOLD + 1, 10, 20]) {
+        const rooms = buildRoomSequence({ seed: 'rest-b', roomCount });
+        const restRooms = rooms.filter((r) => r.kind === 'safe_rest');
+        expect(restRooms).toHaveLength(1);
+        expect(restRooms[0].isGoal).toBe(false);
+        expect(restRooms[0].outcomeSlotId).toBeNull();
+        expect(restRooms[0].setpieceId).toBeNull();
+        // entry + roomCount real/goal rooms + 1 bonus rest room.
+        expect(rooms).toHaveLength(roomCount + 2);
+      }
+    });
+
+    it('lands the rest room roughly at the midpoint, strictly between the entry and the goal', () => {
+      const rooms = buildRoomSequence({ seed: 'rest-c', roomCount: 12 });
+      const restIndex = rooms.findIndex((r) => r.kind === 'safe_rest');
+      expect(restIndex).toBeGreaterThan(0);
+      expect(restIndex).toBeLessThan(rooms.length - 1);
+      // Roughly balanced: neither half is more than a couple rooms longer
+      // than the other.
+      const before = restIndex; // rooms strictly before it, excluding the entry itself is still counted as "before" here
+      const after = rooms.length - 1 - restIndex; // rooms strictly after it, excluding the rest room itself
+      expect(Math.abs(before - after)).toBeLessThanOrEqual(2);
+    });
+
+    it('still produces the correct goal room and total length regardless of the rest room', () => {
+      const rooms = buildRoomSequence({ seed: 'rest-d', roomCount: 9 });
+      const goal = rooms.at(-1);
+      expect(goal.isGoal).toBe(true);
+      expect(goal.kind).toBe('combat');
+      expect(rooms.filter((r) => r.isGoal)).toHaveLength(1);
+    });
   });
 
   it('gives every room a locationTag, including the goal room', () => {

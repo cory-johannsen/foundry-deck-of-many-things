@@ -7,7 +7,8 @@ import { makeFoundryApi } from '../foundry-api.mjs';
 import { traitFieldHtml, wireTraitPickerButtons, readTraitField } from '../trait-picker.mjs';
 import {
   createDungeonScene, buildRoomAtSlot, unlockDoorToSlot, populateSlotEncounter,
-  isSlotPopulated, placePartyInSlot, undoRoomEntry, focusCameraOnSlot, teardownDungeonRun
+  isSlotPopulated, placePartyInSlot, undoRoomEntry, focusCameraOnSlot, teardownDungeonRun,
+  buildPopulateAndUnlockRoom
 } from '../dungeon-scene.mjs';
 import { startCombatForSlot, getCombatForSlot, resolveSlotCombat } from '../dungeon-combat.mjs';
 
@@ -19,7 +20,8 @@ const ROOM_KIND_KEYS = {
   skill_challenge: 'DOMMT.Dungeon.Kind.skill_challenge',
   puzzle_or_trap: 'DOMMT.Dungeon.Kind.puzzle_or_trap',
   narrative: 'DOMMT.Dungeon.Kind.narrative',
-  safe_entry: 'DOMMT.Dungeon.Kind.safe_entry'
+  safe_entry: 'DOMMT.Dungeon.Kind.safe_entry',
+  safe_rest: 'DOMMT.Dungeon.Kind.safe_rest'
 };
 
 const EFFECT_KEYS = {
@@ -33,34 +35,14 @@ const EFFECT_KEYS = {
   lost_gear: 'DOMMT.Dungeon.Effect.lost_gear',
   exhaustion: 'DOMMT.Dungeon.Effect.exhaustion',
   goal_cleared: 'DOMMT.Dungeon.Effect.goal_cleared',
-  goal_failed: 'DOMMT.Dungeon.Effect.goal_failed'
+  goal_failed: 'DOMMT.Dungeon.Effect.goal_failed',
+  rest_room_passed: 'DOMMT.Dungeon.Effect.rest_room_passed'
 };
 
-/**
- * Build+populate+unlock one room at its physical slot. Shared by both the
- * normal outcome-resolution path below and #onStart's auto-advance past the
- * safe entry room (which has nothing to resolve, so nothing ever calls
- * resolveCurrentRoom for it — see dungeon-deck.mjs's buildRoomSequence).
- */
-async function buildPopulateAndUnlockRoom(scene, state, room, physicalSlot) {
-  await buildRoomAtSlot(scene, physicalSlot, {
-    isGoal: room.isGoal, locationTag: room.locationTag, artVariant: room.artVariant, seed: state.seed
-  });
-
-  if (room.kind === 'combat') {
-    await populateSlotEncounter(scene, physicalSlot, {
-      prefillTraits: state.traits, prefillExcludeTraits: state.excludeTraits,
-      levelOffsetBias: depthBiasFor({ physicalSlot, roomCount: state.rooms.length, isGoal: room.isGoal }),
-      locationTag: room.locationTag
-    });
-    // Only unlock once monsters are actually in place — a cancelled theme
-    // dialog leaves the door locked rather than opening onto an empty room;
-    // the GM retries via the "Populate Next Room" button.
-    if (isSlotPopulated(scene, physicalSlot)) await unlockDoorToSlot(scene, physicalSlot);
-  } else {
-    await unlockDoorToSlot(scene, physicalSlot);
-  }
-}
+/** Rooms with nothing to resolve (no outcomeSlotId ever assigned) — never
+ * counted toward the GM's own requested room total (ITEM-5's rest room joins
+ * the entry here). */
+const UNCOUNTED_ROOM_KINDS = new Set(['safe_entry', 'safe_rest']);
 
 /**
  * Resolve the current room's outcome and build+populate+unlock whatever
@@ -155,6 +137,7 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const currentSlot = currentRoom ? state.physicalSlotByRoomId[currentRoom.id] : null;
     const isCombatRoom = currentRoom?.kind === 'combat' && !currentRoomResolved;
     const isSafeEntry = currentRoom?.kind === 'safe_entry';
+    const isSafeRest = currentRoom?.kind === 'safe_rest';
     const activeCombat = isCombatRoom && currentSlot != null ? getCombatForSlot(scene, currentSlot) : null;
 
     return {
@@ -163,15 +146,19 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       sceneId,
       currentSlot,
       completed: state.completed,
-      // The safe entry (always rooms[0]) doesn't count toward the room
-      // total the GM asked for — currentIndex 1 is real room 1 of roomTotal,
-      // not room 2 of roomTotal+1.
-      roomNumber: state.currentIndex,
-      roomTotal: state.rooms.length - 1,
+      // Neither the entry nor a mid-dungeon rest room (ITEM-5) count toward
+      // the room total the GM asked for — currentIndex 1 is real room 1 of
+      // roomTotal, not room 2 of roomTotal+1, and a rest room further along
+      // doesn't bump either number for the rooms after it.
+      roomNumber: state.rooms.slice(0, state.currentIndex + 1)
+        .filter((r) => !UNCOUNTED_ROOM_KINDS.has(r.kind)).length,
+      roomTotal: state.rooms.filter((r) => !UNCOUNTED_ROOM_KINDS.has(r.kind)).length,
       currentRoomResolved,
       nextRoomPending,
       canUndo: canUndoRoomEntry(state),
       isSafeEntry,
+      isSafeRest,
+      isSafeRoom: isSafeEntry || isSafeRest,
       // A combat room never uses the plain Succeed/Fail buttons — it's
       // either mid-fight (combatActive) or something interrupted Combat's
       // own creation and needs the recovery button (combatMissing).
