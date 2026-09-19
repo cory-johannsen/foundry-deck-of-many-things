@@ -142,6 +142,11 @@ export function setpieceAt(seed, occurrenceIndex, setpieceIds) {
   return order[occurrenceIndex % order.length];
 }
 
+// A dungeon this long or longer gets one bonus safe rest room, inserted
+// near its midpoint — never counted against roomCount, same as the entry
+// (ITEM-5).
+export const MID_DUNGEON_REST_THRESHOLD = 6;
+
 /**
  * Build a fresh linear room sequence. `roomCount` includes the goal room, so
  * it must be at least 2 — it does NOT include the safe entry room prepended
@@ -162,6 +167,10 @@ export function buildRoomSequence({ seed, roomCount, setpieceIds = [] }) {
     id: 'room-entry', kind: 'safe_entry', isGoal: false, setpieceId: null, outcomeSlotId: null,
     locationTag: locationTagAt(seed, 'entry'), artVariant: roomArtVariantAt(seed, 'entry')
   }];
+  // Index (within this loop) after which the rest room lands — the real room
+  // nearest the midpoint of the run, so a long dungeon splits roughly in half
+  // around it rather than the rest landing right before the goal.
+  const restAfterIndex = roomCount > MID_DUNGEON_REST_THRESHOLD ? Math.floor((roomCount - 2) / 2) : -1;
   let puzzleOccurrence = 0;
   for (let i = 0; i < roomCount - 1; i += 1) {
     const kind = roomKindAt(seed, i);
@@ -171,6 +180,17 @@ export function buildRoomSequence({ seed, roomCount, setpieceIds = [] }) {
       id: `room-${i}`, kind, isGoal: false, setpieceId, outcomeSlotId: outcomeSlot.id,
       locationTag: locationTagAt(seed, i), artVariant: roomArtVariantAt(seed, i)
     });
+    if (i === restAfterIndex) {
+      // Safe like the entry — no encounter, no outcomeSlotId — but reached
+      // mid-run via the normal door-reveal flow rather than Start, so
+      // dungeon-runner.mjs's markRoomOutcome and dungeon-scene.mjs's
+      // handleDungeonDoorOpened both special-case `kind === 'safe_rest'` to
+      // auto-advance past it the instant it's revealed.
+      rooms.push({
+        id: 'room-rest', kind: 'safe_rest', isGoal: false, setpieceId: null, outcomeSlotId: null,
+        locationTag: locationTagAt(seed, 'rest'), artVariant: roomArtVariantAt(seed, 'rest')
+      });
+    }
   }
   rooms.push({
     id: `room-${roomCount - 1}`,

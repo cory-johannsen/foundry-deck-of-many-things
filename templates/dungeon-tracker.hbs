@@ -5,8 +5,8 @@
         {{#if completed}}
           {{localize "DOMMT.Dungeon.Completed"}}
         {{else}}
-          {{#if isSafeEntry}}
-            {{localize "DOMMT.Dungeon.Kind.safe_entry"}}
+          {{#if isSafeRoom}}
+            {{currentRoom.kindLabel}}
           {{else}}
             {{localize "DOMMT.Dungeon.ProgressLabel" n=roomNumber total=roomTotal}}
           {{/if}}
@@ -30,8 +30,12 @@
 
       {{#unless completed}}
         <p class="hint">{{localize "DOMMT.Dungeon.ThemeReminder" traits=traits excludeTraits=excludeTraits}}</p>
-        {{#if isSafeEntry}}
-          <p class="hint">{{localize "DOMMT.Dungeon.SafeEntryHint"}}</p>
+        {{#if isSafeRoom}}
+          {{#if isSafeEntry}}
+            <p class="hint">{{localize "DOMMT.Dungeon.SafeEntryHint"}}</p>
+          {{else}}
+            <p class="hint">{{localize "DOMMT.Dungeon.SafeRestHint"}}</p>
+          {{/if}}
         {{else}}
           {{#if isCombatRoom}}
             {{#if combatActive}}

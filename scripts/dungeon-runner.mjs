@@ -100,12 +100,15 @@ export async function markRoomOutcome(
   }
 
   const room = state.rooms[state.currentIndex];
-  // A "safe" room (the entry — see buildRoomSequence) has no outcome slot
-  // and nothing to resolve; its own transition happens automatically
-  // (createRun/dungeon-app.mjs's Start flow), never through here. Guard
-  // rather than crash on findOutcomeTemplate(null) if this is ever somehow
-  // reached anyway.
-  if (!room.isGoal && room.outcomeSlotId == null) {
+  // The entry (see buildRoomSequence) has no outcome slot and nothing to
+  // resolve; its own transition happens automatically (createRun/
+  // dungeon-app.mjs's Start flow), never through here. Guard rather than
+  // crash on findOutcomeTemplate(null) if this is ever somehow reached
+  // anyway. A mid-dungeon rest room also has no outcome slot (ITEM-5), but
+  // unlike the entry it IS reached through the normal door-reveal flow, so
+  // it falls through below instead of returning here — see the `safe_rest`
+  // branch just past this guard.
+  if (!room.isGoal && room.outcomeSlotId == null && room.kind !== 'safe_rest') {
     return { state, effectKey: null, mutation: null, nextRoomId: null, nextPhysicalSlot: null };
   }
 
@@ -123,8 +126,13 @@ export async function markRoomOutcome(
     return { state: newState, effectKey, mutation: null, nextRoomId: null, nextPhysicalSlot: null };
   }
 
-  const template = findOutcomeTemplate(room.outcomeSlotId);
-  const { effectKey, mutation } = resolveRoomOutcome(template, succeeded);
+  // A rest room has nothing to reward or ruin — just move the sequence along
+  // to whatever comes after it, same slot-assignment bookkeeping as any
+  // other room (ITEM-5), rather than running findOutcomeTemplate/
+  // resolveRoomOutcome against its null outcomeSlotId.
+  const { effectKey, mutation } = room.kind === 'safe_rest'
+    ? { effectKey: 'rest_room_passed', mutation: null }
+    : resolveRoomOutcome(findOutcomeTemplate(room.outcomeSlotId), succeeded);
   const rooms = (mutation === 'remove_next' || mutation === 'insert_after')
     ? applySequenceMutation(state.rooms, state.currentIndex, mutation, { seed: state.seed, setpieceIds })
     : state.rooms;
