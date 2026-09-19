@@ -20,7 +20,7 @@ import { generateEncounter } from './encounter-generator.mjs';
 import { DungeonApp, resolveCurrentRoom } from './ui/dungeon-app.mjs';
 import { abandonRun, getRunState } from './dungeon-runner.mjs';
 import { handleDungeonDoorOpened, teardownDungeonRun } from './dungeon-scene.mjs';
-import { maybeResolveCombatForActor, maybeResolveCombatForCombatant } from './dungeon-combat.mjs';
+import { maybeResolveCombatForActor, maybeResolveCombatForCombatant, autoPlayCombatantTurnIfDue } from './dungeon-combat.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 
@@ -246,6 +246,18 @@ async function onCombatAutoResolved(result) {
 Hooks.on('updateActor', async (actor) => onCombatAutoResolved(await maybeResolveCombatForActor(actor)));
 Hooks.on('updateCombatant', async (combatant, changes) =>
   onCombatAutoResolved(await maybeResolveCombatForCombatant(combatant, changes)));
+
+/**
+ * Plays a non-player combatant's turn automatically the instant the turn
+ * order reaches it (ITEM-8) — fires on `startCombat()` too, since that also
+ * updates round/turn. Not awaited here, matching the updateWall hook's own
+ * fire-and-forget style; autoPlayCombatantTurnIfDue's own nextTurn() call, if
+ * it acts, re-triggers this same hook naturally for whatever comes next.
+ */
+Hooks.on('updateCombat', (combat, changes) => {
+  if (changes.turn === undefined && changes.round === undefined) return;
+  autoPlayCombatantTurnIfDue(combat);
+});
 
 Hooks.on('getSceneControlButtons', (controls) => {
   const tokenControl = controls.find?.((c) => c.name === 'token') ?? controls.token;

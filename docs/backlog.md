@@ -1,8 +1,13 @@
 # Backlog
 
-_Last updated: 2026-09-18 (ITEM-21 done)_
+_Last updated: 2026-09-18 (ITEM-8 done)_
 
 ## Active
+
+### ITEM-22: Sound effects for dungeon-crawl actions and outcomes
+**State:** backlog
+**Blocked:** false
+**Summary:** Common dungeon-crawl events — doors (open/locked/unlock), attacks/strikes, a creature's death, trap triggers, and other frequent actions/outcomes — should have sound effects that play automatically when the triggering event happens, the same way card draws already do (`card-sound.mjs`/`audio.mjs`'s `playSound`).
 
 ### ITEM-18: Generate token art for the full core bestiary
 **State:** spec
@@ -41,12 +46,6 @@ _Last updated: 2026-09-18 (ITEM-21 done)_
 **Blocked:** false
 **Summary:** Rooms should randomly get destructible cover items (e.g. crates, barrels, rubble) placed in them for tactical cover during encounters.
 
-### ITEM-8: Automate non-player turns in combat
-**State:** backlog
-**Blocked:** false
-**Depends-on:** ITEM-6
-**Summary:** When a non-player-controlled combatant (foe/friend/lurker/twin) comes up in the Combat Tracker's initiative order, it should act automatically according to its default behavior instead of waiting on a GM to manually run its turn.
-
 ### ITEM-5: Refactor combat encounter difficulty scaling
 **State:** backlog
 **Blocked:** false
@@ -58,6 +57,54 @@ _Last updated: 2026-09-18 (ITEM-21 done)_
 **Summary:** Grow `data/dungeon-setpieces.json` beyond the current 2 fully-transcribed puzzles + 3 stub traps into a fuller, more varied set of realistic traps and puzzles, and implement real generation/selection logic on top of it rather than a fixed small pool.
 
 ## Done
+
+### ITEM-8: Automate non-player turns in combat
+**State:** done
+**Blocked:** false
+**Depends-on:** ITEM-6
+**Summary:** When a non-player-controlled combatant (foe/friend/lurker/twin) comes up in the Combat Tracker's initiative order, it should act automatically according to its default behavior instead of waiting on a GM to manually run its turn.
+
+#### Spec
+
+**Problem.** ITEM-6 wires every dungeon (and standalone-macro) encounter into a real PF2e `Combat`, with initiative rolled for everyone — but nothing ever *acts* for a non-player combatant. When a foe/friend/lurker/twin comes up in the turn order, the GM has to manually open its sheet, roll its strike, apply damage, and click "next turn," for every single NPC, every single round. This is exactly the busywork ITEM-6's own automation should have removed.
+
+**Goal.** The moment a non-player-owned combatant's turn comes up in a module-created `Combat` (dungeon room or the standalone "DOMMT: Generate Encounter" macro), it plays itself: move toward the nearest opposing combatant if not already adjacent, make its first available strike against it, apply the result (including damage on a hit), then advance to the next turn — with no GM click needed. A real party member's own turn is never touched; that combatant is genuinely GM/player-controlled.
+
+**Scope decisions, resolved with the user up front (three real design forks, not guessed):**
+1. **Move-then-attack**, not attack-only-in-place and not full tactical pathfinding — a simple straight-line "step toward" heuristic (see Mechanism), not real A*/wall-avoidance.
+2. **Damage auto-applies** — not just rolled into chat for the GM to click "Apply Damage."
+3. **Every non-player-owned combatant auto-plays** — foes, lurker, twins *and* friend (an ally NPC) — not hostiles only. The only thing that stays manual is an actual party character's own turn.
+
+**Root cause / why this needed live research first.** PF2e's own strike-roll pipeline (`actor.system.actions[i].variants[j].roll()`) unconditionally opens a `CheckModifiersDialog` unless the *current user's own* `flags.pf2e.settings.showCheckDialogs`/`showDamageDialogs` are off — confirmed live by inspecting `game.pf2e.Check.roll`'s own source (`t.skipDialog ??= !game.user.settings.showCheckDialogs`), and confirmed that a strike's own `roll()`/`damage()` wrapper does **not** forward a `skipDialog` option itself (two scratch-script calls hung on exactly this dialog until worked around). And `strike.damage()` only *rolls* damage — it never applies it; the actual HP change needs a separate call to `ActorPF2e#applyDamage` (the same method PF2e's own chat-card "Apply Damage" button calls, confirmed via the actor class's real prototype chain — `CONFIG.Actor.documentClass.prototype` only shows the base Foundry `Actor`, not the `ActorPF2e` subclass PF2e actually uses).
+
+**Mechanism (all confirmed live, end to end, against fully scratch actors/scene/combat — never the real active run).**
+1. Toggle the current user's own `flags.pf2e.settings.showCheckDialogs`/`showDamageDialogs` to `false`, immediately restoring both in a `finally` right after — scoped to the GM's own client (these are user flags, not a world/`game.settings` write) and only for the duration of the automated roll, so a GM's own manual rolls elsewhere are unaffected.
+2. Pick a target: the nearest still-alive combatant whose token disposition differs from the acting combatant's own (Chebyshev/8-directional grid distance, matching how this module already measures everything else).
+3. If farther than 1 square away, move the acting token in a straight line toward the target by up to its speed (in squares, from `system.movement.speeds.land.value` ÷ the scene's own `grid.distance` — confirmed live; `system.attributes.speed` doesn't exist on an NPC actor at all, and a first pass at this used that wrong path, silently producing 0 speed and no movement), stopping once adjacent — never further than needed, never past its own speed. No wall-avoidance, no real pathfinding.
+4. Roll its first `ready` strike action, targeting the opponent via `{ document: targetTokenDocument }` — confirmed live this works with **no dependency on which scene the GM's own canvas currently has open** (a plain `TokenDocument` reference is enough; a rendered placeable is not required), which matters because a hook can fire while the GM is looking at a different scene.
+5. On a hit (`success` or `criticalSuccess`), roll damage and apply it via `actor.applyDamage(...)` (handles resistances/weaknesses/immunities correctly, since it's PF2e's own real method, not a hand-rolled HP subtraction).
+6. Advance the turn (`combat.nextTurn()`). If the *next* combatant is also non-player-owned, the same `updateCombat` hook fires again naturally and the sequence repeats — several NPC turns in a row chain automatically with no extra wiring.
+
+**Non-goals.** Real pathfinding/wall-avoidance for movement (explicitly accepted trade-off — see Scope decision 1). Reach-weapon-aware threat ranges, ranged-weapon range increments, or any other tactical nuance beyond "move adjacent, then strike" — every automated combatant is treated as a simple melee attacker for range purposes. Choosing *which* strike to use when a creature has several (always its first `ready` one). Multiple-attack-penalty iteration (a creature always makes exactly one strike on its automated turn, never a second/third at increasing MAP). Reactions, spells, or any non-strike action. Marking a reduced-to-0-HP combatant `defeated` — that's the pre-existing mechanism ITEM-6 already built (and this item doesn't change); `autoResolveIfDecided` still only fires off however that flag actually gets set today. A way for the GM to disable/pause auto-play per-encounter — always on for any module-created Combat, matching the item's own plain wording; a toggle can be a follow-up if it turns out to be wanted.
+
+#### Plan
+
+**1. `scripts/dungeon-combat.mjs`.** New pure-ish helpers (Foundry-document-touching, so not unit-tested, same precedent as the rest of this file) alongside the existing `isModuleCombat`/`combatSideStatus`:
+- `combatantOpponents(combat, combatant)` — every other still-alive combatant whose token disposition differs from `combatant`'s own.
+- `nearestOpponent(combat, combatant)` — the closest of those, by Chebyshev grid distance using the combat's own scene's `grid.size`; `null` if none.
+- `stepToward(combat, combatant, target, distanceSquares)` — moves `combatant.token` up to its speed (in squares) straight toward `target.token`, stopping at 1 square away; no-ops if already adjacent or if speed is 0.
+- `rollAndApplyStrike(combatant, target)` — the dialog-suppression / roll / damage / `applyDamage` sequence from the Mechanism section, in a `try/finally` that always restores the user's dialog flags.
+- `autoPlayCombatantTurnIfDue(combat)` — the orchestrator: bails unless `game.user.isGM` and `isModuleCombat(combat)`; bails if the current combatant is player-owned (`combatant.actor?.hasPlayerOwner`) — that one stays manual; immediately advances the turn (no roll) if the current combatant is already `isDefeated`; otherwise waits a short beat (`AUTO_PLAY_DELAY_MS`, matching this codebase's existing `DEAL_DELAY_MS`-style pacing precedent) so the GM can actually see the round advance, re-checks the turn hasn't already moved on (another client, or the combat auto-resolving mid-wait), finds a target, steps toward it, strikes, then calls `combat.nextTurn()` regardless of whether it found a target.
+
+**2. `scripts/module.mjs`.** New `Hooks.on('updateCombat', (combat, changes) => { if (changes.turn === undefined && changes.round === undefined) return; autoPlayCombatantTurnIfDue(combat); })` — not awaited at the top level, matching the existing `updateWall` hook's own fire-and-forget style. `combat.startCombat()` itself updates `round`/`turn`, so this also covers a combat's very first turn with no separate wiring.
+
+**Tests.** No new unit tests — every new function is Foundry-document/PF2e-actor-API-touching with no pure-logic surface to isolate, same precedent as the rest of `dungeon-combat.mjs` (live-verify only, which this item already did extensively before writing any code).
+
+**Verification (live, via `foundry-rest`, entirely against scratch actors/scene/combat — never the real active run).**
+
+*Piece-by-piece, before writing any code:* (1) the dialog-hang and its fix — two calls without the user-flag workaround hung the relay on a real `CheckModifiersDialog`, cleaned up by closing the stuck `Application` instances and reading their `constructor.name`; the flag-toggle fix produced a clean, dialog-free roll; (2) `strike.variants[0].roll({ target })` needs the target as something exposing `.document` — passing a plain `{ document: tokenDocument }` (not a rendered canvas placeable) works identically and was confirmed **not** to depend on that scene being the GM's currently-viewed one; (3) a forced-low-AC scratch target produced a real `criticalSuccess` outcome with a correctly-computed `dc.value` against its actual AC; (4) `strike.damage()` alone does *not* change HP (`hpChangedAutomatically: false`) — only the follow-up `actor.applyDamage({ damage, token, outcome })` call did, taking a target from 15 HP to 9 on a confirmed crit.
+
+*After assembly, against the real functions added to `dungeon-combat.mjs` (module not yet deployed with this change, so replicated faithfully — same precedent as every other item this session):* a scratch combat with an attacker 8 squares from a forced-low-AC target caught a real bug — the first pass at `stepToward` read speed from `system.attributes.speed.value`, which doesn't exist on an NPC actor (confirmed directly: `Object.keys(actor.system.attributes)` has no `speed` key at all), so `speedFt` silently fell back to `0` and the attacker never moved. Fixed to `system.movement.speeds.land.value` (confirmed present, `40` on the test creature) and re-verified: `distanceSquares:8, speedSquares:8, steps:7` — the attacker moved exactly 7 squares, stopping 1 short of the target (never past `MELEE_REACH_SQUARES`, never past its own speed), then struck for a confirmed `criticalSuccess` and applied damage (15→9 HP), with the Combat's `turn` advancing `0→1` throughout. Separately confirmed both remaining guard clauses on the assembled `autoPlayCombatantTurnIfDue` logic: an already-`isDefeated` combatant's turn is skipped with just a `nextTurn()` call (no roll attempted) and the turn correctly advances past it; a real party character combatant (`hasPlayerOwner: true`) is left completely untouched — the turn does not advance and nothing is rolled, confirming a player's own turn is never auto-played. `npm test` — 553 passing, unchanged (no pure-function surface; same precedent as the rest of this file). Every scratch actor/scene/combat created during this research was deleted immediately after each test (confirmed via a final sweep — zero `SCRATCH`-named actors/scenes remained), and the GM's own `showCheckDialogs`/`showDamageDialogs` flags were confirmed restored to `true`/`true` (their original values) after the last test run.
 
 ### ITEM-21: Starting a dungeon re-prompts the encounter theme dialog it just collected
 **State:** done
