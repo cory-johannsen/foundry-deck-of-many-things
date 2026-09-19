@@ -107,16 +107,19 @@ export function doorOffsetAt(seed, slot, role) {
  * walk-into-the-room-boundary trigger with a real "open the door and see
  * what's inside" beat.
  *
- * Both rooms' flanking wall segments span their *entire* connecting face
- * (solid for the room's full height/width, minus that room's own one-square
- * gap), not just a short frame around a centered door. Combined with two
- * fixed segments capping the very top/bottom (east/west) or left/right
- * (south) of the shared gap column, the two rooms' own gapped walls already
- * fully enclose it — nothing needs to change shape based on how far apart
- * the two offsets land. `corridorRect` is correspondingly always the full
- * connecting face (`CORRIDOR_LEN` × `ROOM_SIZE`, transposed for south),
- * never just `DOOR_WIDTH` deep — dungeon-scene.mjs tiles it with repeated
- * floor art rather than stretching one tile across it.
+ * Both rooms' own *wall* segments (the room's actual perimeter, minus that
+ * room's own one-square gap) still span their entire connecting face,
+ * regardless of where the other side's gap sits — a room's wall is a room's
+ * wall. But the shared 1-square-wide gap *column* between the two faces is
+ * only as tall (east/west) or wide (south) as it needs to be to connect the
+ * two doors: two capping segments close it off at `min(doorY0, gapY0)` and
+ * `max(doorY1, gapY1)` (transposed for south), not at the room's own
+ * top/bottom or left/right edges (ITEM-13) — so two closely-offset doors get
+ * a short connecting hallway and two far-apart doors get a longer one,
+ * instead of every connection rendering as a fixed full-face gallery.
+ * `corridorRect` matches that same trimmed span, tiled once per grid square
+ * by dungeon-scene.mjs (corridor.webp is a small self-contained "box"
+ * texture that looks wrong stretched, so repeating it beats scaling it).
  */
 export function buildConnectionGeometry(slot, seed) {
   const dir = connectionDirection(slot);
@@ -135,6 +138,11 @@ export function buildConnectionGeometry(slot, seed) {
     const doorY1 = doorY0 + DOOR_WIDTH;
     const gapY0 = gy + incomingOffset;
     const gapY1 = gapY0 + DOOR_WIDTH;
+    // The gap column only needs to span between the two doors, not the
+    // room's full height (ITEM-13) — always within [gy, gy + gh] since both
+    // offsets are already clamped to the room's face.
+    const spanY0 = Math.min(doorY0, gapY0);
+    const spanY1 = Math.max(doorY1, gapY1);
     doorWall = { x1: faceX, y1: doorY0, x2: faceX, y2: doorY1 };
     revealDoorWall = { x1: corridorEndX, y1: gapY0, x2: corridorEndX, y2: gapY1 };
     plainWalls.push(
@@ -142,10 +150,10 @@ export function buildConnectionGeometry(slot, seed) {
       { x1: faceX, y1: doorY1, x2: faceX, y2: gy + gh },
       { x1: corridorEndX, y1: gy, x2: corridorEndX, y2: gapY0 },
       { x1: corridorEndX, y1: gapY1, x2: corridorEndX, y2: gy + gh },
-      { x1: Math.min(faceX, corridorEndX), y1: gy, x2: Math.max(faceX, corridorEndX), y2: gy },
-      { x1: Math.min(faceX, corridorEndX), y1: gy + gh, x2: Math.max(faceX, corridorEndX), y2: gy + gh }
+      { x1: Math.min(faceX, corridorEndX), y1: spanY0, x2: Math.max(faceX, corridorEndX), y2: spanY0 },
+      { x1: Math.min(faceX, corridorEndX), y1: spanY1, x2: Math.max(faceX, corridorEndX), y2: spanY1 }
     );
-    corridorRect = { gx: Math.min(faceX, corridorEndX), gy, gw: CORRIDOR_LEN, gh };
+    corridorRect = { gx: Math.min(faceX, corridorEndX), gy: spanY0, gw: CORRIDOR_LEN, gh: spanY1 - spanY0 };
   } else {
     // 'south'
     const faceY = gy + gh;
@@ -154,6 +162,9 @@ export function buildConnectionGeometry(slot, seed) {
     const doorX1 = doorX0 + DOOR_WIDTH;
     const gapX0 = gx + incomingOffset;
     const gapX1 = gapX0 + DOOR_WIDTH;
+    // Same trim as the east/west branch, along x instead of y (ITEM-13).
+    const spanX0 = Math.min(doorX0, gapX0);
+    const spanX1 = Math.max(doorX1, gapX1);
     doorWall = { x1: doorX0, y1: faceY, x2: doorX1, y2: faceY };
     revealDoorWall = { x1: gapX0, y1: corridorEndY, x2: gapX1, y2: corridorEndY };
     plainWalls.push(
@@ -161,10 +172,10 @@ export function buildConnectionGeometry(slot, seed) {
       { x1: doorX1, y1: faceY, x2: gx + gw, y2: faceY },
       { x1: gx, y1: corridorEndY, x2: gapX0, y2: corridorEndY },
       { x1: gapX1, y1: corridorEndY, x2: gx + gw, y2: corridorEndY },
-      { x1: gx, y1: Math.min(faceY, corridorEndY), x2: gx, y2: Math.max(faceY, corridorEndY) },
-      { x1: gx + gw, y1: Math.min(faceY, corridorEndY), x2: gx + gw, y2: Math.max(faceY, corridorEndY) }
+      { x1: spanX0, y1: Math.min(faceY, corridorEndY), x2: spanX0, y2: Math.max(faceY, corridorEndY) },
+      { x1: spanX1, y1: Math.min(faceY, corridorEndY), x2: spanX1, y2: Math.max(faceY, corridorEndY) }
     );
-    corridorRect = { gx, gy: Math.min(faceY, corridorEndY), gw, gh: CORRIDOR_LEN };
+    corridorRect = { gx: spanX0, gy: Math.min(faceY, corridorEndY), gw: spanX1 - spanX0, gh: CORRIDOR_LEN };
   }
 
   // A door/opening offset landing at either extreme (0 or MAX_DOOR_OFFSET)
