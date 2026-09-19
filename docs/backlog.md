@@ -1,8 +1,18 @@
 # Backlog
 
-_Last updated: 2026-09-18 (ITEM-12 done)_
+_Last updated: 2026-09-18 (ITEM-17 added)_
 
 ## Active
+
+### ITEM-17: Randomize room size between small and large
+**State:** backlog
+**Blocked:** false
+**Summary:** Room sizes should be randomized between small (6x6 tiles / 30'x30' in-game) and large (12x12 tiles / 60'x60' in-game), instead of every room using the current fixed `ROOM_SIZE`.
+
+### ITEM-15: Randomly place destructible cover items in rooms
+**State:** backlog
+**Blocked:** false
+**Summary:** Rooms should randomly get destructible cover items (e.g. crates, barrels, rubble) placed in them for tactical cover during encounters.
 
 ### ITEM-14: Token vision is clipped by the scene background instead of actual walls
 **State:** backlog
@@ -36,6 +46,29 @@ _Last updated: 2026-09-18 (ITEM-12 done)_
 **Summary:** Grow `data/dungeon-setpieces.json` beyond the current 2 fully-transcribed puzzles + 3 stub traps into a fuller, more varied set of realistic traps and puzzles, and implement real generation/selection logic on top of it rather than a fixed small pool.
 
 ## Done
+
+### ITEM-16: Rotated corridor tiles render one cell off from their declared position
+**State:** done
+**Blocked:** false
+**Summary:** A corridor-end/corridor-mid Tile placed with a non-zero rotation (ITEM-12) renders shifted diagonally into a neighboring grid cell instead of staying in its own, making a multi-square corridor gallery look like it has a stray misplaced tile.
+
+#### Spec
+
+**Problem (confirmed via screenshot `Screenshot 2026-09-18 175152.png`).** A vertical 3-tile corridor gallery (an `end`/`mid`/`end` stack, ITEM-12's own scenario) showed a phantom fourth box one cell up-and-to-the-left of the bottom `end` tile's declared position, while that tile's own declared cell rendered empty. The two unrotated tiles (`rotation:0`) rendered fine; only the 180°-rotated one was affected.
+
+**Root cause, confirmed live via `foundry-rest`.** `buildRoomAtSlot`'s corridor-tiling loop (`dungeon-scene.mjs`) creates every corridor Tile with `texture: { anchorX: 0, anchorY: 0 }` and `x`/`y` as the cell's top-left corner — a pattern introduced correctly in an earlier fix (`f7e49c6`, "Fix room art rendering centered on its own corner") for Tiles that are *never* rotated. ITEM-12 started rotating corridor tiles (90°/180°/270°) for the first time, and PIXI applies `rotation` around the texture's own anchor point. With `anchorX/Y:0` (the texture's top-left corner) as that pivot, rotating spins the tile around its own corner instead of its center, moving its visible footprint into a neighboring cell. Confirmed directly by inspecting the live PIXI mesh of both the broken pattern and the fix: `anchorX/Y:0` with top-left `x,y` renders a 180°-rotated tile centered one full cell up-and-left of where it belongs; Foundry's own default anchor (0.5, 0.5) with `x,y` passed as the cell's *center* keeps the mesh's `anchor`/position exactly matching the intended cell regardless of rotation — the same pattern `scene-divination.mjs` already uses for its own rotated card Tiles (its own comment: "Foundry v14 anchors a Tile on its CENTRE, not its top-left corner").
+
+**Goal.** A rotated corridor tile renders in exactly the grid cell it was placed at, matching an unrotated one.
+
+**Scope.** Only the corridor-tiling loop in `dungeon-scene.mjs`'s `buildRoomAtSlot` (the part ITEM-12 touched). The room-art Tile in the same function is unaffected — it's never rotated, so its existing `anchorX/Y:0` + top-left `x,y` (from `f7e49c6`) stays correct and untouched.
+
+#### Plan
+
+**Fix.** Corridor tiles drop `anchorX: 0, anchorY: 0` (falling back to Foundry's own default center anchor) and pass `x`/`y` as the cell's center (`toPixels(gx+dx) + toPixels(1)/2`, `toPixels(gy+dy) + toPixels(1)/2`) instead of its top-left corner — mirroring `scene-divination.mjs`'s already-correct pattern for rotated Tiles exactly.
+
+**Tests.** No new unit test — this is a Foundry/PIXI rendering behavior with no pure-function surface to assert against (same precedent as the rest of `dungeon-scene.mjs`). `npm test` re-run to confirm nothing else regressed (550 passing, unchanged count — expected, since this file isn't unit-tested).
+
+**Verification.** Live via `foundry-rest` against the real, currently-active `xrPSYLalV2uwizn4` scene (module v0.37.0, already running the ITEM-12/13 code): (1) reproduced the bug directly — a scratch Tile built with the *old* pattern (`anchorX/Y:0`, top-left `x,y`, `rotation:180`) showed mesh `anchor:(0,0)`, `position:(1000,1000)` (its raw declared top-left, unadjusted) — PIXI's own rotation pivot, confirming the mechanism; (2) confirmed the fix — a scratch Tile built with the *new* pattern (`rotation:180`, center `x,y`) showed mesh `anchor:(0.5,0.5)`, `position` exactly at the cell's center; (3) re-created all three of the scene's real corridor tiles with the fixed pattern and got the expected centers (`(650,350)`, `(650,450)`, `(650,550)` for the `gy:3,4,5` cells at `gx:6`) before deleting the scratch copies; (4) **repaired the user's actual broken scene in place** — patched the 3 existing corridor Tile documents there (`GEHt033Jxkx9SAkP`, `QG2vNTKx618zUCuj`, `3RWThEh6ewSVTiOw`) to `anchorX/Y:0.5` and their cell centers, confirmed via a follow-up read that all three now report the corrected `x`/`y`/anchor — so the screenshot's own dungeon run is fixed, not just future ones.
 
 ### ITEM-12: Make adjacent hallway connectors read as one continuous corridor
 **State:** done
