@@ -115,6 +115,12 @@ export async function createDungeonScene() {
     fogExploration: true,
     backgroundColor: '#2b2620',
     grid: { type: 1, size: GRID_SIZE, distance: 5, units: 'ft' },
+    // This module already manages its own canvas sizing via
+    // ensureSceneCovers/requiredDimensions — pre-sized headroom built
+    // dynamically as the run grows — rather than relying on Foundry's own
+    // padding mechanic, so pad by nothing rather than silently inherit
+    // Foundry's 25% default (ITEM-20 reopening).
+    padding: 0,
     ...requiredDimensions(ROOMS_PER_ROW), // headroom for the first two rows
     flags: { [MODULE_ID]: { role: 'dungeon-run' } }
   });
