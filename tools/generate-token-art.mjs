@@ -36,14 +36,48 @@ export const TOKEN_PX = 512;
 // sheet, which reads as a square tile on a map instead of blending into dark
 // ground. The background instruction is repeated and placed last, where it
 // carries more weight.
-export const STYLE = 'dark fantasy illustration, intricate linework, rich jewel-tone colors, '
-  + 'dramatic rim lighting, centered bust portrait, isolated on a plain solid black background, '
-  + 'black background, no scenery, no backdrop';
+//
+// "full color illustration" was added after ITEM-18 batch 1: three separate
+// creatures (beggar, commoner, and one gnome-philomath attempt) drifted into
+// a black-and-white woodcut/engraving style unprompted — "rich jewel-tone
+// colors" alone wasn't enough to hold the model on full color every time.
+export const STYLE = 'dark fantasy illustration, full color illustration, intricate linework, '
+  + 'rich jewel-tone colors, dramatic rim lighting, centered bust portrait, isolated on a '
+  + 'plain solid black background, black background, no scenery, no backdrop';
 
+// The three clusters appended after "photograph, 3d render" were all learned
+// the same way: fixed once on a single creature's own `avoid` list (or, for
+// the frame/ring cluster, on ICON_NEGATIVE only), then rediscovered again on
+// an unrelated creature because the fix never made it back to the shared
+// negative prompt every generation actually uses. Baked in here instead of
+// re-added per creature from ITEM-18 batch 2 onward.
+//   - frame/halo/ring: recurred independently on `drake`/`house-drake`/
+//     `fey-dragonet` (coiled-creature roundel), `ghoul-stalker`/`grindylow`
+//     (moon/halo), and then again on ITEM-18's own `adept`/`barrister`
+//     (arch/halo) and `guard-dog` (a decorative ring, traced to the prompt's
+//     own "a metal ring" collar detail being read as a framing device, not
+//     an object worn by the subject — worth remembering when describing
+//     small worn accessories: say what it's for, not that it's a ring).
+//   - monochrome/woodcut: `beggar`'s and `commoner`'s first attempts, and one
+//     `gnome-philomath` attempt, all drifted into a black-and-white antique
+//     engraving style inside an ornate frame — a different failure from the
+//     frame cluster above (composition was otherwise fine, just wrong color
+//     mode), so it needs its own terms rather than folding into the first.
+//   - colored (non-black) background: flagged as an unfixed gap in ITEM-2's
+//     own Verification notes (`grindylow`/`kappa` both came back on a solid
+//     colored field) and recurred on ITEM-18's `gnome-philomath` (solid
+//     teal) — the positive prompt already asks for a black background twice,
+//     so this was always a negative-list gap, not a wording-strength one.
 export const NEGATIVE = 'text, letters, words, watermark, signature, logo, frame, border, ornate border, '
   + 'parchment, paper texture, scroll, background scenery, landscape, architecture, interior, '
   + 'multiple figures, crowd, full body, tiny figure, blurry, deformed hands, extra limbs, '
-  + 'modern clothing, firearms, photograph, 3d render';
+  + 'modern clothing, firearms, photograph, 3d render, '
+  + 'circular frame, circular border, circular halo, glowing ring, decorative ring, ring border, '
+  + 'concentric circles, roundel, medallion, coin, wreath border, coiled into a circle, ouroboros, '
+  + 'mandala, moon, full moon, arch, archway, gothic arch, doorway, window, stained glass, portal, '
+  + 'black and white, monochrome, grayscale, greyscale, line art, woodcut print, engraving, sepia tone, '
+  + 'colored background, tinted background, solid color backdrop, colored backdrop, studio backdrop, '
+  + 'green screen, teal background, mint background';
 
 /**
  * A style for creatures that have no head to make a bust of.
@@ -60,15 +94,22 @@ export const NEGATIVE = 'text, letters, words, watermark, signature, logo, frame
  * "floating in empty black space" here — a creature with nothing under it
  * cannot be standing in a landscape.
  */
-export const SHAPELESS_STYLE = 'dark fantasy illustration, intricate linework, rich jewel-tone colors, '
-  + 'dramatic rim lighting, one single creature alone, floating in empty black space with '
-  + 'nothing around it, isolated on a plain solid black background, black background, '
-  + 'no scenery, no ground, no backdrop';
+export const SHAPELESS_STYLE = 'dark fantasy illustration, full color illustration, intricate linework, '
+  + 'rich jewel-tone colors, dramatic rim lighting, one single creature alone, floating in empty '
+  + 'black space with nothing around it, isolated on a plain solid black background, black '
+  + 'background, no scenery, no ground, no backdrop';
 
+// "reflection, water surface, wet ground, puddle" added after ITEM-18's
+// `bloodseeker`: its first accepted image passed `backgroundScore` (the
+// generator's own keep-best-of-4 fallback) at a middling score, but failed
+// `check-token-art.mjs`'s stricter standalone check over a faint ground/water
+// reflection gradient along the bottom edge — "ground, floor, terrain,
+// horizon" were already here and still weren't enough to hold the model off
+// a subtle gradient that isn't bright enough to trip the edge-ring measure.
 export const SHAPELESS_NEGATIVE = `${NEGATIVE}, face, head, eyes, mouth, teeth, fangs, portrait, `
   + 'person, humanoid, creature with a face, glass tank, aquarium, jar, container, display case, '
   + 'glass, wireframe, outline box, diagram, cutaway, cliff, canyon, rocks, cave, waterfall, '
-  + 'ground, floor, terrain, horizon';
+  + 'ground, floor, terrain, horizon, reflection, water surface, wet ground, puddle, fog, mist';
 
 /**
  * A style for the macro icons, which are not tokens and are not drawn big.
@@ -183,19 +224,57 @@ export const CREATURES = [
 ];
 
 /**
- * Encounter-generator bestiary art (ITEM-2 of docs/backlog.md).
+ * Encounter-generator bestiary art (ITEM-2/ITEM-18 of docs/backlog.md).
  *
  * The SRD/Monster Core bestiaries ship no token art for most entries, so a
- * randomly-generated encounter mostly spawned the default silhouette. This is
- * a prioritized first batch, not the whole bestiary — see the backlog item
- * for the frequency methodology. Written to their own directory, separate
- * from the hand-picked card-summon art above, since `data/creature-art.json`
- * looks these up by bestiary {pack, docId} rather than by a card's own name.
+ * randomly-generated encounter mostly spawned the default silhouette. Grown
+ * incrementally, batch by batch, against the priority list in
+ * `docs/creature-art-todo.csv` (level ascending, then rarity ascending) —
+ * see the backlog item for the methodology. Written to their own directory,
+ * separate from the hand-picked card-summon art above, since
+ * `data/creature-art.json` looks these up by bestiary {pack, docId} rather
+ * than by a card's own name.
  *
  * `homunculus` is deliberately absent here — the Monster Core bestiary entry
  * is the same creature the Homunculus card already has art for above, so
  * data/creature-art.json points it at that existing image instead of a
  * second, near-duplicate generation.
+ *
+ * Prompt-authoring checklist (ITEM-18 batch 1 needed a redo on 7 of 20 —
+ * these are the lessons that aren't fixable by the shared NEGATIVE/
+ * SHAPELESS_NEGATIVE lists above and have to be applied by hand, per entry,
+ * when writing a new one):
+ *   1. Ground every description in the bestiary's own text (`system.details.
+ *      publicNotes`, `system.traits.value`, `system.traits.size`) fetched
+ *      live via `foundry-rest`, not from memory — a plausible-sounding but
+ *      wrong physical description defeats the entire point of per-creature
+ *      art, and this codebase has no other check that would catch it.
+ *   2. Never describe a subject's shape or limbs by comparing it to a
+ *      different creature ("fingers splayed like spider legs") — the model
+ *      reads the comparison literally. `crawling-hand`'s worst attempt (a
+ *      full moonlit forest scene with a spider) traced directly to that one
+ *      phrase. Describe the actual anatomy instead.
+ *   3. Don't call a small worn accessory a "ring" (or anything else with a
+ *      strong circular-frame association) even when it's accurate — `guard-
+ *      dog`'s "a worn leather collar with a metal ring" was read as a
+ *      decorative border around the whole image, not an object on the dog.
+ *      Say what it's for ("a studded leather collar") instead.
+ *   4. For a subject that's a single isolated body part or small object
+ *      (a severed hand, an animated broom) rather than a whole creature,
+ *      frame it explicitly: "extreme close-up of X only, nothing else in
+ *      the frame" — `crawling-hand`'s fix, and worth reaching for by default
+ *      rather than only after a scenery-drift failure.
+ *   5. `shapeless: true` is for anything a "centered bust portrait" doesn't
+ *      suit — not just literally bodiless creatures (oozes, wisps) but also
+ *      small non-humanoid critters low to the ground (`clockwork-spy`,
+ *      `bloodseeker`). A humanoid-shaped subject (even a small one, even an
+ *      animal with an expressive face) almost always does fine on the plain
+ *      `STYLE`/`NEGATIVE` pair instead.
+ *   6. Review every image against `node tools/check-token-art.mjs` *and* by
+ *      eye before accepting — the checker catches bright/pale backgrounds
+ *      only; it does not catch off-style monochrome drift, wrong-subject
+ *      drift, or a solid-colored (but not bright) background, all of which
+ *      slipped past it in batch 1 and needed a manual catch.
  */
 export const MONSTER_ART = [
   { id: 'soulrider-fiend', file: 'soulrider-fiend', dir: 'assets/creature-art',
@@ -409,7 +488,175 @@ export const MONSTER_ART = [
       + 'in a low warning snarl, a muscular stance, a plain leather collar',
     avoid: 'cute, puppy, cartoon, wagging tail, friendly, circular border, ring, roundel, '
       + 'medallion, decorative surround, wreath, coiled into a circle, ouroboros, chain '
-      + 'border, spiked ring' }
+      + 'border, spiked ring' },
+
+  // ITEM-18 batch 2 (docs/backlog.md) — completes the level -1 tier (38
+  // creatures), pre-written ahead of generation per the MONSTER_ART
+  // docblock's prompt-authoring checklist above. Every `avoid` list below
+  // only needs to name risks specific to that one creature — the recurring
+  // cross-cutting failures (halo/frame, monochrome drift, colored
+  // background) are now covered once in the shared NEGATIVE/
+  // SHAPELESS_NEGATIVE constants instead of being repeated per entry.
+  { id: 'gutter-ooze', file: 'gutter-ooze', dir: 'assets/creature-art', shapeless: true,
+    prompt: 'A small squat mass of translucent brown-grey protoplasm oozing along a gutter, '
+      + 'pebbles and bits of refuse and rotting matter suspended inside its jelly, glistening '
+      + 'and dripping',
+    avoid: 'humanoid, face, large size, cube shape, clean, sparkling' },
+  { id: 'halfling-street-watcher', file: 'halfling-street-watcher', dir: 'assets/creature-art',
+    prompt: 'A halfling street watcher, small and round-cheeked, covered head to ankle in '
+      + 'mismatched scavenged armor and leather, a heavy frying pan held like a weapon, '
+      + 'sharp watchful eyes, cheerful but wary' },
+  { id: 'haniver', file: 'haniver', dir: 'assets/creature-art', shapeless: true,
+    prompt: 'A tiny amphibious fey gremlin with slick grey-green skin and rubbery fin-like '
+      + 'wings, webbed grasping fingers reaching curiously, wide inquisitive eyes, perched low '
+      + 'and alert',
+    avoid: 'humanoid, fish, mermaid, cute, cartoon' },
+  { id: 'harrow-reader', file: 'harrow-reader', dir: 'assets/creature-art',
+    prompt: 'A human harrow reader in layered traveler’s robes hung with charms, fanning a '
+      + 'spread of ornately illustrated harrow cards in one hand, an appraising knowing gaze',
+    avoid: 'legible card details, readable text, tarot cliche robes' },
+  { id: 'judge', file: 'judge', dir: 'assets/creature-art',
+    prompt: 'A stern human judge in formal dark robes, a heavy ceremonial gavel held upright, '
+      + 'a cold unwavering expression, sharp authoritative posture' },
+  { id: 'kobold-warrior', file: 'kobold-warrior', dir: 'assets/creature-art',
+    prompt: 'A small reptilian kobold warrior, scaly red-brown hide, a narrow snout and small '
+      + 'sharp teeth, crude scavenged armor, a short spear held ready, beady cunning eyes' },
+  { id: 'librarian', file: 'librarian', dir: 'assets/creature-art',
+    prompt: 'A human librarian in a modest long coat, a stack of old bound tomes cradled in '
+      + 'one arm, spectacles perched low, a precise and watchful expression' },
+  { id: 'merchant', file: 'merchant', dir: 'assets/creature-art',
+    prompt: 'A shrewd human merchant in fine layered trade clothes, a jingling coin purse held '
+      + 'in one hand, a ledger tucked under the other arm, a calculating salesman’s smile' },
+  { id: 'mitflit', file: 'mitflit', dir: 'assets/creature-art', shapeless: true,
+    prompt: 'A small hunched fey gremlin, mottled grey-green skin, oversized drooping ears, a '
+      + 'cringing timid posture, wide anxious eyes, a tamed beetle clinging to its shoulder',
+    avoid: 'confident posture, cute, humanoid child, standing upright proudly' },
+  { id: 'monkey', file: 'monkey', dir: 'assets/creature-art',
+    prompt: 'A small quick primate with bright orange-brown fur, a long prehensile tail curled '
+      + 'behind it, clutching a stolen piece of fruit, sharp curious eyes, mid-scamper',
+    avoid: 'cute, cartoon, human clothing, circus' },
+  { id: 'nyktera', file: 'nyktera', dir: 'assets/creature-art', shapeless: true,
+    prompt: 'A tiny gentle fey sprite with a bat’s furred face and large membranous bat wings, '
+      + 'huge affectionate dark eyes, small clawed feet, hovering with wings spread',
+    avoid: 'humanoid, vampire, evil, fangs bared aggressively, cute cartoon bat' },
+  { id: 'obsessive-researcher', file: 'obsessive-researcher', dir: 'assets/creature-art',
+    prompt: 'A gaunt sunlight-deprived human researcher in rumpled scholarly robes, wild '
+      + 'unkempt hair, ink-stained fingers clutching a dense annotated tome, feverishly intense '
+      + 'eyes' },
+  { id: 'phantasmal-minion', file: 'phantasmal-minion', dir: 'assets/creature-art', shapeless: true,
+    prompt: 'A crude half-formed humanoid shape made of translucent grey-violet ghostlight, '
+      + 'featureless smooth head, simple stubby limbs, faintly glowing outline, incomplete and '
+      + 'flickering like an unfinished illusion',
+    avoid: 'detailed face, clothing, weapon, skeleton, realistic skin, solid opaque body' },
+  { id: 'physician', file: 'physician', dir: 'assets/creature-art',
+    prompt: 'A human physician in a long clean coat, a leather satchel of instruments and '
+      + 'vials open at hand, wire spectacles, a calm clinical and observant expression' },
+  { id: 'pilgrim-of-irori', file: 'pilgrim-of-irori', dir: 'assets/creature-art',
+    prompt: 'A travel-worn human pilgrim in simple sturdy robes marked with a small monastic '
+      + 'sigil, a walking staff in hand, a dusty pack, a serene disciplined expression' },
+  { id: 'pufferfish', file: 'pufferfish', dir: 'assets/creature-art', shapeless: true,
+    prompt: 'A small round fish fully inflated into a spiked ball, sharp spines radiating in '
+      + 'every direction, tiny round eyes, mottled brown-yellow skin, floating alone',
+    avoid: 'sea urchin, cartoon, cute, deflated, smooth without spines' },
+  { id: 'red-fox', file: 'red-fox', dir: 'assets/creature-art',
+    prompt: 'A sleek red fox with rust-orange fur, a white underbelly, a bushy white-tipped '
+      + 'tail, pointed alert ears, sharp cunning eyes, mid-pounce',
+    avoid: 'cute, cartoon, plush toy, domestic dog' },
+  { id: 'root-leshy-groundskeeper', file: 'root-leshy-groundskeeper', dir: 'assets/creature-art',
+    prompt: 'A small stout leshy whose entire head is a gnarled woody root carved with two '
+      + 'small glowing eyes and no other facial features, a stubborn hunched posture, a '
+      + 'wooden digging tool gripped in root-like hands, bark-textured limbs',
+    avoid: 'human face, human skin, beard, moustache' },
+  { id: 'servant', file: 'servant', dir: 'assets/creature-art',
+    prompt: 'A human household servant in a plain dark uniform with a white apron, a folded '
+      + 'linen cloth over one arm, a poised deferential posture, a composed expression' },
+  { id: 'server', file: 'server', dir: 'assets/creature-art',
+    prompt: 'A human tavern server in a stained work apron, balancing a wooden tray of tankards '
+      + 'on one hand, quick on their feet, a harried but good-natured expression' },
+  { id: 'severed-head', file: 'severed-head', dir: 'assets/creature-art', shapeless: true,
+    prompt: 'Extreme close-up of a single severed human head only, nothing else in the frame, '
+      + 'grey rotting undead flesh, matted hair, hollow sunken eyes with a faint unholy glow, '
+      + 'no neck or body attached, floating alone in plain empty black space',
+    avoid: 'body, neck, shoulders, clean skin, living expression, full skeleton, jack-o-lantern' },
+  { id: 'skeleton-guard', file: 'skeleton-guard', dir: 'assets/creature-art',
+    prompt: 'An animated skeletal guard in bare bone, faint unholy violet light glowing in its '
+      + 'empty eye sockets, a notched ancient blade held ready, tattered remnants of old armor',
+    avoid: 'flesh, skin, living face' },
+  { id: 'skunk', file: 'skunk', dir: 'assets/creature-art',
+    prompt: 'A small black-furred skunk with a bold white stripe down its back, a raised '
+      + 'bushy tail, small dark eyes, an alert defensive stance',
+    avoid: 'cute, cartoon, plush toy' },
+  { id: 'snapping-turtle', file: 'snapping-turtle', dir: 'assets/creature-art', shapeless: true,
+    prompt: 'A squat freshwater snapping turtle, a rough dark shell, a long flexible neck '
+      + 'thrust forward, a sharp hooked beak open aggressively, small fierce eyes',
+    avoid: 'humanoid, cute, cartoon, water pool, wet ground' },
+  // The existing "soulrider-fiend"/"spawning-soulrider-fiend" entries above
+  // depict a fully-grown soulrider's reanimated-corpse host; these two are a
+  // different, lower-level bestiary entry representing the small unattached
+  // parasite itself, per its own publicNotes ("narrow creatures only a few
+  // feet long... before beginning their growth") — deliberately not drawn as
+  // a corpse-host to avoid duplicating that other entry's exact composition.
+  { id: 'soulrider-celestial', file: 'soulrider-celestial', dir: 'assets/creature-art', shapeless: true,
+    prompt: 'A small narrow aberration a few feet long, a segmented worm-like body of pale '
+      + 'gold and white with faint feathered fronds along its sides, a soft holy radiance, '
+      + 'no host body, coiling alone',
+    avoid: 'corpse, host body, humanoid, angel wings, halo' },
+  { id: 'soulrider-monitor', file: 'soulrider-monitor', dir: 'assets/creature-art', shapeless: true,
+    prompt: 'A small narrow aberration a few feet long, a segmented worm-like body of grey '
+      + 'and silver with faceted geometric ridges along its sides, a cold neutral gleam, no '
+      + 'host body, coiling alone',
+    avoid: 'corpse, host body, humanoid, robot, clockwork gears' },
+  { id: 'sprite', file: 'sprite', dir: 'assets/creature-art', shapeless: true,
+    prompt: 'A tiny nine-inch fey sprite with delicate insectile wings glowing faintly like a '
+      + 'firefly, a small impish face with a capricious grin, wary alert posture, hovering '
+      + 'alone',
+    avoid: 'humanoid adult, large size, cute cartoon fairy, wand, wings like a butterfly' },
+  { id: 'tax-collector', file: 'tax-collector', dir: 'assets/creature-art',
+    prompt: 'A humorless human tax collector in stiff formal clothes, a heavy ledger book '
+      + 'open in one hand, a wax seal stamp in the other, a cold unsympathetic expression' },
+  { id: 'teacher', file: 'teacher', dir: 'assets/creature-art',
+    prompt: 'A patient human teacher in modest scholarly attire, a slate chalkboard held under '
+      + 'one arm, a piece of chalk in hand, a warm encouraging expression' },
+  { id: 'three-toed-sloth', file: 'three-toed-sloth', dir: 'assets/creature-art', shapeless: true,
+    prompt: 'A small shaggy three-toed sloth with algae-tinted greenish fur, long curved '
+      + 'fearsome claws, hanging upside down from an unseen branch, a gentle sleepy '
+      + 'expression',
+    avoid: 'cute, cartoon, standing upright, ground, tree trunk visible' },
+  { id: 'tooth-fairy', file: 'tooth-fairy', dir: 'assets/creature-art', shapeless: true,
+    prompt: 'A tiny fey creature freshly hatched from a buried tooth, larval and unfinished '
+      + 'looking, small crude pliers clutched in spindly hands, papery translucent wings, '
+      + 'unsettling wide eyes',
+    avoid: 'cute, human tooth fairy costume, adult humanoid, wand, coins' },
+  { id: 'trained-raven', file: 'trained-raven', dir: 'assets/creature-art',
+    prompt: 'A glossy black raven with a sharp intelligent gleam in its eye, wings half-spread, '
+      + 'a small trinket clutched in one claw, perched and watchful',
+    avoid: 'cute, cartoon, crow with dull feathers' },
+  { id: 'trilobite', file: 'trilobite', dir: 'assets/creature-art', shapeless: true,
+    prompt: 'An ancient armored sea arthropod, a segmented oval exoskeleton ridged like a '
+      + 'horseshoe crab, many small jointed legs underneath, tiny compound eyes, seen from '
+      + 'above',
+    avoid: 'humanoid, insect wings, crab claws, water, wet ground' },
+  { id: 'urchin', file: 'urchin', dir: 'assets/creature-art',
+    prompt: 'A scrappy human street urchin child in ragged oversized clothes, a stolen coin '
+      + 'purse clutched tight, a sharp streetwise gaze, smudged dirt on the face',
+    avoid: 'cute, adult, wealthy clothing' },
+  { id: 'viper', file: 'viper', dir: 'assets/creature-art',
+    prompt: 'A coiled venomous viper with patterned dark scales, hinged fangs bared and '
+      + 'dripping venom, a raised striking posture, narrow slit-pupiled eyes',
+    avoid: 'cute, cartoon, legs, arms' },
+  { id: 'weasel', file: 'weasel', dir: 'assets/creature-art',
+    prompt: 'A small lean weasel with sleek brown fur, an elongated body, sharp needle-like '
+      + 'teeth bared, latched biting posture, fierce tiny eyes',
+    avoid: 'cute, cartoon, plush toy, ferret pet' },
+  { id: 'yellow-musk-thrall', file: 'yellow-musk-thrall', dir: 'assets/creature-art',
+    prompt: 'A mindless human thrall with waxy grey-green skin, vacant staring eyes, a thick '
+      + 'yellow flowering vine tendril bored into the back of the skull, slack jawed and '
+      + 'shambling',
+    avoid: 'flowers held decoratively, healthy skin, aware expression' },
+  { id: 'zombie-shambler', file: 'zombie-shambler', dir: 'assets/creature-art',
+    prompt: 'A slow shambling zombie with grey rotting flesh sloughing from its frame, '
+      + 'clouded dead eyes, arms outstretched, jaw hanging slack, tattered ragged clothes',
+    avoid: 'clean skin, fast running pose, comedic' }
 ];
 
 /**
