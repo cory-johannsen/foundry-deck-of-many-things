@@ -95,13 +95,17 @@ export function doorOffsetAt(seed, slot, role) {
 }
 
 /**
- * Door + gap geometry connecting `slot` to `slot + 1`, each end at its own
+ * Door geometry connecting `slot` to `slot + 1`, each end at its own
  * independent offset (`doorOffsetAt`) so the two doors often don't line up.
  *
- * Only `slot`'s side is a real Foundry door (`doorWall`, locked/unlocked by
- * the GM as today). `slot + 1`'s side is a plain opening — no door object,
- * just a gap left in an otherwise-solid wall — so the existing single
- * lock/unlock action still gates the whole connection with no change.
+ * Both ends are real Foundry doors. `slot`'s side (`doorWall`) is the
+ * progress gate — locked/unlocked by the GM as today. `slot + 1`'s side
+ * (`revealDoorWall`) starts merely closed, never locked — players can always
+ * open it once they're through the first door — and *opening* it is what
+ * reveals the next room and advances the tracker (see
+ * dungeon-scene.mjs's handleDungeonDoorOpened), replacing the earlier
+ * walk-into-the-room-boundary trigger with a real "open the door and see
+ * what's inside" beat.
  *
  * Both rooms' flanking wall segments span their *entire* connecting face
  * (solid for the room's full height/width, minus that room's own one-square
@@ -121,6 +125,7 @@ export function buildConnectionGeometry(slot, seed) {
   const incomingOffset = doorOffsetAt(seed, slot + 1, 'incoming');
   const plainWalls = [];
   let doorWall;
+  let revealDoorWall;
   let corridorRect;
 
   if (dir === 'east' || dir === 'west') {
@@ -131,6 +136,7 @@ export function buildConnectionGeometry(slot, seed) {
     const gapY0 = gy + incomingOffset;
     const gapY1 = gapY0 + DOOR_WIDTH;
     doorWall = { x1: faceX, y1: doorY0, x2: faceX, y2: doorY1 };
+    revealDoorWall = { x1: corridorEndX, y1: gapY0, x2: corridorEndX, y2: gapY1 };
     plainWalls.push(
       { x1: faceX, y1: gy, x2: faceX, y2: doorY0 },
       { x1: faceX, y1: doorY1, x2: faceX, y2: gy + gh },
@@ -149,6 +155,7 @@ export function buildConnectionGeometry(slot, seed) {
     const gapX0 = gx + incomingOffset;
     const gapX1 = gapX0 + DOOR_WIDTH;
     doorWall = { x1: doorX0, y1: faceY, x2: doorX1, y2: faceY };
+    revealDoorWall = { x1: gapX0, y1: corridorEndY, x2: gapX1, y2: corridorEndY };
     plainWalls.push(
       { x1: gx, y1: faceY, x2: doorX0, y2: faceY },
       { x1: doorX1, y1: faceY, x2: gx + gw, y2: faceY },
@@ -164,5 +171,5 @@ export function buildConnectionGeometry(slot, seed) {
   // leaves no room for the flanking segment on that side — drop the
   // resulting zero-length segment rather than create a degenerate Wall.
   const nonDegenerate = plainWalls.filter((w) => w.x1 !== w.x2 || w.y1 !== w.y2);
-  return { doorWall, plainWalls: nonDegenerate, corridorRect };
+  return { doorWall, revealDoorWall, plainWalls: nonDegenerate, corridorRect };
 }

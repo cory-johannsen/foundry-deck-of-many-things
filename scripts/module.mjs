@@ -19,7 +19,7 @@ import {
 import { generateEncounter } from './encounter-generator.mjs';
 import { DungeonApp, resolveCurrentRoom } from './ui/dungeon-app.mjs';
 import { abandonRun } from './dungeon-runner.mjs';
-import { handleDungeonRoomEnter } from './dungeon-scene.mjs';
+import { handleDungeonDoorOpened } from './dungeon-scene.mjs';
 import { maybeResolveCombatForActor, maybeResolveCombatForCombatant } from './dungeon-combat.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
@@ -89,10 +89,7 @@ Hooks.once('ready', async () => {
     resetDungeon: async (sceneId) => {
       if (!game.user.isGM) return ui.notifications.warn(game.i18n.localize('DOMMT.Dungeon.GmOnlyWarning'));
       await abandonRun({ sceneId: sceneId ?? canvas?.scene?.id });
-    },
-    // Called by the dispatcher script on each room's Region (executeScript,
-    // gmOnly) when a party token walks into it — see dungeon-scene.mjs.
-    onDungeonRoomEnter: (sceneId, tokenId, slot) => handleDungeonRoomEnter(sceneId, tokenId, slot)
+    }
   };
   if (game.user.isGM) {
     try { await ensureWorldMacros(); } catch (e) { console.error(`${MODULE_ID} | ensureWorldMacros failed`, e); }
@@ -214,6 +211,18 @@ Hooks.once('ready', registerChoiceSocket);
 Hooks.once('ready', registerChargeSound);
 
 Hooks.on('renderChatMessageHTML', bindPendingDrawButton);
+
+/**
+ * A dungeon room's discovery trigger — opening its own reveal door (see
+ * dungeon-scene.mjs's docblock for why this is a plain hook rather than a
+ * Region behavior). Fires on every connected client on every wall update;
+ * `handleDungeonDoorOpened` itself both filters for a real dungeon reveal
+ * door and only acts on the GM's own client.
+ */
+Hooks.on('updateWall', (wall, changes) => {
+  if (changes.ds !== CONST.WALL_DOOR_STATES.OPEN) return;
+  handleDungeonDoorOpened(wall.parent?.id, wall.id);
+});
 
 /**
  * Advances a dungeon room the instant its Combat auto-resolves (every
