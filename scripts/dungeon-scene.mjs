@@ -275,9 +275,13 @@ export function isSlotPopulated(scene, slot) {
  * Generate a combat room's encounter inside slot's own footprint. Hidden by
  * default (the discovery beat) — room 0 is the one exception, since the
  * party starts there with no door to walk through, so Start calls this with
- * `hidden:false`. The GM still gets the existing theme dialog + Accept/Reroll
- * preview — nothing about that flow changes, it's just handed a target room
- * instead of "near a focus token."
+ * `hidden:false`. The GM still gets the existing Accept/Reroll preview —
+ * nothing about that flow changes, it's just handed a target room instead of
+ * "near a focus token." No theme dialog, though (ITEM-21): a dungeon run's
+ * traits/excludeTraits are captured once at "Start Dungeon" and reused
+ * unchanged for every room it populates (Start, Populate Next Room, combat
+ * recovery all funnel through here), so re-asking for the same traits every
+ * time would just repeat a prompt the GM already answered.
  */
 export async function populateSlotEncounter(scene, slot, {
   prefillTraits = [], prefillExcludeTraits = [], hidden = true, levelOffsetBias = 0, locationTag = null
@@ -288,6 +292,7 @@ export async function populateSlotEncounter(scene, slot, {
     prefillExcludeTraits,
     levelOffsetBias,
     locationTag,
+    skipThemeDialog: true,
     originArea: {
       x: toPixels(rect.gx), y: toPixels(rect.gy),
       width: toPixels(rect.gw), height: toPixels(rect.gh)

@@ -1,26 +1,8 @@
 # Backlog
 
-_Last updated: 2026-09-18 (ITEM-20 done, ITEM-18 header restored)_
+_Last updated: 2026-09-18 (ITEM-21 done)_
 
 ## Active
-
-### ITEM-21: Starting a dungeon re-prompts the encounter theme dialog it just collected
-**State:** spec
-**Blocked:** false
-**Summary:** Clicking "Start Dungeon" already collects theme/exclude traits on its own form, but immediately pops up the separate "DOMMT: Generate Encounter" theme dialog again (for the first real room, if it's a combat room) — a redundant, unexpected extra prompt right after the GM just filled in the same fields.
-
-#### Spec
-
-**Problem.** Clicking "Start Dungeon" (`DungeonApp.#onStart`, `dungeon-app.mjs:208`) reads `traits`/`excludeTraits` off its own form and passes them into `createRun`, then immediately builds and populates the first real room via `buildPopulateAndUnlockRoom` → `populateSlotEncounter`. If that first room is a combat room, this chain ends up calling `generateEncounter()` (`encounter-generator.mjs:117`), which **unconditionally** opens `chooseThemeAndSize`'s `DialogV2` (`encounter-generator.mjs:22`, titled `DOMMT.Encounter.Title` — the same "Generate Encounter" theme dialog the standalone macro uses) before it will generate anything — even though `populateSlotEncounter` already passed the just-collected `state.traits`/`state.excludeTraits` in as `prefillTraits`/`prefillExcludeTraits`. Prefilling only pre-checks the dialog's own trait pickers; it doesn't skip the dialog. The GM sees: fill in traits on the Start form → click Start → immediately get asked to fill in (the same, already-checked) traits again in a second popup before the dungeon actually starts.
-
-**Root cause.** `generateEncounter` was designed for the standalone "DOMMT: Generate Encounter" macro, where there's no prior context and the theme dialog is the *entire* point. `populateSlotEncounter` (`dungeon-scene.mjs:279`) reuses `generateEncounter` wholesale for dungeon-room population, and its own docblock says this was a deliberate choice ("The GM still gets the existing theme dialog + Accept/Reroll preview — nothing about that flow changes"). But ITEM-1's own Spec already documents the actual intended design as the opposite: traits are "captured once at 'Start Dungeon' and reused unchanged for every room" — `generateEncounter` never got a way to honor that once prefill values are already known, so every dungeon-room population (Start, "Populate Next Room", combat recovery) re-prompts for input the run already has.
-
-**Goal.** Starting a dungeon run should not re-ask for theme traits it was just given. Once traits/excludeTraits are set at Start, populating a combat room during that run should proceed straight to the Accept/Reroll encounter preview using those already-known traits, with no intermediate theme dialog.
-
-**Scope.** `generateEncounter`/`chooseThemeAndSize` (`encounter-generator.mjs`) and `populateSlotEncounter`'s call into it (`dungeon-scene.mjs`). Likely needs a way for a caller that already has final traits (not just a prefill suggestion) to skip `chooseThemeAndSize` entirely and go straight to dealing/previewing the encounter.
-
-**Non-goals.** The standalone "DOMMT: Generate Encounter" macro keeps its theme dialog exactly as-is — it has no prior run context to draw traits from, so the prompt is doing real work there. Removing the Accept/Reroll preview dialog — that one stays for every path, dungeon or standalone; only the *theme* prompt is redundant when a run already supplied it. Whether "Populate Next Room" should ever let a GM change theme mid-run per room (a real, separate question ITEM-1 already gestures at) — out of scope here; this item only removes the *redundant* re-ask of information already given, not a deliberate later re-ask.
-
 
 ### ITEM-18: Generate token art for the full core bestiary
 **State:** spec
@@ -76,6 +58,35 @@ _Last updated: 2026-09-18 (ITEM-20 done, ITEM-18 header restored)_
 **Summary:** Grow `data/dungeon-setpieces.json` beyond the current 2 fully-transcribed puzzles + 3 stub traps into a fuller, more varied set of realistic traps and puzzles, and implement real generation/selection logic on top of it rather than a fixed small pool.
 
 ## Done
+
+### ITEM-21: Starting a dungeon re-prompts the encounter theme dialog it just collected
+**State:** done
+**Blocked:** false
+**Summary:** Clicking "Start Dungeon" already collects theme/exclude traits on its own form, but immediately pops up the separate "DOMMT: Generate Encounter" theme dialog again (for the first real room, if it's a combat room) — a redundant, unexpected extra prompt right after the GM just filled in the same fields.
+
+#### Spec
+
+**Problem.** Clicking "Start Dungeon" (`DungeonApp.#onStart`, `dungeon-app.mjs:208`) reads `traits`/`excludeTraits` off its own form and passes them into `createRun`, then immediately builds and populates the first real room via `buildPopulateAndUnlockRoom` → `populateSlotEncounter`. If that first room is a combat room, this chain ends up calling `generateEncounter()` (`encounter-generator.mjs:117`), which **unconditionally** opens `chooseThemeAndSize`'s `DialogV2` (`encounter-generator.mjs:22`, titled `DOMMT.Encounter.Title` — the same "Generate Encounter" theme dialog the standalone macro uses) before it will generate anything — even though `populateSlotEncounter` already passed the just-collected `state.traits`/`state.excludeTraits` in as `prefillTraits`/`prefillExcludeTraits`. Prefilling only pre-checks the dialog's own trait pickers; it doesn't skip the dialog. The GM sees: fill in traits on the Start form → click Start → immediately get asked to fill in (the same, already-checked) traits again in a second popup before the dungeon actually starts.
+
+**Root cause.** `generateEncounter` was designed for the standalone "DOMMT: Generate Encounter" macro, where there's no prior context and the theme dialog is the *entire* point. `populateSlotEncounter` (`dungeon-scene.mjs:279`) reuses `generateEncounter` wholesale for dungeon-room population, and its own docblock says this was a deliberate choice ("The GM still gets the existing theme dialog + Accept/Reroll preview — nothing about that flow changes"). But ITEM-1's own Spec already documents the actual intended design as the opposite: traits are "captured once at 'Start Dungeon' and reused unchanged for every room" — `generateEncounter` never got a way to honor that once prefill values are already known, so every dungeon-room population (Start, "Populate Next Room", combat recovery) re-prompts for input the run already has.
+
+**Goal.** Starting a dungeon run should not re-ask for theme traits it was just given. Once traits/excludeTraits are set at Start, populating a combat room during that run should proceed straight to the Accept/Reroll encounter preview using those already-known traits, with no intermediate theme dialog.
+
+**Scope.** `generateEncounter`/`chooseThemeAndSize` (`encounter-generator.mjs`) and `populateSlotEncounter`'s call into it (`dungeon-scene.mjs`). Likely needs a way for a caller that already has final traits (not just a prefill suggestion) to skip `chooseThemeAndSize` entirely and go straight to dealing/previewing the encounter.
+
+**Non-goals.** The standalone "DOMMT: Generate Encounter" macro keeps its theme dialog exactly as-is — it has no prior run context to draw traits from, so the prompt is doing real work there. Removing the Accept/Reroll preview dialog — that one stays for every path, dungeon or standalone; only the *theme* prompt is redundant when a run already supplied it. Whether "Populate Next Room" should ever let a GM change theme mid-run per room (a real, separate question ITEM-1 already gestures at) — out of scope here; this item only removes the *redundant* re-ask of information already given, not a deliberate later re-ask.
+
+#### Plan
+
+**Chosen fix.** `generateEncounter` gains a `skipThemeDialog` param (default `false`, so the standalone macro's own call — which never sets it — is completely unaffected). When `true`, it builds `theme` directly from `{ traits: prefillTraits, excludeTraits: prefillExcludeTraits }` instead of awaiting `chooseThemeAndSize`'s `DialogV2` — the same `{traits, excludeTraits}` shape that dialog's own callback already returns, so nothing downstream needed to change. `populateSlotEncounter` (`dungeon-scene.mjs`) — the single choke point every dungeon-room population call goes through (`buildPopulateAndUnlockRoom`, used by both `#onStart` and `resolveCurrentRoom`'s room-to-room progression, and `#onPopulateNext`'s recovery path) — now always passes `skipThemeDialog: true`, since a dungeon run's traits are already final by the time any room gets populated, not just a suggestion.
+
+**1. `scripts/encounter-generator.mjs`.** `generateEncounter` signature gains `skipThemeDialog = false`. The `chooseThemeAndSize` call becomes conditional: skip it and build `theme` from `prefillTraits`/`prefillExcludeTraits` directly when `skipThemeDialog` is true, otherwise unchanged.
+
+**2. `scripts/dungeon-scene.mjs`.** `populateSlotEncounter`'s call into `generateEncounter` adds `skipThemeDialog: true`. Docblock updated — it previously said "the GM still gets the existing theme dialog," which is no longer true for the theme prompt specifically (the Accept/Reroll preview is untouched).
+
+**Tests.** No new unit tests — both functions are `DialogV2`/`canvas`-dependent with no existing pure-function test coverage in this codebase (same precedent as the rest of `dungeon-scene.mjs`/`encounter-generator.mjs`); the change itself is a plain conditional with no new pure logic to isolate.
+
+**Verification.** `npm test` — 553 passing, unchanged (no test surface touched). `npm run validate`/`validate:dungeon` unaffected. Confirmed by tracing every `populateSlotEncounter` call site (`dungeon-app.mjs`'s `buildPopulateAndUnlockRoom` — covering both `#onStart`'s first-real-room build and every subsequent `resolveCurrentRoom` room-to-room advance — and `#onPopulateNext`) all funnel through the same choke point, so the fix applies uniformly to every point in a run where a combat room gets populated, not just the first. The standalone "DOMMT: Generate Encounter" macro's own call (`module.mjs`'s `generateEncounter: (options) => generateEncounter(options)`) never sets `skipThemeDialog`, so its dialog is untouched, matching the Non-goals exactly.
 
 ### ITEM-20: Frontier room's open outgoing face leaks vision/light past its walls
 **State:** done

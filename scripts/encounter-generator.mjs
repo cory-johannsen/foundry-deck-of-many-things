@@ -117,7 +117,7 @@ async function spawnEncounterTokens(api, roster, partyMembers, {
 
 export async function generateEncounter({
   prefillTraits = [], prefillExcludeTraits = [], originArea = null, forceHidden = false, extraFlags = null,
-  levelOffsetBias = 0, locationTag = null
+  levelOffsetBias = 0, locationTag = null, skipThemeDialog = false
 } = {}) {
   if (!game.user.isGM) {
     ui.notifications.warn(game.i18n.localize('DOMMT.Encounter.GmOnlyWarning'));
@@ -137,7 +137,15 @@ export async function generateEncounter({
     ui.notifications.warn(game.i18n.localize('DOMMT.Encounter.PartyTooSmall'));
   }
 
-  const theme = await chooseThemeAndSize({ api, prefillTraits, prefillExcludeTraits });
+  // A dungeon room population already has final traits — captured once at
+  // "Start Dungeon" and reused unchanged for every room (ITEM-1's own
+  // design), not just a prefill suggestion — so it skips straight to
+  // dealing/previewing instead of asking for the same traits again (ITEM-21).
+  // The standalone "DOMMT: Generate Encounter" macro has no such prior
+  // context, so it always shows the dialog (skipThemeDialog defaults false).
+  const theme = skipThemeDialog
+    ? { traits: prefillTraits, excludeTraits: prefillExcludeTraits }
+    : await chooseThemeAndSize({ api, prefillTraits, prefillExcludeTraits });
   if (!theme || theme === 'cancel') return;
 
   let seed = freshSeed();
