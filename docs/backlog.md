@@ -1,6 +1,6 @@
 # Backlog
 
-_Last updated: 2026-09-19 (ITEM-17 done, ITEM-20 reopened, ITEM-18 prompts preconstructed for the entire remaining worklist, ITEM-23 spec'd)_
+_Last updated: 2026-09-19 (ITEM-17 done, ITEM-20 reopened, ITEM-18 batch 3: 37 of 38 remaining level -1 creatures generated, ITEM-23 spec'd)_
 
 ## Active
 
@@ -130,6 +130,18 @@ Cross-cutting notes from the parallel run: 6 true creature-name collisions turne
 `docs/creature-art-todo.csv` is unchanged (still 1,589 rows, including the 38 level -1 rows whose prompts already existed pre-this-PR) — rows only come out once art is actually generated and validated, not when a prompt is written. Every remaining row (and the 38 level -1 rows from batch 2) now has a `MONSTER_ART` entry ready to generate. `module.json` bumped to 0.43.0.
 
 **Next up:** resume actual generation batch-by-batch (see the Plan's per-batch steps below), starting from the top of `docs/creature-art-todo.csv` (level -1). ITEM-18 stays `in-progress` until that CSV is empty.
+
+**Batch 3 (37 of the 38 remaining level -1 creatures, this PR) — completes the level -1 tier except for one deferred creature.** `node tools/generate-token-art.mjs` run against all 38 level -1 `MONSTER_ART` entries preconstructed in batch 2.
+
+**A real bug found and fixed before this batch could proceed.** `--reroll=N` (used to force a different image on a redo) was silently a no-op for any multi-word creature id: the seed hash (`[...id].reduce((a,c) => a*31+c.charCodeAt(0), 7)`) took its modulo only once at the end, so for ids longer than ~10 characters the accumulator blew past `Number.MAX_SAFE_INTEGER` mid-loop and lost precision — `+ reroll * 104_729` rounded away to nothing, and every "reroll" reproduced the exact same seed (and thus the exact same image) as `reroll=0`. Caught live: a `--reroll=1` redo of `halfling-street-watcher` reproduced all 4 of its original attempts' background scores exactly. Fixed by taking the modulo on every step of the reduce (`tools/generate-token-art.mjs`).
+
+**A new cross-cutting failure class, not caught by `backgroundScore`/`check-token-art.mjs`.** Several images came back with a full (often dark, so score-invisible) scene behind the subject instead of a plain black background — profession NPCs pulled toward showing their "workplace" (a librarian's bookshelves, a merchant's shelf of coins, a physician's wall of bottles, a teacher's chalkboard) even though nothing in their prompts asked for one, plus a few unrelated full-landscape backdrops and glow-ring halos. Promoted to the shared `NEGATIVE` constant (room/shop/shelf/landscape/vignette/glow-ring terms) rather than chasing it per creature — this is exactly the "fix at the source" precedent batch 2 already established for the frame/monochrome/colored-background clusters.
+
+**Redo tally: 24 of the 38 needed at least one redo, several needed many** (a higher rate than batch 1's 7/20 — this batch leaned harder on profession-NPC and prop-heavy prompts, the exact archetype the new failure class above targets). Two creatures needed rewritten prompts, not just added `avoid` terms: `yellow-musk-thrall` first rendered as a bare skull instead of the described fleshy "shambling humanoid" (prompt rewritten to explicitly require visible flesh and a full head/shoulders/torso), and `halfling-street-watcher` never once landed on a black background across 6 rounds and 25 total generations — including with the shared-constant fix, per-creature `avoid` additions, an explicit "solid black background" phrase in the prompt, and a raised CFG scale (10 vs the default 7) — before a full rewrite dropping the word "street" (the likely trigger, pulling toward an outdoor-scene association) got it down to a persistent dark grey (best score 56) but still not clean.
+
+**`halfling-street-watcher` deferred, not shipped.** After 6 rounds of genuinely different mitigations, this is a real, specific model/prompt interaction rather than an unlucky roll — continuing to spend GPU time on it has sharply diminishing returns. Its row stays in `docs/creature-art-todo.csv` (the only level -1 row left) and its `MONSTER_ART` entry's rewritten prompt stays in place for whoever picks this up next; worth trying a different sampler/checkpoint override or just accepting a non-black background as a one-off exception if another round of prompt changes doesn't work either.
+
+**Verification.** `npm test` — 627 passing (up from 590; 78 asset-existence entries, up from 41). `npm run validate:creature-art` — 77 entries, no duplicate lookup keys. `node tools/check-token-art.mjs` — all clean. `npm run validate`/`validate:dungeon` unaffected. Implemented in an isolated git worktree. `docs/creature-art-todo.csv` updated to remove the 37 shipped rows (1,552 remaining, 1 of which is the deferred level -1 creature). `module.json` bumped to 0.44.0.
 
 ### ITEM-15: Randomly place destructible cover items in rooms
 **State:** backlog
