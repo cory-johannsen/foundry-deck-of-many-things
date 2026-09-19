@@ -20,7 +20,7 @@
  * behavior runs in a more sandboxed context).
  */
 import {
-  ROOM_SIZE, ROOMS_PER_ROW, CORRIDOR_LEN,
+  ROOM_SIZE_LARGE, ROOMS_PER_ROW, CORRIDOR_LEN, INITIAL_GX,
   slotRect, slotRowCol, roomEnclosureWalls, buildConnectionGeometry, corridorTileVariant, outgoingFaceWall
 } from './dungeon-layout.mjs';
 import { freeSpotInRect } from './placement.mjs';
@@ -43,13 +43,20 @@ const CORRIDOR_ART_BY_VARIANT = {
   mid: `${ROOM_ART_DIR}/corridor-mid.webp`
 };
 
-// A room's own light (ITEM-14) — see buildRoomAtSlot. A room is ROOM_SIZE
-// (6) squares across; at this scene's 5ft/square grid that's a 30x30ft room
-// whose half-diagonal (center to corner) is ~21.2ft, so ROOM_LIGHT_BRIGHT
-// reaches every corner at full brightness, with ROOM_LIGHT_DIM giving a
-// generous soft falloff beyond the room into its connecting corridor.
-const ROOM_LIGHT_BRIGHT = 22;
-const ROOM_LIGHT_DIM = 40;
+// A room's own light (ITEM-14) — see buildRoomAtSlot. Radii scale with the
+// room's own actual size (ITEM-17, rooms are no longer all the same size):
+// a room is `roomSizeSquares` squares across, so at this scene's 5ft/square
+// grid its half-diagonal (center to corner) is roomSizeSquares*5/sqrt(2) ft
+// — ROOM_LIGHT_BRIGHT reaches every corner at full brightness, with
+// ROOM_LIGHT_DIM giving a generous soft falloff beyond the room into its
+// connecting corridor. For the original fixed ROOM_SIZE_SMALL (6) this
+// reproduces the exact bright:22/dim:40 this module always used.
+const GRID_DISTANCE_FT = 5;
+const ROOM_LIGHT_DIM_MARGIN = 18;
+function roomLightRadii(roomSizeSquares) {
+  const bright = Math.ceil((roomSizeSquares * GRID_DISTANCE_FT) / Math.SQRT2);
+  return { bright, dim: bright + ROOM_LIGHT_DIM_MARGIN };
+}
 const ROOM_LIGHT_COLOR = '#ff8844';
 const ROOM_LIGHT_ALPHA = 0.35;
 
@@ -70,11 +77,24 @@ function wallDoc({ x1, y1, x2, y2 }, { door = CONST.WALL_DOOR_TYPES.NONE, ds = C
   };
 }
 
+// Worst-case pre-sizing (ITEM-17): rooms can now be as big as
+// ROOM_SIZE_LARGE, but this only ever needs to be a safe *upper bound* — a
+// row of all-small rooms just leaves some of this headroom unused, same as
+// this module has always over-provisioned canvas space (see ITEM-20).
+// ensureSceneCovers still grows the scene further if a run somehow needs
+// more than even this. Width includes INITIAL_GX (dungeon-layout.mjs) —
+// every room's gx is offset by that much to stay positive even when a
+// west-moving row drifts left of where it started, so the scene itself
+// needs to be wide enough to contain that same offset, or a room built out
+// there silently lands outside the scene's declared bounds (confirmed live:
+// a too-narrow scene clamped/misplaced a Tile whose x exceeded its width,
+// before this was added — gy never needs the equivalent, since it only ever
+// increases).
 function requiredDimensions(maxSlot) {
   const { row } = slotRowCol(maxSlot);
-  const stride = ROOM_SIZE + CORRIDOR_LEN;
+  const stride = ROOM_SIZE_LARGE + CORRIDOR_LEN;
   return {
-    width: toPixels(ROOMS_PER_ROW * stride + MARGIN_ROOMS),
+    width: toPixels(INITIAL_GX + ROOMS_PER_ROW * stride + MARGIN_ROOMS),
     height: toPixels((row + 1) * stride + MARGIN_ROOMS)
   };
 }
@@ -109,13 +129,14 @@ export async function createDungeonScene() {
  * outgoingFaceWall's docblock. `locationTag`/`artVariant` (from the room's
  * own data — see dungeon-deck.mjs) pick its background Tile. `seed` (the
  * run's own seed) drives the connecting door/opening's independently random
- * placement on each side (ITEM-9) — deterministic per run, so it needs
- * threading through from the caller like `locationTag`/`artVariant`.
+ * placement on each side (ITEM-9), *and* this room's own size (small or
+ * large, ITEM-17) — deterministic per run, so it needs threading through
+ * from the caller like `locationTag`/`artVariant`.
  */
 export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag = null, artVariant = 0, seed = '' } = {}) {
   await ensureSceneCovers(scene, slot);
 
-  const walls = roomEnclosureWalls(slot, { hasOutgoing: !isGoal }).map((side) => wallDoc(side));
+  const walls = roomEnclosureWalls(seed, slot, { hasOutgoing: !isGoal }).map((side) => wallDoc(side));
   const tiles = [];
 
   if (slot > 0) {
@@ -179,14 +200,14 @@ export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag
     // across the rest of the scene's pre-sized canvas. Deleted and replaced
     // by the real door/opening geometry above the moment that next room
     // actually gets built.
-    walls.push(wallDoc(outgoingFaceWall(slot), {
+    walls.push(wallDoc(outgoingFaceWall(seed, slot), {
       flags: { [MODULE_ID]: { dungeonFrontierWallForSlot: slot } }
     }));
   }
 
   if (walls.length) await scene.createEmbeddedDocuments('Wall', walls);
 
-  const rect = slotRect(slot);
+  const rect = slotRect(seed, slot);
   tiles.push({
     texture: { src: roomArtPath({ locationTag, isGoal, artVariant }), anchorX: 0, anchorY: 0 },
     x: toPixels(rect.gx), y: toPixels(rect.gy),
@@ -199,15 +220,15 @@ export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag
   // AmbientLight to match, so a party with no darkvision (rules-based vision
   // gives a non-darkvision PC a vision radius of 0, confirmed live) couldn't
   // actually see the room they were standing in (ITEM-14). One centered
-  // light per room, radius generous enough to reach every corner (a room is
-  // ROOM_SIZE squares across — half its diagonal, in this scene's 5ft/square
-  // grid, is comfortably under 25ft — see ROOM_LIGHT_BRIGHT/DIM) plus a bit
-  // of dim falloff into the connecting corridor, fixes that without needing
+  // light per room, radius generous enough to reach every corner (scaled to
+  // this room's own actual size, ITEM-17 — see roomLightRadii) plus a bit of
+  // dim falloff into the connecting corridor, fixes that without needing
   // per-room-art torch positions (inconsistent across variants — e.g.
   // construct art has none at all).
+  const { bright, dim } = roomLightRadii(rect.gw);
   await scene.createEmbeddedDocuments('AmbientLight', [{
     x: toPixels(rect.gx + rect.gw / 2), y: toPixels(rect.gy + rect.gh / 2),
-    config: { dim: ROOM_LIGHT_DIM, bright: ROOM_LIGHT_BRIGHT, color: ROOM_LIGHT_COLOR, alpha: ROOM_LIGHT_ALPHA }
+    config: { dim, bright, color: ROOM_LIGHT_COLOR, alpha: ROOM_LIGHT_ALPHA }
   }]);
 }
 
@@ -232,11 +253,12 @@ export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag
  * find `currentIndex` already advanced and bail out before ever reaching a
  * camera pan) and by the tracker UI's own render, so simply having the
  * tracker window open keeps the view honest regardless of whether that
- * one-shot trigger happened to fire this time.
+ * one-shot trigger happened to fire this time. `seed` (ITEM-17) is needed to
+ * know this room's own actual size.
  */
-export function focusCameraOnSlot(scene, slot) {
+export function focusCameraOnSlot(scene, slot, seed) {
   if (canvas?.scene?.id !== scene.id) return;
-  const rect = slotRect(slot);
+  const rect = slotRect(seed, slot);
   const roomPixelSize = Math.max(toPixels(rect.gw), toPixels(rect.gh));
   const [screenWidth, screenHeight] = canvas.screenDimensions ?? [1000, 1000];
   // Fit the room's footprint plus a 30% margin into whichever screen
@@ -282,12 +304,14 @@ export function isSlotPopulated(scene, slot) {
  * traits/excludeTraits are captured once at "Start Dungeon" and reused
  * unchanged for every room it populates (Start, Populate Next Room, combat
  * recovery all funnel through here), so re-asking for the same traits every
- * time would just repeat a prompt the GM already answered.
+ * time would just repeat a prompt the GM already answered. `seed` (ITEM-17)
+ * is needed to know this room's own actual size, for the encounter's
+ * spawn-placement area.
  */
 export async function populateSlotEncounter(scene, slot, {
-  prefillTraits = [], prefillExcludeTraits = [], hidden = true, levelOffsetBias = 0, locationTag = null
+  prefillTraits = [], prefillExcludeTraits = [], hidden = true, levelOffsetBias = 0, locationTag = null, seed = ''
 } = {}) {
-  const rect = slotRect(slot);
+  const rect = slotRect(seed, slot);
   await generateEncounter({
     prefillTraits,
     prefillExcludeTraits,
@@ -333,9 +357,10 @@ async function removeActorTokensFromAllScenes(actorId) {
 }
 
 /** Start-of-run: place the party's tokens inside slot, removing any of their
- * tokens elsewhere in the world first. */
-export async function placePartyInSlot(scene, slot, partyMembers) {
-  const rect = slotRect(slot);
+ * tokens elsewhere in the world first. `seed` (ITEM-17) is needed to know
+ * this room's own actual size. */
+export async function placePartyInSlot(scene, slot, partyMembers, seed) {
+  const rect = slotRect(seed, slot);
   const occupied = [];
   const createdIds = [];
   for (const actor of partyMembers) {
@@ -408,10 +433,11 @@ export async function teardownDungeonRun(scene, { previousSceneId = null } = {})
   return { destSceneId: destScene?.id ?? null, deletedNpcActorCount: npcActorIds.length };
 }
 
-/** Move already-placed tokens into slot — for undo, stepping the party back. */
-export async function moveTokensToSlot(scene, tokenIds, slot) {
+/** Move already-placed tokens into slot — for undo, stepping the party back.
+ * `seed` (ITEM-17) is needed to know this room's own actual size. */
+export async function moveTokensToSlot(scene, tokenIds, slot, seed) {
   if (!tokenIds?.length) return;
-  const rect = slotRect(slot);
+  const rect = slotRect(seed, slot);
   const updates = tokenIds.map((id, i) => ({
     _id: id,
     x: toPixels(rect.gx + (i % rect.gw)),
@@ -440,7 +466,7 @@ export async function buildPopulateAndUnlockRoom(scene, state, room, physicalSlo
     await populateSlotEncounter(scene, physicalSlot, {
       prefillTraits: state.traits, prefillExcludeTraits: state.excludeTraits,
       levelOffsetBias: depthBiasFor({ physicalSlot, roomCount: state.rooms.length, isGoal: room.isGoal }),
-      locationTag: room.locationTag
+      locationTag: room.locationTag, seed: state.seed
     });
     // Only unlock once monsters are actually in place — a cancelled theme
     // dialog leaves the door locked rather than opening onto an empty room;
@@ -479,7 +505,7 @@ export async function handleDungeonDoorOpened(sceneId, wallId) {
   // opened would give away that a fight is coming.
   if (nextRoom?.kind === 'combat') await startCombatForSlot(scene, slot);
   const { state: advancedState } = await advanceToRoom({ sceneId, roomId: nextRoomId, revealedTokenIds });
-  focusCameraOnSlot(scene, slot);
+  focusCameraOnSlot(scene, slot, state.seed);
 
   // A rest room (ITEM-5) is safe and has nothing to resolve — like the
   // entry, its own way forward opens immediately, no GM click required,
@@ -512,7 +538,7 @@ export async function undoRoomEntry(sceneId) {
   const previousSlot = state.physicalSlotByRoomId[previousRoomId];
   const partyIds = partyActorIds();
   const partyTokenIds = scene.tokens.filter((t) => partyIds.has(t.actor?.id)).map((t) => t.id);
-  await moveTokensToSlot(scene, partyTokenIds, previousSlot);
+  await moveTokensToSlot(scene, partyTokenIds, previousSlot, state.seed);
 
   await undoLastRoomEntry({ sceneId });
 }
