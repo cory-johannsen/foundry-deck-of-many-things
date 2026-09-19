@@ -1,6 +1,6 @@
 # Backlog
 
-_Last updated: 2026-09-17 (ITEM-9 done)_
+_Last updated: 2026-09-18 (ITEM-10 done)_
 
 ## Active
 
@@ -21,6 +21,29 @@ _Last updated: 2026-09-17 (ITEM-9 done)_
 **Summary:** Grow `data/dungeon-setpieces.json` beyond the current 2 fully-transcribed puzzles + 3 stub traps into a fuller, more varied set of realistic traps and puzzles, and implement real generation/selection logic on top of it rather than a fixed small pool.
 
 ## Done
+
+### ITEM-10: Trigger room discovery by opening a real door, not walking in
+**State:** done
+**Blocked:** false
+**Summary:** The "reveal door" ITEM-9 added on each room's incoming face (previously a plain wall-gap) becomes a real interactive Foundry door, and opening it — not a token merely walking into the room's rectangle — is what reveals the room's contents and advances the tracker.
+
+#### Spec
+
+**Problem/Goal.** ITEM-9 gave each room's incoming face a *gap* (no door object, always passable) rather than a real door. The reveal/advance trigger was a Region's `tokenEnter` behavior, firing the instant a party token's movement crossed into the room's rectangle — no tactile "open the door" moment, and nothing stopped a token from being inside the room's footprint before any door-like interaction happened. The user wants an actual door on each end of the connecting hallway, and wants *opening the second one* — not stepping past it — to be the moment a room reveals itself.
+
+**Mechanism.**
+1. `dungeon-layout.mjs`'s `buildConnectionGeometry` already computed the incoming face's gap position (`incomingOffset`) for ITEM-9's flanking walls; it now also returns that exact segment as `revealDoorWall` (a normal door-shaped wall segment) instead of leaving it as an implicit omission between two flanking segments.
+2. `dungeon-scene.mjs`'s `buildRoomAtSlot` creates `revealDoorWall` as a real Foundry door, flagged `dungeonRevealDoorForSlot: slot`, starting `CLOSED` (never `LOCKED`) — the *first* door (`dungeonDoorToSlot`, unchanged) stays the GM-gated progress lock; this second one is always freely operable by players once they're through it, its only job is to be the discovery trigger.
+3. The Region + `tokenEnter` `executeScript` behavior is removed entirely (it had no other purpose — confirmed nothing else reads the Region or its `physicalSlot` flag). Discovery is now driven by a `Hooks.on('updateWall', ...)` registered directly in `module.mjs`, checking `changes.ds === CONST.WALL_DOOR_STATES.OPEN` and calling `handleDungeonDoorOpened(sceneId, wallId)` (renamed from `handleDungeonRoomEnter`, same internal logic — reveal tokens, start Combat if applicable, `advanceToRoom`, focus camera — just keyed off a door-open event instead of a token-position event). No `module.api` entry is needed for this any more (the old Region-behavior trigger needed one because a Region's `executeScript` runs in a more sandboxed context; a plain Foundry hook registered in `module.mjs` already has direct access).
+4. `relockDoorToSlot` (the undo path) now also re-closes the reveal door, so undoing an accidental entry fully reverts both doors' state, not just the progress-gate one.
+
+**Non-goals.** Locking the reveal door — it's deliberately never lockable. Changing anything about the first (progress-gate) door's own lock/unlock flow.
+
+#### Plan
+
+Implemented directly (small, mechanical change riding entirely on ITEM-9's already-computed offsets): `dungeon-layout.mjs` (+`revealDoorWall`), `dungeon-scene.mjs` (second door creation, Region removal, `handleDungeonRoomEnter` → `handleDungeonDoorOpened`, `relockDoorToSlot` closes both), `module.mjs` (`updateWall` hook replacing the `onDungeonRoomEnter` API entry). `tests/dungeon-layout.test.mjs` gained coverage for `revealDoorWall`'s own position/face/independence from the outgoing door.
+
+**Verification.** `npm test` — 539 passing, 2 new. `npm run validate`/`validate:dungeon`/`validate:creature-art` unaffected. Live-verified via `foundry-rest` in scratch scenes: (1) the exact `buildRoomAtSlot` wall-creation shape — gate door `door:1, ds:LOCKED`, reveal door `door:1, ds:CLOSED` (never locked), offsets confirmed different (0 vs 5); (2) the `updateWall` hook itself — opening a flagged reveal door fires the hook with `changes.ds` matching `WALL_DOOR_STATES.OPEN`, `wall.parent.id` correctly resolves to the scene, the `dungeonRevealDoorForSlot` flag reads correctly inside the handler, and *closing* a door (not an open transition) correctly does not fire the filter. The `getRunState`/`advanceToRoom` portion of `handleDungeonDoorOpened` is pre-existing, previously-verified code reached through a new trigger path — not independently re-verified here since `game.settings.set` is unreachable through the live-script relay (banned substring); a live playtest pass once this merges will exercise it end to end.
 
 ### ITEM-9: Randomize door placement so rooms don't align
 **State:** done

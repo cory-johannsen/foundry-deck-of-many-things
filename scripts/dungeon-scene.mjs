@@ -1,7 +1,6 @@
 /**
- * The Foundry side of a physical dungeon: creates the run's own Scene,
- * builds one room at a time (walls + a Region carrying the automatic
- * room-entry trigger), and wires that trigger back into dungeon-runner.mjs.
+ * The Foundry side of a physical dungeon: creates the run's own Scene and
+ * builds one room at a time (walls, floor art, and a real reveal door).
  *
  * Rooms are built lazily — see dungeon-runner.mjs's docblock for why a
  * pre-built-everything approach would need reindexing logic this design
@@ -11,6 +10,14 @@
  * Modelled on scene-divination.mjs's Scene.create / activate-vs-view
  * precedent, but for a real explorable scene (tokenVision:true, real walls)
  * rather than a flat card-display one.
+ *
+ * Room discovery is triggered by opening a real door (the "reveal door" on
+ * each room's own incoming face, flagged `dungeonRevealDoorForSlot`) rather
+ * than a token merely walking into the room's footprint — module.mjs's own
+ * `updateWall` hook calls `handleDungeonDoorOpened` directly (no Region or
+ * `module.api` indirection needed for that, unlike the walk-in trigger this
+ * replaced, which needed `module.api` because a Region's `executeScript`
+ * behavior runs in a more sandboxed context).
  */
 import {
   ROOM_SIZE, ROOMS_PER_ROW, CORRIDOR_LEN,
@@ -26,10 +33,6 @@ const GRID_SIZE = 100;
 const MARGIN_ROOMS = 1;
 
 const toPixels = (gridVal) => gridVal * GRID_SIZE;
-
-const REGION_ENTRY_SCRIPT =
-  `const slot = region.getFlag('${MODULE_ID}', 'physicalSlot');\n` +
-  `await game.modules.get('${MODULE_ID}').api.onDungeonRoomEnter(scene.id, event.data.token.id, slot);`;
 
 const ROOM_ART_DIR = `modules/${MODULE_ID}/assets/dungeon-rooms`;
 const CORRIDOR_ART_PATH = `${ROOM_ART_DIR}/corridor.webp`;
@@ -97,11 +100,19 @@ export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag
   const tiles = [];
 
   if (slot > 0) {
-    const { doorWall, plainWalls, corridorRect } = buildConnectionGeometry(slot - 1, seed);
+    const { doorWall, revealDoorWall, plainWalls, corridorRect } = buildConnectionGeometry(slot - 1, seed);
     walls.push(wallDoc(doorWall, {
       door: CONST.WALL_DOOR_TYPES.DOOR,
       ds: CONST.WALL_DOOR_STATES.LOCKED,
       flags: { [MODULE_ID]: { dungeonDoorToSlot: slot } }
+    }));
+    // Never locked — the first door is the progress gate. This one is just
+    // the "open it and see what's inside" trigger (handleDungeonDoorOpened),
+    // freely operable by players the moment they're through the first door.
+    walls.push(wallDoc(revealDoorWall, {
+      door: CONST.WALL_DOOR_TYPES.DOOR,
+      ds: CONST.WALL_DOOR_STATES.CLOSED,
+      flags: { [MODULE_ID]: { dungeonRevealDoorForSlot: slot } }
     }));
     walls.push(...plainWalls.map((w) => wallDoc(w)));
     // corridorRect now spans the whole connecting face (ITEM-9), not just one
@@ -128,21 +139,6 @@ export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag
     width: toPixels(rect.gw), height: toPixels(rect.gh)
   });
   await scene.createEmbeddedDocuments('Tile', tiles);
-
-  await scene.createEmbeddedDocuments('Region', [{
-    name: `Room ${slot}`,
-    shapes: [{
-      type: 'rectangle',
-      x: toPixels(rect.gx), y: toPixels(rect.gy),
-      width: toPixels(rect.gw), height: toPixels(rect.gh)
-    }],
-    flags: { [MODULE_ID]: { physicalSlot: slot } },
-    behaviors: [{
-      name: 'Room Entry',
-      type: 'executeScript',
-      system: { events: ['tokenEnter'], source: REGION_ENTRY_SCRIPT }
-    }]
-  }]);
 }
 
 /**
@@ -191,9 +187,14 @@ export async function unlockDoorToSlot(scene, slot) {
   if (wall) await wall.update({ ds: CONST.WALL_DOOR_STATES.CLOSED });
 }
 
+/** Re-locks the progress-gate door AND re-closes the reveal door beyond it —
+ * a full undo of both doors' state, not just the one a GM would think to
+ * check, in case a player had already opened the second one too. */
 export async function relockDoorToSlot(scene, slot) {
   const wall = scene.walls.find((w) => w.getFlag(MODULE_ID, 'dungeonDoorToSlot') === slot);
   if (wall) await wall.update({ ds: CONST.WALL_DOOR_STATES.LOCKED });
+  const revealWall = scene.walls.find((w) => w.getFlag(MODULE_ID, 'dungeonRevealDoorForSlot') === slot);
+  if (revealWall) await revealWall.update({ ds: CONST.WALL_DOOR_STATES.CLOSED });
 }
 
 /** Whether a combat room's monsters have already been placed. */
@@ -279,19 +280,20 @@ export async function moveTokensToSlot(scene, tokenIds, slot) {
 }
 
 /**
- * The stable module.api entry point the Region's dispatcher script calls.
- * Ignores anything that isn't a genuine party token entering the true
- * frontier room — a monster's own token, a familiar, or a GM drag-move past
- * a still-locked wall shouldn't be able to desync the tracker.
+ * Called from module.mjs's `updateWall` hook whenever any door's state
+ * changes to OPEN — ignores anything that isn't the true frontier room's own
+ * reveal door (`dungeonRevealDoorForSlot`), so a plain scenery door, an
+ * already-passed room's door being reopened, or a GM idly clicking a wall
+ * can't desync the tracker.
  */
-export async function handleDungeonRoomEnter(sceneId, tokenId, slot) {
-  // The Region's dispatcher script only ever runs on a GM client (executeScript
-  // is gmOnly), but this function is also reachable directly through
-  // module.api — guard it the same way rather than trusting only the caller.
+export async function handleDungeonDoorOpened(sceneId, wallId) {
+  // Called directly from a global hook, which fires on every connected
+  // client — only the GM's own client should act on it.
   if (!game.user.isGM) return;
   const scene = game.scenes.get(sceneId);
-  const token = scene?.tokens.get(tokenId);
-  if (!token?.actor || !partyActorIds().has(token.actor.id)) return;
+  const wall = scene?.walls.get(wallId);
+  const slot = wall?.getFlag(MODULE_ID, 'dungeonRevealDoorForSlot');
+  if (slot == null) return;
 
   const state = getRunState(sceneId);
   if (!state) return;
@@ -301,8 +303,8 @@ export async function handleDungeonRoomEnter(sceneId, tokenId, slot) {
   const revealedTokenIds = await revealSlotTokens(scene, slot);
   const nextRoom = state.rooms.find((r) => r.id === nextRoomId);
   // Started here, not at populateSlotEncounter/build time — the room's
-  // monsters spawn hidden, and starting Combat before the room is actually
-  // entered would give away that a fight is coming.
+  // monsters spawn hidden, and starting Combat before the door is actually
+  // opened would give away that a fight is coming.
   if (nextRoom?.kind === 'combat') await startCombatForSlot(scene, slot);
   await advanceToRoom({ sceneId, roomId: nextRoomId, revealedTokenIds });
   focusCameraOnSlot(scene, slot);

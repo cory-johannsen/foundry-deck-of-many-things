@@ -140,11 +140,38 @@ describe('buildConnectionGeometry', () => {
   it('always lands every wall segment on integer grid coordinates', () => {
     for (let slot = 0; slot < 2 * ROOMS_PER_ROW; slot += 1) {
       const { doorWall, plainWalls, corridorRect } = buildConnectionGeometry(slot, 'seed-a');
+      const { revealDoorWall } = buildConnectionGeometry(slot, 'seed-a');
       const coords = [doorWall.x1, doorWall.y1, doorWall.x2, doorWall.y2,
+                       revealDoorWall.x1, revealDoorWall.y1, revealDoorWall.x2, revealDoorWall.y2,
                        corridorRect.gx, corridorRect.gy, corridorRect.gw, corridorRect.gh,
                        ...plainWalls.flatMap((w) => [w.x1, w.y1, w.x2, w.y2])];
       for (const v of coords) expect(Number.isInteger(v)).toBe(true);
     }
+  });
+
+  it('gives slot + 1 its own reveal door, on its own face, at its own (incoming) offset', () => {
+    const rect = slotRect(0); // slot 0 -> east, slot 1 receives it on its west face
+    const nextRect = slotRect(1);
+    const { revealDoorWall } = buildConnectionGeometry(0, 'seed-a');
+    // On slot 1's own west face, not slot 0's east face.
+    expect(revealDoorWall.x1).toBe(nextRect.gx);
+    expect(revealDoorWall.x2).toBe(nextRect.gx);
+    expect(revealDoorWall.x1).not.toBe(rect.gx + rect.gw);
+    // Width DOOR_WIDTH, fully within the room's face.
+    expect(Math.abs(revealDoorWall.y2 - revealDoorWall.y1)).toBe(DOOR_WIDTH);
+    expect(Math.min(revealDoorWall.y1, revealDoorWall.y2)).toBeGreaterThanOrEqual(nextRect.gy);
+    expect(Math.max(revealDoorWall.y1, revealDoorWall.y2)).toBeLessThanOrEqual(nextRect.gy + nextRect.gh);
+  });
+
+  it('the reveal door and the outgoing door can land at different offsets (ITEM-9\'s whole point)', () => {
+    let sawMisalignment = false;
+    for (let slot = 0; slot < 15; slot += 1) {
+      const { doorWall, revealDoorWall } = buildConnectionGeometry(slot, 'seed-a');
+      const doorPos = Math.min(doorWall.y1, doorWall.y2) + Math.min(doorWall.x1, doorWall.x2);
+      const revealPos = Math.min(revealDoorWall.y1, revealDoorWall.y2) + Math.min(revealDoorWall.x1, revealDoorWall.x2);
+      if (doorPos !== revealPos) { sawMisalignment = true; break; }
+    }
+    expect(sawMisalignment).toBe(true);
   });
 
   it('keeps the door fully within the room\'s face, never spilling past a corner', () => {
@@ -195,13 +222,14 @@ describe('buildConnectionGeometry', () => {
   });
 
   it('never produces a door and a plain wall at the same coordinates', () => {
+    const sameSeg = (a, b) => a.x1 === b.x1 && a.y1 === b.y1 && a.x2 === b.x2 && a.y2 === b.y2;
     for (const slot of [0, 1, ROOMS_PER_ROW - 1, ROOMS_PER_ROW]) {
-      const { doorWall, plainWalls } = buildConnectionGeometry(slot, 'seed-a');
+      const { doorWall, revealDoorWall, plainWalls } = buildConnectionGeometry(slot, 'seed-a');
       for (const w of plainWalls) {
-        const same = w.x1 === doorWall.x1 && w.y1 === doorWall.y1
-          && w.x2 === doorWall.x2 && w.y2 === doorWall.y2;
-        expect(same).toBe(false);
+        expect(sameSeg(w, doorWall)).toBe(false);
+        expect(sameSeg(w, revealDoorWall)).toBe(false);
       }
+      expect(sameSeg(doorWall, revealDoorWall)).toBe(false);
     }
   });
 
