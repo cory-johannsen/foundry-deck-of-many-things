@@ -19,10 +19,22 @@ import { totalCombatXp, xpPerSurvivor, lootGpForXp } from './combat-rewards.mjs'
 
 const MODULE_ID = 'deck-of-many-more-things';
 
+/** Ids of the actual party characters — this module's own definition of
+ * "a real party member," used instead of Foundry's `hasPlayerOwner` wherever
+ * a combatant needs to be told apart from an automated one. A solo-GM world
+ * with no separate player-role users (confirmed live on the real deployed
+ * world: one `Gamemaster`-role user owns every party actor directly) makes
+ * `hasPlayerOwner` false for actual party characters too, since that getter
+ * only counts non-GM users — this membership check doesn't depend on how
+ * the world's users/ownership happen to be set up. */
+function partyActorIds() {
+  return new Set((game.actors?.party?.members ?? []).map((m) => m.id));
+}
+
 /** Every token on `scene` carrying `flagKey === flagValue`, plus every current party token. */
 function combatantTokens(scene, flagKey, flagValue) {
   const monsterTokens = scene.tokens.filter((t) => t.getFlag(MODULE_ID, flagKey) === flagValue);
-  const partyIds = new Set((game.actors?.party?.members ?? []).map((m) => m.id));
+  const partyIds = partyActorIds();
   const partyTokens = scene.tokens.filter((t) => partyIds.has(t.actor?.id));
   return [...monsterTokens, ...partyTokens];
 }
@@ -226,15 +238,19 @@ async function rollAndApplyStrike(combatant, target) {
  * Hook target for `updateCombat` — module.mjs registers this whenever the
  * turn or round changes. Plays the current combatant's turn automatically if
  * it isn't a real party member: move adjacent to the nearest opponent if not
- * already, strike once, apply the result, advance the turn. A player-owned
- * combatant (an actual party character) is left entirely alone. If the next
- * combatant is also non-player-owned, this fires again naturally off that
- * same `nextTurn()` call — no explicit recursion needed here.
+ * already, strike once, apply the result, advance the turn. A real party
+ * character's own combatant is left entirely alone — checked by membership
+ * in `game.actors.party.members` (`partyActorIds`), not Foundry's
+ * `hasPlayerOwner`, which came back false for actual party actors on the
+ * real deployed world (a solo-GM world with no separate player-role users)
+ * and let their turns get auto-played right alongside the NPCs. If the next
+ * combatant is also non-party, this fires again naturally off that same
+ * `nextTurn()` call — no explicit recursion needed here.
  */
 export async function autoPlayCombatantTurnIfDue(combat) {
   if (!game.user.isGM || !isModuleCombat(combat)) return;
   const combatant = combat.combatant;
-  if (!combatant || combatant.actor?.hasPlayerOwner) return;
+  if (!combatant || partyActorIds().has(combatant.actor?.id) || combatant.actor?.hasPlayerOwner) return;
 
   if (combatant.isDefeated) {
     await combat.nextTurn();
