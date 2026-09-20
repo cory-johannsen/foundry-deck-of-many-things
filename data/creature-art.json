@@ -614,5 +614,13 @@
     "name": "Pilgrim of Irori",
     "level": -1,
     "art": "pilgrim-of-irori.webp"
+  },
+  {
+    "id": "halfling_street_watcher",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "FWLTPQZzrVsokXHb",
+    "name": "Halfling Street Watcher",
+    "level": -1,
+    "art": "halfling-street-watcher.webp"
   }
 ]
