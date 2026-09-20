@@ -43,7 +43,7 @@ export const TOKEN_PX = 512;
 // colors" alone wasn't enough to hold the model on full color every time.
 export const STYLE = 'dark fantasy illustration, full color illustration, intricate linework, '
   + 'rich jewel-tone colors, dramatic rim lighting, centered bust portrait, isolated on a '
-  + 'plain solid black background, black background, no scenery, no backdrop';
+  + 'plain solid black background, black background, not grey, not white, no scenery, no backdrop';
 
 // The three clusters appended after "photograph, 3d render" were all learned
 // the same way: fixed once on a single creature's own `avoid` list (or, for
@@ -87,6 +87,20 @@ export const STYLE = 'dark fantasy illustration, full color illustration, intric
 //     halo" failure the frame/halo cluster above already names, but reached
 //     via an aura/glow effect rather than a literal frame, so it needs its
 //     own wording to catch.
+//   - plain grey/white studio backdrop: ITEM-18's level 0 batch came back
+//     with roughly 25 of 41 images on a flat or gradient grey (occasionally
+//     white) backdrop instead of black — a different failure from the
+//     `colored background` cluster above (grey/white aren't "colored"), and
+//     one the `STYLE` positive prompt's "black background" alone wasn't
+//     holding against: SDXL's own default studio-portrait backdrop is a
+//     neutral grey vignette, and nothing here was telling it not to fall
+//     back to that default. `STYLE` also gained an explicit "not grey, not
+//     white" clause for the same reason — a negative-list fix alone wasn't
+//     enough for `halfling-street-watcher` earlier, so this time both sides
+//     get it from the start. A handful of this batch's other failures were
+//     genuine scenery instead (a farmer's open field, a splashing ocean
+//     backdrop under a dolphin) — folded into the existing landscape/water
+//     terms below rather than given a new cluster.
 export const NEGATIVE = 'text, letters, words, watermark, signature, logo, frame, border, ornate border, '
   + 'parchment, paper texture, scroll, background scenery, landscape, architecture, interior, '
   + 'multiple figures, crowd, full body, tiny figure, blurry, deformed hands, extra limbs, '
@@ -101,7 +115,11 @@ export const NEGATIVE = 'text, letters, words, watermark, signature, logo, frame
   + 'bookshelf, shelf of bottles, shelf of coins, wall decoration, framed picture, painting on wall, '
   + 'chalkboard, city skyline, cityscape, alleyway, mountain vista, forest silhouette, night sky vista, '
   + 'vignette, oval backdrop, framed panel behind subject, '
-  + 'glowing aura around subject, radiating glow ring, colored aura outline';
+  + 'glowing aura around subject, radiating glow ring, colored aura outline, '
+  + 'grey background, gray background, neutral grey backdrop, studio grey background, '
+  + 'grey gradient, radial grey vignette, grey studio backdrop, white background, '
+  + 'pale grey backdrop, plain field, open landscape, sky, clouds, horizon line, splashing water, '
+  + 'ocean spray, water splash effect';
 
 /**
  * A style for creatures that have no head to make a bust of.
@@ -724,9 +742,9 @@ export const MONSTER_ART = [
     prompt: "A small floating sphere of swirling storm-cloud and mist, faint crackles of light flickering within its wispy form, no solid limbs or body, drifting and spinning with playful, curious energy",
     avoid: "humanoid, solid body, face, wings" },
   { id: 'aiuvarin-translator', file: 'aiuvarin-translator', dir: 'assets/creature-art',
-    prompt: "An aiuvarin translator, human features with subtly pointed ears, alert intelligent eyes, neat practical travel clothing with a satchel of note-taking tools, leaning forward attentively as if mid-conversation, composed and observant" },
+    prompt: "An aiuvarin translator, human features with subtly pointed ears, alert intelligent eyes, neat practical travel clothing with a satchel of note-taking tools, leaning forward attentively as if mid-conversation, composed and observant, standing against a background that is solid black with nothing else in it" },
   { id: 'azarketi-crab-catcher', file: 'azarketi-crab-catcher', dir: 'assets/creature-art',
-    prompt: "An azarketi crab catcher, humanoid with faintly scaled damp skin, small gill slits along the neck, webbed fingers, dressed in simple wet-weather fishing garb, holding a woven crab trap, alert coastal stance" },
+    prompt: "An azarketi crab catcher, humanoid with faintly scaled damp skin, small gill slits along the neck, webbed fingers, dressed in simple wet-weather fishing garb, holding a woven crab trap, alert coastal stance, standing against a background that is solid black with nothing else in it" },
   { id: 'badger', file: 'badger', dir: 'assets/creature-art', shapeless: true,
     prompt: "A stout badger with dark brownish-grey fur and bold white stripes forming a mask around its eyes, low to the ground, claws bared and teeth showing in a ferocious defensive snarl",
     avoid: "humanoid, upright posture, large size" },
@@ -740,32 +758,38 @@ export const MONSTER_ART = [
     prompt: "A sleek grey bottlenose dolphin leaping through open water, smooth curved body, long snout, powerful tail fluke, water streaming off its skin, caught mid-arc in a playful motion",
     avoid: "humanoid, land animal features, dry" },
   { id: 'conspiracist', file: 'conspiracist', dir: 'assets/creature-art',
-    prompt: "A human conspiracist, shabby unkempt clothing covered in pinned scraps of scrawled notes and clippings, wild darting eyes, leaning in close as if sharing a dangerous secret, one finger raised insistently" },
+    prompt: "A human conspiracist, shabby unkempt clothing covered in pinned scraps of scrawled notes and clippings, wild darting eyes, leaning in close as if sharing a dangerous secret, one finger raised insistently, standing against a background that is solid black with nothing else in it" },
   { id: 'dockhand', file: 'dockhand', dir: 'assets/creature-art',
     prompt: "A human dockhand, muscular build, rolled sleeves and sweat-stained work clothes, calloused hands gripping a thick coil of rope, sturdy boots braced against a heavy load, mid-effort straining posture" },
   { id: 'dream-spider', file: 'dream-spider', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A small spider with an iridescent sheen across its many legs and bulbous abdomen, fine strands of shimmering web clinging to its body, poised low and alert, fangs slightly bared",
+    prompt: "A small spider with an iridescent sheen across its many legs and bulbous abdomen, fine strands of shimmering web clinging to its body, poised low and alert, fangs slightly bared, standing against a background that is solid black with nothing else in it",
     avoid: "humanoid, large size, dull colors" },
   { id: 'drover', file: 'drover', dir: 'assets/creature-art',
-    prompt: "A human drover, weathered travel clothes dusted from the road, a long wooden herding staff in hand, wide-brimmed hat shading a sun-worn face, watchful eyes scanning as if minding a herd nearby" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a human drover in weathered travel clothes, a long wooden herding "
+      + "staff gripped in one hand, a wide-brimmed hat shading a sun-worn face, watchful "
+      + "narrowed eyes, a stern practical expression" },
   { id: 'dwarf-smith', file: 'dwarf-smith', dir: 'assets/creature-art',
-    prompt: "A stout dwarf smith, thick braided beard singed at the tips, soot-streaked leather apron over broad shoulders, gripping a hammer and tongs, forearms corded with muscle, intent focused expression" },
+    prompt: "A stout dwarf smith, thick braided beard singed at the tips, soot-streaked leather apron over broad shoulders, gripping a hammer and tongs, forearms corded with muscle, intent focused expression, standing against a background that is solid black with nothing else in it" },
   { id: 'earth-wisp', file: 'earth-wisp', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A small rolling sphere of packed rock, mud, and tangled leaves, faint rumbling energy glowing dimly within its craggy surface, no solid limbs or body, hovering low with a timid, watchful stillness",
+    prompt: "A small rolling sphere of packed rock, mud, and tangled leaves, faint rumbling energy glowing dimly within its craggy surface, no solid limbs or body, hovering low with a timid, watchful stillness, standing against a background that is solid black with nothing else in it",
     avoid: "humanoid, face, smooth surface" },
   { id: 'envoy', file: 'envoy', dir: 'assets/creature-art',
     prompt: "A human envoy, fine but practical diplomatic attire with a sash denoting foreign allegiance, composed neutral expression, hands clasped formally, poised and measured as though addressing a court" },
   { id: 'farmer', file: 'farmer', dir: 'assets/creature-art',
     prompt: "A human farmer, simple homespun work clothes rolled at the sleeves, sun-weathered skin, calloused hands gripping a wooden hoe, sturdy boots caked with dirt, patient and steady stance" },
   { id: 'fisher', file: 'fisher', dir: 'assets/creature-art',
-    prompt: "A human fisher, plain weathered clothing, sleeves rolled past the elbow, calloused hands hauling in a woven net heavy with catch, salt-worn skin, squinting against sun and spray" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a human fisher in plain weathered clothing, sleeves rolled past "
+      + "the elbow, calloused hands gripping a woven fishing net bundled at their side, "
+      + "salt-worn skin, a squinting weathered expression" },
   { id: 'giant-maggot', file: 'giant-maggot', dir: 'assets/creature-art', shapeless: true,
     prompt: "A pale, segmented maggot the size of a person, soft ringed body glistening with slime, blind and limbless, a small mouth lined with tiny hooks, writhing and squirming as it feeds",
     avoid: "humanoid, insect wings, dry skin, bristled hair" },
   { id: 'hryngar-sharpshooter', file: 'hryngar-sharpshooter', dir: 'assets/creature-art',
     prompt: "A hryngar duergar dwarf sharpshooter, ashen grey skin, close-cropped hair, sturdy build in dark reinforced leathers, a loaded crossbow raised and steady, narrowed eyes tracking a distant target with grim focus" },
   { id: 'ioton', file: 'ioton', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A small ghostly cloud of shifting silver mist, ephemeral eye-like glimmers and faint unreadable symbols flickering briefly across its surface before fading, no fixed limbs or body, drifting weightlessly",
+    prompt: "A small ghostly cloud of shifting silver mist, ephemeral eye-like glimmers and faint unreadable symbols flickering briefly across its surface before fading, no fixed limbs or body, drifting weightlessly, floating alone against a background that is solid black with nothing else in it",
     avoid: "humanoid, solid body, face, color" },
   { id: 'kangaroo', file: 'kangaroo', dir: 'assets/creature-art', shapeless: true,
     prompt: "A large kangaroo balanced upright on powerful hind legs and a thick tail, small forelimbs curled close to its chest, long ears alert, muscular haunches coiled as if about to leap",
@@ -780,11 +804,11 @@ export const MONSTER_ART = [
   { id: 'orc-scrapper', file: 'orc-scrapper', dir: 'assets/creature-art',
     prompt: "An orc scrapper, towering muscular build with long arms and a bow-legged stance, heavy brow and jutting tusks, scarred greenish-grey skin, wearing crude scavenged armor, gripping a notched weapon with aggressive readiness" },
   { id: 'penitent-of-calistria', file: 'penitent-of-calistria', dir: 'assets/creature-art',
-    prompt: "A human penitent of Calistria, plain coarse-woven robes, fresh welts visible on bared shoulders from self-flagellation, a small wasp-shaped holy symbol at the chest, head bowed in humble supplication" },
+    prompt: "A human penitent of Calistria, plain coarse-woven robes, fresh welts visible on bared shoulders from self-flagellation, a small wasp-shaped holy symbol at the chest, head bowed in humble supplication, standing against a background that is solid black with nothing else in it" },
   { id: 'political-upstart', file: 'political-upstart', dir: 'assets/creature-art',
-    prompt: "A human political upstart, bold striking attire, chin lifted defiantly, one fist raised mid-gesture as if rallying a crowd, fiery determined eyes, hair windswept and untamed" },
+    prompt: "A human political upstart, bold striking attire, chin lifted defiantly, one fist raised mid-gesture as if rallying a crowd, fiery determined eyes, hair windswept and untamed, standing against a background that is solid black with nothing else in it" },
   { id: 'poppet-attendant', file: 'poppet-attendant', dir: 'assets/creature-art',
-    prompt: "A small poppet attendant construct, a stitched cloth-and-wood doll body with a smooth painted ceramic face, jointed wooden limbs, a simple servant's apron, holding a needle and thread, standing dutifully at attention" },
+    prompt: "A small poppet attendant construct, a stitched cloth-and-wood doll body with a smooth painted ceramic face, jointed wooden limbs, a simple servant's apron, holding a needle and thread, standing dutifully at attention, against a background that is solid black with nothing else in it" },
   { id: 'prime-minister', file: 'prime-minister', dir: 'assets/creature-art',
     prompt: "A human prime minister, austere formal bureaucratic robes layered with a heavy seal of office, stern composed expression, hands folded, an air of practiced authority and quiet calculation" },
   { id: 'pugwampi', file: 'pugwampi', dir: 'assets/creature-art',
@@ -809,7 +833,7 @@ export const MONSTER_ART = [
     prompt: "A small toxin-slicked frog with mottled skin in warning colors, bulging eyes, long hind legs coiled to leap, throat pulsing, crouched low and alert on damp ground",
     avoid: "humanoid, large size, dry skin" },
   { id: 'stingray', file: 'stingray', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A wide flat stingray gliding low, smooth grey-brown skin rippling along its broad fins, a long barbed tail curling upward in warning, small eyes set atop its diamond-shaped body",
+    prompt: "A wide flat stingray gliding low, smooth grey-brown skin rippling along its broad fins, a long barbed tail curling upward in warning, small eyes set atop its diamond-shaped body, floating alone against a background that is solid black with nothing else in it",
     avoid: "humanoid, legs, fish scales" },
   { id: 'toady', file: 'toady', dir: 'assets/creature-art',
     prompt: "A human toady, an oversized ill-fitting coat hanging off hunched shoulders, an ingratiating fawning grin, hands wringing nervously, eyes darting as if awaiting a master's command" },
