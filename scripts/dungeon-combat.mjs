@@ -183,12 +183,29 @@ const AUTO_PLAY_DELAY_MS = 700;
 // mid-turn (rather than never starting at all) still recovers.
 export const AGENT_TIMEOUT_MS = 45000;
 
-/** Waits AGENT_TIMEOUT_MS, then — if nothing external acted on this exact
- * turn in the meantime — notifies the GM and finishes the turn with the
- * heuristic instead of leaving it stalled forever. */
+/**
+ * Waits AGENT_TIMEOUT_MS, then fires the heuristic fallback for `combatant`
+ * — but only if this exact timer is still the freshest thing watching this
+ * exact turn. It is NOT a guarantee that nothing else happened in the
+ * meantime: `applyAgentDecision` arms a fresh timer after every action, so a
+ * multi-action turn can have several of these outstanding at once. What it
+ * does guarantee is that a superseded timer bails out silently instead of
+ * firing on top of a turn something else already advanced — it captures the
+ * combat's `round`/`turn` and the per-turn write counter at arm time, and on
+ * fire, re-checks the combatant is still current, the round/turn haven't
+ * moved on (catches the same combatant's *next* turn, not just a different
+ * one), and the counter is unchanged (catches a decision already applied by
+ * this same turn's more-recently-armed timer or the external poller).
+ */
 export async function armAgentTimeout(combat, combatant) {
+  const armedRound = combat.round;
+  const armedTurn = combat.turn;
+  const armedCounter = currentStoredAgentTurnState(combat, combatant.id)?.counter ?? 0;
   await new Promise((resolve) => setTimeout(resolve, AGENT_TIMEOUT_MS));
   if (!game.combats.has(combat.id) || combat.combatant?.id !== combatant.id) return;
+  if (combat.round !== armedRound || combat.turn !== armedTurn) return;
+  const currentCounter = currentStoredAgentTurnState(combat, combatant.id)?.counter ?? 0;
+  if (currentCounter !== armedCounter) return;
   ui.notifications.warn(
     game.i18n.format('DOMMT.Dungeon.Combat.AgentTimeoutWarning', { name: combatant.name })
   );
@@ -232,16 +249,45 @@ function actionReachSquares(action, gridDistanceFt) {
   return MELEE_REACH_SQUARES;
 }
 
-/** Reads back Combat's own per-turn agent bookkeeping, or a fresh one if
- * this is the first time this exact combatant's turn is seen. */
-function getAgentTurnState(combat, combatantId) {
+/**
+ * The raw stored `agentTurnState` flag, but only when it actually belongs to
+ * this exact turn — same `combatantId` *and* the same `round`/`turn` the
+ * Combat is on right now. `combatantId` alone isn't enough: the same
+ * combatant returns to this same check on every one of its future turns, so
+ * comparing only `combatantId` can't tell "still mid-turn" from "this
+ * combatant's turn again, next round" — which is exactly what left a lone
+ * agent-controlled NPC permanently passive from round 2 onward (its
+ * exhausted `actionsRemaining: 0` from the previous round kept matching).
+ * Returns `null` whenever the stored flag doesn't match, so callers fall
+ * back to a fresh state.
+ */
+function currentStoredAgentTurnState(combat, combatantId) {
   const stored = combat.getFlag(MODULE_ID, 'agentTurnState');
-  if (stored?.combatantId === combatantId) return { actionsRemaining: stored.actionsRemaining, mapIncrement: stored.mapIncrement };
-  return initAgentTurnState();
+  if (stored?.combatantId === combatantId && stored.round === combat.round && stored.turn === combat.turn) return stored;
+  return null;
 }
 
+/** Reads back Combat's own per-turn agent bookkeeping, or a fresh one
+ * (`initAgentTurnState()`) if this is the first decision seen for this exact
+ * combatant/round/turn — see `currentStoredAgentTurnState` above. */
+function getAgentTurnState(combat, combatantId) {
+  const stored = currentStoredAgentTurnState(combat, combatantId);
+  return stored ? { actionsRemaining: stored.actionsRemaining, mapIncrement: stored.mapIncrement } : initAgentTurnState();
+}
+
+/** Writes the per-turn state back, tagged with the combat's current
+ * `round`/`turn` (so a later turn can never mistake this for "still
+ * current," see `currentStoredAgentTurnState`) and a `counter` that
+ * increments on every write for this same turn. `armAgentTimeout` captures
+ * that counter at arm time and re-checks it before firing its fallback, so
+ * a timer superseded by a real decision already applied can tell it's stale
+ * instead of firing on top of a turn that's still being played. */
 async function setAgentTurnState(combat, combatantId, turnState) {
-  await combat.setFlag(MODULE_ID, 'agentTurnState', { combatantId, ...turnState });
+  const counter = (currentStoredAgentTurnState(combat, combatantId)?.counter ?? 0) + 1;
+  await combat.setFlag(MODULE_ID, 'agentTurnState', {
+    combatantId, round: combat.round, turn: combat.turn,
+    actionsRemaining: turnState.actionsRemaining, mapIncrement: turnState.mapIncrement, counter
+  });
 }
 
 /** The closest opposing combatant, or null if none remain. */

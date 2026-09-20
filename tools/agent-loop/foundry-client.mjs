@@ -9,7 +9,12 @@
 
 import { readFileSync } from 'node:fs';
 
-function readEnvOrDotenv(name) {
+/** Reads `name` from the real shell environment first, falling back to a
+ * `.env` file in the current working directory — the same lookup every var
+ * in this tool's README is documented against (`ANTHROPIC_API_KEY` included,
+ * see `providers/claude.mjs`), so exported for provider modules to reuse
+ * rather than each reimplementing (or silently not implementing) it. */
+export function readEnvOrDotenv(name) {
   if (process.env[name]) return process.env[name];
   try {
     const line = readFileSync('.env', 'utf8').split('\n').find((l) => l.startsWith(`${name}=`));
@@ -32,11 +37,18 @@ export async function findOnlineClientId({ baseUrl, apiKey, fetchImpl = fetch })
  * Throws on a relay-level refusal or a script-level error, with the same
  * distinction foundry-exec.sh makes (banned pattern / no client / thrown). */
 export async function runFoundryScript(script, {
-  baseUrl = readEnvOrDotenv('FOUNDRY_BASE_URL') ?? 'https://foundryrestapi.com',
+  baseUrl = readEnvOrDotenv('FOUNDRY_BASE_URL'),
   apiKey = readEnvOrDotenv('FOUNDRY_REST_API_KEY'),
   clientId = readEnvOrDotenv('FOUNDRY_CLIENT_ID'),
   fetchImpl = fetch
 } = {}) {
+  // No default to the public foundryrestapi.com relay — its 100
+  // requests/month free tier is incompatible with polling every few
+  // seconds (see the design doc's Alternatives Considered section and this
+  // tool's README step 1). A missing/misspelled FOUNDRY_BASE_URL must fail
+  // loudly here, not silently point the poller at the public relay and
+  // exhaust its month's quota in minutes.
+  if (!baseUrl) throw new Error('foundry-client: FOUNDRY_BASE_URL not set');
   if (!apiKey) throw new Error('foundry-client: FOUNDRY_REST_API_KEY not set');
   const client = clientId ?? await findOnlineClientId({ baseUrl, apiKey, fetchImpl });
   const res = await fetchImpl(`${baseUrl}/execute-js?clientId=${client}`, {

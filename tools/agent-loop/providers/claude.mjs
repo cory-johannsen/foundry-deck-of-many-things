@@ -6,13 +6,21 @@
  * parsing to get wrong.
  */
 
+import { readEnvOrDotenv } from '../foundry-client.mjs';
+
 const CLAUDE_MODEL = 'claude-sonnet-5';
 
-export async function decide(context, { apiKey = process.env.ANTHROPIC_API_KEY, fetchImpl = fetch } = {}) {
+export async function decide(context, { apiKey = readEnvOrDotenv('ANTHROPIC_API_KEY'), fetchImpl = fetch } = {}) {
   const candidateIds = context.candidates.map((c) => c.id);
   const body = {
     model: CLAUDE_MODEL,
-    max_tokens: 512,
+    // Generous headroom above the ~50-100 tokens the tool_use block itself
+    // needs: claude-sonnet-5's adaptive thinking tokens count against
+    // max_tokens too, and with no explicit thinking/effort configuration a
+    // small budget can be entirely consumed before the forced tool_use
+    // block is ever emitted — surfacing as the same misleading "no
+    // choose_action tool call" error below, just from a different cause.
+    max_tokens: 4096,
     tools: [{
       name: 'choose_action',
       description: 'Choose exactly one candidate action for this combatant\'s turn.',
@@ -42,6 +50,9 @@ export async function decide(context, { apiKey = process.env.ANTHROPIC_API_KEY, 
     body: JSON.stringify(body)
   });
   const payload = await res.json();
+  if (!res.ok) {
+    throw new Error(`claude provider: API request failed (${res.status}): ${payload?.error?.message ?? 'unknown error'}`);
+  }
   const toolUse = payload.content?.find((c) => c.type === 'tool_use' && c.name === 'choose_action');
   if (!toolUse) throw new Error('claude provider: no choose_action tool call in response');
 

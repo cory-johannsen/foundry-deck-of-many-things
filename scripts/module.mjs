@@ -106,10 +106,12 @@ Hooks.once('ready', async () => {
     // turn is due, or apply exactly one chosen candidate. Never exposes
     // arbitrary script access.
     getPendingAgentTurn: (combatId) => {
+      if (!game.user.isGM) return ui.notifications.warn(game.i18n.localize('DOMMT.Dungeon.GmOnlyWarning'));
       const combat = game.combats.get(combatId ?? game.combat?.id);
       return combat ? getPendingAgentTurn(combat) : null;
     },
     applyAgentDecision: (combatId, combatantId, candidateId) => {
+      if (!game.user.isGM) return ui.notifications.warn(game.i18n.localize('DOMMT.Dungeon.GmOnlyWarning'));
       const combat = game.combats.get(combatId);
       return combat ? applyAgentDecision(combat, combatantId, candidateId) : null;
     }

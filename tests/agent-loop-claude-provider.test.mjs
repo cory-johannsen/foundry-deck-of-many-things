@@ -44,4 +44,20 @@ describe('claude provider decide()', () => {
     const fetchImpl = fakeFetch('{"candidateId": "not-a-real-candidate", "rationale": "oops"}');
     await expect(decide(CONTEXT, { apiKey: 'test-key', fetchImpl })).rejects.toThrow(/not offered/);
   });
+
+  it('throws a diagnosable error when the API response is not ok, instead of the generic "no tool call" message', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ error: { type: 'authentication_error', message: 'invalid x-api-key' } })
+    });
+    await expect(decide(CONTEXT, { apiKey: 'bad-key', fetchImpl }))
+      .rejects.toThrow(/401.*invalid x-api-key/);
+  });
+
+  it('falls back to a generic message when a non-ok response has no error payload', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({}) });
+    await expect(decide(CONTEXT, { apiKey: 'test-key', fetchImpl }))
+      .rejects.toThrow(/500.*unknown error/);
+  });
 });
