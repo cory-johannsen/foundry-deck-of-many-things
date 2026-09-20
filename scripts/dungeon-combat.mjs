@@ -73,8 +73,24 @@ export function combatSideStatus(combat) {
   };
 }
 
-/** Grants XP/loot on victory, then deletes the Combat either way. */
+/**
+ * Grants XP/loot on victory, then deletes the Combat either way — and, since
+ * this fight is now genuinely over regardless of outcome, deletes every
+ * non-party combatant's token and its underlying Actor too. `spawnCreatures`/
+ * `spawnBuiltCreature` (foundry-api.mjs) always create a real, permanent
+ * world Actor for an encounter's monsters; before this, the only place that
+ * ever got cleaned up was `teardownDungeonRun` at Abandon time, so a
+ * normally-*won* dungeon (never abandoned) left every defeated monster's
+ * Actor sitting in the world forever — confirmed live: 8 had piled up in the
+ * real world from ordinary completed play before this existed.
+ */
 async function resolveCombat(combat, outcome, api) {
+  const scene = combat.scene;
+  const partyIds = partyActorIds();
+  const npcCombatants = combat.combatants.filter((c) => c.actor?.id && !partyIds.has(c.actor.id));
+  const npcTokenIds = npcCombatants.map((c) => c.tokenId).filter(Boolean);
+  const npcActorIds = [...new Set(npcCombatants.map((c) => c.actor.id))];
+
   if (outcome === 'victory') {
     const hostileLevels = combat.combatants
       .filter((c) => c.token?.disposition === -1)
@@ -89,6 +105,8 @@ async function resolveCombat(combat, outcome, api) {
     if (game.actors.party) await api.addCoins(game.actors.party.id, { gp: lootGpForXp(totalXp) });
   }
   await combat.delete();
+  if (npcTokenIds.length && scene) await scene.deleteEmbeddedDocuments('Token', npcTokenIds);
+  if (npcActorIds.length) await Actor.deleteDocuments(npcActorIds);
 }
 
 /** Shared by both the manual GM buttons and the automatic hooks below. */
