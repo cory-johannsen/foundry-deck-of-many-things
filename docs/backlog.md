@@ -1,6 +1,6 @@
 # Backlog
 
-_Last updated: 2026-09-20 (ITEM-11 reopened and fixed — a combat first room no longer prompts the GM immediately at Start; ITEM-8 reopened and fixed — party turns were auto-playing on a solo-GM world with no player-role users; ITEM-20 reopening resolved and done; ITEM-17 done, ITEM-18 level -1 and level 0 tiers fully complete, level 1 chunk 2/4 done, ITEM-23 spec'd)_
+_Last updated: 2026-09-20 (ITEM-11 reopened and fixed — a combat first room no longer prompts the GM immediately at Start; ITEM-8 reopened and fixed — party turns were auto-playing on a solo-GM world with no player-role users; ITEM-20 reopening resolved and done; ITEM-17 done, ITEM-18 level -1 and level 0 tiers fully complete, level 1 chunk 3/4 done, ITEM-23 spec'd)_
 
 ## Active
 
@@ -132,6 +132,16 @@ Cross-cutting notes from the parallel run: 6 true creature-name collisions turne
 **Redo tally: 22 of 40 needed at least one redo, one (`grig`) needed four rounds.** `grig`'s worst attempt combined three separate failures at once — a circular moon-halo backdrop, monochrome black-and-white rendering despite `STYLE`'s "full color illustration" clause, and a fully humanoid winged-woman subject with no trace of the described insectile hind legs — traced to the prompt's own "a humanoid torso joined to... hind legs" wording reading as "draw a human," not "draw a small fey with human-like features." Fixed by rewriting the prompt to state a one-foot height and "cricket-like hind legs" explicitly, plus a long avoid list naming every failure mode by name (`monochrome`, `moon`, `circular halo`, `tall adult human proportions`). Landed on a correct-enough insectile fey on the final attempt — not a perfect match to the original "impish grin, clutching a fiddle" framing, but clearly the right creature and fully clean background, accepted as within the normal range of creative variance this pipeline already tolerates elsewhere.
 
 **Verification.** `npm test` — 749 passing (up from 705; 200 asset-existence entries). `npm run validate:creature-art` — 199 entries, no duplicate lookup keys. `node tools/check-token-art.mjs` — only the same 4 already-documented exceptions flagged. `npm run validate`/`validate:dungeon` unaffected. `docs/creature-art-todo.csv`'s level 1 tier now has 80 of its original 160 rows remaining (two chunks done, two to go). `module.json` bumped to 0.48.0.
+
+**Batch 5 — level 1, chunk 3 of 4 (40 more, 120 of 160 total).** This chunk included all 23 of the module's planar `shade-*` variants at once (one `MONSTER_ART` entry per plane, from `shade-abaddon` through `shade-plane-of-wood`), which drove an unusually high share of this chunk's redos — humanoid "shade" prompts pulled toward decorative/ceremonial framing even more readily than the religious-NPC prompts that started this failure class in chunk 1.
+
+**Two creatures deferred after four rounds each, matching the `halfling-street-watcher` precedent.** `naiad` kept landing on an elaborate circular moon-halo mandala with butterfly-wing corner ornaments (the same fey-figure halo pull as batch 2's `grig`/`sprite`/`nyktera`, just never fully suppressed for this one), and `shade-axis` kept landing inside an ornate oval vignette frame with corner medallions — its own prompt's "covered... in tiny precise lines of close black script" was rewritten to "fine dark tattoo-like markings" (suspecting the model was reading "script" as an excuse to render a wireframe/manuscript-border look) but the framing pull persisted regardless. Both rows stay in `docs/creature-art-todo.csv` for a future attempt rather than continuing to spend GPU time past the point of diminishing returns.
+
+**Another tracking gap caught before shipping, not after.** `shade-plane-of-air` had passed `check-token-art.mjs` after the first redo round but was left out of that round's accepted-and-wired batch — the same mistake class as chunk 1's, but this time caught by a scripted cross-check (`original chunk list minus wired minus deferred` must be empty) run before finalizing rather than discovered afterward. Worth keeping this cross-check as a standing step for every future chunk, not just when something feels off.
+
+**Redo tally: 27 of 40 needed at least one redo (including the 2 ultimately deferred).**
+
+**Verification.** `npm test` — 787 passing (up from 749; 238 asset-existence entries). `npm run validate:creature-art` — 237 entries, no duplicate lookup keys. `node tools/check-token-art.mjs` — only the same 4 already-documented exceptions flagged. `npm run validate`/`validate:dungeon` unaffected. `docs/creature-art-todo.csv`'s level 1 tier now has 42 of its original 160 rows remaining (2 of which are this chunk's deferred creatures) — three chunks done, one to go. `module.json` bumped to 0.49.0.
 
 ### ITEM-15: Randomly place destructible cover items in rooms
 **State:** backlog

@@ -1144,19 +1144,35 @@ export const MONSTER_ART = [
   { id: 'naari-pyrochemist', file: 'naari-pyrochemist', dir: 'assets/creature-art',
     prompt: "A human naari pyrochemist, faint glowing veins of fire visible beneath the skin, alchemical vials and small bombs strapped across a leather bandolier, eyes bright with elemental passion." },
   { id: 'naiad', file: 'naiad', dir: 'assets/creature-art',
-    prompt: "A naiad, a fey nymph with elegant elven features, hair and flowing robes that seem woven from rippling water, standing serene and protective beside a natural spring." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a naiad, a fey nymph with elegant elven features, hair and "
+      + "flowing robes that seem woven from rippling water, a serene protective expression.",
+    avoid: "spring, pond, water scene, lily pads, forest, trees" },
   { id: 'nixie', file: 'nixie', dir: 'assets/creature-art',
-    prompt: "A nixie, an aquatic fey the size of a child, large eyes, long whisker-like barbels at the mouth, webbed fingers and toes, scaly skin, and long hair the texture of seaweed." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a nixie, an aquatic fey the size of a child, large eyes, long "
+      + "whisker-like barbels at the mouth, webbed fingers and toes, scaly skin, and long "
+      + "hair the texture of seaweed.",
+    avoid: "white background" },
   { id: 'nosoi', file: 'nosoi', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A nosoi psychopomp resembling a small sparrow, wearing a heavy leather plague doctor's beaked mask, perched attentively, clutching a tiny scroll in one clawed foot.",
-    avoid: "humanoid body, bare bird face" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a nosoi psychopomp resembling a small sparrow, wearing a heavy "
+      + "leather plague doctor's beaked mask, perched attentively, clutching a tiny scroll in "
+      + "one clawed foot.",
+    avoid: "humanoid body, bare bird face, colored glow, purple background, navy background" },
   { id: 'ooze-mephit', file: 'ooze-mephit', dir: 'assets/creature-art', shapeless: true,
     prompt: "A small boneless mephit made almost entirely of ocher-colored ooze and muck, a slick dripping form leaving foul stains wherever it touches, an unctuous flattering grin.",
     avoid: "bones, solid limbs, clean surface" },
   { id: 'orc-agriculturist', file: 'orc-agriculturist', dir: 'assets/creature-art',
-    prompt: "A tall tusked orc farmer, rugged practical work clothes, gripping a hoe or sickle, muscular build shaped by tough labor in unforgiving soil." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a tall tusked orc farmer, rugged practical work clothes, gripping "
+      + "a hoe or sickle, a muscular build shaped by tough labor." },
   { id: 'orc-veteran', file: 'orc-veteran', dir: 'assets/creature-art',
-    prompt: "A towering scarred orc veteran, thick muscled limbs, battle-worn armor plates, a heavy weapon gripped with grim experienced confidence, a face marked by countless old wounds." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a towering scarred orc veteran, thick muscled limbs, battle-worn "
+      + "armor plates, a heavy weapon gripped with grim experienced confidence, a face marked "
+      + "by countless old wounds.",
+    avoid: "grey background, colored background" },
   { id: 'ostovite', file: 'ostovite', dir: 'assets/creature-art', shapeless: true,
     prompt: "A tiny skittering fiend, a mass of spindly limbs gnawing hungrily at a scattered bone, its scavenger body low and quick across the ground.",
     avoid: "large size, humanoid shape" },
@@ -1193,11 +1209,19 @@ export const MONSTER_ART = [
     prompt: "An amorphous mass of grimy sewage and detritus, a sewer ooze oozing through a filthy culvert, its surface glistening with foul sludge and floating debris.",
     avoid: "humanoid, cube shape, clean water" },
   { id: 'shade-abaddon', file: 'shade-abaddon', dir: 'assets/creature-art',
-    prompt: "A gaunt haunted humanoid shade, terror etched into its mortal-seeming face, a faint choking mist of Abaddon clinging to its form as if forever fleeing an unseen pursuer." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a gaunt haunted humanoid shade, terror etched into its "
+      + "mortal-seeming face, faint traces of ash and old blood on pale skin.",
+    avoid: "mist, fog, haze, glowing outline" },
   { id: 'shade-astral-plane', file: 'shade-astral-plane', dir: 'assets/creature-art',
     prompt: "A translucent silver-blue humanoid shade, an astrally projected double of its mortal self, edges shimmering faintly like starlight, ethereal and weightless." },
   { id: 'shade-axis', file: 'shade-axis', dir: 'assets/creature-art',
-    prompt: "A humanoid shade with skin like aged parchment, covered edge to edge in tiny precise lines of close black script, still and orderly in posture." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a humanoid shade with skin like aged parchment, covered edge to "
+      + "edge in fine dark tattoo-like markings in orderly rows, still and orderly in "
+      + "posture.",
+    avoid: "wireframe, 3d mesh, grid lines, geometric grid, readable text, letters, grey "
+      + "background" },
   { id: 'shade-boneyard', file: 'shade-boneyard', dir: 'assets/creature-art',
     prompt: "A bare animated skeleton shade, hollow dark eye sockets, bones clean and ivory-pale, standing in the exact silhouette it held in life with an unnerving quiet stillness.",
     avoid: "flesh, skin, decayed muscle" },
@@ -1229,7 +1253,10 @@ export const MONSTER_ART = [
   { id: 'shade-plane-of-air', file: 'shade-plane-of-air', dir: 'assets/creature-art',
     prompt: "A swirling humanoid shade formed of visible wind currents and drifting mist, translucent and constantly stirring, barely holding its shape." },
   { id: 'shade-plane-of-earth', file: 'shade-plane-of-earth', dir: 'assets/creature-art',
-    prompt: "A humanoid shade formed of packed earth and rough stone, a cracked mineral texture across its surface, heavy and still." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a humanoid shade formed of packed earth and rough stone, a "
+      + "cracked mineral texture across its surface, heavy and still.",
+    avoid: "white background, gradient background" },
   { id: 'shade-plane-of-fire', file: 'shade-plane-of-fire', dir: 'assets/creature-art',
     prompt: "A humanoid shade made of flickering flame, glowing embers where its features would be, wavering light casting a warm restless glow." },
   { id: 'shade-plane-of-metal', file: 'shade-plane-of-metal', dir: 'assets/creature-art',

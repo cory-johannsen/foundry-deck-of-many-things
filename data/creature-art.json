@@ -1590,5 +1590,309 @@
     "name": "Grig\r",
     "level": 1,
     "art": "grig.webp"
+  },
+  {
+    "id": "naari_pyrochemist",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "M0R0oJXi5e01jxWe",
+    "name": "Naari Pyrochemist\r",
+    "level": 1,
+    "art": "naari-pyrochemist.webp"
+  },
+  {
+    "id": "oread_guard",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "gZL6zc7tQAmBKXpx",
+    "name": "Oread Guard\r",
+    "level": 1,
+    "art": "oread-guard.webp"
+  },
+  {
+    "id": "plague_zombie",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "aWiTcxAySoYjUP6T",
+    "name": "Plague Zombie\r",
+    "level": 1,
+    "art": "plague-zombie.webp"
+  },
+  {
+    "id": "raktavarna",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "nFhAJSpbJz1w71EU",
+    "name": "Raktavarna\r",
+    "level": 1,
+    "art": "raktavarna.webp"
+  },
+  {
+    "id": "reef_octopus",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "RknMXlwJcbvGhk3n",
+    "name": "Reef Octopus\r",
+    "level": 1,
+    "art": "reef-octopus.webp"
+  },
+  {
+    "id": "riding_dog",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "ECe2DkOgSSqXHBqv",
+    "name": "Riding Dog\r",
+    "level": 1,
+    "art": "riding-dog.webp"
+  },
+  {
+    "id": "riding_horse",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "CLf9k9A9ApTAkZeL",
+    "name": "Riding Horse\r",
+    "level": 1,
+    "art": "riding-horse.webp"
+  },
+  {
+    "id": "rigger",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "hBSGQAonirqUAHCP",
+    "name": "Rigger\r",
+    "level": 1,
+    "art": "rigger.webp"
+  },
+  {
+    "id": "sewer_ooze",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "9InGpxq5xbbHaL9f",
+    "name": "Sewer Ooze\r",
+    "level": 1,
+    "art": "sewer-ooze.webp"
+  },
+  {
+    "id": "shade_dead_vault",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "iOvt926hGa6ci3Q2",
+    "name": "Shade (Dead Vault)\r",
+    "level": 1,
+    "art": "shade-dead-vault.webp"
+  },
+  {
+    "id": "shade_maelstrom",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "dwE8vdnqBGjRWU46",
+    "name": "Shade (Maelstrom)\r",
+    "level": 1,
+    "art": "shade-maelstrom.webp"
+  },
+  {
+    "id": "shade_outer_rifts",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "0phL9JgjsbcPsuoS",
+    "name": "Shade (Outer Rifts)\r",
+    "level": 1,
+    "art": "shade-outer-rifts.webp"
+  },
+  {
+    "id": "shade_plane_of_fire",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "LIeIU7FCSZr25ss7",
+    "name": "Shade (Plane of Fire)\r",
+    "level": 1,
+    "art": "shade-plane-of-fire.webp"
+  },
+  {
+    "id": "shade_plane_of_metal",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "nX0oonECc1yyxSyc",
+    "name": "Shade (Plane of Metal)\r",
+    "level": 1,
+    "art": "shade-plane-of-metal.webp"
+  },
+  {
+    "id": "prisoner",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "oIHp4amcx8ecZRwM",
+    "name": "Prisoner\r",
+    "level": 1,
+    "art": "prisoner.webp"
+  },
+  {
+    "id": "python",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "Yadztw8CmYuWfA7k",
+    "name": "Python\r",
+    "level": 1,
+    "art": "python.webp"
+  },
+  {
+    "id": "shade_boneyard",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "j6E7RLYuFNuFgLlS",
+    "name": "Shade (Boneyard)\r",
+    "level": 1,
+    "art": "shade-boneyard.webp"
+  },
+  {
+    "id": "shade_creations_forge",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "aPyQVT1a4UdY4dDn",
+    "name": "Shade (Creation's Forge)\r",
+    "level": 1,
+    "art": "shade-creations-forge.webp"
+  },
+  {
+    "id": "shade_heaven",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "sxgfInlzlVdZS7KD",
+    "name": "Shade (Heaven)\r",
+    "level": 1,
+    "art": "shade-heaven.webp"
+  },
+  {
+    "id": "shade_hell",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "5BgI2GFP6D9B3wIN",
+    "name": "Shade (Hell)\r",
+    "level": 1,
+    "art": "shade-hell.webp"
+  },
+  {
+    "id": "shade_nirvana",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "5bhKDPTVzQJoVGv7",
+    "name": "Shade (Nirvana)\r",
+    "level": 1,
+    "art": "shade-nirvana.webp"
+  },
+  {
+    "id": "shade_plane_of_wood",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "loSwEJV8C5Xa9Lko",
+    "name": "Shade (Plane of Wood)\r",
+    "level": 1,
+    "art": "shade-plane-of-wood.webp"
+  },
+  {
+    "id": "ostovite",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "A53wPFx58XRx0UZ7",
+    "name": "Ostovite\r",
+    "level": 1,
+    "art": "ostovite.webp"
+  },
+  {
+    "id": "shade_astral_plane",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "2ZJo8mtDRD4Xffto",
+    "name": "Shade (Astral Plane)\r",
+    "level": 1,
+    "art": "shade-astral-plane.webp"
+  },
+  {
+    "id": "shade_ethereal_plane",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "assVtFdE3wpL41nf",
+    "name": "Shade (Ethereal Plane)\r",
+    "level": 1,
+    "art": "shade-ethereal-plane.webp"
+  },
+  {
+    "id": "shade_plane_of_water",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "Wk5flXpCpPzCNfs8",
+    "name": "Shade (Plane of Water)\r",
+    "level": 1,
+    "art": "shade-plane-of-water.webp"
+  },
+  {
+    "id": "messenger",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "z1tLeckmpJuStmlx",
+    "name": "Messenger\r",
+    "level": 1,
+    "art": "messenger.webp"
+  },
+  {
+    "id": "quasit",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "9jF564DF6ylEovna",
+    "name": "Quasit\r",
+    "level": 1,
+    "art": "quasit.webp"
+  },
+  {
+    "id": "shade_dreamlands",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "oDSlHEEOL2C5ioHb",
+    "name": "Shade (Dreamlands)\r",
+    "level": 1,
+    "art": "shade-dreamlands.webp"
+  },
+  {
+    "id": "shade_elysium",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "BnHYkRRddyGcgIl3",
+    "name": "Shade (Elysium)\r",
+    "level": 1,
+    "art": "shade-elysium.webp"
+  },
+  {
+    "id": "shade_netherworld",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "Xmo4EAdMgltKqjah",
+    "name": "Shade (Netherworld)\r",
+    "level": 1,
+    "art": "shade-netherworld.webp"
+  },
+  {
+    "id": "nixie",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "X4gmFWEuhtpjBj4P",
+    "name": "Nixie\r",
+    "level": 1,
+    "art": "nixie.webp"
+  },
+  {
+    "id": "nosoi",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "5KstOkXabrOlZaKR",
+    "name": "Nosoi\r",
+    "level": 1,
+    "art": "nosoi.webp"
+  },
+  {
+    "id": "orc_agriculturist",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "8WFse73d3kgTPbje",
+    "name": "Orc Agriculturist\r",
+    "level": 1,
+    "art": "orc-agriculturist.webp"
+  },
+  {
+    "id": "orc_veteran",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "V90OYOMyyPLPJuod",
+    "name": "Orc Veteran\r",
+    "level": 1,
+    "art": "orc-veteran.webp"
+  },
+  {
+    "id": "shade_abaddon",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "mJye6dqtmF7xquE3",
+    "name": "Shade (Abaddon)\r",
+    "level": 1,
+    "art": "shade-abaddon.webp"
+  },
+  {
+    "id": "shade_plane_of_earth",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "SN5yHit6vkKd4HQJ",
+    "name": "Shade (Plane of Earth)\r",
+    "level": 1,
+    "art": "shade-plane-of-earth.webp"
+  },
+  {
+    "id": "shade_plane_of_air",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "MqEpezChWmV14FHa",
+    "name": "Shade (Plane of Air)\r",
+    "level": 1,
+    "art": "shade-plane-of-air.webp"
   }
 ]
