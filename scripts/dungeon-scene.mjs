@@ -20,16 +20,31 @@
  * behavior runs in a more sandboxed context).
  */
 import {
-  ROOM_SIZE_LARGE, ROOMS_PER_ROW, CORRIDOR_LEN, INITIAL_GX,
-  slotRect, slotRowCol, roomEnclosureWalls, buildConnectionGeometry, corridorTileVariant, outgoingFaceWall
-} from './dungeon-layout.mjs';
-import { freeSpotInRect } from './placement.mjs';
-import { generateEncounter } from './encounter-generator.mjs';
-import { getRunState, advanceToRoom, undoLastRoomEntry, canUndoRoomEntry, markRoomOutcome } from './dungeon-runner.mjs';
-import { depthBiasFor } from './dungeon-deck.mjs';
-import { startCombatForSlot } from './dungeon-combat.mjs';
+  ROOM_SIZE_LARGE,
+  ROOMS_PER_ROW,
+  CORRIDOR_LEN,
+  INITIAL_GX,
+  slotRect,
+  slotRowCol,
+  roomEnclosureWalls,
+  buildConnectionGeometry,
+  corridorTileVariant,
+  outgoingFaceWall,
+} from "./dungeon-layout.mjs";
+import { freeSpotInRect } from "./placement.mjs";
+import { generateEncounter } from "./encounter-generator.mjs";
+import {
+  getRunState,
+  advanceToRoom,
+  undoLastRoomEntry,
+  canUndoRoomEntry,
+  markRoomOutcome,
+} from "./dungeon-runner.mjs";
+import { depthBiasFor } from "./dungeon-deck.mjs";
+import { startCombatForSlot } from "./dungeon-combat.mjs";
+import { playDoorSound } from "./dungeon-sound.mjs";
 
-const MODULE_ID = 'deck-of-many-more-things';
+const MODULE_ID = "deck-of-many-more-things";
 const GRID_SIZE = 100;
 const MARGIN_ROOMS = 1;
 
@@ -40,7 +55,7 @@ const CORRIDOR_ART_PATH = `${ROOM_ART_DIR}/corridor.webp`;
 const CORRIDOR_ART_BY_VARIANT = {
   single: CORRIDOR_ART_PATH,
   end: `${ROOM_ART_DIR}/corridor-end.webp`,
-  mid: `${ROOM_ART_DIR}/corridor-mid.webp`
+  mid: `${ROOM_ART_DIR}/corridor-mid.webp`,
 };
 
 // A room's own light (ITEM-14) — see buildRoomAtSlot. Radii scale with the
@@ -57,23 +72,33 @@ function roomLightRadii(roomSizeSquares) {
   const bright = Math.ceil((roomSizeSquares * GRID_DISTANCE_FT) / Math.SQRT2);
   return { bright, dim: bright + ROOM_LIGHT_DIM_MARGIN };
 }
-const ROOM_LIGHT_COLOR = '#ff8844';
+const ROOM_LIGHT_COLOR = "#ff8844";
 const ROOM_LIGHT_ALPHA = 0.35;
 
 /** The path to a room's background art — a dedicated image per locationTag
  * for the goal room (there's only ever one), or one of its regular pool of
  * pregenerated variants otherwise. */
 function roomArtPath({ locationTag, isGoal, artVariant }) {
-  return isGoal ? `${ROOM_ART_DIR}/${locationTag}-goal.webp` : `${ROOM_ART_DIR}/${locationTag}-${artVariant}.webp`;
+  return isGoal
+    ? `${ROOM_ART_DIR}/${locationTag}-goal.webp`
+    : `${ROOM_ART_DIR}/${locationTag}-${artVariant}.webp`;
 }
 
-function wallDoc({ x1, y1, x2, y2 }, { door = CONST.WALL_DOOR_TYPES.NONE, ds = CONST.WALL_DOOR_STATES.CLOSED, flags = null } = {}) {
+function wallDoc(
+  { x1, y1, x2, y2 },
+  {
+    door = CONST.WALL_DOOR_TYPES.NONE,
+    ds = CONST.WALL_DOOR_STATES.CLOSED,
+    flags = null,
+  } = {},
+) {
   return {
     c: [toPixels(x1), toPixels(y1), toPixels(x2), toPixels(y2)],
-    door, ds,
+    door,
+    ds,
     sight: CONST.WALL_SENSE_TYPES.NORMAL,
     move: CONST.WALL_MOVEMENT_TYPES.NORMAL,
-    ...(flags ? { flags } : {})
+    ...(flags ? { flags } : {}),
   };
 }
 
@@ -95,7 +120,7 @@ function requiredDimensions(maxSlot) {
   const stride = ROOM_SIZE_LARGE + CORRIDOR_LEN;
   return {
     width: toPixels(INITIAL_GX + ROOMS_PER_ROW * stride + MARGIN_ROOMS),
-    height: toPixels((row + 1) * stride + MARGIN_ROOMS)
+    height: toPixels((row + 1) * stride + MARGIN_ROOMS),
   };
 }
 
@@ -110,11 +135,11 @@ async function ensureSceneCovers(scene, slot) {
 
 export async function createDungeonScene() {
   return Scene.create({
-    name: 'Dungeon Crawl',
+    name: "Dungeon Crawl",
     tokenVision: true,
     fogExploration: true,
-    backgroundColor: '#2b2620',
-    grid: { type: 1, size: GRID_SIZE, distance: 5, units: 'ft' },
+    backgroundColor: "#2b2620",
+    grid: { type: 1, size: GRID_SIZE, distance: 5, units: "ft" },
     // This module already manages its own canvas sizing via
     // ensureSceneCovers/requiredDimensions — pre-sized headroom built
     // dynamically as the run grows — rather than relying on Foundry's own
@@ -122,7 +147,7 @@ export async function createDungeonScene() {
     // Foundry's 25% default (ITEM-20 reopening).
     padding: 0,
     ...requiredDimensions(ROOMS_PER_ROW), // headroom for the first two rows
-    flags: { [MODULE_ID]: { role: 'dungeon-run' } }
+    flags: { [MODULE_ID]: { role: "dungeon-run" } },
   });
 }
 
@@ -139,10 +164,16 @@ export async function createDungeonScene() {
  * large, ITEM-17) — deterministic per run, so it needs threading through
  * from the caller like `locationTag`/`artVariant`.
  */
-export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag = null, artVariant = 0, seed = '' } = {}) {
+export async function buildRoomAtSlot(
+  scene,
+  slot,
+  { isGoal = false, locationTag = null, artVariant = 0, seed = "" } = {},
+) {
   await ensureSceneCovers(scene, slot);
 
-  const walls = roomEnclosureWalls(seed, slot, { hasOutgoing: !isGoal }).map((side) => wallDoc(side));
+  const walls = roomEnclosureWalls(seed, slot, { hasOutgoing: !isGoal }).map(
+    (side) => wallDoc(side),
+  );
   const tiles = [];
 
   if (slot > 0) {
@@ -150,23 +181,34 @@ export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag
     // below) with the real, precisely-cut door/opening geometry this room's
     // build now provides for that connection — delete first so a stray solid
     // segment doesn't sit exactly under the new door.
-    const placeholder = scene.walls.filter((w) => w.getFlag(MODULE_ID, 'dungeonFrontierWallForSlot') === slot - 1);
-    if (placeholder.length) await scene.deleteEmbeddedDocuments('Wall', placeholder.map((w) => w.id));
+    const placeholder = scene.walls.filter(
+      (w) => w.getFlag(MODULE_ID, "dungeonFrontierWallForSlot") === slot - 1,
+    );
+    if (placeholder.length)
+      await scene.deleteEmbeddedDocuments(
+        "Wall",
+        placeholder.map((w) => w.id),
+      );
 
-    const { doorWall, revealDoorWall, plainWalls, corridorRect } = buildConnectionGeometry(slot - 1, seed);
-    walls.push(wallDoc(doorWall, {
-      door: CONST.WALL_DOOR_TYPES.DOOR,
-      ds: CONST.WALL_DOOR_STATES.LOCKED,
-      flags: { [MODULE_ID]: { dungeonDoorToSlot: slot } }
-    }));
+    const { doorWall, revealDoorWall, plainWalls, corridorRect } =
+      buildConnectionGeometry(slot - 1, seed);
+    walls.push(
+      wallDoc(doorWall, {
+        door: CONST.WALL_DOOR_TYPES.DOOR,
+        ds: CONST.WALL_DOOR_STATES.LOCKED,
+        flags: { [MODULE_ID]: { dungeonDoorToSlot: slot } },
+      }),
+    );
     // Never locked — the first door is the progress gate. This one is just
     // the "open it and see what's inside" trigger (handleDungeonDoorOpened),
     // freely operable by players the moment they're through the first door.
-    walls.push(wallDoc(revealDoorWall, {
-      door: CONST.WALL_DOOR_TYPES.DOOR,
-      ds: CONST.WALL_DOOR_STATES.CLOSED,
-      flags: { [MODULE_ID]: { dungeonRevealDoorForSlot: slot } }
-    }));
+    walls.push(
+      wallDoc(revealDoorWall, {
+        door: CONST.WALL_DOOR_TYPES.DOOR,
+        ds: CONST.WALL_DOOR_STATES.CLOSED,
+        flags: { [MODULE_ID]: { dungeonRevealDoorForSlot: slot } },
+      }),
+    );
     walls.push(...plainWalls.map((w) => wallDoc(w)));
     // corridorRect is tiled once per grid square rather than stretching one
     // image across it — corridor.webp is a small self-contained "box"
@@ -193,8 +235,9 @@ export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag
         texture: { src: CORRIDOR_ART_BY_VARIANT[variant] },
         x: toPixels(corridorRect.gx + dx) + toPixels(1) / 2,
         y: toPixels(corridorRect.gy + dy) + toPixels(1) / 2,
-        width: toPixels(1), height: toPixels(1),
-        rotation
+        width: toPixels(1),
+        height: toPixels(1),
+        rotation,
       });
     }
   }
@@ -206,20 +249,28 @@ export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag
     // across the rest of the scene's pre-sized canvas. Deleted and replaced
     // by the real door/opening geometry above the moment that next room
     // actually gets built.
-    walls.push(wallDoc(outgoingFaceWall(seed, slot), {
-      flags: { [MODULE_ID]: { dungeonFrontierWallForSlot: slot } }
-    }));
+    walls.push(
+      wallDoc(outgoingFaceWall(seed, slot), {
+        flags: { [MODULE_ID]: { dungeonFrontierWallForSlot: slot } },
+      }),
+    );
   }
 
-  if (walls.length) await scene.createEmbeddedDocuments('Wall', walls);
+  if (walls.length) await scene.createEmbeddedDocuments("Wall", walls);
 
   const rect = slotRect(seed, slot);
   tiles.push({
-    texture: { src: roomArtPath({ locationTag, isGoal, artVariant }), anchorX: 0, anchorY: 0 },
-    x: toPixels(rect.gx), y: toPixels(rect.gy),
-    width: toPixels(rect.gw), height: toPixels(rect.gh)
+    texture: {
+      src: roomArtPath({ locationTag, isGoal, artVariant }),
+      anchorX: 0,
+      anchorY: 0,
+    },
+    x: toPixels(rect.gx),
+    y: toPixels(rect.gy),
+    width: toPixels(rect.gw),
+    height: toPixels(rect.gh),
   });
-  await scene.createEmbeddedDocuments('Tile', tiles);
+  await scene.createEmbeddedDocuments("Tile", tiles);
 
   // Every room's art paints lit torches in its corners, but painted torches
   // aren't real Foundry light sources — nothing here ever placed an
@@ -232,10 +283,13 @@ export async function buildRoomAtSlot(scene, slot, { isGoal = false, locationTag
   // per-room-art torch positions (inconsistent across variants — e.g.
   // construct art has none at all).
   const { bright, dim } = roomLightRadii(rect.gw);
-  await scene.createEmbeddedDocuments('AmbientLight', [{
-    x: toPixels(rect.gx + rect.gw / 2), y: toPixels(rect.gy + rect.gh / 2),
-    config: { dim, bright, color: ROOM_LIGHT_COLOR, alpha: ROOM_LIGHT_ALPHA }
-  }]);
+  await scene.createEmbeddedDocuments("AmbientLight", [
+    {
+      x: toPixels(rect.gx + rect.gw / 2),
+      y: toPixels(rect.gy + rect.gh / 2),
+      config: { dim, bright, color: ROOM_LIGHT_COLOR, alpha: ROOM_LIGHT_ALPHA },
+    },
+  ]);
 }
 
 /**
@@ -276,28 +330,41 @@ export function focusCameraOnSlot(scene, slot, seed) {
     x: toPixels(rect.gx + rect.gw / 2),
     y: toPixels(rect.gy + rect.gh / 2),
     scale,
-    duration: 250
+    duration: 250,
   });
 }
 
 export async function unlockDoorToSlot(scene, slot) {
-  const wall = scene.walls.find((w) => w.getFlag(MODULE_ID, 'dungeonDoorToSlot') === slot);
-  if (wall) await wall.update({ ds: CONST.WALL_DOOR_STATES.CLOSED });
+  const wall = scene.walls.find(
+    (w) => w.getFlag(MODULE_ID, "dungeonDoorToSlot") === slot,
+  );
+  if (wall) {
+    await wall.update({ ds: CONST.WALL_DOOR_STATES.CLOSED });
+    playDoorSound("unlock");
+  }
 }
 
 /** Re-locks the progress-gate door AND re-closes the reveal door beyond it —
  * a full undo of both doors' state, not just the one a GM would think to
  * check, in case a player had already opened the second one too. */
 export async function relockDoorToSlot(scene, slot) {
-  const wall = scene.walls.find((w) => w.getFlag(MODULE_ID, 'dungeonDoorToSlot') === slot);
-  if (wall) await wall.update({ ds: CONST.WALL_DOOR_STATES.LOCKED });
-  const revealWall = scene.walls.find((w) => w.getFlag(MODULE_ID, 'dungeonRevealDoorForSlot') === slot);
-  if (revealWall) await revealWall.update({ ds: CONST.WALL_DOOR_STATES.CLOSED });
+  const wall = scene.walls.find(
+    (w) => w.getFlag(MODULE_ID, "dungeonDoorToSlot") === slot,
+  );
+  if (wall) {
+    await wall.update({ ds: CONST.WALL_DOOR_STATES.LOCKED });
+    playDoorSound("lock");
+  }
+  const revealWall = scene.walls.find(
+    (w) => w.getFlag(MODULE_ID, "dungeonRevealDoorForSlot") === slot,
+  );
+  if (revealWall)
+    await revealWall.update({ ds: CONST.WALL_DOOR_STATES.CLOSED });
 }
 
 /** Whether a combat room's monsters have already been placed. */
 export function isSlotPopulated(scene, slot) {
-  return scene.tokens.some((t) => t.getFlag(MODULE_ID, 'dungeonSlot') === slot);
+  return scene.tokens.some((t) => t.getFlag(MODULE_ID, "dungeonSlot") === slot);
 }
 
 /** Whether slot's own walls/geometry have been built yet — `dungeonDoorToSlot`
@@ -307,7 +374,9 @@ export function isSlotPopulated(scene, slot) {
  * room whose build is still deliberately deferred (ITEM-11 reopening) apart
  * from one that's merely unpopulated after a cancelled Accept/Reroll). */
 export function isSlotBuilt(scene, slot) {
-  return scene.walls.some((w) => w.getFlag(MODULE_ID, 'dungeonDoorToSlot') === slot);
+  return scene.walls.some(
+    (w) => w.getFlag(MODULE_ID, "dungeonDoorToSlot") === slot,
+  );
 }
 
 /**
@@ -324,9 +393,18 @@ export function isSlotBuilt(scene, slot) {
  * is needed to know this room's own actual size, for the encounter's
  * spawn-placement area.
  */
-export async function populateSlotEncounter(scene, slot, {
-  prefillTraits = [], prefillExcludeTraits = [], hidden = true, levelOffsetBias = 0, locationTag = null, seed = ''
-} = {}) {
+export async function populateSlotEncounter(
+  scene,
+  slot,
+  {
+    prefillTraits = [],
+    prefillExcludeTraits = [],
+    hidden = true,
+    levelOffsetBias = 0,
+    locationTag = null,
+    seed = "",
+  } = {},
+) {
   const rect = slotRect(seed, slot);
   await generateEncounter({
     prefillTraits,
@@ -335,26 +413,37 @@ export async function populateSlotEncounter(scene, slot, {
     locationTag,
     skipThemeDialog: true,
     originArea: {
-      x: toPixels(rect.gx), y: toPixels(rect.gy),
-      width: toPixels(rect.gw), height: toPixels(rect.gh)
+      x: toPixels(rect.gx),
+      y: toPixels(rect.gy),
+      width: toPixels(rect.gw),
+      height: toPixels(rect.gh),
     },
     forceHidden: hidden,
-    extraFlags: { [MODULE_ID]: { dungeonSlot: slot } }
+    extraFlags: { [MODULE_ID]: { dungeonSlot: slot } },
   });
 }
 
 /** Un-hides slot's tagged tokens (discovery). Returns the ids revealed. */
 export async function revealSlotTokens(scene, slot) {
-  const tokens = scene.tokens.filter((t) => t.getFlag(MODULE_ID, 'dungeonSlot') === slot && t.hidden);
+  const tokens = scene.tokens.filter(
+    (t) => t.getFlag(MODULE_ID, "dungeonSlot") === slot && t.hidden,
+  );
   const ids = tokens.map((t) => t.id);
-  if (ids.length) await scene.updateEmbeddedDocuments('Token', ids.map((id) => ({ _id: id, hidden: false })));
+  if (ids.length)
+    await scene.updateEmbeddedDocuments(
+      "Token",
+      ids.map((id) => ({ _id: id, hidden: false })),
+    );
   return ids;
 }
 
 /** Inverse of revealSlotTokens, for undo. */
 export async function hideTokens(scene, tokenIds) {
   if (tokenIds?.length) {
-    await scene.updateEmbeddedDocuments('Token', tokenIds.map((id) => ({ _id: id, hidden: true })));
+    await scene.updateEmbeddedDocuments(
+      "Token",
+      tokenIds.map((id) => ({ _id: id, hidden: true })),
+    );
   }
 }
 
@@ -368,7 +457,11 @@ function partyActorIds() {
 async function removeActorTokensFromAllScenes(actorId) {
   for (const s of game.scenes) {
     const existing = s.tokens.filter((t) => t.actor?.id === actorId);
-    if (existing.length) await s.deleteEmbeddedDocuments('Token', existing.map((t) => t.id));
+    if (existing.length)
+      await s.deleteEmbeddedDocuments(
+        "Token",
+        existing.map((t) => t.id),
+      );
   }
 }
 
@@ -381,10 +474,20 @@ export async function placePartyInSlot(scene, slot, partyMembers, seed) {
   const createdIds = [];
   for (const actor of partyMembers) {
     await removeActorTokensFromAllScenes(actor.id);
-    const spot = freeSpotInRect({ occupied, rect, gw: 1, gh: 1 }) ?? { gx: rect.gx, gy: rect.gy, gw: 1, gh: 1 };
+    const spot = freeSpotInRect({ occupied, rect, gw: 1, gh: 1 }) ?? {
+      gx: rect.gx,
+      gy: rect.gy,
+      gw: 1,
+      gh: 1,
+    };
     occupied.push(spot);
-    const td = await actor.getTokenDocument({ x: toPixels(spot.gx), y: toPixels(spot.gy) });
-    const [created] = await scene.createEmbeddedDocuments('Token', [td.toObject()]);
+    const td = await actor.getTokenDocument({
+      x: toPixels(spot.gx),
+      y: toPixels(spot.gy),
+    });
+    const [created] = await scene.createEmbeddedDocuments("Token", [
+      td.toObject(),
+    ]);
     createdIds.push(created.id);
   }
   return createdIds;
@@ -410,7 +513,9 @@ async function placePartyNearSceneCenter(destScene, partyMembers) {
     const x = centerX + (col - 1) * spacing;
     const y = centerY + row * spacing;
     const td = await actor.getTokenDocument({ x, y });
-    const [created] = await destScene.createEmbeddedDocuments('Token', [td.toObject()]);
+    const [created] = await destScene.createEmbeddedDocuments("Token", [
+      td.toObject(),
+    ]);
     createdIds.push(created.id);
   }
   return createdIds;
@@ -428,15 +533,26 @@ async function placePartyNearSceneCenter(destScene, partyMembers) {
  * such orphaned actors had accumulated in this world before this existed).
  * Then deletes the dungeon scene itself.
  */
-export async function teardownDungeonRun(scene, { previousSceneId = null } = {}) {
+export async function teardownDungeonRun(
+  scene,
+  { previousSceneId = null } = {},
+) {
   const partyIds = partyActorIds();
-  const npcActorIds = [...new Set(
-    scene.tokens.filter((t) => t.actor?.id && !partyIds.has(t.actor.id)).map((t) => t.actor.id)
-  )];
-  const partyMembers = (game.actors?.party?.members ?? []).filter((m) => partyIds.has(m.id));
+  const npcActorIds = [
+    ...new Set(
+      scene.tokens
+        .filter((t) => t.actor?.id && !partyIds.has(t.actor.id))
+        .map((t) => t.actor.id),
+    ),
+  ];
+  const partyMembers = (game.actors?.party?.members ?? []).filter((m) =>
+    partyIds.has(m.id),
+  );
 
   let destScene = previousSceneId ? game.scenes.get(previousSceneId) : null;
-  if (!destScene) destScene = game.scenes.find((s) => s.name === 'Foundry Virtual Tabletop') ?? null;
+  if (!destScene)
+    destScene =
+      game.scenes.find((s) => s.name === "Foundry Virtual Tabletop") ?? null;
 
   if (destScene && partyMembers.length) {
     await placePartyNearSceneCenter(destScene, partyMembers);
@@ -446,7 +562,10 @@ export async function teardownDungeonRun(scene, { previousSceneId = null } = {})
   if (npcActorIds.length) await Actor.deleteDocuments(npcActorIds);
   await scene.delete();
 
-  return { destSceneId: destScene?.id ?? null, deletedNpcActorCount: npcActorIds.length };
+  return {
+    destSceneId: destScene?.id ?? null,
+    deletedNpcActorCount: npcActorIds.length,
+  };
 }
 
 /** Move already-placed tokens into slot — for undo, stepping the party back.
@@ -457,9 +576,9 @@ export async function moveTokensToSlot(scene, tokenIds, slot, seed) {
   const updates = tokenIds.map((id, i) => ({
     _id: id,
     x: toPixels(rect.gx + (i % rect.gw)),
-    y: toPixels(rect.gy + Math.floor(i / rect.gw))
+    y: toPixels(rect.gy + Math.floor(i / rect.gw)),
   }));
-  await scene.updateEmbeddedDocuments('Token', updates);
+  await scene.updateEmbeddedDocuments("Token", updates);
 }
 
 /**
@@ -473,21 +592,36 @@ export async function moveTokensToSlot(scene, tokenIds, slot, seed) {
  * file deliberately never imports from ui/dungeon-app.mjs (see this file's
  * own docblock).
  */
-export async function buildPopulateAndUnlockRoom(scene, state, room, physicalSlot) {
+export async function buildPopulateAndUnlockRoom(
+  scene,
+  state,
+  room,
+  physicalSlot,
+) {
   await buildRoomAtSlot(scene, physicalSlot, {
-    isGoal: room.isGoal, locationTag: room.locationTag, artVariant: room.artVariant, seed: state.seed
+    isGoal: room.isGoal,
+    locationTag: room.locationTag,
+    artVariant: room.artVariant,
+    seed: state.seed,
   });
 
-  if (room.kind === 'combat') {
+  if (room.kind === "combat") {
     await populateSlotEncounter(scene, physicalSlot, {
-      prefillTraits: state.traits, prefillExcludeTraits: state.excludeTraits,
-      levelOffsetBias: depthBiasFor({ physicalSlot, roomCount: state.rooms.length, isGoal: room.isGoal }),
-      locationTag: room.locationTag, seed: state.seed
+      prefillTraits: state.traits,
+      prefillExcludeTraits: state.excludeTraits,
+      levelOffsetBias: depthBiasFor({
+        physicalSlot,
+        roomCount: state.rooms.length,
+        isGoal: room.isGoal,
+      }),
+      locationTag: room.locationTag,
+      seed: state.seed,
     });
     // Only unlock once monsters are actually in place — a cancelled theme
     // dialog leaves the door locked rather than opening onto an empty room;
     // the GM retries via the "Populate Next Room" button.
-    if (isSlotPopulated(scene, physicalSlot)) await unlockDoorToSlot(scene, physicalSlot);
+    if (isSlotPopulated(scene, physicalSlot))
+      await unlockDoorToSlot(scene, physicalSlot);
   } else {
     await unlockDoorToSlot(scene, physicalSlot);
   }
@@ -506,7 +640,7 @@ export async function handleDungeonDoorOpened(sceneId, wallId) {
   if (!game.user.isGM) return;
   const scene = game.scenes.get(sceneId);
   const wall = scene?.walls.get(wallId);
-  const slot = wall?.getFlag(MODULE_ID, 'dungeonRevealDoorForSlot');
+  const slot = wall?.getFlag(MODULE_ID, "dungeonRevealDoorForSlot");
   if (slot == null) return;
 
   const state = getRunState(sceneId);
@@ -514,24 +648,39 @@ export async function handleDungeonDoorOpened(sceneId, wallId) {
   const nextRoomId = state.rooms[state.currentIndex + 1]?.id;
   if (!nextRoomId || state.physicalSlotByRoomId[nextRoomId] !== slot) return;
 
+  playDoorSound("open");
   const revealedTokenIds = await revealSlotTokens(scene, slot);
   const nextRoom = state.rooms.find((r) => r.id === nextRoomId);
   // Started here, not at populateSlotEncounter/build time — the room's
   // monsters spawn hidden, and starting Combat before the door is actually
   // opened would give away that a fight is coming.
-  if (nextRoom?.kind === 'combat') await startCombatForSlot(scene, slot);
-  const { state: advancedState } = await advanceToRoom({ sceneId, roomId: nextRoomId, revealedTokenIds });
+  if (nextRoom?.kind === "combat") await startCombatForSlot(scene, slot);
+  const { state: advancedState } = await advanceToRoom({
+    sceneId,
+    roomId: nextRoomId,
+    revealedTokenIds,
+  });
   focusCameraOnSlot(scene, slot, state.seed);
 
   // A rest room (ITEM-5) is safe and has nothing to resolve — like the
   // entry, its own way forward opens immediately, no GM click required,
   // instead of leaving the party stuck with no Succeed/Fail button to press.
-  if (nextRoom?.kind === 'safe_rest' && advancedState) {
-    const { state: resolvedState, nextRoomId: afterRestId, nextPhysicalSlot: afterRestSlot } =
-      await markRoomOutcome({ sceneId, succeeded: true });
+  if (nextRoom?.kind === "safe_rest" && advancedState) {
+    const {
+      state: resolvedState,
+      nextRoomId: afterRestId,
+      nextPhysicalSlot: afterRestSlot,
+    } = await markRoomOutcome({ sceneId, succeeded: true });
     if (afterRestId && afterRestSlot != null) {
-      const afterRestRoom = resolvedState.rooms.find((r) => r.id === afterRestId);
-      await buildPopulateAndUnlockRoom(scene, resolvedState, afterRestRoom, afterRestSlot);
+      const afterRestRoom = resolvedState.rooms.find(
+        (r) => r.id === afterRestId,
+      );
+      await buildPopulateAndUnlockRoom(
+        scene,
+        resolvedState,
+        afterRestRoom,
+        afterRestSlot,
+      );
     }
   }
 }
@@ -542,7 +691,9 @@ export async function undoRoomEntry(sceneId) {
   const scene = game.scenes.get(sceneId);
   const state = getRunState(sceneId);
   if (!scene || !canUndoRoomEntry(state)) {
-    ui.notifications.warn(game.i18n.localize('DOMMT.Dungeon.AlreadyResolvedUndoWarning'));
+    ui.notifications.warn(
+      game.i18n.localize("DOMMT.Dungeon.AlreadyResolvedUndoWarning"),
+    );
     return;
   }
 
@@ -553,7 +704,9 @@ export async function undoRoomEntry(sceneId) {
   const previousRoomId = state.rooms[entry.fromIndex].id;
   const previousSlot = state.physicalSlotByRoomId[previousRoomId];
   const partyIds = partyActorIds();
-  const partyTokenIds = scene.tokens.filter((t) => partyIds.has(t.actor?.id)).map((t) => t.id);
+  const partyTokenIds = scene.tokens
+    .filter((t) => partyIds.has(t.actor?.id))
+    .map((t) => t.id);
   await moveTokensToSlot(scene, partyTokenIds, previousSlot, state.seed);
 
   await undoLastRoomEntry({ sceneId });
