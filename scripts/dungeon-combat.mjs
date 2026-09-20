@@ -16,6 +16,9 @@
  */
 import { makeFoundryApi } from './foundry-api.mjs';
 import { totalCombatXp, xpPerSurvivor, lootGpForXp } from './combat-rewards.mjs';
+import {
+  initAgentTurnState, buildCandidateList, applyCandidateToTurnState, buildDecisionContext
+} from './agent-candidates.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 
@@ -215,6 +218,32 @@ function chebyshevSquares(a, b, gridSize) {
   return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) / gridSize;
 }
 
+/** Reach for one ready action, in squares — a `reach-N` trait (N in feet)
+ * takes priority; otherwise a ranged action's own range increment (feet);
+ * otherwise plain melee reach. Confirmed live during planning: a PF2e
+ * strike's own `.traits` array carries entries like `{name: 'reach-20', ...}`,
+ * and `.item.system.range` is `{increment, max}` in feet for a ranged
+ * attack, `null` for melee. */
+function actionReachSquares(action, gridDistanceFt) {
+  const reachTrait = (action.traits ?? []).find((t) => /^reach-\d+$/.test(t.name ?? ''));
+  if (reachTrait) return Number(reachTrait.name.split('-')[1]) / gridDistanceFt;
+  const rangeIncrement = action.item?.system?.range?.increment;
+  if (rangeIncrement) return rangeIncrement / gridDistanceFt;
+  return MELEE_REACH_SQUARES;
+}
+
+/** Reads back Combat's own per-turn agent bookkeeping, or a fresh one if
+ * this is the first time this exact combatant's turn is seen. */
+function getAgentTurnState(combat, combatantId) {
+  const stored = combat.getFlag(MODULE_ID, 'agentTurnState');
+  if (stored?.combatantId === combatantId) return { actionsRemaining: stored.actionsRemaining, mapIncrement: stored.mapIncrement };
+  return initAgentTurnState();
+}
+
+async function setAgentTurnState(combat, combatantId, turnState) {
+  await combat.setFlag(MODULE_ID, 'agentTurnState', { combatantId, ...turnState });
+}
+
 /** The closest opposing combatant, or null if none remain. */
 function nearestOpponent(combat, combatant) {
   const gridSize = combat.scene?.grid?.size ?? 100;
@@ -349,4 +378,143 @@ export async function playHeuristicTurn(combat, combatant) {
   if (game.combats.has(combat.id) && combat.combatant?.id === combatant.id) {
     await combat.nextTurn();
   }
+}
+
+// --- Task 3: external agent-controlled turn decisions --------------------
+
+/**
+ * The current decision point for the due combatant, or `null` if there's
+ * nothing for an external agent to decide right now (no combat due, the
+ * current combatant isn't agent-controlled, or it's already defeated). The
+ * *only* read surface `tools/agent-loop`'s poller uses — see module.mjs's
+ * api.getPendingAgentTurn.
+ */
+export function getPendingAgentTurn(combat) {
+  if (!isModuleCombat(combat)) return null;
+  const combatant = combat.combatant;
+  if (!combatant || combatant.isDefeated || !combatant.getFlag(MODULE_ID, 'agentControlled')) return null;
+
+  const turnState = getAgentTurnState(combat, combatant.id);
+  const gridSize = combat.scene?.grid?.size ?? 100;
+  const gridDistanceFt = combat.scene?.grid?.distance ?? 5;
+
+  const opponents = combatantOpponents(combat, combatant).map((c) => ({
+    id: c.id, name: c.name,
+    distanceSquares: chebyshevSquares(combatant.token, c.token, gridSize),
+    hp: c.actor?.system?.attributes?.hp?.value ?? null
+  }));
+
+  const readyActions = (combatant.actor?.system?.actions ?? [])
+    .filter((a) => a.type === 'strike' && a.ready !== false)
+    .map((a) => ({
+      slug: a.item?.slug ?? a.slug ?? a.label,
+      label: a.label,
+      variantCount: a.variants?.length ?? 1,
+      reachSquares: actionReachSquares(a, gridDistanceFt)
+    }));
+  const hasRangedOrReach = readyActions.some((a) => a.reachSquares > MELEE_REACH_SQUARES);
+
+  const self = {
+    name: combatant.name,
+    hp: combatant.actor?.system?.attributes?.hp?.value ?? null,
+    conditions: Array.from(combatant.actor?.conditions ?? []).map((c) => c.slug)
+  };
+
+  const candidates = buildCandidateList({ opponents, readyActions, turnState, hazard: null, hasRangedOrReach });
+  return {
+    combatId: combat.id,
+    combatantId: combatant.id,
+    context: buildDecisionContext({ self, opponents, candidates, roundNumber: combat.round }),
+    candidates
+  };
+}
+
+/** Moves `combatant`'s token up to its own speed, straight toward or away
+ * from `target`'s token depending on `posture` — the same math stepToward
+ * already uses (no wall-avoidance, no real pathfinding, see #100), just
+ * parameterized by direction instead of always approaching. A no-op if
+ * already at the desired distance or with no speed to move. */
+async function strideByPosture(combat, combatant, posture, target) {
+  const gridSize = combat.scene?.grid?.size ?? 100;
+  const gridDistanceFt = combat.scene?.grid?.distance ?? 5;
+  const speedFt = combatant.actor?.system?.movement?.speeds?.land?.value ?? 0;
+  const speedSquares = Math.floor(speedFt / gridDistanceFt);
+  if (speedSquares <= 0 || !target) return;
+
+  const me = combatant.token;
+  const dest = target.token;
+  const dx = Math.sign(dest.x - me.x) || 0;
+  const dy = Math.sign(dest.y - me.y) || 0;
+  const sign = posture === 'retreat' ? -1 : 1;
+  await me.update({ x: me.x + sign * dx * gridSize * speedSquares, y: me.y + sign * dy * gridSize * speedSquares });
+}
+
+/** Rolls one strike at a specific MAP `variantIndex` against `target` and
+ * applies damage on a hit — the same dialog-suppression/roll/damage/
+ * applyDamage sequence rollAndApplyStrike already uses, generalized to a
+ * caller-chosen variant instead of always variants[0]. */
+async function rollAndApplyStrikeAtVariant(combatant, target, actionSlug, variantIndex) {
+  const strike = (combatant.actor?.system?.actions ?? [])
+    .find((a) => a.type === 'strike' && a.ready !== false && (a.item?.slug ?? a.slug ?? a.label) === actionSlug);
+  if (!strike) return null;
+
+  const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
+  const prevShowDamage = game.user.flags?.pf2e?.settings?.showDamageDialogs;
+  await game.user.update({
+    'flags.pf2e.settings.showCheckDialogs': false,
+    'flags.pf2e.settings.showDamageDialogs': false
+  });
+  try {
+    const targetRef = { document: target.token };
+    const variant = strike.variants[Math.min(variantIndex, strike.variants.length - 1)];
+    await variant.roll({ target: targetRef, createMessage: true });
+    const outcome = game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
+    if (outcome === 'success' || outcome === 'criticalSuccess') {
+      const damageRoll = await strike.damage({ target: targetRef, outcome, createMessage: true });
+      if (damageRoll) await target.actor.applyDamage({ damage: damageRoll, token: target.token, outcome });
+    }
+    return outcome;
+  } finally {
+    await game.user.update({
+      'flags.pf2e.settings.showCheckDialogs': prevShowCheck,
+      'flags.pf2e.settings.showDamageDialogs': prevShowDamage
+    });
+  }
+}
+
+/**
+ * Executes exactly one chosen candidate for `combatantId`'s current turn in
+ * `combat`, updates the per-turn state, and advances the turn once actions
+ * run out or `endTurn` was chosen. Returns the pending-turn shape for the
+ * *next* iteration (same shape getPendingAgentTurn returns), or `null` once
+ * the turn has actually ended. The only mutation path an external process
+ * ever reaches — see module.mjs's api.applyAgentDecision.
+ */
+export async function applyAgentDecision(combat, combatantId, candidateId) {
+  const pending = getPendingAgentTurn(combat);
+  if (!pending || pending.combatantId !== combatantId) return null;
+  const candidate = pending.candidates.find((c) => c.id === candidateId);
+  if (!candidate) return null;
+
+  const combatant = combat.combatant;
+  if (candidate.type === 'stride') {
+    const target = candidate.targetId ? combatantOpponents(combat, combatant).find((c) => c.id === candidate.targetId) : null;
+    await strideByPosture(combat, combatant, candidate.posture, target);
+  } else if (candidate.type === 'strike') {
+    const target = combatantOpponents(combat, combatant).find((c) => c.id === candidate.targetId);
+    if (target) await rollAndApplyStrikeAtVariant(combatant, target, candidate.actionSlug, candidate.variantIndex);
+  }
+
+  const turnState = getAgentTurnState(combat, combatantId);
+  const nextTurnState = applyCandidateToTurnState(turnState, candidate);
+  await setAgentTurnState(combat, combatantId, nextTurnState);
+
+  if (nextTurnState.actionsRemaining <= 0) {
+    if (game.combats.has(combat.id) && combat.combatant?.id === combatantId) await combat.nextTurn();
+    return null;
+  }
+  // Actions remain — re-arm the timeout for the next decision rather than
+  // leaving this turn permanently unwatched after one action.
+  armAgentTimeout(combat, combatant);
+  return getPendingAgentTurn(combat);
 }
