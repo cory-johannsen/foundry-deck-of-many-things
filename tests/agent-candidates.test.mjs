@@ -1,7 +1,8 @@
 // tests/agent-candidates.test.mjs
 import { describe, it, expect } from 'vitest';
 import {
-  initAgentTurnState, buildMovementCandidates, buildStrikeCandidates, buildSpellCandidates, endTurnCandidate,
+  initAgentTurnState, buildMovementCandidates, buildStrikeCandidates, buildSpellCandidates,
+  buildAreaSpellCandidates, endTurnCandidate,
   buildCandidateList, applyCandidateToTurnState, buildDecisionContext,
   MAX_ACTIONS_PER_TURN, AGENT_MELEE_REACH_SQUARES
 } from '../scripts/agent-candidates.mjs';
@@ -108,6 +109,59 @@ describe('buildSpellCandidates', () => {
   });
 });
 
+describe('buildAreaSpellCandidates', () => {
+  const opp1 = { id: 'opp1', name: 'Fighter' };
+  const opp2 = { id: 'opp2', name: 'Cleric' };
+  const opp3 = { id: 'opp3', name: 'Rogue' };
+
+  const quench = {
+    id: 'sp1', slug: 'quench', label: 'Quench', cost: 2, save: 'fortitude', basic: true, entryId: 'entry1',
+    placements: [
+      { centerType: 'opponent', centerId: 'opp1', affected: [opp1, opp2] },
+      { centerType: 'opponent', centerId: 'opp3', affected: [opp3] }
+    ]
+  };
+
+  it('offers one candidate per spell, centered on whichever placement catches the most opponents', () => {
+    const candidates = buildAreaSpellCandidates({ readyAreaSpells: [quench], actionsRemaining: 3 });
+    expect(candidates).toEqual([
+      {
+        id: 'castArea:quench:opponent:opp1', type: 'castArea',
+        spellId: 'sp1', entryId: 'entry1', cost: 2, save: 'fortitude', basic: true,
+        centerType: 'opponent', centerId: 'opp1', affectedIds: ['opp1', 'opp2'],
+        summary: 'Quench (hits Fighter, Cleric)'
+      }
+    ]);
+  });
+
+  it('omits a spell whose cost exceeds the actions remaining', () => {
+    const candidates = buildAreaSpellCandidates({ readyAreaSpells: [quench], actionsRemaining: 1 });
+    expect(candidates).toEqual([]);
+  });
+
+  it('omits a spell where every placement catches zero opponents', () => {
+    const allyOnly = { ...quench, placements: [{ centerType: 'self', centerId: null, affected: [] }] };
+    const candidates = buildAreaSpellCandidates({ readyAreaSpells: [allyOnly], actionsRemaining: 3 });
+    expect(candidates).toEqual([]);
+  });
+
+  it('offers a self-centered candidate for an emanation, with no centerId', () => {
+    const wails = {
+      id: 'sp2', slug: 'wails-of-the-damned', label: 'Wails of the Damned', cost: 2, save: 'fortitude', basic: false, entryId: 'entry1',
+      placements: [{ centerType: 'self', centerId: null, affected: [opp1] }]
+    };
+    const candidates = buildAreaSpellCandidates({ readyAreaSpells: [wails], actionsRemaining: 3 });
+    expect(candidates).toEqual([
+      {
+        id: 'castArea:wails-of-the-damned:self', type: 'castArea',
+        spellId: 'sp2', entryId: 'entry1', cost: 2, save: 'fortitude', basic: false,
+        centerType: 'self', centerId: null, affectedIds: ['opp1'],
+        summary: 'Wails of the Damned (hits Fighter)'
+      }
+    ]);
+  });
+});
+
 describe('endTurnCandidate', () => {
   it('is always the same zero-cost candidate', () => {
     expect(endTurnCandidate()).toEqual({ id: 'endTurn', type: 'endTurn', cost: 0, summary: 'End turn' });
@@ -142,6 +196,16 @@ describe('buildCandidateList', () => {
     const turnState = { actionsRemaining: 1, mapIncrement: 0 };
     const candidates = buildCandidateList({ opponents: [opponent], readyActions: [claw], readySpells: [spiritBlast], turnState, hazard: null, hasRangedOrReach: false });
     expect(candidates.map((c) => c.id)).toEqual(['strike:claw:opp1', 'endTurn']);
+  });
+
+  it('includes an affordable area-spell candidate alongside strikes', () => {
+    const quench = {
+      id: 'sp3', slug: 'quench', label: 'Quench', cost: 2, save: 'fortitude', basic: true, entryId: 'entry1',
+      placements: [{ centerType: 'self', centerId: null, affected: [{ id: 'opp1', name: 'Fighter' }] }]
+    };
+    const turnState = { actionsRemaining: 3, mapIncrement: 0 };
+    const candidates = buildCandidateList({ opponents: [opponent], readyActions: [claw], readyAreaSpells: [quench], turnState, hazard: null, hasRangedOrReach: false });
+    expect(candidates.map((c) => c.id)).toEqual(['strike:claw:opp1', 'castArea:quench:self', 'endTurn']);
   });
 });
 
