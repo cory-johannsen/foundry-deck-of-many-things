@@ -1270,5 +1270,325 @@
     "name": "Ghoul\r",
     "level": 1,
     "art": "ghoul.webp"
+  },
+  {
+    "id": "giant_amoeba",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "37VjWGXq40eLfrl6",
+    "name": "Giant Amoeba\r",
+    "level": 1,
+    "art": "giant-amoeba.webp"
+  },
+  {
+    "id": "giant_fly",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "DEBxtP23o93Qq1n6",
+    "name": "Giant Fly\r",
+    "level": 1,
+    "art": "giant-fly.webp"
+  },
+  {
+    "id": "giant_frog",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "jiLbjz3kic9Uv5b6",
+    "name": "Giant Frog\r",
+    "level": 1,
+    "art": "giant-frog.webp"
+  },
+  {
+    "id": "giant_skunk",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "nr4E59Xu10nWYsyO",
+    "name": "Giant Skunk\r",
+    "level": 1,
+    "art": "giant-skunk.webp"
+  },
+  {
+    "id": "gnome_bard",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "9XccneFB5DmMHig0",
+    "name": "Gnome Bard\r",
+    "level": 1,
+    "art": "gnome-bard.webp"
+  },
+  {
+    "id": "goblin_dog",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "yclRuradTmZbdKFQ",
+    "name": "Goblin Dog\r",
+    "level": 1,
+    "art": "goblin-dog.webp"
+  },
+  {
+    "id": "goblin_snake",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "S4jkgQ7Ni3w8kZ7I",
+    "name": "Goblin Snake\r",
+    "level": 1,
+    "art": "goblin-snake.webp"
+  },
+  {
+    "id": "grave_robber",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "sYcMzx8RcgaIxyLu",
+    "name": "Grave Robber\r",
+    "level": 1,
+    "art": "grave-robber.webp"
+  },
+  {
+    "id": "gravedigger",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "0t2jNg5tpwWbCYx4",
+    "name": "Gravedigger\r",
+    "level": 1,
+    "art": "gravedigger.webp"
+  },
+  {
+    "id": "halfling_troublemaker",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "L39Fr3dewrvIK2LE",
+    "name": "Halfling Troublemaker\r",
+    "level": 1,
+    "art": "halfling-troublemaker.webp"
+  },
+  {
+    "id": "hippocampus",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "CHVMOXznjUDcb3XP",
+    "name": "Hippocampus\r",
+    "level": 1,
+    "art": "hippocampus.webp"
+  },
+  {
+    "id": "hryngar_bombardier",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "KDbJ402jFuvn5frX",
+    "name": "Hryngar Bombardier\r",
+    "level": 1,
+    "art": "hryngar-bombardier.webp"
+  },
+  {
+    "id": "hunting_spider",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "A4VgQIHsqJKssQOM",
+    "name": "Hunting Spider\r",
+    "level": 1,
+    "art": "hunting-spider.webp"
+  },
+  {
+    "id": "kholo_pragmatist",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "AhyWwDKH1gIVSfys",
+    "name": "Kholo Pragmatist\r",
+    "level": 1,
+    "art": "kholo-pragmatist.webp"
+  },
+  {
+    "id": "lantern_archon",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "0HjVFx8qIKDCfblg",
+    "name": "Lantern Archon\r",
+    "level": 1,
+    "art": "lantern-archon.webp"
+  },
+  {
+    "id": "lizardfolk_defender",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "WZRHV2WU0SkpbtJI",
+    "name": "Lizardfolk Defender\r",
+    "level": 1,
+    "art": "lizardfolk-defender.webp"
+  },
+  {
+    "id": "lizardfolk_scout",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "V8w4iOwUMPqYnqVE",
+    "name": "Lizardfolk Scout\r",
+    "level": 1,
+    "art": "lizardfolk-scout.webp"
+  },
+  {
+    "id": "lyrakien",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "iNwaxIYuD0OTDNjJ",
+    "name": "Lyrakien\r",
+    "level": 1,
+    "art": "lyrakien.webp"
+  },
+  {
+    "id": "giant_gecko",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "mathcxCcrQmn9Jj8",
+    "name": "Giant Gecko\r",
+    "level": 1,
+    "art": "giant-gecko.webp"
+  },
+  {
+    "id": "goblin_chef",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "DsyCuAx23QkztXNF",
+    "name": "Goblin Chef\r",
+    "level": 1,
+    "art": "goblin-chef.webp"
+  },
+  {
+    "id": "goblin_pyro",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "Ky5eNRvN71O0tY9l",
+    "name": "Goblin Pyro\r",
+    "level": 1,
+    "art": "goblin-pyro.webp"
+  },
+  {
+    "id": "grippli_scout",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "rpq2rHlZjy5g31xo",
+    "name": "Grippli Scout\r",
+    "level": 1,
+    "art": "grippli-scout.webp"
+  },
+  {
+    "id": "mechanic",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "Koz2GhqliCU5sIJl",
+    "name": "Mechanic\r",
+    "level": 1,
+    "art": "mechanic.webp"
+  },
+  {
+    "id": "goblin_war_chanter",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "wepiUEi2Lxl8j1BH",
+    "name": "Goblin War Chanter\r",
+    "level": 1,
+    "art": "goblin-war-chanter.webp"
+  },
+  {
+    "id": "hobgoblin_soldier",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "NW68bxCLC6oDHxL9",
+    "name": "Hobgoblin Soldier\r",
+    "level": 1,
+    "art": "hobgoblin-soldier.webp"
+  },
+  {
+    "id": "hyena",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "tUWchW8dXavTFeBy",
+    "name": "Hyena\r",
+    "level": 1,
+    "art": "hyena.webp"
+  },
+  {
+    "id": "guard",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "Aktz95gNNzfAiTzk",
+    "name": "Guard\r",
+    "level": 1,
+    "art": "guard.webp"
+  },
+  {
+    "id": "innkeeper",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "BYpxg06tP5hI6CzQ",
+    "name": "Innkeeper\r",
+    "level": 1,
+    "art": "innkeeper.webp"
+  },
+  {
+    "id": "kobold_scout",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "PcHQDmPTztw32PhL",
+    "name": "Kobold Scout\r",
+    "level": 1,
+    "art": "kobold-scout.webp"
+  },
+  {
+    "id": "local_herbalist",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "3m8fkhbaUubLeckt",
+    "name": "Local Herbalist\r",
+    "level": 1,
+    "art": "local-herbalist.webp"
+  },
+  {
+    "id": "manta_ray",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "ACIqdW6VsFA1TCpN",
+    "name": "Manta Ray\r",
+    "level": 1,
+    "art": "manta-ray.webp"
+  },
+  {
+    "id": "giant_cockroach",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "UWRydTp1UvpsOWYO",
+    "name": "Giant Cockroach\r",
+    "level": 1,
+    "art": "giant-cockroach.webp"
+  },
+  {
+    "id": "giant_solifugid",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "C7LvY2Xxzm2xRL1M",
+    "name": "Giant Solifugid\r",
+    "level": 1,
+    "art": "giant-solifugid.webp"
+  },
+  {
+    "id": "giant_tick",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "le7VaOJyQQnl37Wa",
+    "name": "Giant Tick\r",
+    "level": 1,
+    "art": "giant-tick.webp"
+  },
+  {
+    "id": "goblin_commando",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "sA2dFdRUwiapo69Z",
+    "name": "Goblin Commando\r",
+    "level": 1,
+    "art": "goblin-commando.webp"
+  },
+  {
+    "id": "gourd_leshy",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "f9fjSDdcBKkEPoIi",
+    "name": "Gourd Leshy\r",
+    "level": 1,
+    "art": "gourd-leshy.webp"
+  },
+  {
+    "id": "gunsmith",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "GuYToKMrt5mxxZW6",
+    "name": "Gunsmith\r",
+    "level": 1,
+    "art": "gunsmith.webp"
+  },
+  {
+    "id": "jinkin",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "lFDYJOIp2knQ0IRY",
+    "name": "Jinkin\r",
+    "level": 1,
+    "art": "jinkin.webp"
+  },
+  {
+    "id": "merfolk_warrior",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "YiGZxwT2xTVYQyTu",
+    "name": "Merfolk Warrior\r",
+    "level": 1,
+    "art": "merfolk-warrior.webp"
+  },
+  {
+    "id": "grig",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "j1mm6bb3hZ56jSrK",
+    "name": "Grig\r",
+    "level": 1,
+    "art": "grig.webp"
   }
 ]

@@ -1,6 +1,6 @@
 # Backlog
 
-_Last updated: 2026-09-20 (ITEM-11 reopened and fixed — a combat first room no longer prompts the GM immediately at Start; ITEM-8 reopened and fixed — party turns were auto-playing on a solo-GM world with no player-role users; ITEM-20 reopening resolved and done; ITEM-17 done, ITEM-18 level -1 and level 0 tiers fully complete, level 1 chunk 1/4 done, ITEM-23 spec'd)_
+_Last updated: 2026-09-20 (ITEM-11 reopened and fixed — a combat first room no longer prompts the GM immediately at Start; ITEM-8 reopened and fixed — party turns were auto-playing on a solo-GM world with no player-role users; ITEM-20 reopening resolved and done; ITEM-17 done, ITEM-18 level -1 and level 0 tiers fully complete, level 1 chunk 2/4 done, ITEM-23 spec'd)_
 
 ## Active
 
@@ -124,6 +124,14 @@ Cross-cutting notes from the parallel run: 6 true creature-name collisions turne
 **Redo tally: 26 of 40 needed at least one redo; the worst 3 (`acolyte-of-nethys`, `caligni-dancer`, `cave-scorpion`) needed three full rounds each** (shared-constant fix → per-creature prompt rewrite with an explicit "Centered studio portrait" lead-in → a raised-CFG reroll) before finally landing clean/borderline on the fourth attempt — the same escalation depth `halfling-street-watcher` needed in batch 3, but this time it paid off instead of ending in a deferred exception.
 
 **Verification.** `npm test` — 705 passing (up from 669; 156 asset-existence entries). `npm run validate:creature-art` — 155 entries, no duplicate lookup keys. `node tools/check-token-art.mjs` — only the 4 already-documented exceptions (`conspiracist`, `fisher`, `halfling-street-watcher`, `penitent-of-calistria`) flagged, no new ones. `npm run validate`/`validate:dungeon` unaffected. `docs/creature-art-todo.csv`'s level 1 tier now has 120 of its original 160 rows remaining. `module.json` bumped to 0.47.0.
+
+**Follow-up fix (v0.47.1):** `boggard-scout`, `deep-one`, `fuath`, and `ghoul` had actually passed `check-token-art.mjs` during chunk 1's first redo round but were never added to `data/creature-art.json` or removed from the todo CSV — missed while tracking which of that round's 19 redone creatures were accepted. Caught during chunk 2 setup (the wired-in count didn't match the chunk size), confirmed all 4 still clean, wired in with no new generation needed.
+
+**Batch 5 — level 1, chunk 2 of 4 (40 more, 80 of 160 total).** Same process as chunk 1. This time each round's accepted set was cross-checked against the full original chunk list before finalizing (`missing.length === 0`) specifically to catch a repeat of the chunk 1 tracking gap above — none found.
+
+**Redo tally: 22 of 40 needed at least one redo, one (`grig`) needed four rounds.** `grig`'s worst attempt combined three separate failures at once — a circular moon-halo backdrop, monochrome black-and-white rendering despite `STYLE`'s "full color illustration" clause, and a fully humanoid winged-woman subject with no trace of the described insectile hind legs — traced to the prompt's own "a humanoid torso joined to... hind legs" wording reading as "draw a human," not "draw a small fey with human-like features." Fixed by rewriting the prompt to state a one-foot height and "cricket-like hind legs" explicitly, plus a long avoid list naming every failure mode by name (`monochrome`, `moon`, `circular halo`, `tall adult human proportions`). Landed on a correct-enough insectile fey on the final attempt — not a perfect match to the original "impish grin, clutching a fiddle" framing, but clearly the right creature and fully clean background, accepted as within the normal range of creative variance this pipeline already tolerates elsewhere.
+
+**Verification.** `npm test` — 749 passing (up from 705; 200 asset-existence entries). `npm run validate:creature-art` — 199 entries, no duplicate lookup keys. `node tools/check-token-art.mjs` — only the same 4 already-documented exceptions flagged. `npm run validate`/`validate:dungeon` unaffected. `docs/creature-art-todo.csv`'s level 1 tier now has 80 of its original 160 rows remaining (two chunks done, two to go). `module.json` bumped to 0.48.0.
 
 ### ITEM-15: Randomly place destructible cover items in rooms
 **State:** backlog
