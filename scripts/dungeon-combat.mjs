@@ -28,6 +28,11 @@ import {
 } from "./agent-candidates.mjs";
 import { findPath, blockedEdgesFromWalls } from "./pathfinding.mjs";
 import { coverBlocksLineOfFire, COVER_EFFECT_DATA } from "./cover-items.mjs";
+import {
+  playStrikeSound,
+  playSpellSound,
+  playCreatureDeathSound,
+} from "./dungeon-sound.mjs";
 
 const MODULE_ID = "deck-of-many-more-things";
 
@@ -666,6 +671,10 @@ async function applyDefeatIfReducedToZero(target) {
     await target.actor.increaseCondition("dying");
   } else if (!target.isDefeated) {
     await target.update({ defeated: true });
+    // #95: a party member going to 'dying' isn't death yet, per PF2e's own
+    // rules (they can still be stabilized) — only an NPC actually defeated
+    // here gets the death sound.
+    playCreatureDeathSound();
   }
 }
 
@@ -719,6 +728,45 @@ async function withCoverBonus(combat, attacker, target, roll) {
 }
 
 /**
+ * The plain-value context playStrikeSound (dungeon-sound.mjs) needs to pick
+ * a hit sound, pulled off a live strike/target — kept as a thin extraction
+ * step so the actual bucketing logic stays pure and testable there.
+ *
+ * `weaponGroup` comes from `item.system.group`, which only a real Weapon
+ * item carries (a party member's own gear) — a monster's synthetic
+ * "melee"/"ranged" strike item has no group at all, so `weaponGroup` only
+ * ever matters for the ranged bow/crossbow split, where it's a player
+ * weapon either way.
+ *
+ * `damageType` needed two different paths, confirmed live against both a
+ * real weapon and a monster's natural attack — a real Weapon item (a
+ * Longsword) carries it as the *singular* `system.damage.damageType`, but a
+ * monster's synthetic strike item has no `system.damage` at all and carries
+ * it instead in `system.damageRolls`, a map of one-or-more named damage
+ * instances. Checking only the first (monster) path silently left every
+ * player weapon attack with no damage type at all, always falling through
+ * to the bludgeoning default regardless of the weapon actually swung.
+ *
+ * `blocked` is a heuristic, not a confirmed Shield Block reaction: PF2e
+ * exposes no "was Shield Block used on this hit" flag to check directly, so
+ * this reads whether the target's shield was raised at the moment the hit
+ * landed instead — true whenever Shield Block was available to use, whether
+ * or not the player actually triggered it.
+ */
+function strikeSoundContext(strike, target) {
+  const damageRolls = Object.values(strike.item?.system?.damageRolls ?? {});
+  return {
+    isRanged: !!strike.item?.isRanged,
+    weaponGroup: strike.item?.system?.group ?? null,
+    damageType:
+      strike.item?.system?.damage?.damageType ??
+      damageRolls[0]?.damageType ??
+      null,
+    blocked: target.actor?.system?.attributes?.shield?.raised === true,
+  };
+}
+
+/**
  * Rolls `combatant`'s first ready strike against `target` and, on a hit,
  * rolls and applies damage — confirmed live (see ITEM-8 in docs/backlog.md):
  * a strike's own roll()/damage() never forwards a skipDialog option, so the
@@ -746,6 +794,7 @@ async function rollAndApplyStrike(combat, combatant, target) {
       await strike.variants[0].roll({ target: targetRef, createMessage: true });
       const outcome =
         game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
+      playStrikeSound(outcome, strikeSoundContext(strike, target));
       if (outcome === "success" || outcome === "criticalSuccess") {
         const damageRoll = await strike.damage({
           target: targetRef,
@@ -1048,6 +1097,7 @@ async function rollAndApplyStrikeAtVariant(
       await variant.roll({ target: targetRef, createMessage: true });
       const outcome =
         game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
+      playStrikeSound(outcome, strikeSoundContext(strike, target));
       if (outcome === "success" || outcome === "criticalSuccess") {
         const damageRoll = await strike.damage({
           target: targetRef,
@@ -1115,6 +1165,7 @@ async function castSpellAndApplySave(
     await saveStat.roll({ dc: { value: dc }, createMessage: true });
     const outcome =
       game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
+    playSpellSound(outcome);
     const damageRoll = await spell.rollDamage?.({
       target: targetRef,
       outcome,
