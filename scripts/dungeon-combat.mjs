@@ -378,6 +378,25 @@ function spellRangeSquares(spell, gridDistanceFt) {
 }
 
 /**
+ * True for an area spell squarely inside #119's scope: a `burst` or
+ * `emanation` (both simple "radius from a point" shapes — confirmed live
+ * against the real bestiary that cone/line/cylinder/square/cube exist too,
+ * but need directional geometry this module doesn't compute, so they're
+ * deferred to a follow-up issue), save-based damage (a `defense.save`
+ * statistic and at least one damage instance), and a fixed 1/2/3-action
+ * cost — the same damage/save/cost shape as #118's isSpellInScope, just
+ * without the single-target requirement.
+ */
+function isAreaSpellInScope(spell) {
+  const system = spell.system ?? {};
+  const areaType = system.area?.type;
+  if (areaType !== "burst" && areaType !== "emanation") return false;
+  if (!system.defense?.save?.statistic) return false;
+  if (!Object.keys(system.damage ?? {}).length) return false;
+  return /^[123]$/.test(system.time?.value ?? "");
+}
+
+/**
  * The raw stored `agentTurnState` flag, but only when it actually belongs to
  * this exact turn — same `combatantId` *and* the same `round`/`turn` the
  * Combat is on right now. `combatantId` alone isn't enough: the same
@@ -819,7 +838,8 @@ export function getPendingAgentTurn(combat) {
   const gridSize = combat.scene?.grid?.size ?? 100;
   const gridDistanceFt = combat.scene?.grid?.distance ?? 5;
 
-  const opponents = combatantOpponents(combat, combatant).map((c) => ({
+  const rawOpponents = combatantOpponents(combat, combatant);
+  const opponents = rawOpponents.map((c) => ({
     id: c.id,
     name: c.name,
     distanceSquares: chebyshevSquares(combatant.token, c.token, gridSize),
@@ -857,6 +877,37 @@ export function getPendingAgentTurn(combat) {
     )
     .filter(Boolean);
 
+  const readyAreaSpells = (combatant.actor?.spellcasting?.contents ?? [])
+    .flatMap((entry) =>
+      (entry.spells?.contents ?? []).filter(isAreaSpellInScope).map((spell) => {
+        const radiusSquares = (spell.system.area.value ?? 0) / gridDistanceFt;
+        const withinRadius = (centerToken) =>
+          rawOpponents
+            .filter(
+              (o) => chebyshevSquares(centerToken, o.token, gridSize) <= radiusSquares,
+            )
+            .map((o) => ({ id: o.id, name: o.name }));
+        const placements =
+          spell.system.area.type === "emanation"
+            ? [{ centerType: "self", centerId: null, affected: withinRadius(combatant.token) }]
+            : rawOpponents.map((center) => ({
+                centerType: "opponent",
+                centerId: center.id,
+                affected: withinRadius(center.token),
+              }));
+        return {
+          id: spell.id,
+          slug: spell.slug,
+          label: spell.name,
+          cost: Number(spell.system.time.value),
+          save: spell.system.defense.save.statistic,
+          basic: spell.system.defense.save.basic,
+          entryId: entry.id,
+          placements,
+        };
+      }),
+    );
+
   const self = {
     name: combatant.name,
     hp: combatant.actor?.system?.attributes?.hp?.value ?? null,
@@ -869,6 +920,7 @@ export function getPendingAgentTurn(combat) {
     opponents,
     readyActions,
     readySpells,
+    readyAreaSpells,
     turnState,
     hazard: null,
     hasRangedOrReach,
@@ -1045,6 +1097,67 @@ async function castSpellAndApplySave(
 }
 
 /**
+ * Casts `spellId` (from spellcasting entry `entryId`) once, then rolls each
+ * of `targets`' own saves against the spell's DC and applies damage to each
+ * independently — confirmed live this is the correct way to resolve a
+ * burst/emanation against the affected set `getPendingAgentTurn` already
+ * precomputed: PF2e's own area-spell chat card offers an interactive
+ * `placeTemplate()` flow for the GM to draw the AoE on the canvas and
+ * target tokens by hand, but since this module always knows in advance
+ * which opponents a candidate's placement catches (that's how the
+ * candidate was built), it bypasses that UI entirely and drives the same
+ * per-target save/damage/apply sequence #118's castSpellAndApplySave uses
+ * for a single target, just once per affected creature.
+ */
+async function castAreaSpellAndApplySaves(combatant, targets, spellId, entryId, save) {
+  const entry = combatant.actor?.spellcasting?.contents?.find(
+    (e) => e.id === entryId,
+  );
+  const spell = entry?.spells?.contents?.find((s) => s.id === spellId);
+  if (!entry || !spell) return null;
+
+  const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
+  const prevShowDamage = game.user.flags?.pf2e?.settings?.showDamageDialogs;
+  await game.user.update({
+    "flags.pf2e.settings.showCheckDialogs": false,
+    "flags.pf2e.settings.showDamageDialogs": false,
+  });
+  try {
+    await entry.cast(spell, { createMessage: true });
+    const dc = entry.statistic?.dc?.value ?? 10;
+    const outcomes = [];
+    for (const target of targets) {
+      const saveStat = target.actor?.saves?.[save];
+      if (!saveStat) continue;
+      const targetRef = { document: target.token };
+      await saveStat.roll({ dc: { value: dc }, createMessage: true });
+      const outcome =
+        game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
+      const damageRoll = await spell.rollDamage?.({
+        target: targetRef,
+        outcome,
+        createMessage: true,
+      });
+      if (damageRoll) {
+        await target.actor.applyDamage({
+          damage: damageRoll,
+          token: target.token,
+          outcome,
+        });
+        await applyDefeatIfReducedToZero(target);
+      }
+      outcomes.push({ targetId: target.id, outcome });
+    }
+    return outcomes;
+  } finally {
+    await game.user.update({
+      "flags.pf2e.settings.showCheckDialogs": prevShowCheck,
+      "flags.pf2e.settings.showDamageDialogs": prevShowDamage,
+    });
+  }
+}
+
+/**
  * Executes exactly one chosen candidate for `combatantId`'s current turn in
  * `combat`, updates the per-turn state, and advances the turn once actions
  * run out or `endTurn` was chosen. Returns the pending-turn shape for the
@@ -1086,6 +1199,18 @@ export async function applyAgentDecision(combat, combatantId, candidateId) {
       await castSpellAndApplySave(
         combatant,
         target,
+        candidate.spellId,
+        candidate.entryId,
+        candidate.save,
+      );
+  } else if (candidate.type === "castArea") {
+    const targets = combatantOpponents(combat, combatant).filter((c) =>
+      candidate.affectedIds.includes(c.id),
+    );
+    if (targets.length)
+      await castAreaSpellAndApplySaves(
+        combatant,
+        targets,
         candidate.spellId,
         candidate.entryId,
         candidate.save,
