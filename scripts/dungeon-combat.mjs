@@ -27,6 +27,7 @@ import {
   buildDecisionContext,
 } from "./agent-candidates.mjs";
 import { findPath, blockedEdgesFromWalls } from "./pathfinding.mjs";
+import { coverBlocksLineOfFire, COVER_EFFECT_DATA } from "./cover-items.mjs";
 
 const MODULE_ID = "deck-of-many-more-things";
 
@@ -128,6 +129,26 @@ export function combatSideStatus(combat) {
   };
 }
 
+/** Cover-item (#96) tokens belonging to this combat's own room/encounter —
+ * scoped the same way combatantTokens scopes monster tokens, but read off
+ * `combat`'s own flag instead of taking flagKey/flagValue as parameters,
+ * since resolveCombat only ever has the Combat itself to go on. Cover items
+ * are never Combatants (they don't act, so they never join initiative),
+ * so they can't be found via `combat.combatants` the way NPCs are below —
+ * this scans the scene's tokens directly instead. */
+function coverItemTokensForCombat(combat) {
+  const scene = combat.scene;
+  const dungeonSlot = combat.getFlag(MODULE_ID, "dungeonSlot");
+  const encounterId = combat.getFlag(MODULE_ID, "encounterId");
+  if (!scene || (dungeonSlot == null && encounterId == null)) return [];
+  return scene.tokens.filter((t) => {
+    if (!t.getFlag(MODULE_ID, "coverItem")) return false;
+    if (dungeonSlot != null)
+      return t.getFlag(MODULE_ID, "dungeonSlot") === dungeonSlot;
+    return t.getFlag(MODULE_ID, "encounterId") === encounterId;
+  });
+}
+
 /**
  * Grants XP/loot on victory, then deletes the Combat either way — and, since
  * this fight is now genuinely over regardless of outcome, deletes every
@@ -138,6 +159,11 @@ export function combatSideStatus(combat) {
  * normally-*won* dungeon (never abandoned) left every defeated monster's
  * Actor sitting in the world forever — confirmed live: 8 had piled up in the
  * real world from ordinary completed play before this existed.
+ *
+ * Cover items (#96) get the exact same treatment for the exact same reason
+ * — spawnCoverItems also creates real, permanent Actors, and tactical cover
+ * for one specific fight has no reason to still be standing in the world
+ * (or the room) once that fight is over.
  */
 async function resolveCombat(combat, outcome, api) {
   const scene = combat.scene;
@@ -147,6 +173,11 @@ async function resolveCombat(combat, outcome, api) {
   );
   const npcTokenIds = npcCombatants.map((c) => c.tokenId).filter(Boolean);
   const npcActorIds = [...new Set(npcCombatants.map((c) => c.actor.id))];
+  const coverTokens = coverItemTokensForCombat(combat);
+  const coverTokenIds = coverTokens.map((t) => t.id);
+  const coverActorIds = [
+    ...new Set(coverTokens.map((t) => t.actor?.id).filter(Boolean)),
+  ];
 
   if (outcome === "victory") {
     const hostileLevels = combat.combatants
@@ -171,6 +202,9 @@ async function resolveCombat(combat, outcome, api) {
   if (npcTokenIds.length && scene)
     await scene.deleteEmbeddedDocuments("Token", npcTokenIds);
   if (npcActorIds.length) await Actor.deleteDocuments(npcActorIds);
+  if (coverTokenIds.length && scene)
+    await scene.deleteEmbeddedDocuments("Token", coverTokenIds);
+  if (coverActorIds.length) await Actor.deleteDocuments(coverActorIds);
 }
 
 /** Shared by both the manual GM buttons and the automatic hooks below. */
@@ -595,6 +629,55 @@ async function applyDefeatIfReducedToZero(target) {
   }
 }
 
+/** Grid cells currently occupied by an undestroyed cover item (#96) on this
+ * combat's scene — a hazard actor cover-items.mjs's spawnCoverItems flagged
+ * `flags.dommt.coverItem` at spawn time, filtered to ones that still have HP
+ * (a destroyed cover item no longer blocks a line of fire, whatever state
+ * its token/actor happen to still be in on the scene). */
+function activeCoverCells(combat) {
+  const gridSize = combat.scene?.grid?.size ?? 100;
+  return (combat.scene?.tokens ?? [])
+    .filter(
+      (t) =>
+        t.getFlag(MODULE_ID, "coverItem") &&
+        (t.actor?.system?.attributes?.hp?.value ?? 0) > 0,
+    )
+    .map((t) => tokenCell(t, gridSize));
+}
+
+/**
+ * Runs `roll` with a temporary +2 circumstance AC effect (#96,
+ * COVER_EFFECT_DATA) applied to `target`'s actor if a cover item stands
+ * between `attacker` and `target` — removed again immediately after, in a
+ * `finally`, so the bonus applies to exactly this one roll and never
+ * lingers on the actor afterward. PF2e's own FlatModifier rule element does
+ * the real work of folding it into the attack roll's DC comparison; this
+ * only decides whether it applies for this specific attacker/target pair
+ * and cleans up after itself.
+ */
+async function withCoverBonus(combat, attacker, target, roll) {
+  const gridSize = combat.scene?.grid?.size ?? 100;
+  const coverCells = activeCoverCells(combat);
+  const covered =
+    coverCells.length > 0 &&
+    coverBlocksLineOfFire(
+      tokenCell(attacker.token, gridSize),
+      tokenCell(target.token, gridSize),
+      coverCells,
+    );
+  let effect = null;
+  if (covered) {
+    [effect] = await target.actor.createEmbeddedDocuments("Item", [
+      COVER_EFFECT_DATA,
+    ]);
+  }
+  try {
+    return await roll();
+  } finally {
+    if (effect) await effect.delete();
+  }
+}
+
 /**
  * Rolls `combatant`'s first ready strike against `target` and, on a hit,
  * rolls and applies damage — confirmed live (see ITEM-8 in docs/backlog.md):
@@ -604,7 +687,7 @@ async function applyDefeatIfReducedToZero(target) {
  * target.token}` as the roll target works with no dependency on which scene
  * is currently rendered on this client's canvas.
  */
-async function rollAndApplyStrike(combatant, target) {
+async function rollAndApplyStrike(combat, combatant, target) {
   const strike = combatant.actor?.system?.actions?.find(
     (a) => a.type === "strike" && a.ready !== false,
   );
@@ -618,26 +701,28 @@ async function rollAndApplyStrike(combatant, target) {
   });
 
   try {
-    const targetRef = { document: target.token };
-    await strike.variants[0].roll({ target: targetRef, createMessage: true });
-    const outcome =
-      game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
-    if (outcome === "success" || outcome === "criticalSuccess") {
-      const damageRoll = await strike.damage({
-        target: targetRef,
-        outcome,
-        createMessage: true,
-      });
-      if (damageRoll) {
-        await target.actor.applyDamage({
-          damage: damageRoll,
-          token: target.token,
+    return await withCoverBonus(combat, combatant, target, async () => {
+      const targetRef = { document: target.token };
+      await strike.variants[0].roll({ target: targetRef, createMessage: true });
+      const outcome =
+        game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
+      if (outcome === "success" || outcome === "criticalSuccess") {
+        const damageRoll = await strike.damage({
+          target: targetRef,
           outcome,
+          createMessage: true,
         });
-        await applyDefeatIfReducedToZero(target);
+        if (damageRoll) {
+          await target.actor.applyDamage({
+            damage: damageRoll,
+            token: target.token,
+            outcome,
+          });
+          await applyDefeatIfReducedToZero(target);
+        }
       }
-    }
-    return outcome;
+      return outcome;
+    });
   } finally {
     await game.user.update({
       "flags.pf2e.settings.showCheckDialogs": prevShowCheck,
@@ -704,7 +789,7 @@ export async function playHeuristicTurn(combat, combatant) {
       target.combatant,
       target.distanceSquares,
     );
-    await rollAndApplyStrike(combatant, target.combatant);
+    await rollAndApplyStrike(combat, combatant, target.combatant);
   }
   if (game.combats.has(combat.id) && combat.combatant?.id === combatant.id) {
     await combat.nextTurn();
@@ -755,22 +840,20 @@ export function getPendingAgentTurn(combat) {
 
   const readySpells = (combatant.actor?.spellcasting?.contents ?? [])
     .flatMap((entry) =>
-      (entry.spells?.contents ?? [])
-        .filter(isSpellInScope)
-        .map((spell) => {
-          const rangeSquares = spellRangeSquares(spell, gridDistanceFt);
-          if (rangeSquares == null) return null;
-          return {
-            id: spell.id,
-            slug: spell.slug,
-            label: spell.name,
-            cost: Number(spell.system.time.value),
-            rangeSquares,
-            save: spell.system.defense.save.statistic,
-            basic: spell.system.defense.save.basic,
-            entryId: entry.id,
-          };
-        }),
+      (entry.spells?.contents ?? []).filter(isSpellInScope).map((spell) => {
+        const rangeSquares = spellRangeSquares(spell, gridDistanceFt);
+        if (rangeSquares == null) return null;
+        return {
+          id: spell.id,
+          slug: spell.slug,
+          label: spell.name,
+          cost: Number(spell.system.time.value),
+          rangeSquares,
+          save: spell.system.defense.save.statistic,
+          basic: spell.system.defense.save.basic,
+          entryId: entry.id,
+        };
+      }),
     )
     .filter(Boolean);
 
@@ -844,6 +927,7 @@ async function strideByPosture(combat, combatant, posture, target) {
  * applyDamage sequence rollAndApplyStrike already uses, generalized to a
  * caller-chosen variant instead of always variants[0]. */
 async function rollAndApplyStrikeAtVariant(
+  combat,
   combatant,
   target,
   actionSlug,
@@ -864,28 +948,30 @@ async function rollAndApplyStrikeAtVariant(
     "flags.pf2e.settings.showDamageDialogs": false,
   });
   try {
-    const targetRef = { document: target.token };
-    const variant =
-      strike.variants[Math.min(variantIndex, strike.variants.length - 1)];
-    await variant.roll({ target: targetRef, createMessage: true });
-    const outcome =
-      game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
-    if (outcome === "success" || outcome === "criticalSuccess") {
-      const damageRoll = await strike.damage({
-        target: targetRef,
-        outcome,
-        createMessage: true,
-      });
-      if (damageRoll) {
-        await target.actor.applyDamage({
-          damage: damageRoll,
-          token: target.token,
+    return await withCoverBonus(combat, combatant, target, async () => {
+      const targetRef = { document: target.token };
+      const variant =
+        strike.variants[Math.min(variantIndex, strike.variants.length - 1)];
+      await variant.roll({ target: targetRef, createMessage: true });
+      const outcome =
+        game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
+      if (outcome === "success" || outcome === "criticalSuccess") {
+        const damageRoll = await strike.damage({
+          target: targetRef,
           outcome,
+          createMessage: true,
         });
-        await applyDefeatIfReducedToZero(target);
+        if (damageRoll) {
+          await target.actor.applyDamage({
+            damage: damageRoll,
+            token: target.token,
+            outcome,
+          });
+          await applyDefeatIfReducedToZero(target);
+        }
       }
-    }
-    return outcome;
+      return outcome;
+    });
   } finally {
     await game.user.update({
       "flags.pf2e.settings.showCheckDialogs": prevShowCheck,
@@ -907,7 +993,13 @@ async function rollAndApplyStrikeAtVariant(
  * rollAndApplyStrikeAtVariant, since neither the save roll nor the damage
  * roll forwards a skipDialog option of its own.
  */
-async function castSpellAndApplySave(combatant, target, spellId, entryId, save) {
+async function castSpellAndApplySave(
+  combatant,
+  target,
+  spellId,
+  entryId,
+  save,
+) {
   const entry = combatant.actor?.spellcasting?.contents?.find(
     (e) => e.id === entryId,
   );
@@ -980,6 +1072,7 @@ export async function applyAgentDecision(combat, combatantId, candidateId) {
     );
     if (target)
       await rollAndApplyStrikeAtVariant(
+        combat,
         combatant,
         target,
         candidate.actionSlug,
