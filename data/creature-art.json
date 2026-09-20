@@ -1894,5 +1894,333 @@
     "name": "Shade (Plane of Air)\r",
     "level": 1,
     "art": "shade-plane-of-air.webp"
+  },
+  {
+    "id": "shade_universe",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "3orVmNKI1518s4m7",
+    "name": "Shade (Universe)\r",
+    "level": 1,
+    "art": "shade-universe.webp"
+  },
+  {
+    "id": "silvanshee",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "UhnElzzdp553WUyM",
+    "name": "Silvanshee\r",
+    "level": 1,
+    "art": "silvanshee.webp"
+  },
+  {
+    "id": "skulk",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "uGXTQYuRNtgPt1Pp",
+    "name": "Skulk\r",
+    "level": 1,
+    "art": "skulk.webp"
+  },
+  {
+    "id": "spawning_soulrider_celestial",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "ZTH7qmzEVshknw41",
+    "name": "Spawning Soulrider (Celestial)\r",
+    "level": 1,
+    "art": "spawning-soulrider-celestial.webp"
+  },
+  {
+    "id": "sunflower_leshy",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "Bz5wgKEVsHAyaYEx",
+    "name": "Sunflower Leshy\r",
+    "level": 1,
+    "art": "sunflower-leshy.webp"
+  },
+  {
+    "id": "tunnel_viper",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "ETSHIHmTP0Yajsci",
+    "name": "Tunnel Viper\r",
+    "level": 1,
+    "art": "tunnel-viper.webp"
+  },
+  {
+    "id": "voidworm",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "ciLdEf6sld8h2a2j",
+    "name": "Voidworm\r",
+    "level": 1,
+    "art": "voidworm.webp"
+  },
+  {
+    "id": "war_pony",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "BMpBXSq8T20WdUDl",
+    "name": "War Pony\r",
+    "level": 1,
+    "art": "war-pony.webp"
+  },
+  {
+    "id": "wolf",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "BN5Lb6IsQ9Wyu3rL",
+    "name": "Wolf\r",
+    "level": 1,
+    "art": "wolf.webp"
+  },
+  {
+    "id": "xulgath_warrior",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "5vBG8a8dnJfmVd3Y",
+    "name": "Xulgath Warrior\r",
+    "level": 1,
+    "art": "xulgath-warrior.webp"
+  },
+  {
+    "id": "yzobu",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "H7PDLOIbDG9zt4H1",
+    "name": "Yzobu\r",
+    "level": 1,
+    "art": "yzobu.webp"
+  },
+  {
+    "id": "zoaem",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "wycu7XN9VgiSpSfB",
+    "name": "Zoaem\r",
+    "level": 1,
+    "art": "zoaem.webp"
+  },
+  {
+    "id": "cythnigot",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "YhVYGhzNrOFQROui",
+    "name": "Cythnigot\r",
+    "level": 1,
+    "art": "cythnigot.webp"
+  },
+  {
+    "id": "gathlain_wanderer",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "CSPuBqtPITQt43Md",
+    "name": "Gathlain Wanderer\r",
+    "level": 1,
+    "art": "gathlain-wanderer.webp"
+  },
+  {
+    "id": "grioth_scout",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "NeKtvaz1jB7D6oti",
+    "name": "Grioth Scout\r",
+    "level": 1,
+    "art": "grioth-scout.webp"
+  },
+  {
+    "id": "ice_mephit",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "6Me4Q1JDupyCCnGg",
+    "name": "Ice Mephit\r",
+    "level": 1,
+    "art": "ice-mephit.webp"
+  },
+  {
+    "id": "ooze_mephit",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "5FcYbQxHehjO4w1d",
+    "name": "Ooze Mephit\r",
+    "level": 1,
+    "art": "ooze-mephit.webp"
+  },
+  {
+    "id": "steam_mephit",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "ARw4pyNmuQxoZDke",
+    "name": "Steam Mephit\r",
+    "level": 1,
+    "art": "steam-mephit.webp"
+  },
+  {
+    "id": "tanuki_village_hero",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "Y8rw1J79zfGyznoa",
+    "name": "Tanuki Village Hero\r",
+    "level": 1,
+    "art": "tanuki-village-hero.webp"
+  },
+  {
+    "id": "vanara_disciple",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "za4NM8NwZKumv3NM",
+    "name": "Vanara Disciple\r",
+    "level": 1,
+    "art": "vanara-disciple.webp"
+  },
+  {
+    "id": "wayang_whisperblade",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "wGnhBByFbXVFt9WX",
+    "name": "Wayang Whisperblade\r",
+    "level": 1,
+    "art": "wayang-whisperblade.webp"
+  },
+  {
+    "id": "stheno_harpist",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "74Sw9n7c4sMaK9Rx",
+    "name": "Stheno Harpist\r",
+    "level": 1,
+    "art": "stheno-harpist.webp"
+  },
+  {
+    "id": "wyrwood_sneak",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "eEnyd5lwBY9wtgSS",
+    "name": "Wyrwood Sneak\r",
+    "level": 1,
+    "art": "wyrwood-sneak.webp"
+  },
+  {
+    "id": "shade_axis",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "UfYZs75zqPmkUXjy",
+    "name": "Shade (Axis)\r",
+    "level": 1,
+    "art": "shade-axis.webp"
+  },
+  {
+    "id": "sylph_sneak",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "XbQEXEBwPsBMzxqN",
+    "name": "Sylph Sneak\r",
+    "level": 1,
+    "art": "sylph-sneak.webp"
+  },
+  {
+    "id": "umbral_gnome_scout",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "63gNd2JNUDcAjYzo",
+    "name": "Umbral Gnome Scout\r",
+    "level": 1,
+    "art": "umbral-gnome-scout.webp"
+  },
+  {
+    "id": "undine_hydromancer",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "yFFw1Gsd4teXA97L",
+    "name": "Undine Hydromancer\r",
+    "level": 1,
+    "art": "undine-hydromancer.webp"
+  },
+  {
+    "id": "vexgit",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "BbIyNJDPkGKLK0Rt",
+    "name": "Vexgit\r",
+    "level": 1,
+    "art": "vexgit.webp"
+  },
+  {
+    "id": "naiad",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "Cqi8jadYpUTajIC6",
+    "name": "Naiad\r",
+    "level": 1,
+    "art": "naiad.webp"
+  },
+  {
+    "id": "water_mephit",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "KFf6pJmFmzj7HH9i",
+    "name": "Water Mephit\r",
+    "level": 1,
+    "art": "water-mephit.webp"
+  },
+  {
+    "id": "shokasura",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "K5ahJfASpyXA2WqM",
+    "name": "Shokasura\r",
+    "level": 1,
+    "art": "shokasura.webp"
+  },
+  {
+    "id": "samsaran_anchorite",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "NBdVKrLxKhurBETJ",
+    "name": "Samsaran Anchorite\r",
+    "level": 1,
+    "art": "samsaran-anchorite.webp"
+  },
+  {
+    "id": "dust_mephit",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "m40M5R7wcm5DSVK2",
+    "name": "Dust Mephit\r",
+    "level": 1,
+    "art": "dust-mephit.webp"
+  },
+  {
+    "id": "tripkee_scout_mc2",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "Eo3xxyRwtaynkjoD",
+    "name": "Tripkee Scout\r",
+    "level": 1,
+    "art": "tripkee-scout-mc2.webp"
+  },
+  {
+    "id": "tripkee_scout_npc",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "XfK0MATlH2WDNhAA",
+    "name": "Tripkee Scout\r",
+    "level": 1,
+    "art": "tripkee-scout-npc.webp"
+  },
+  {
+    "id": "velociraptor",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "ZW8ARUrNdc3zewLM",
+    "name": "Velociraptor\r",
+    "level": 1,
+    "art": "velociraptor.webp"
+  },
+  {
+    "id": "water_scamp",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "Fn5ZKPwiaXm242Np",
+    "name": "Water Scamp\r",
+    "level": 1,
+    "art": "water-scamp.webp"
+  },
+  {
+    "id": "shikigami",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "MovMBbHEln0TUlYh",
+    "name": "Shikigami\r",
+    "level": 1,
+    "art": "shikigami.webp"
+  },
+  {
+    "id": "akata",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "nRsH7unLIRWq0ZHC",
+    "name": "Akata\r",
+    "level": 1,
+    "art": "akata.webp"
+  },
+  {
+    "id": "spawning_soulrider_monitor",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "NnEnGsSuxgP1eY5Z",
+    "name": "Spawning Soulrider (Monitor)\r",
+    "level": 1,
+    "art": "spawning-soulrider-monitor.webp"
+  },
+  {
+    "id": "void_zombie",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "cKu0rrZtEAFCosej",
+    "name": "Void Zombie\r",
+    "level": 1,
+    "art": "void-zombie.webp"
   }
 ]
