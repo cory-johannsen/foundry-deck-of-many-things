@@ -14,13 +14,21 @@
  * module.mjs — the composition root that already imports from every one of
  * these files — is what stitches "combat resolved" to "advance the room."
  */
-import { makeFoundryApi } from './foundry-api.mjs';
-import { totalCombatXp, xpPerSurvivor, lootGpForXp } from './combat-rewards.mjs';
+import { makeFoundryApi } from "./foundry-api.mjs";
 import {
-  initAgentTurnState, buildCandidateList, applyCandidateToTurnState, buildDecisionContext
-} from './agent-candidates.mjs';
+  totalCombatXp,
+  xpPerSurvivor,
+  lootGpForXp,
+} from "./combat-rewards.mjs";
+import {
+  initAgentTurnState,
+  buildCandidateList,
+  applyCandidateToTurnState,
+  buildDecisionContext,
+} from "./agent-candidates.mjs";
+import { findPath, blockedEdgesFromWalls } from "./pathfinding.mjs";
 
-const MODULE_ID = 'deck-of-many-more-things';
+const MODULE_ID = "deck-of-many-more-things";
 
 /** Ids of the actual party characters — this module's own definition of
  * "a real party member," used instead of Foundry's `hasPlayerOwner` wherever
@@ -36,7 +44,9 @@ function partyActorIds() {
 
 /** Every token on `scene` carrying `flagKey === flagValue`, plus every current party token. */
 function combatantTokens(scene, flagKey, flagValue) {
-  const monsterTokens = scene.tokens.filter((t) => t.getFlag(MODULE_ID, flagKey) === flagValue);
+  const monsterTokens = scene.tokens.filter(
+    (t) => t.getFlag(MODULE_ID, flagKey) === flagValue,
+  );
   const partyIds = partyActorIds();
   const partyTokens = scene.tokens.filter((t) => partyIds.has(t.actor?.id));
   return [...monsterTokens, ...partyTokens];
@@ -56,12 +66,19 @@ async function startCombat(scene, flagKey, flagValue) {
   await combat.setFlag(MODULE_ID, flagKey, flagValue);
   const partyIds = partyActorIds();
   const combatants = await combat.createEmbeddedDocuments(
-    'Combatant', tokens.map((t) => ({
-      tokenId: t.id, sceneId: scene.id,
-      ...(partyIds.has(t.actor?.id) ? {} : { flags: { [MODULE_ID]: { agentControlled: true } } })
-    }))
+    "Combatant",
+    tokens.map((t) => ({
+      tokenId: t.id,
+      sceneId: scene.id,
+      ...(partyIds.has(t.actor?.id)
+        ? {}
+        : { flags: { [MODULE_ID]: { agentControlled: true } } }),
+    })),
   );
-  await combat.rollInitiative(combatants.map((c) => c.id), { skipDialog: true });
+  await combat.rollInitiative(
+    combatants.map((c) => c.id),
+    { skipDialog: true },
+  );
   await combat.startCombat();
   return combat;
 }
@@ -72,28 +89,42 @@ async function startCombat(scene, flagKey, flagValue) {
  * never have the flag in the first place. */
 export async function toggleAgentControlled(combatant) {
   if (partyActorIds().has(combatant.actor?.id)) return;
-  const current = combatant.getFlag(MODULE_ID, 'agentControlled') ?? false;
-  await combatant.setFlag(MODULE_ID, 'agentControlled', !current);
+  const current = combatant.getFlag(MODULE_ID, "agentControlled") ?? false;
+  await combatant.setFlag(MODULE_ID, "agentControlled", !current);
 }
 
-export const startCombatForSlot = (scene, slot) => startCombat(scene, 'dungeonSlot', slot);
-export const startCombatForEncounterId = (scene, encounterId) => startCombat(scene, 'encounterId', encounterId);
+export const startCombatForSlot = (scene, slot) =>
+  startCombat(scene, "dungeonSlot", slot);
+export const startCombatForEncounterId = (scene, encounterId) =>
+  startCombat(scene, "encounterId", encounterId);
 
 export function getCombatForSlot(scene, slot) {
-  return game.combats.find((c) => c.scene?.id === scene.id && c.getFlag(MODULE_ID, 'dungeonSlot') === slot) ?? null;
+  return (
+    game.combats.find(
+      (c) =>
+        c.scene?.id === scene.id &&
+        c.getFlag(MODULE_ID, "dungeonSlot") === slot,
+    ) ?? null
+  );
 }
 
 function isModuleCombat(c) {
-  return c.getFlag(MODULE_ID, 'dungeonSlot') != null || c.getFlag(MODULE_ID, 'encounterId') != null;
+  return (
+    c.getFlag(MODULE_ID, "dungeonSlot") != null ||
+    c.getFlag(MODULE_ID, "encounterId") != null
+  );
 }
 
 /** `{ hostilesDefeated, partyDefeated }` — both false while the fight's still going. */
 export function combatSideStatus(combat) {
   const groups = { hostile: [], party: [] };
-  for (const c of combat.combatants) (c.token?.disposition === -1 ? groups.hostile : groups.party).push(c);
+  for (const c of combat.combatants)
+    (c.token?.disposition === -1 ? groups.hostile : groups.party).push(c);
   return {
-    hostilesDefeated: groups.hostile.length > 0 && groups.hostile.every((c) => c.isDefeated),
-    partyDefeated: groups.party.length > 0 && groups.party.every((c) => c.isDefeated)
+    hostilesDefeated:
+      groups.hostile.length > 0 && groups.hostile.every((c) => c.isDefeated),
+    partyDefeated:
+      groups.party.length > 0 && groups.party.every((c) => c.isDefeated),
   };
 }
 
@@ -111,30 +142,44 @@ export function combatSideStatus(combat) {
 async function resolveCombat(combat, outcome, api) {
   const scene = combat.scene;
   const partyIds = partyActorIds();
-  const npcCombatants = combat.combatants.filter((c) => c.actor?.id && !partyIds.has(c.actor.id));
+  const npcCombatants = combat.combatants.filter(
+    (c) => c.actor?.id && !partyIds.has(c.actor.id),
+  );
   const npcTokenIds = npcCombatants.map((c) => c.tokenId).filter(Boolean);
   const npcActorIds = [...new Set(npcCombatants.map((c) => c.actor.id))];
 
-  if (outcome === 'victory') {
+  if (outcome === "victory") {
     const hostileLevels = combat.combatants
       .filter((c) => c.token?.disposition === -1)
       .map((c) => c.actor?.system?.details?.level?.value ?? 0);
     const partyLevel = await api.partyLevel();
     const totalXp = totalCombatXp(hostileLevels, partyLevel);
-    const party = (game.actors?.party?.members ?? []).filter((m) => m.type === 'character');
+    const party = (game.actors?.party?.members ?? []).filter(
+      (m) => m.type === "character",
+    );
     const share = xpPerSurvivor(totalXp, party.length);
     for (const member of party) {
-      await member.update({ 'system.details.xp.value': (member.system.details.xp.value ?? 0) + share });
+      await member.update({
+        "system.details.xp.value":
+          (member.system.details.xp.value ?? 0) + share,
+      });
     }
-    if (game.actors.party) await api.addCoins(game.actors.party.id, { gp: lootGpForXp(totalXp) });
+    if (game.actors.party)
+      await api.addCoins(game.actors.party.id, { gp: lootGpForXp(totalXp) });
   }
   await combat.delete();
-  if (npcTokenIds.length && scene) await scene.deleteEmbeddedDocuments('Token', npcTokenIds);
+  if (npcTokenIds.length && scene)
+    await scene.deleteEmbeddedDocuments("Token", npcTokenIds);
   if (npcActorIds.length) await Actor.deleteDocuments(npcActorIds);
 }
 
 /** Shared by both the manual GM buttons and the automatic hooks below. */
-export async function resolveSlotCombat(scene, slot, outcome, api = makeFoundryApi()) {
+export async function resolveSlotCombat(
+  scene,
+  slot,
+  outcome,
+  api = makeFoundryApi(),
+) {
   const combat = getCombatForSlot(scene, slot);
   if (!combat) return;
   await resolveCombat(combat, outcome, api);
@@ -152,8 +197,8 @@ async function autoResolveIfDecided(combat) {
   if (!game.user.isGM || !game.combats.has(combat.id)) return null;
   const { hostilesDefeated, partyDefeated } = combatSideStatus(combat);
   if (!hostilesDefeated && !partyDefeated) return null;
-  const outcome = hostilesDefeated ? 'victory' : 'defeat';
-  const dungeonSlot = combat.getFlag(MODULE_ID, 'dungeonSlot') ?? null;
+  const outcome = hostilesDefeated ? "victory" : "defeat";
+  const dungeonSlot = combat.getFlag(MODULE_ID, "dungeonSlot") ?? null;
   const scene = combat.scene;
   await resolveCombat(combat, outcome, makeFoundryApi());
   return { outcome, dungeonSlot, scene };
@@ -161,13 +206,16 @@ async function autoResolveIfDecided(combat) {
 
 /** Hook target for `updateActor` — module.mjs registers this. */
 export function maybeResolveCombatForActor(actor) {
-  const combat = game.combats.find((c) => isModuleCombat(c) && c.combatants.some((cb) => cb.actorId === actor.id));
+  const combat = game.combats.find(
+    (c) =>
+      isModuleCombat(c) && c.combatants.some((cb) => cb.actorId === actor.id),
+  );
   return combat ? autoResolveIfDecided(combat) : null;
 }
 
 /** Hook target for `updateCombatant` — module.mjs registers this. */
 export function maybeResolveCombatForCombatant(combatant, changes) {
-  if (!('defeated' in changes)) return null;
+  if (!("defeated" in changes)) return null;
   const combat = combatant.parent;
   return combat && isModuleCombat(combat) ? autoResolveIfDecided(combat) : null;
 }
@@ -200,19 +248,26 @@ export const AGENT_TIMEOUT_MS = 45000;
 export async function armAgentTimeout(combat, combatant) {
   const armedRound = combat.round;
   const armedTurn = combat.turn;
-  const armedCounter = currentStoredAgentTurnState(combat, combatant.id)?.counter ?? 0;
+  const armedCounter =
+    currentStoredAgentTurnState(combat, combatant.id)?.counter ?? 0;
   await new Promise((resolve) => setTimeout(resolve, AGENT_TIMEOUT_MS));
-  if (!game.combats.has(combat.id) || combat.combatant?.id !== combatant.id) return;
+  if (!game.combats.has(combat.id) || combat.combatant?.id !== combatant.id)
+    return;
   if (combat.round !== armedRound || combat.turn !== armedTurn) return;
-  const currentCounter = currentStoredAgentTurnState(combat, combatant.id)?.counter ?? 0;
+  const currentCounter =
+    currentStoredAgentTurnState(combat, combatant.id)?.counter ?? 0;
   if (currentCounter !== armedCounter) return;
   ui.notifications.warn(
-    game.i18n.format('DOMMT.Dungeon.Combat.AgentTimeoutWarning', { name: combatant.name })
+    game.i18n.format("DOMMT.Dungeon.Combat.AgentTimeoutWarning", {
+      name: combatant.name,
+    }),
   );
-  const gmIds = ChatMessage.getWhisperRecipients('GM').map((u) => u.id);
+  const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
   await ChatMessage.create({
-    content: game.i18n.format('DOMMT.Dungeon.Combat.AgentTimeoutChat', { name: combatant.name }),
-    whisper: gmIds
+    content: game.i18n.format("DOMMT.Dungeon.Combat.AgentTimeoutChat", {
+      name: combatant.name,
+    }),
+    whisper: gmIds,
   });
   await playHeuristicTurn(combat, combatant);
 }
@@ -223,7 +278,11 @@ export async function armAgentTimeout(combat, combatant) {
 function combatantOpponents(combat, combatant) {
   const mySide = combatant.token?.disposition;
   return combat.combatants.filter(
-    (c) => c.id !== combatant.id && !c.isDefeated && c.token && c.token.disposition !== mySide
+    (c) =>
+      c.id !== combatant.id &&
+      !c.isDefeated &&
+      c.token &&
+      c.token.disposition !== mySide,
   );
 }
 
@@ -242,8 +301,10 @@ function chebyshevSquares(a, b, gridSize) {
  * and `.item.system.range` is `{increment, max}` in feet for a ranged
  * attack, `null` for melee. */
 function actionReachSquares(action, gridDistanceFt) {
-  const reachTrait = (action.traits ?? []).find((t) => /^reach-\d+$/.test(t.name ?? ''));
-  if (reachTrait) return Number(reachTrait.name.split('-')[1]) / gridDistanceFt;
+  const reachTrait = (action.traits ?? []).find((t) =>
+    /^reach-\d+$/.test(t.name ?? ""),
+  );
+  if (reachTrait) return Number(reachTrait.name.split("-")[1]) / gridDistanceFt;
   const rangeIncrement = action.item?.system?.range?.increment;
   if (rangeIncrement) return rangeIncrement / gridDistanceFt;
   return MELEE_REACH_SQUARES;
@@ -262,8 +323,13 @@ function actionReachSquares(action, gridDistanceFt) {
  * back to a fresh state.
  */
 function currentStoredAgentTurnState(combat, combatantId) {
-  const stored = combat.getFlag(MODULE_ID, 'agentTurnState');
-  if (stored?.combatantId === combatantId && stored.round === combat.round && stored.turn === combat.turn) return stored;
+  const stored = combat.getFlag(MODULE_ID, "agentTurnState");
+  if (
+    stored?.combatantId === combatantId &&
+    stored.round === combat.round &&
+    stored.turn === combat.turn
+  )
+    return stored;
   return null;
 }
 
@@ -272,7 +338,12 @@ function currentStoredAgentTurnState(combat, combatantId) {
  * combatant/round/turn — see `currentStoredAgentTurnState` above. */
 function getAgentTurnState(combat, combatantId) {
   const stored = currentStoredAgentTurnState(combat, combatantId);
-  return stored ? { actionsRemaining: stored.actionsRemaining, mapIncrement: stored.mapIncrement } : initAgentTurnState();
+  return stored
+    ? {
+        actionsRemaining: stored.actionsRemaining,
+        mapIncrement: stored.mapIncrement,
+      }
+    : initAgentTurnState();
 }
 
 /** Writes the per-turn state back, tagged with the combat's current
@@ -283,10 +354,15 @@ function getAgentTurnState(combat, combatantId) {
  * a timer superseded by a real decision already applied can tell it's stale
  * instead of firing on top of a turn that's still being played. */
 async function setAgentTurnState(combat, combatantId, turnState) {
-  const counter = (currentStoredAgentTurnState(combat, combatantId)?.counter ?? 0) + 1;
-  await combat.setFlag(MODULE_ID, 'agentTurnState', {
-    combatantId, round: combat.round, turn: combat.turn,
-    actionsRemaining: turnState.actionsRemaining, mapIncrement: turnState.mapIncrement, counter
+  const counter =
+    (currentStoredAgentTurnState(combat, combatantId)?.counter ?? 0) + 1;
+  await combat.setFlag(MODULE_ID, "agentTurnState", {
+    combatantId,
+    round: combat.round,
+    turn: combat.turn,
+    actionsRemaining: turnState.actionsRemaining,
+    mapIncrement: turnState.mapIncrement,
+    counter,
   });
 }
 
@@ -308,12 +384,128 @@ function nearestOpponent(combat, combatant) {
 
 const MELEE_REACH_SQUARES = 1;
 
+/** Grid-square {gx, gy} for a token's position. Tokens here are always
+ * exactly grid-aligned (one square), same "pixel / gridSize, no center
+ * offset" convention chebyshevSquares already uses. */
+function tokenCell(token, gridSize) {
+  return {
+    gx: Math.round(token.x / gridSize),
+    gy: Math.round(token.y / gridSize),
+  };
+}
+
+/** {gx0, gy0, gx1, gy1} bounding every grid square the scene actually
+ * covers, so findPath's search space stays finite even on this generator's
+ * deliberately over-provisioned canvas (ITEM-20). Null (unbounded search) if
+ * the scene has no usable dimensions yet. */
+function sceneBounds(combat, gridSize) {
+  const width = combat.scene?.width;
+  const height = combat.scene?.height;
+  if (!width || !height) return null;
+  return {
+    gx0: 0,
+    gy0: 0,
+    gx1: Math.ceil(width / gridSize) - 1,
+    gy1: Math.ceil(height / gridSize) - 1,
+  };
+}
+
+/** A wall blocks movement if its own `move` sense says so, unless it's a
+ * door currently standing open — Foundry's own collision rules ignore an
+ * open door's sense properties, and this generator's doors do transition
+ * CLOSED/LOCKED -> OPEN when a player opens one (handleDungeonDoorOpened,
+ * dungeon-scene.mjs), so a party that's already opened a door shouldn't
+ * find it treated as a wall by pathfinding. */
+function wallBlocksMovement(wall) {
+  if (wall.move === CONST.WALL_MOVEMENT_TYPES.NONE) return false;
+  if (
+    wall.door !== CONST.WALL_DOOR_TYPES.NONE &&
+    wall.ds === CONST.WALL_DOOR_STATES.OPEN
+  )
+    return false;
+  return true;
+}
+
+/** The isBlocked(a, b) predicate pathfinding.mjs's findPath expects, built
+ * from this combat's real scene walls — the one piece of Foundry glue
+ * pathfinding.mjs is deliberately kept free of (see that file's own
+ * docblock for the pure/glue split and why). */
+function movementBlockedEdges(combat) {
+  const gridSize = combat.scene?.grid?.size ?? 100;
+  const walls = (combat.scene?.walls?.contents ?? [])
+    .filter(wallBlocksMovement)
+    .map((w) => ({ x1: w.c[0], y1: w.c[1], x2: w.c[2], y2: w.c[3] }));
+  return blockedEdgesFromWalls(walls, gridSize);
+}
+
 /**
- * Moves `combatant`'s token in a straight 8-directional line toward
- * `target`'s token, up to its own speed, stopping once adjacent
- * (MELEE_REACH_SQUARES) — no wall-avoidance, no real pathfinding, an
- * explicitly accepted simplification (ITEM-8's own Non-goals). A no-op if
- * already adjacent or if the combatant has no speed to move with.
+ * A real, wall-aware path from `start` toward `targetCell` (#100) — straight
+ * to it for an approach, or toward a point projected directly away from it
+ * for a retreat, trying progressively shorter retreat distances if the
+ * farthest one isn't reachable (a wall directly behind the retreater
+ * shouldn't cancel the retreat outright, just shorten it). `speedSquares`
+ * bounds how far a retreat goal is projected; how much of the returned path
+ * is actually walked is still the caller's own speed clamp. Returns `null`
+ * if no path exists at all.
+ */
+function posturePath(
+  start,
+  targetCell,
+  posture,
+  speedSquares,
+  isBlocked,
+  bounds,
+) {
+  if (posture !== "retreat")
+    return findPath(start, targetCell, isBlocked, bounds);
+
+  const dx = Math.sign(start.gx - targetCell.gx) || 1;
+  const dy = Math.sign(start.gy - targetCell.gy) || 1;
+  for (let dist = Math.max(1, speedSquares); dist >= 1; dist -= 1) {
+    let gx = start.gx + dx * dist;
+    let gy = start.gy + dy * dist;
+    if (bounds) {
+      gx = Math.min(Math.max(gx, bounds.gx0), bounds.gx1);
+      gy = Math.min(Math.max(gy, bounds.gy0), bounds.gy1);
+    }
+    const path = findPath(start, { gx, gy }, isBlocked, bounds);
+    if (path && path.length > 1) return path;
+  }
+  return null;
+}
+
+/**
+ * Walks up to `speedSquares` steps of `path` (a findPath result, `path[0]`
+ * === the mover's own current cell), stopping early once within
+ * `stopWithinSquares` (Chebyshev) of `targetCell` — the same "don't
+ * overshoot into melee range" clamp this module has always applied, now
+ * checked per-waypoint against a possibly-curved route instead of computed
+ * once for a straight line. `stopWithinSquares` of `0` (retreat's case)
+ * never stops early; only the speed budget and the path's own length do.
+ * Returns the destination {gx, gy} actually reached, or `null` if the mover
+ * shouldn't move at all (no path, or every waypoint is within the stop
+ * distance already).
+ */
+function walkPath(path, targetCell, speedSquares, stopWithinSquares) {
+  let stepIndex = 0;
+  for (let i = 1; i < path.length && i <= speedSquares; i += 1) {
+    if (stopWithinSquares > 0) {
+      const remaining = Math.max(
+        Math.abs(path[i].gx - targetCell.gx),
+        Math.abs(path[i].gy - targetCell.gy),
+      );
+      if (remaining < stopWithinSquares) break;
+    }
+    stepIndex = i;
+  }
+  return stepIndex > 0 ? path[stepIndex] : null;
+}
+
+/**
+ * Moves `combatant`'s token toward `target`'s token along a real,
+ * wall-aware path (#100), up to its own speed, stopping once adjacent
+ * (MELEE_REACH_SQUARES). A no-op if already adjacent, if the combatant has
+ * no speed to move with, or if no path to the target exists at all.
  */
 async function stepToward(combat, combatant, target, distanceSquares) {
   if (distanceSquares <= MELEE_REACH_SQUARES) return;
@@ -325,14 +517,19 @@ async function stepToward(combat, combatant, target, distanceSquares) {
   // moved.
   const speedFt = combatant.actor?.system?.movement?.speeds?.land?.value ?? 0;
   const speedSquares = Math.floor(speedFt / gridDistanceFt);
-  const steps = Math.min(speedSquares, Math.floor(distanceSquares - MELEE_REACH_SQUARES));
-  if (steps <= 0) return;
+  if (speedSquares <= 0) return;
 
   const me = combatant.token;
   const dest = target.token;
-  const dx = Math.sign(dest.x - me.x);
-  const dy = Math.sign(dest.y - me.y);
-  await me.update({ x: me.x + dx * gridSize * steps, y: me.y + dy * gridSize * steps });
+  const start = tokenCell(me, gridSize);
+  const goal = tokenCell(dest, gridSize);
+  const bounds = sceneBounds(combat, gridSize);
+  const path = findPath(start, goal, movementBlockedEdges(combat), bounds);
+  if (!path) return;
+
+  const waypoint = walkPath(path, goal, speedSquares, MELEE_REACH_SQUARES);
+  if (!waypoint) return;
+  await me.update({ x: waypoint.gx * gridSize, y: waypoint.gy * gridSize });
 }
 
 /**
@@ -358,8 +555,8 @@ async function stepToward(combat, combatant, target, distanceSquares) {
  */
 async function applyDefeatIfReducedToZero(target) {
   if ((target.actor?.system?.attributes?.hp?.value ?? 1) > 0) return;
-  if (target.actor?.type === 'character') {
-    await target.actor.increaseCondition('dying');
+  if (target.actor?.type === "character") {
+    await target.actor.increaseCondition("dying");
   } else if (!target.isDefeated) {
     await target.update({ defeated: true });
   }
@@ -375,32 +572,43 @@ async function applyDefeatIfReducedToZero(target) {
  * is currently rendered on this client's canvas.
  */
 async function rollAndApplyStrike(combatant, target) {
-  const strike = combatant.actor?.system?.actions?.find((a) => a.type === 'strike' && a.ready !== false);
+  const strike = combatant.actor?.system?.actions?.find(
+    (a) => a.type === "strike" && a.ready !== false,
+  );
   if (!strike) return null;
 
   const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
   const prevShowDamage = game.user.flags?.pf2e?.settings?.showDamageDialogs;
   await game.user.update({
-    'flags.pf2e.settings.showCheckDialogs': false,
-    'flags.pf2e.settings.showDamageDialogs': false
+    "flags.pf2e.settings.showCheckDialogs": false,
+    "flags.pf2e.settings.showDamageDialogs": false,
   });
 
   try {
     const targetRef = { document: target.token };
     await strike.variants[0].roll({ target: targetRef, createMessage: true });
-    const outcome = game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
-    if (outcome === 'success' || outcome === 'criticalSuccess') {
-      const damageRoll = await strike.damage({ target: targetRef, outcome, createMessage: true });
+    const outcome =
+      game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
+    if (outcome === "success" || outcome === "criticalSuccess") {
+      const damageRoll = await strike.damage({
+        target: targetRef,
+        outcome,
+        createMessage: true,
+      });
       if (damageRoll) {
-        await target.actor.applyDamage({ damage: damageRoll, token: target.token, outcome });
+        await target.actor.applyDamage({
+          damage: damageRoll,
+          token: target.token,
+          outcome,
+        });
         await applyDefeatIfReducedToZero(target);
       }
     }
     return outcome;
   } finally {
     await game.user.update({
-      'flags.pf2e.settings.showCheckDialogs': prevShowCheck,
-      'flags.pf2e.settings.showDamageDialogs': prevShowDamage
+      "flags.pf2e.settings.showCheckDialogs": prevShowCheck,
+      "flags.pf2e.settings.showDamageDialogs": prevShowDamage,
     });
   }
 }
@@ -421,14 +629,19 @@ async function rollAndApplyStrike(combatant, target) {
 export async function autoPlayCombatantTurnIfDue(combat) {
   if (!game.user.isGM || !isModuleCombat(combat)) return;
   const combatant = combat.combatant;
-  if (!combatant || partyActorIds().has(combatant.actor?.id) || combatant.actor?.hasPlayerOwner) return;
+  if (
+    !combatant ||
+    partyActorIds().has(combatant.actor?.id) ||
+    combatant.actor?.hasPlayerOwner
+  )
+    return;
 
   if (combatant.isDefeated) {
     await combat.nextTurn();
     return;
   }
 
-  if (combatant.getFlag(MODULE_ID, 'agentControlled')) {
+  if (combatant.getFlag(MODULE_ID, "agentControlled")) {
     // Not awaited — arms a background timeout and returns immediately, same
     // fire-and-forget style module.mjs's own updateCombat hook already uses
     // to call this function. getPendingAgentTurn/applyAgentDecision (Task 3)
@@ -440,7 +653,8 @@ export async function autoPlayCombatantTurnIfDue(combat) {
   await new Promise((resolve) => setTimeout(resolve, AUTO_PLAY_DELAY_MS));
   // Another client (or the combat auto-resolving mid-wait) may have already
   // moved things on — don't act on a stale turn.
-  if (!game.combats.has(combat.id) || combat.combatant?.id !== combatant.id) return;
+  if (!game.combats.has(combat.id) || combat.combatant?.id !== combatant.id)
+    return;
   await playHeuristicTurn(combat, combatant);
 }
 
@@ -451,7 +665,12 @@ export async function autoPlayCombatantTurnIfDue(combat) {
 export async function playHeuristicTurn(combat, combatant) {
   const target = nearestOpponent(combat, combatant);
   if (target) {
-    await stepToward(combat, combatant, target.combatant, target.distanceSquares);
+    await stepToward(
+      combat,
+      combatant,
+      target.combatant,
+      target.distanceSquares,
+    );
     await rollAndApplyStrike(combatant, target.combatant);
   }
   if (game.combats.has(combat.id) && combat.combatant?.id === combatant.id) {
@@ -471,51 +690,71 @@ export async function playHeuristicTurn(combat, combatant) {
 export function getPendingAgentTurn(combat) {
   if (!isModuleCombat(combat)) return null;
   const combatant = combat.combatant;
-  if (!combatant || combatant.isDefeated || !combatant.getFlag(MODULE_ID, 'agentControlled')) return null;
+  if (
+    !combatant ||
+    combatant.isDefeated ||
+    !combatant.getFlag(MODULE_ID, "agentControlled")
+  )
+    return null;
 
   const turnState = getAgentTurnState(combat, combatant.id);
   const gridSize = combat.scene?.grid?.size ?? 100;
   const gridDistanceFt = combat.scene?.grid?.distance ?? 5;
 
   const opponents = combatantOpponents(combat, combatant).map((c) => ({
-    id: c.id, name: c.name,
+    id: c.id,
+    name: c.name,
     distanceSquares: chebyshevSquares(combatant.token, c.token, gridSize),
-    hp: c.actor?.system?.attributes?.hp?.value ?? null
+    hp: c.actor?.system?.attributes?.hp?.value ?? null,
   }));
 
   const readyActions = (combatant.actor?.system?.actions ?? [])
-    .filter((a) => a.type === 'strike' && a.ready !== false)
+    .filter((a) => a.type === "strike" && a.ready !== false)
     .map((a) => ({
       slug: a.item?.slug ?? a.slug ?? a.label,
       label: a.label,
       variantCount: a.variants?.length ?? 1,
-      reachSquares: actionReachSquares(a, gridDistanceFt)
+      reachSquares: actionReachSquares(a, gridDistanceFt),
     }));
-  const hasRangedOrReach = readyActions.some((a) => a.reachSquares > MELEE_REACH_SQUARES);
+  const hasRangedOrReach = readyActions.some(
+    (a) => a.reachSquares > MELEE_REACH_SQUARES,
+  );
 
   const self = {
     name: combatant.name,
     hp: combatant.actor?.system?.attributes?.hp?.value ?? null,
-    conditions: Array.from(combatant.actor?.conditions ?? []).map((c) => c.slug)
+    conditions: Array.from(combatant.actor?.conditions ?? []).map(
+      (c) => c.slug,
+    ),
   };
 
-  const candidates = buildCandidateList({ opponents, readyActions, turnState, hazard: null, hasRangedOrReach });
+  const candidates = buildCandidateList({
+    opponents,
+    readyActions,
+    turnState,
+    hazard: null,
+    hasRangedOrReach,
+  });
   return {
     combatId: combat.id,
     combatantId: combatant.id,
-    context: buildDecisionContext({ self, opponents, candidates, roundNumber: combat.round }),
-    candidates
+    context: buildDecisionContext({
+      self,
+      opponents,
+      candidates,
+      roundNumber: combat.round,
+    }),
+    candidates,
   };
 }
 
-/** Moves `combatant`'s token up to its own speed, straight toward or away
- * from `target`'s token depending on `posture`, parameterized by direction
- * instead of always approaching (no wall-avoidance, no real pathfinding, see
- * #100). For `approach`, clamps to stop adjacent to the target rather than
- * overshooting past it — the same distance clamp stepToward already uses.
- * `retreat` has no "don't overshoot" concept, so it's unclamped, bounded only
- * by speed. A no-op if already at the desired distance or with no speed to
- * move. */
+/** Moves `combatant`'s token up to its own speed, along a real, wall-aware
+ * path (#100) toward or away from `target`'s token depending on `posture`.
+ * For `approach`, stops adjacent to the target rather than overshooting past
+ * it — the same clamp stepToward uses. `retreat` has no "don't overshoot"
+ * concept, so it's unclamped, bounded only by speed and posturePath's own
+ * progressively-shorter-distance fallback. A no-op if already at the desired
+ * distance, with no speed to move, or if no usable path exists. */
 async function strideByPosture(combat, combatant, posture, target) {
   const gridSize = combat.scene?.grid?.size ?? 100;
   const gridDistanceFt = combat.scene?.grid?.distance ?? 5;
@@ -525,49 +764,77 @@ async function strideByPosture(combat, combatant, posture, target) {
 
   const me = combatant.token;
   const dest = target.token;
-  const steps = posture === 'approach'
-    ? Math.min(speedSquares, Math.floor(chebyshevSquares(me, dest, gridSize) - MELEE_REACH_SQUARES))
-    : speedSquares;
-  if (steps <= 0) return;
+  const start = tokenCell(me, gridSize);
+  const targetCell = tokenCell(dest, gridSize);
+  const bounds = sceneBounds(combat, gridSize);
+  const isBlocked = movementBlockedEdges(combat);
+  const path = posturePath(
+    start,
+    targetCell,
+    posture,
+    speedSquares,
+    isBlocked,
+    bounds,
+  );
+  if (!path) return;
 
-  const dx = Math.sign(dest.x - me.x) || 0;
-  const dy = Math.sign(dest.y - me.y) || 0;
-  const sign = posture === 'retreat' ? -1 : 1;
-  await me.update({ x: me.x + sign * dx * gridSize * steps, y: me.y + sign * dy * gridSize * steps });
+  const stopWithin = posture === "approach" ? MELEE_REACH_SQUARES : 0;
+  const waypoint = walkPath(path, targetCell, speedSquares, stopWithin);
+  if (!waypoint) return;
+  await me.update({ x: waypoint.gx * gridSize, y: waypoint.gy * gridSize });
 }
 
 /** Rolls one strike at a specific MAP `variantIndex` against `target` and
  * applies damage on a hit — the same dialog-suppression/roll/damage/
  * applyDamage sequence rollAndApplyStrike already uses, generalized to a
  * caller-chosen variant instead of always variants[0]. */
-async function rollAndApplyStrikeAtVariant(combatant, target, actionSlug, variantIndex) {
-  const strike = (combatant.actor?.system?.actions ?? [])
-    .find((a) => a.type === 'strike' && a.ready !== false && (a.item?.slug ?? a.slug ?? a.label) === actionSlug);
+async function rollAndApplyStrikeAtVariant(
+  combatant,
+  target,
+  actionSlug,
+  variantIndex,
+) {
+  const strike = (combatant.actor?.system?.actions ?? []).find(
+    (a) =>
+      a.type === "strike" &&
+      a.ready !== false &&
+      (a.item?.slug ?? a.slug ?? a.label) === actionSlug,
+  );
   if (!strike) return null;
 
   const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
   const prevShowDamage = game.user.flags?.pf2e?.settings?.showDamageDialogs;
   await game.user.update({
-    'flags.pf2e.settings.showCheckDialogs': false,
-    'flags.pf2e.settings.showDamageDialogs': false
+    "flags.pf2e.settings.showCheckDialogs": false,
+    "flags.pf2e.settings.showDamageDialogs": false,
   });
   try {
     const targetRef = { document: target.token };
-    const variant = strike.variants[Math.min(variantIndex, strike.variants.length - 1)];
+    const variant =
+      strike.variants[Math.min(variantIndex, strike.variants.length - 1)];
     await variant.roll({ target: targetRef, createMessage: true });
-    const outcome = game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
-    if (outcome === 'success' || outcome === 'criticalSuccess') {
-      const damageRoll = await strike.damage({ target: targetRef, outcome, createMessage: true });
+    const outcome =
+      game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
+    if (outcome === "success" || outcome === "criticalSuccess") {
+      const damageRoll = await strike.damage({
+        target: targetRef,
+        outcome,
+        createMessage: true,
+      });
       if (damageRoll) {
-        await target.actor.applyDamage({ damage: damageRoll, token: target.token, outcome });
+        await target.actor.applyDamage({
+          damage: damageRoll,
+          token: target.token,
+          outcome,
+        });
         await applyDefeatIfReducedToZero(target);
       }
     }
     return outcome;
   } finally {
     await game.user.update({
-      'flags.pf2e.settings.showCheckDialogs': prevShowCheck,
-      'flags.pf2e.settings.showDamageDialogs': prevShowDamage
+      "flags.pf2e.settings.showCheckDialogs": prevShowCheck,
+      "flags.pf2e.settings.showDamageDialogs": prevShowDamage,
     });
   }
 }
@@ -587,12 +854,24 @@ export async function applyAgentDecision(combat, combatantId, candidateId) {
   if (!candidate) return null;
 
   const combatant = combat.combatant;
-  if (candidate.type === 'stride') {
-    const target = candidate.targetId ? combatantOpponents(combat, combatant).find((c) => c.id === candidate.targetId) : null;
+  if (candidate.type === "stride") {
+    const target = candidate.targetId
+      ? combatantOpponents(combat, combatant).find(
+          (c) => c.id === candidate.targetId,
+        )
+      : null;
     await strideByPosture(combat, combatant, candidate.posture, target);
-  } else if (candidate.type === 'strike') {
-    const target = combatantOpponents(combat, combatant).find((c) => c.id === candidate.targetId);
-    if (target) await rollAndApplyStrikeAtVariant(combatant, target, candidate.actionSlug, candidate.variantIndex);
+  } else if (candidate.type === "strike") {
+    const target = combatantOpponents(combat, combatant).find(
+      (c) => c.id === candidate.targetId,
+    );
+    if (target)
+      await rollAndApplyStrikeAtVariant(
+        combatant,
+        target,
+        candidate.actionSlug,
+        candidate.variantIndex,
+      );
   }
 
   const turnState = getAgentTurnState(combat, combatantId);
@@ -600,7 +879,8 @@ export async function applyAgentDecision(combat, combatantId, candidateId) {
   await setAgentTurnState(combat, combatantId, nextTurnState);
 
   if (nextTurnState.actionsRemaining <= 0) {
-    if (game.combats.has(combat.id) && combat.combatant?.id === combatantId) await combat.nextTurn();
+    if (game.combats.has(combat.id) && combat.combatant?.id === combatantId)
+      await combat.nextTurn();
     return null;
   }
   // Actions remain — re-arm the timeout for the next decision rather than
