@@ -1238,5 +1238,37 @@
     "name": "Cave Scorpion\r",
     "level": 1,
     "art": "cave-scorpion.webp"
+  },
+  {
+    "id": "boggard_scout",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "s2TkernjfKVEhlJY",
+    "name": "Boggard Scout\r",
+    "level": 1,
+    "art": "boggard-scout.webp"
+  },
+  {
+    "id": "deep_one",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "HH93tN1gMZXr3jvf",
+    "name": "Deep One\r",
+    "level": 1,
+    "art": "deep-one.webp"
+  },
+  {
+    "id": "fuath",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "M6c9Trk8tzwZ2wVf",
+    "name": "Fuath\r",
+    "level": 1,
+    "art": "fuath.webp"
+  },
+  {
+    "id": "ghoul",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "LHHgGSs0ELCR4CYK",
+    "name": "Ghoul\r",
+    "level": 1,
+    "art": "ghoul.webp"
   }
 ]
