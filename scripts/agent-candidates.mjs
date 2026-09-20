@@ -71,17 +71,42 @@ export function buildStrikeCandidates({ readyActions, opponents, mapIncrement })
   return candidates;
 }
 
+/**
+ * One candidate per ready single-target, save-based spell x each opponent
+ * within that spell's range, provided the spell's own action cost fits the
+ * actions still remaining this turn (unlike a strike, a spell's cost isn't
+ * always 1, so this check can't wait for `buildCandidateList`'s exhausted
+ * short-circuit).
+ */
+export function buildSpellCandidates({ readySpells, opponents, actionsRemaining }) {
+  const candidates = [];
+  for (const spell of readySpells) {
+    if (spell.cost > actionsRemaining) continue;
+    for (const opponent of opponents) {
+      if (opponent.distanceSquares > spell.rangeSquares) continue;
+      candidates.push({
+        id: `cast:${spell.slug}:${opponent.id}`, type: 'cast',
+        spellId: spell.id, entryId: spell.entryId, targetId: opponent.id, cost: spell.cost,
+        save: spell.save, basic: spell.basic,
+        summary: `${spell.label} vs ${opponent.name}`
+      });
+    }
+  }
+  return candidates;
+}
+
 /** Always available — lets the agent stop spending actions early. */
 export function endTurnCandidate() {
   return { id: 'endTurn', type: 'endTurn', cost: 0, summary: 'End turn' };
 }
 
 /** Full candidate list for one decision iteration. */
-export function buildCandidateList({ opponents, readyActions, turnState, hazard = null, hasRangedOrReach = false }) {
+export function buildCandidateList({ opponents, readyActions, readySpells = [], turnState, hazard = null, hasRangedOrReach = false }) {
   if (turnState.actionsRemaining <= 0) return [endTurnCandidate()];
   return [
     ...buildMovementCandidates({ opponents, hazard, hasRangedOrReach }),
     ...buildStrikeCandidates({ readyActions, opponents, mapIncrement: turnState.mapIncrement }),
+    ...buildSpellCandidates({ readySpells, opponents, actionsRemaining: turnState.actionsRemaining }),
     endTurnCandidate()
   ];
 }

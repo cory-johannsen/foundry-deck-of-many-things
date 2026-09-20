@@ -311,6 +311,39 @@ function actionReachSquares(action, gridDistanceFt) {
 }
 
 /**
+ * True for a spell squarely inside #118's scope: single-target (no `area`,
+ * and `target.value` names exactly one creature — not "plus any number of
+ * additional creatures", Chain Lightning's multi-target shape, explicitly
+ * deferred to a follow-up issue), save-based damage (a `defense.save`
+ * statistic and at least one damage instance), and a fixed 1/2/3-action
+ * cost (excludes a variable range like "1 to 3" and a ritual-style
+ * duration like "1 hour"). Confirmed live against the real bestiary
+ * (Spirit Blast, Void Warp, Vitality Lash all match; Chain Lightning,
+ * Harm/Heal's variable cost, and no-save utility spells don't).
+ */
+function isSpellInScope(spell) {
+  const system = spell.system ?? {};
+  if (system.area != null) return false;
+  const targetValue = system.target?.value ?? "";
+  if (!/^1\b/.test(targetValue) || /plus|additional/i.test(targetValue))
+    return false;
+  if (!system.defense?.save?.statistic) return false;
+  if (!Object.keys(system.damage ?? {}).length) return false;
+  return /^[123]$/.test(system.time?.value ?? "");
+}
+
+/** Squares a single-target spell reaches, from its free-text `range.value`
+ * ("30 feet", confirmed live) — `null` when unparseable, since a spell we
+ * can't validate as reachable is safer to leave off the candidate list
+ * than to guess a range for. */
+function spellRangeSquares(spell, gridDistanceFt) {
+  const match = /^(\d+)\s*feet$/i.exec(
+    (spell.system?.range?.value ?? "").trim(),
+  );
+  return match ? Number(match[1]) / gridDistanceFt : null;
+}
+
+/**
  * The raw stored `agentTurnState` flag, but only when it actually belongs to
  * this exact turn — same `combatantId` *and* the same `round`/`turn` the
  * Combat is on right now. `combatantId` alone isn't enough: the same
@@ -720,6 +753,27 @@ export function getPendingAgentTurn(combat) {
     (a) => a.reachSquares > MELEE_REACH_SQUARES,
   );
 
+  const readySpells = (combatant.actor?.spellcasting?.contents ?? [])
+    .flatMap((entry) =>
+      (entry.spells?.contents ?? [])
+        .filter(isSpellInScope)
+        .map((spell) => {
+          const rangeSquares = spellRangeSquares(spell, gridDistanceFt);
+          if (rangeSquares == null) return null;
+          return {
+            id: spell.id,
+            slug: spell.slug,
+            label: spell.name,
+            cost: Number(spell.system.time.value),
+            rangeSquares,
+            save: spell.system.defense.save.statistic,
+            basic: spell.system.defense.save.basic,
+            entryId: entry.id,
+          };
+        }),
+    )
+    .filter(Boolean);
+
   const self = {
     name: combatant.name,
     hp: combatant.actor?.system?.attributes?.hp?.value ?? null,
@@ -731,6 +785,7 @@ export function getPendingAgentTurn(combat) {
   const candidates = buildCandidateList({
     opponents,
     readyActions,
+    readySpells,
     turnState,
     hazard: null,
     hasRangedOrReach,
@@ -840,6 +895,64 @@ async function rollAndApplyStrikeAtVariant(
 }
 
 /**
+ * Casts `spellId` (from spellcasting entry `entryId`) at `target`, rolls the
+ * target's own save against the spell's DC, then rolls and applies damage —
+ * confirmed live this is a 4-step chain, not the single `cast()` call a
+ * strike's `.roll()` might suggest by analogy: `entryDoc.cast()` alone
+ * announces the spell (posts its chat card) but rolls no save and applies no
+ * damage. The target's own `actor.saves[save].roll({dc})` produces the real
+ * outcome; `spell.rollDamage({target, outcome})` then handles basic-save
+ * doubling/halving internally, the same way `strike.damage()` handles
+ * crit doubling for a Strike. Same dialog-suppression convention as
+ * rollAndApplyStrikeAtVariant, since neither the save roll nor the damage
+ * roll forwards a skipDialog option of its own.
+ */
+async function castSpellAndApplySave(combatant, target, spellId, entryId, save) {
+  const entry = combatant.actor?.spellcasting?.contents?.find(
+    (e) => e.id === entryId,
+  );
+  const spell = entry?.spells?.contents?.find((s) => s.id === spellId);
+  if (!entry || !spell) return null;
+
+  const saveStat = target.actor?.saves?.[save];
+  if (!saveStat) return null;
+
+  const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
+  const prevShowDamage = game.user.flags?.pf2e?.settings?.showDamageDialogs;
+  await game.user.update({
+    "flags.pf2e.settings.showCheckDialogs": false,
+    "flags.pf2e.settings.showDamageDialogs": false,
+  });
+  try {
+    const targetRef = { document: target.token };
+    await entry.cast(spell, { target: targetRef, createMessage: true });
+    const dc = entry.statistic?.dc?.value ?? 10;
+    await saveStat.roll({ dc: { value: dc }, createMessage: true });
+    const outcome =
+      game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
+    const damageRoll = await spell.rollDamage?.({
+      target: targetRef,
+      outcome,
+      createMessage: true,
+    });
+    if (damageRoll) {
+      await target.actor.applyDamage({
+        damage: damageRoll,
+        token: target.token,
+        outcome,
+      });
+      await applyDefeatIfReducedToZero(target);
+    }
+    return outcome;
+  } finally {
+    await game.user.update({
+      "flags.pf2e.settings.showCheckDialogs": prevShowCheck,
+      "flags.pf2e.settings.showDamageDialogs": prevShowDamage,
+    });
+  }
+}
+
+/**
  * Executes exactly one chosen candidate for `combatantId`'s current turn in
  * `combat`, updates the per-turn state, and advances the turn once actions
  * run out or `endTurn` was chosen. Returns the pending-turn shape for the
@@ -871,6 +984,18 @@ export async function applyAgentDecision(combat, combatantId, candidateId) {
         target,
         candidate.actionSlug,
         candidate.variantIndex,
+      );
+  } else if (candidate.type === "cast") {
+    const target = combatantOpponents(combat, combatant).find(
+      (c) => c.id === candidate.targetId,
+    );
+    if (target)
+      await castSpellAndApplySave(
+        combatant,
+        target,
+        candidate.spellId,
+        candidate.entryId,
+        candidate.save,
       );
   }
 
