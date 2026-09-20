@@ -7,7 +7,7 @@ import { makeFoundryApi } from '../foundry-api.mjs';
 import { traitFieldHtml, wireTraitPickerButtons, readTraitField } from '../trait-picker.mjs';
 import {
   createDungeonScene, buildRoomAtSlot, unlockDoorToSlot, populateSlotEncounter,
-  isSlotPopulated, placePartyInSlot, undoRoomEntry, focusCameraOnSlot, teardownDungeonRun,
+  isSlotPopulated, isSlotBuilt, placePartyInSlot, undoRoomEntry, focusCameraOnSlot, teardownDungeonRun,
   buildPopulateAndUnlockRoom
 } from '../dungeon-scene.mjs';
 import { startCombatForSlot, getCombatForSlot, resolveSlotCombat } from '../dungeon-combat.mjs';
@@ -220,11 +220,15 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     });
 
     // The entry has nothing to resolve, so — unlike every other room — its
-    // own exit is built, populated (if the first real room needs it) and
-    // unlocked immediately, with no GM click required: "the exit from this
-    // room is always visible."
+    // own exit is unlocked immediately, with no GM click required: "the exit
+    // from this room is always visible." That still holds outright for a
+    // non-combat first room (built and unlocked right here, same as always).
+    // A *combat* first room's build+populate is deliberately deferred to the
+    // GM's own "Populate Next Room" click instead (#onPopulateNext, below) —
+    // Start used to pop its Accept/Reroll preview immediately, before the GM
+    // had even seen the dungeon scene (ITEM-11 reopening).
     const firstRealRoom = state.rooms[1];
-    if (firstRealRoom) {
+    if (firstRealRoom && firstRealRoom.kind !== 'combat') {
       await buildPopulateAndUnlockRoom(scene, state, firstRealRoom, 1);
     }
 
@@ -289,6 +293,17 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const nextRoom = state?.rooms[state.currentIndex + 1] ?? null;
     const slot = nextRoom ? state.physicalSlotByRoomId[nextRoom.id] : null;
     if (slot == null) return;
+
+    // A combat first room's walls don't exist yet the first time this runs
+    // for it — Start deliberately skipped building it (see #onStart) — so
+    // build them here too, same as every other recovery this button already
+    // covers. A no-op for every normal case, where the room was already
+    // built back when the room before it resolved.
+    if (!isSlotBuilt(scene, slot)) {
+      await buildRoomAtSlot(scene, slot, {
+        isGoal: nextRoom.isGoal, locationTag: nextRoom.locationTag, artVariant: nextRoom.artVariant, seed: state.seed
+      });
+    }
 
     await populateSlotEncounter(scene, slot, {
       prefillTraits: state.traits, prefillExcludeTraits: state.excludeTraits,

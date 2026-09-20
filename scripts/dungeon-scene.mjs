@@ -300,6 +300,16 @@ export function isSlotPopulated(scene, slot) {
   return scene.tokens.some((t) => t.getFlag(MODULE_ID, 'dungeonSlot') === slot);
 }
 
+/** Whether slot's own walls/geometry have been built yet — `dungeonDoorToSlot`
+ * only ever exists on the connecting door `buildConnectionGeometry` adds
+ * inside `buildRoomAtSlot`'s `slot > 0` branch, so its presence means the
+ * room itself has already been constructed (used to tell a first real combat
+ * room whose build is still deliberately deferred (ITEM-11 reopening) apart
+ * from one that's merely unpopulated after a cancelled Accept/Reroll). */
+export function isSlotBuilt(scene, slot) {
+  return scene.walls.some((w) => w.getFlag(MODULE_ID, 'dungeonDoorToSlot') === slot);
+}
+
 /**
  * Generate a combat room's encounter inside slot's own footprint. Hidden by
  * default (the discovery beat) — room 0 is the one exception, since the
