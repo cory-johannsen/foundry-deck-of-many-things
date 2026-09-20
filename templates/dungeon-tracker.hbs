@@ -31,11 +31,13 @@
       {{#unless completed}}
         <p class="hint">{{localize "DOMMT.Dungeon.ThemeReminder" traits=traits excludeTraits=excludeTraits}}</p>
         {{#if isSafeRoom}}
-          {{#if isSafeEntry}}
-            <p class="hint">{{localize "DOMMT.Dungeon.SafeEntryHint"}}</p>
-          {{else}}
-            <p class="hint">{{localize "DOMMT.Dungeon.SafeRestHint"}}</p>
-          {{/if}}
+          {{#unless nextRoomPending}}
+            {{#if isSafeEntry}}
+              <p class="hint">{{localize "DOMMT.Dungeon.SafeEntryHint"}}</p>
+            {{else}}
+              <p class="hint">{{localize "DOMMT.Dungeon.SafeRestHint"}}</p>
+            {{/if}}
+          {{/unless}}
         {{else}}
           {{#if isCombatRoom}}
             {{#if combatActive}}
