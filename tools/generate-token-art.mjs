@@ -1012,8 +1012,11 @@ export const MONSTER_ART = [
     prompt: "A large nearly transparent blob of quivering protoplasm, faint internal structures visible through its thin permeable membrane, oozing and surrounding unseen prey.",
     avoid: "humanoid, defined limbs, cube shape" },
   { id: 'giant-cockroach', file: 'giant-cockroach', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A large glossy brown cockroach, long twitching antennae sweeping the air, a segmented armored carapace catching the light, spiny bristled legs skittering rapidly across a filthy surface.",
-    avoid: "humanoid posture, wings spread wide" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a large glossy brown cockroach, long twitching antennae sweeping "
+      + "the air, a segmented armored carapace catching the light, spiny bristled legs poised "
+      + "mid-scurry.",
+    avoid: "humanoid posture, wings spread wide, ground, floor, wood surface, white background" },
   { id: 'giant-fly', file: 'giant-fly', dir: 'assets/creature-art', shapeless: true,
     prompt: "A pony-sized fly, massive compound eyes reflecting light, a bristly hair-covered body, translucent buzzing wings, forelimbs constantly grooming its mouthparts.",
     avoid: "humanoid posture, clean smooth body" },
@@ -1027,17 +1030,23 @@ export const MONSTER_ART = [
     prompt: "A large black-and-white striped skunk, a bushy raised tail, a stocky muscular body bristling with fur, poised as if ready to spray a foul musk.",
     avoid: "humanoid posture" },
   { id: 'giant-solifugid', file: 'giant-solifugid', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A large tan bristled solifugid, six long spindly legs and two oversized fanged feeding pincers up front, a hairy low-slung body scuttling close to the sand.",
-    avoid: "eight legs, web, humanoid posture" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a large tan bristled solifugid, six long spindly legs and two "
+      + "oversized fanged feeding pincers up front, a hairy low-slung body.",
+    avoid: "eight legs, web, humanoid posture, sand, beach, desert, ocean, palm trees" },
   { id: 'giant-tick', file: 'giant-tick', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A dog-sized bloated tick, a mottled gray-brown domed shell, eight short stubby legs, a sharp piercing mouthpart, scurrying with unsettling speed.",
-    avoid: "humanoid posture, fur" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a dog-sized bloated tick, a mottled gray-brown domed shell, eight "
+      + "short stubby legs, a sharp piercing mouthpart.",
+    avoid: "humanoid posture, fur, ground, floor, wood surface, white background" },
   { id: 'gnome-bard', file: 'gnome-bard', dir: 'assets/creature-art',
     prompt: "A small gnome bard with vividly colored hair and eyes, strumming a small stringed instrument mid-performance, an animated theatrical expression, ornate traveling clothes." },
   { id: 'goblin-chef', file: 'goblin-chef', dir: 'assets/creature-art',
     prompt: "A small green-skinned goblin chef, an apron over ragged clothes, wide ears and a big head, brandishing a cleaver and a smoking ladle, a proud gap-toothed grin over something dubious cooking." },
   { id: 'goblin-commando', file: 'goblin-commando', dir: 'assets/creature-art',
-    prompt: "A small green-skinned goblin commando, scavenged mismatched armor, a crude weapon raised eagerly overhead, wide grinning mouth, more interested in glory than leading its comrades." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a small green-skinned goblin commando, scavenged mismatched armor, "
+      + "a crude weapon raised eagerly overhead, wide grinning mouth." },
   { id: 'goblin-dog', file: 'goblin-dog', dir: 'assets/creature-art', shapeless: true,
     prompt: "A large ungainly goblin dog, a blunt-nosed rodent-like beast with a thin wiry body and long spindly legs, patchy mangy fur, snarling with cowardly menace.",
     avoid: "canine face, floppy ears" },
@@ -1049,14 +1058,23 @@ export const MONSTER_ART = [
   { id: 'goblin-war-chanter', file: 'goblin-war-chanter', dir: 'assets/creature-art',
     prompt: "A small green-skinned goblin war chanter, gripping a battered drum or horn, mouth open mid-chant, exuberant wild energy, ragged tribal decorations." },
   { id: 'gourd-leshy', file: 'gourd-leshy', dir: 'assets/creature-art',
-    prompt: "A small gourd leshy, a plant guardian with a round gourd-shaped head and a body of woven vines and broad leaves, stubby leafy limbs, standing watchful over a field." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a small gourd leshy, a plant guardian with a round gourd-shaped "
+      + "head and a body of woven vines and broad leaves, stubby leafy limbs, a watchful "
+      + "expression.",
+    avoid: "field, farmland, crops, vines flanking either side, white background" },
   { id: 'grave-robber', file: 'grave-robber', dir: 'assets/creature-art',
     prompt: "A furtive human grave robber in a dark hooded cloak, gripping a shovel in one hand and a pilfered trinket in the other, a nervous sidelong glance." },
   { id: 'gravedigger', file: 'gravedigger', dir: 'assets/creature-art',
     prompt: "A burly human gravedigger, dirt-stained work clothes, leaning on a heavy shovel, a grim weathered face shaped by long hours of quiet backbreaking labor." },
   { id: 'grig', file: 'grig', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A tiny fey grig, a humanoid torso joined to powerful bent hind legs built for leaping, thin gossamer wings, clutching a small fiddle, an impish grin.",
-    avoid: "full insect body, six legs" },
+    prompt: "Full color illustration on a plain solid black background with absolutely "
+      + "nothing else in the frame: a tiny fey grig, only about a foot tall, a small "
+      + "humanoid torso joined to oversized bent cricket-like hind legs built for leaping, "
+      + "thin gossamer insect wings, clutching a small fiddle, an impish grin.",
+    avoid: "full insect body, six legs, white background, monochrome, black and white, "
+      + "grayscale, moon, full moon, circular halo, circular frame, ornate border, tall "
+      + "adult human proportions" },
   { id: 'grioth-scout', file: 'grioth-scout', dir: 'assets/creature-art',
     prompt: "A tall alien grioth scout, a bat-like four-eyed visage, leathery wings folded at its back, a long wriggling tail, dark ritualistic wrappings, an unsettling watchful stillness." },
   { id: 'grippli-scout', file: 'grippli-scout', dir: 'assets/creature-art',
@@ -1064,7 +1082,11 @@ export const MONSTER_ART = [
   { id: 'guard', file: 'guard', dir: 'assets/creature-art',
     prompt: "A human town guard in worn uniform mail, gripping a spear at attention, an alert stern expression, scanning the street for trouble." },
   { id: 'gunsmith', file: 'gunsmith', dir: 'assets/creature-art',
-    prompt: "A human gunsmith in a leather work apron, protective goggles pushed up on the forehead, carefully examining a disassembled firearm with a small tool in hand, focused expertise." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a human gunsmith in a leather work apron, protective goggles "
+      + "pushed up on the forehead, a disassembled firearm held in one hand, a small tool in "
+      + "the other, focused expertise.",
+    avoid: "workshop, workbench, shelf, lamp, white background" },
   { id: 'halfling-troublemaker', file: 'halfling-troublemaker', dir: 'assets/creature-art',
     prompt: "A small halfling troublemaker, a mischievous grin, a heavy cast-iron frying pan held ready like a weapon, scruffy well-worn traveling clothes, bravado well beyond their size." },
   { id: 'hippocampus', file: 'hippocampus', dir: 'assets/creature-art', shapeless: true,
@@ -1086,8 +1108,10 @@ export const MONSTER_ART = [
   { id: 'innkeeper', file: 'innkeeper', dir: 'assets/creature-art',
     prompt: "A human innkeeper in a simple apron, a ring of room keys at the belt, a tired but welcoming smile, wiping down a well-worn counter." },
   { id: 'jinkin', file: 'jinkin', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A tiny sadistic jinkin gremlin, hands full of stolen cursed trinkets, a wicked gleeful grin, crouched low as it plots its next act of mischief.",
-    avoid: "large size, kind expression" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a tiny sadistic jinkin gremlin, hands full of stolen cursed "
+      + "trinkets, a wicked gleeful grin, crouched low.",
+    avoid: "large size, kind expression, grey background, colored background" },
   { id: 'kholo-pragmatist', file: 'kholo-pragmatist', dir: 'assets/creature-art',
     prompt: "A rugged kholo hunter, weathered scarred leathers, gripping a longspear in both hands at a defensive guard, a hardened pragmatic stare weighing the odds of the fight." },
   { id: 'kobold-scout', file: 'kobold-scout', dir: 'assets/creature-art',
@@ -1110,7 +1134,11 @@ export const MONSTER_ART = [
   { id: 'mechanic', file: 'mechanic', dir: 'assets/creature-art',
     prompt: "A human mechanic in soot-streaked overalls, gripping a heavy wrench, tinkering intently with a small mechanical device, a focused slightly manic gleam in the eye." },
   { id: 'merfolk-warrior', file: 'merfolk-warrior', dir: 'assets/creature-art',
-    prompt: "A merfolk warrior, a humanoid torso with delicate features tapering into the powerful fish tail and gleaming scales of a massive fish below the waist, gripping a trident, ready for battle." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a merfolk warrior, a humanoid torso with delicate features "
+      + "tapering into the powerful fish tail and gleaming scales of a massive fish below the "
+      + "waist, gripping a trident, ready for battle.",
+    avoid: "underwater scene, ocean, water, light rays, bubbles" },
   { id: 'messenger', file: 'messenger', dir: 'assets/creature-art',
     prompt: "A human messenger in a practical travel cloak, a satchel of sealed letters slung across the chest, caught mid-stride with purposeful haste." },
   { id: 'naari-pyrochemist', file: 'naari-pyrochemist', dir: 'assets/creature-art',
