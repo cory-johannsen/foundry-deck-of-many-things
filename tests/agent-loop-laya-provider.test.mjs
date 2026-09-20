@@ -1,5 +1,14 @@
-import { describe, it, expect, vi } from 'vitest';
-import { decide } from '../tools/agent-loop/providers/laya.mjs';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+// Isolate from whatever's really in this repo's .env (a real LAYA_API_KEY is
+// checked in for local dev use) — decide()'s apiKey default reads it via
+// readEnvOrDotenv, so without this mock these tests would depend on, and
+// leak, the real secret.
+vi.mock('node:fs', () => ({
+  readFileSync: () => { throw new Error('ENOENT: no such file'); }
+}));
+
+const { decide } = await import('../tools/agent-loop/providers/laya.mjs');
 
 const CONTEXT = {
   self: { name: 'Yamaraj', hp: 40, conditions: [] },
@@ -15,11 +24,23 @@ function fakeFetch(answersJson, { ok = true, status = 200 } = {}) {
   return vi.fn().mockResolvedValue({
     ok,
     status,
-    json: async () => ({ model: 'laya-rl-agent', answers: JSON.parse(answersJson), usage: {} })
+    json: async () => ({ model: 'laya-rl-agent', answers: JSON.parse(answersJson), usage: {} }),
+    text: async () => answersJson
   });
 }
 
 describe('laya provider decide()', () => {
+  const originalApiKey = process.env.LAYA_API_KEY;
+
+  beforeEach(() => {
+    delete process.env.LAYA_API_KEY;
+  });
+
+  afterEach(() => {
+    if (originalApiKey === undefined) delete process.env.LAYA_API_KEY;
+    else process.env.LAYA_API_KEY = originalApiKey;
+  });
+
   it('sends the context as state and the candidates as a choice question', async () => {
     const fetchImpl = fakeFetch('{"candidate": {"type": "choice", "choice": "strike:claw:opp1", "probabilities": {"strike:claw:opp1": 0.7, "endTurn": 0.3}, "confidence": 0.6}}');
     await decide(CONTEXT, { apiKey: 'test-key', fetchImpl });
@@ -42,7 +63,7 @@ describe('laya provider decide()', () => {
     expect(fetchWithKey.mock.calls[0][1].headers.Authorization).toBe('Bearer test-key');
 
     const fetchNoKey = fakeFetch('{"candidate": {"type": "choice", "choice": "endTurn", "probabilities": {"endTurn": 1}}}');
-    await decide(CONTEXT, { apiKey: undefined, fetchImpl: fetchNoKey });
+    await decide(CONTEXT, { fetchImpl: fetchNoKey });
     expect(fetchNoKey.mock.calls[0][1].headers.Authorization).toBeUndefined();
   });
 
@@ -77,5 +98,15 @@ describe('laya provider decide()', () => {
   it('throws with the response status and body on a non-ok response', async () => {
     const fetchImpl = fakeFetch('{}', { ok: false, status: 403 });
     await expect(decide(CONTEXT, { apiKey: 'wrong-key', fetchImpl })).rejects.toThrow(/403/);
+  });
+
+  it('throws a clear error for a non-JSON error response instead of crashing on JSON parsing', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => { throw new SyntaxError('Unexpected token I in JSON'); },
+      text: async () => 'Internal Server Error'
+    });
+    await expect(decide(CONTEXT, { apiKey: 'test-key', fetchImpl })).rejects.toThrow(/500.*Internal Server Error/s);
   });
 });

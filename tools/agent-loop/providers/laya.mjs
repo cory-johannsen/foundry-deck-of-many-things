@@ -47,10 +47,14 @@ export async function decide(context, {
     },
     body: JSON.stringify(body)
   });
-  const payload = await res.json();
+  // Checked before parsing as JSON — an error response isn't guaranteed to
+  // be JSON (a 500 can come back as plain text), and res.json() throwing on
+  // malformed input would otherwise replace a clear "500: ..." with a
+  // confusing "Unexpected token" parse error.
   if (!res.ok) {
-    throw new Error(`laya provider: API request failed (${res.status}): ${JSON.stringify(payload)}`);
+    throw new Error(`laya provider: API request failed (${res.status}): ${await res.text()}`);
   }
+  const payload = await res.json();
 
   const candidateId = payload.answers?.candidate?.choice;
   if (!Object.prototype.hasOwnProperty.call(criteria, candidateId)) {

@@ -11,10 +11,11 @@
  * Requires: FOUNDRY_REST_API_KEY, FOUNDRY_BASE_URL (your self-hosted relay),
  * ANTHROPIC_API_KEY — see README.md.
  */
-import { runFoundryScript } from './foundry-client.mjs';
+import { runFoundryScript, readEnvOrDotenv } from './foundry-client.mjs';
 import { resolveProvider } from './providers/index.mjs';
 
-const POLL_INTERVAL_MS = Number(process.env.DOMMT_POLL_INTERVAL_MS ?? 3000);
+const POLL_INTERVAL_MS = Number(readEnvOrDotenv('DOMMT_POLL_INTERVAL_MS') ?? 3000);
+const AGENT_PROVIDER_NAME = readEnvOrDotenv('DOMMT_AGENT_PROVIDER') ?? 'claude';
 const MODULE_ID = 'deck-of-many-more-things';
 
 async function getPendingTurn() {
@@ -51,7 +52,7 @@ async function playOnePendingTurnToCompletion(decide) {
 
 async function main() {
   const decide = resolveProvider();
-  console.log(`agent-loop: polling every ${POLL_INTERVAL_MS}ms with provider "${process.env.DOMMT_AGENT_PROVIDER ?? 'claude'}"`);
+  console.log(`agent-loop: polling every ${POLL_INTERVAL_MS}ms with provider "${AGENT_PROVIDER_NAME}"`);
   for (;;) {
     try {
       await playOnePendingTurnToCompletion(decide);
