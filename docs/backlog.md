@@ -1,6 +1,6 @@
 # Backlog
 
-_Last updated: 2026-09-19 (ITEM-8 reopened and fixed — party turns were auto-playing on a solo-GM world with no player-role users; ITEM-20 reopening resolved and done; ITEM-17 done, ITEM-18 level -1 and level 0 tiers fully complete, ITEM-23 spec'd)_
+_Last updated: 2026-09-20 (ITEM-8 reopened and fixed — party turns were auto-playing on a solo-GM world with no player-role users; ITEM-20 reopening resolved and done; ITEM-17 done, ITEM-18 level -1 and level 0 tiers fully complete, level 1 chunk 1/4 done, ITEM-23 spec'd)_
 
 ## Active
 
@@ -114,6 +114,16 @@ Cross-cutting notes from the parallel run: 6 true creature-name collisions turne
 **Three accepted as checker false positives, not real failures — confirmed by eye.** `conspiracist`, `penitent-of-calistria`, and (after its prompt rewrite) `fisher` all render on a genuinely solid black background, but each subject's own bright/pale clothing (a paper-scrap-covered white shirt, a wide white monastic hood, a tan woven poncho-like wrap) extends to the frame's edges — enough to trip `check-token-art.mjs`'s edge-ring brightness heuristic into a `BACKGROUND`/`PALE BACKDROP` verdict despite there being no actual backdrop. Same underlying limitation the Spec already documents for bright-subject-touching-edge cases (batch 3's `yellow-musk-thrall` investigation); accepted after individual visual confirmation per that same precedent, not by lowering any threshold.
 
 **Verification.** `npm test` — 669 passing (up from 628; 120 asset-existence entries). `npm run validate:creature-art` — 119 entries, no duplicate lookup keys. `npm run validate`/`validate:dungeon` unaffected. Implemented in an isolated git worktree. `docs/creature-art-todo.csv`'s level 0 tier is now fully empty (0 rows) — the second tier completely finished under ITEM-18, 1,510 rows remaining overall (levels 1-25). `module.json` bumped to 0.46.0.
+
+**Batch 5 — level 1, chunk 1 of 4 (40 of 160 creatures).** Level 1 has 160 creatures, the largest single-level tier so far (4x level 0's), so it's being worked in four 40-creature chunks — same size as the whole level 0 batch — each shipped as its own PR rather than one very large one. User explicitly asked to proceed chunk-by-chunk without stopping to ask between them.
+
+**Two more cross-cutting failure classes found and fixed at the source.** (1) Symmetrical flanking objects framing the subject — ornate gold pillars either side of `abbot-of-abadar` and `acolyte-of-nethys`, mirrored candelabra/urns on `caligni-dancer` — the same "religious/ceremonial figure pulls toward a symmetrical shrine composition" failure that had already independently recurred on `trained-raven` (batch 2) without ever being promoted to the shared list until now. (2) A swirling smoke/fog/cloud haze filling the frame (`cave-scorpion`) — dark enough at the corners to slip past `backgroundScore` but clearly not "nothing else in it" on review. Both added to `NEGATIVE`.
+
+**A mistake made and caught immediately this time — no repeat of batch 4's regex bug.** The same 14-prompt "bake an explicit black-background phrase into the prompt" fix that batch 4 did via a buggy regex script was done this round via 14 individual, hand-verified `Edit` calls instead, with the diff reviewed against the exact intended id list before running the redo — zero collateral edits.
+
+**Redo tally: 26 of 40 needed at least one redo; the worst 3 (`acolyte-of-nethys`, `caligni-dancer`, `cave-scorpion`) needed three full rounds each** (shared-constant fix → per-creature prompt rewrite with an explicit "Centered studio portrait" lead-in → a raised-CFG reroll) before finally landing clean/borderline on the fourth attempt — the same escalation depth `halfling-street-watcher` needed in batch 3, but this time it paid off instead of ending in a deferred exception.
+
+**Verification.** `npm test` — 705 passing (up from 669; 156 asset-existence entries). `npm run validate:creature-art` — 155 entries, no duplicate lookup keys. `node tools/check-token-art.mjs` — only the 4 already-documented exceptions (`conspiracist`, `fisher`, `halfling-street-watcher`, `penitent-of-calistria`) flagged, no new ones. `npm run validate`/`validate:dungeon` unaffected. `docs/creature-art-todo.csv`'s level 1 tier now has 120 of its original 160 rows remaining. `module.json` bumped to 0.47.0.
 
 ### ITEM-15: Randomly place destructible cover items in rooms
 **State:** backlog
