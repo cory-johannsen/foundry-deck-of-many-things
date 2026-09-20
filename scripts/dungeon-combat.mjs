@@ -430,10 +430,13 @@ export function getPendingAgentTurn(combat) {
 }
 
 /** Moves `combatant`'s token up to its own speed, straight toward or away
- * from `target`'s token depending on `posture` — the same math stepToward
- * already uses (no wall-avoidance, no real pathfinding, see #100), just
- * parameterized by direction instead of always approaching. A no-op if
- * already at the desired distance or with no speed to move. */
+ * from `target`'s token depending on `posture`, parameterized by direction
+ * instead of always approaching (no wall-avoidance, no real pathfinding, see
+ * #100). For `approach`, clamps to stop adjacent to the target rather than
+ * overshooting past it — the same distance clamp stepToward already uses.
+ * `retreat` has no "don't overshoot" concept, so it's unclamped, bounded only
+ * by speed. A no-op if already at the desired distance or with no speed to
+ * move. */
 async function strideByPosture(combat, combatant, posture, target) {
   const gridSize = combat.scene?.grid?.size ?? 100;
   const gridDistanceFt = combat.scene?.grid?.distance ?? 5;
@@ -443,10 +446,15 @@ async function strideByPosture(combat, combatant, posture, target) {
 
   const me = combatant.token;
   const dest = target.token;
+  const steps = posture === 'approach'
+    ? Math.min(speedSquares, Math.floor(chebyshevSquares(me, dest, gridSize) - MELEE_REACH_SQUARES))
+    : speedSquares;
+  if (steps <= 0) return;
+
   const dx = Math.sign(dest.x - me.x) || 0;
   const dy = Math.sign(dest.y - me.y) || 0;
   const sign = posture === 'retreat' ? -1 : 1;
-  await me.update({ x: me.x + sign * dx * gridSize * speedSquares, y: me.y + sign * dy * gridSize * speedSquares });
+  await me.update({ x: me.x + sign * dx * gridSize * steps, y: me.y + sign * dy * gridSize * steps });
 }
 
 /** Rolls one strike at a specific MAP `variantIndex` against `target` and
