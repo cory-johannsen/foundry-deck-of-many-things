@@ -128,19 +128,44 @@ export function buildAreaSpellCandidates({ readyAreaSpells, actionsRemaining }) 
   return candidates;
 }
 
+/**
+ * One candidate per ready single-target, attack-roll spell x each opponent
+ * within that spell's range — same shape as buildSpellCandidates (#118's
+ * save-based spells), minus `save`/`basic` (an attack-roll spell resolves
+ * against AC via dungeon-combat.mjs's castAttackSpellAndApplyRoll, not a
+ * target's own saving throw), and a distinct `castAttack` type so
+ * applyAgentDecision's dispatch never conflates the two execution paths.
+ */
+export function buildAttackSpellCandidates({ readyAttackSpells, opponents, actionsRemaining }) {
+  const candidates = [];
+  for (const spell of readyAttackSpells) {
+    if (spell.cost > actionsRemaining) continue;
+    for (const opponent of opponents) {
+      if (opponent.distanceSquares > spell.rangeSquares) continue;
+      candidates.push({
+        id: `castAttack:${spell.slug}:${opponent.id}`, type: 'castAttack',
+        spellId: spell.id, entryId: spell.entryId, targetId: opponent.id, cost: spell.cost,
+        summary: `${spell.label} vs ${opponent.name}`
+      });
+    }
+  }
+  return candidates;
+}
+
 /** Always available — lets the agent stop spending actions early. */
 export function endTurnCandidate() {
   return { id: 'endTurn', type: 'endTurn', cost: 0, summary: 'End turn' };
 }
 
 /** Full candidate list for one decision iteration. */
-export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], turnState, hazard = null, hasRangedOrReach = false }) {
+export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], readyAttackSpells = [], turnState, hazard = null, hasRangedOrReach = false }) {
   if (turnState.actionsRemaining <= 0) return [endTurnCandidate()];
   return [
     ...buildMovementCandidates({ opponents, hazard, hasRangedOrReach }),
     ...buildStrikeCandidates({ readyActions, opponents, mapIncrement: turnState.mapIncrement }),
     ...buildSpellCandidates({ readySpells, opponents, actionsRemaining: turnState.actionsRemaining }),
     ...buildAreaSpellCandidates({ readyAreaSpells, actionsRemaining: turnState.actionsRemaining }),
+    ...buildAttackSpellCandidates({ readyAttackSpells, opponents, actionsRemaining: turnState.actionsRemaining }),
     endTurnCandidate()
   ];
 }
