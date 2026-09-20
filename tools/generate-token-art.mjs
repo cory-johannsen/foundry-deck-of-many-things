@@ -1439,7 +1439,11 @@ export const MONSTER_ART = [
   { id: 'crocodile', file: 'crocodile', dir: 'assets/creature-art',
     prompt: "A large crocodile, thick armored scaly hide in mottled dark green-brown, powerful jaws lined with jagged teeth, a low reptilian body, eyes and nostrils raised as if lurking at the waterline" },
   { id: 'deinonychus', file: 'deinonychus', dir: 'assets/creature-art',
-    prompt: "A deinonychus, a lean muscular bipedal dinosaur with scaly hide patched with vibrant feathers, two powerful clawed legs with a large sickle talon raised, sharp toothy jaws parted, a long balancing tail" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a deinonychus, a lean muscular bipedal dinosaur with scaly hide "
+      + "patched with vibrant feathers, two powerful clawed legs with a large sickle talon "
+      + "raised, sharp toothy jaws parted, a long balancing tail.",
+    avoid: "gradient sky, ground, sand, horizon" },
   { id: 'dero-stalker', file: 'dero-stalker', dir: 'assets/creature-art',
     prompt: "A dero stalker, a short wiry humanoid with gray-blue skin, wild shocks of off-white hair, milky white sightless-looking eyes, hunched and creeping, clawed reaching hands" },
   { id: 'dhampir-wizard', file: 'dhampir-wizard', dir: 'assets/creature-art',

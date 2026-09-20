@@ -627,7 +627,7 @@
     "id": "air_wisp",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "Q6oMLXjmGqF6dxzp",
-    "name": "Air Wisp\r",
+    "name": "Air Wisp",
     "level": 0,
     "art": "air-wisp.webp"
   },
@@ -635,7 +635,7 @@
     "id": "badger",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "DMoeZLBSXHO4nibR",
-    "name": "Badger\r",
+    "name": "Badger",
     "level": 0,
     "art": "badger.webp"
   },
@@ -643,7 +643,7 @@
     "id": "blue_ringed_octopus",
     "pack": "pf2e.pathfinder-bestiary-2",
     "docId": "WxSpfUReYJb4StxG",
-    "name": "Blue-Ringed Octopus\r",
+    "name": "Blue-Ringed Octopus",
     "level": 0,
     "art": "blue-ringed-octopus.webp"
   },
@@ -651,7 +651,7 @@
     "id": "bone_scavenger",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "8IVbWVMYUhBE4Yyc",
-    "name": "Bone Scavenger\r",
+    "name": "Bone Scavenger",
     "level": 0,
     "art": "bone-scavenger.webp"
   },
@@ -659,7 +659,7 @@
     "id": "giant_maggot",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "e0Jxg2AHeQSDGNnV",
-    "name": "Giant Maggot\r",
+    "name": "Giant Maggot",
     "level": 0,
     "art": "giant-maggot.webp"
   },
@@ -667,7 +667,7 @@
     "id": "mayor",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "HKQofrjurRdgEq3p",
-    "name": "Mayor\r",
+    "name": "Mayor",
     "level": 0,
     "art": "mayor.webp"
   },
@@ -675,7 +675,7 @@
     "id": "melixie",
     "pack": "pf2e.pathfinder-bestiary-3",
     "docId": "dkDbXG0boTkddHSG",
-    "name": "Melixie\r",
+    "name": "Melixie",
     "level": 0,
     "art": "melixie.webp"
   },
@@ -683,7 +683,7 @@
     "id": "miner",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "GKDMvepxkEsUnN5d",
-    "name": "Miner\r",
+    "name": "Miner",
     "level": 0,
     "art": "miner.webp"
   },
@@ -691,7 +691,7 @@
     "id": "pugwampi",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "aeOzCBpwnUVcpqxI",
-    "name": "Pugwampi\r",
+    "name": "Pugwampi",
     "level": 0,
     "art": "pugwampi.webp"
   },
@@ -699,7 +699,7 @@
     "id": "sea_snake",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "rVzdgqUn7slx2WSS",
-    "name": "Sea Snake\r",
+    "name": "Sea Snake",
     "level": 0,
     "art": "sea-snake.webp"
   },
@@ -707,7 +707,7 @@
     "id": "soulbound_homunculus",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "qDTbixJDMopR0ixh",
-    "name": "Soulbound Homunculus\r",
+    "name": "Soulbound Homunculus",
     "level": 0,
     "art": "soulbound-homunculus.webp"
   },
@@ -715,7 +715,7 @@
     "id": "spear_frog",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "KIwZekBcdyBX8X9k",
-    "name": "Spear Frog\r",
+    "name": "Spear Frog",
     "level": 0,
     "art": "spear-frog.webp"
   },
@@ -723,7 +723,7 @@
     "id": "toady",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "BbFb0HC3vMBGP5WN",
-    "name": "Toady\r",
+    "name": "Toady",
     "level": 0,
     "art": "toady.webp"
   },
@@ -731,7 +731,7 @@
     "id": "torchbearer",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "xjJV1G5FBeLV4KPQ",
-    "name": "Torchbearer\r",
+    "name": "Torchbearer",
     "level": 0,
     "art": "torchbearer.webp"
   },
@@ -739,7 +739,7 @@
     "id": "vampire_squid",
     "pack": "pf2e.pathfinder-bestiary-2",
     "docId": "3MDlKPlPhHBo1DId",
-    "name": "Vampire Squid\r",
+    "name": "Vampire Squid",
     "level": 0,
     "art": "vampire-squid.webp"
   },
@@ -747,7 +747,7 @@
     "id": "water_wisp",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "PV8ex8ivTfD7bzEP",
-    "name": "Water Wisp\r",
+    "name": "Water Wisp",
     "level": 0,
     "art": "water-wisp.webp"
   },
@@ -755,7 +755,7 @@
     "id": "bottlenose_dolphin",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "YZ4G7eRQ49dTVtjb",
-    "name": "Bottlenose Dolphin\r",
+    "name": "Bottlenose Dolphin",
     "level": 0,
     "art": "bottlenose-dolphin.webp"
   },
@@ -763,7 +763,7 @@
     "id": "envoy",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "9wdaQ6ZuBAZx9Vjk",
-    "name": "Envoy\r",
+    "name": "Envoy",
     "level": 0,
     "art": "envoy.webp"
   },
@@ -771,7 +771,7 @@
     "id": "orc_scrapper",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "YReM6QbqwUz3UTP7",
-    "name": "Orc Scrapper\r",
+    "name": "Orc Scrapper",
     "level": 0,
     "art": "orc-scrapper.webp"
   },
@@ -779,7 +779,7 @@
     "id": "ringhorn_ram",
     "pack": "pf2e.pathfinder-bestiary-3",
     "docId": "S6V3z6bE6G9J68tE",
-    "name": "Ringhorn Ram\r",
+    "name": "Ringhorn Ram",
     "level": 0,
     "art": "ringhorn-ram.webp"
   },
@@ -787,7 +787,7 @@
     "id": "azarketi_crab_catcher",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "ZXiFjrQbhvboEZTL",
-    "name": "Azarketi Crab Catcher\r",
+    "name": "Azarketi Crab Catcher",
     "level": 0,
     "art": "azarketi-crab-catcher.webp"
   },
@@ -795,7 +795,7 @@
     "id": "earth_wisp",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "5YmEdbkqk1IYWL7B",
-    "name": "Earth Wisp\r",
+    "name": "Earth Wisp",
     "level": 0,
     "art": "earth-wisp.webp"
   },
@@ -803,7 +803,7 @@
     "id": "poppet_attendant",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "AlvTmrsJXarVlgDZ",
-    "name": "Poppet Attendant\r",
+    "name": "Poppet Attendant",
     "level": 0,
     "art": "poppet-attendant.webp"
   },
@@ -811,7 +811,7 @@
     "id": "ioton",
     "pack": "pf2e.pathfinder-bestiary-3",
     "docId": "FXwgsLTRneGzclsw",
-    "name": "Ioton\r",
+    "name": "Ioton",
     "level": 0,
     "art": "ioton.webp"
   },
@@ -819,7 +819,7 @@
     "id": "political_upstart",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "HVUlGw83Hf4YmW0p",
-    "name": "Political Upstart\r",
+    "name": "Political Upstart",
     "level": 0,
     "art": "political-upstart.webp"
   },
@@ -827,7 +827,7 @@
     "id": "stingray",
     "pack": "pf2e.pathfinder-bestiary-2",
     "docId": "HXWT5QxmOCn0poMt",
-    "name": "Stingray\r",
+    "name": "Stingray",
     "level": 0,
     "art": "stingray.webp"
   },
@@ -835,7 +835,7 @@
     "id": "aiuvarin_translator",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "9p0WMNDYyeW5sqGX",
-    "name": "Aiuvarin Translator\r",
+    "name": "Aiuvarin Translator",
     "level": 0,
     "art": "aiuvarin-translator.webp"
   },
@@ -843,7 +843,7 @@
     "id": "dwarf_smith",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "rY3uqGq5QyvNOU91",
-    "name": "Dwarf Smith\r",
+    "name": "Dwarf Smith",
     "level": 0,
     "art": "dwarf-smith.webp"
   },
@@ -851,7 +851,7 @@
     "id": "dream_spider",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "4SfnQzORMdmBsp49",
-    "name": "Dream Spider\r",
+    "name": "Dream Spider",
     "level": 0,
     "art": "dream-spider.webp"
   },
@@ -859,7 +859,7 @@
     "id": "conspiracist",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "W3uePAytelIvWOuV",
-    "name": "Conspiracist\r",
+    "name": "Conspiracist",
     "level": 0,
     "art": "conspiracist.webp"
   },
@@ -867,7 +867,7 @@
     "id": "penitent_of_calistria",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "uTGGtpKUotQep27v",
-    "name": "Penitent of Calistria\r",
+    "name": "Penitent of Calistria",
     "level": 0,
     "art": "penitent-of-calistria.webp"
   },
@@ -875,7 +875,7 @@
     "id": "drover",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "aq5spzk2UZrI0ZwK",
-    "name": "Drover\r",
+    "name": "Drover",
     "level": 0,
     "art": "drover.webp"
   },
@@ -883,7 +883,7 @@
     "id": "fisher",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "LbSA6uGVafcosT0X",
-    "name": "Fisher\r",
+    "name": "Fisher",
     "level": 0,
     "art": "fisher.webp"
   },
@@ -891,7 +891,7 @@
     "id": "dockhand",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "Wv4jaiD6X8negvH2",
-    "name": "Dockhand\r",
+    "name": "Dockhand",
     "level": 0,
     "art": "dockhand.webp"
   },
@@ -899,7 +899,7 @@
     "id": "farmer",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "bZRZahVaMyzTbJ4u",
-    "name": "Farmer\r",
+    "name": "Farmer",
     "level": 0,
     "art": "farmer.webp"
   },
@@ -907,7 +907,7 @@
     "id": "hryngar_sharpshooter",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "Ytp0kRaG8iexmPfN",
-    "name": "Hryngar Sharpshooter\r",
+    "name": "Hryngar Sharpshooter",
     "level": 0,
     "art": "hryngar-sharpshooter.webp"
   },
@@ -915,7 +915,7 @@
     "id": "kangaroo",
     "pack": "pf2e.pathfinder-bestiary-3",
     "docId": "rOFpnEic0eJdaxiM",
-    "name": "Kangaroo\r",
+    "name": "Kangaroo",
     "level": 0,
     "art": "kangaroo.webp"
   },
@@ -923,7 +923,7 @@
     "id": "prime_minister",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "KV9WeA9fq5HuCxxx",
-    "name": "Prime Minister\r",
+    "name": "Prime Minister",
     "level": 0,
     "art": "prime-minister.webp"
   },
@@ -931,7 +931,7 @@
     "id": "puppet",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "r75kLP8MgLx46ZTO",
-    "name": "Puppet\r",
+    "name": "Puppet",
     "level": 0,
     "art": "puppet.webp"
   },
@@ -939,7 +939,7 @@
     "id": "riding_pony",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "F3ungAqpGjFotwUK",
-    "name": "Riding Pony\r",
+    "name": "Riding Pony",
     "level": 0,
     "art": "riding-pony.webp"
   },
@@ -947,7 +947,7 @@
     "id": "vine_leshy",
     "pack": "pf2e.pathfinder-bestiary-3",
     "docId": "H8PaAZanEOT85KjD",
-    "name": "Vine Leshy\r",
+    "name": "Vine Leshy",
     "level": 0,
     "art": "vine-leshy.webp"
   },
@@ -955,7 +955,7 @@
     "id": "acolyte_of_iomedae",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "dwzAEnCBpDWnZBWr",
-    "name": "Acolyte of Iomedae\r",
+    "name": "Acolyte of Iomedae",
     "level": 1,
     "art": "acolyte-of-iomedae.webp"
   },
@@ -963,7 +963,7 @@
     "id": "air_mephit",
     "pack": "pf2e.pathfinder-bestiary",
     "docId": "KDRlxdIUADWHI6Vr",
-    "name": "Air Mephit\r",
+    "name": "Air Mephit",
     "level": 1,
     "art": "air-mephit.webp"
   },
@@ -971,7 +971,7 @@
     "id": "arbiter",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "oaxKg1yQDmK2PWXG",
-    "name": "Arbiter\r",
+    "name": "Arbiter",
     "level": 1,
     "art": "arbiter.webp"
   },
@@ -979,7 +979,7 @@
     "id": "augur",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "hfA1xQSk1dPVwt00",
-    "name": "Augur\r",
+    "name": "Augur",
     "level": 1,
     "art": "augur.webp"
   },
@@ -987,7 +987,7 @@
     "id": "bodyguard",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "3jkmJgV4zwygUqLy",
-    "name": "Bodyguard\r",
+    "name": "Bodyguard",
     "level": 1,
     "art": "bodyguard.webp"
   },
@@ -995,7 +995,7 @@
     "id": "cacodaemon",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "9Bl1ua3uLqodv47s",
-    "name": "Cacodaemon\r",
+    "name": "Cacodaemon",
     "level": 1,
     "art": "cacodaemon.webp"
   },
@@ -1003,7 +1003,7 @@
     "id": "cultist",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "GbPDSJeXjHc1VRN2",
-    "name": "Cultist\r",
+    "name": "Cultist",
     "level": 1,
     "art": "cultist.webp"
   },
@@ -1011,7 +1011,7 @@
     "id": "cunning_fox",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "Olett4ib6Xik7qYt",
-    "name": "Cunning Fox\r",
+    "name": "Cunning Fox",
     "level": 1,
     "art": "cunning-fox.webp"
   },
@@ -1019,7 +1019,7 @@
     "id": "dancer",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "r7nprCpuqhEulxjD",
-    "name": "Dancer\r",
+    "name": "Dancer",
     "level": 1,
     "art": "dancer.webp"
   },
@@ -1027,7 +1027,7 @@
     "id": "deep_one_hybrid",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "uH1EFwWGCyrMcsbb",
-    "name": "Deep One Hybrid\r",
+    "name": "Deep One Hybrid",
     "level": 1,
     "art": "deep-one-hybrid.webp"
   },
@@ -1035,7 +1035,7 @@
     "id": "dwarf_warrior",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "IjFlp5eVVTEg902W",
-    "name": "Dwarf Warrior\r",
+    "name": "Dwarf Warrior",
     "level": 1,
     "art": "dwarf-warrior.webp"
   },
@@ -1043,7 +1043,7 @@
     "id": "electric_eel",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "gCmfPEfqS60BiuVP",
-    "name": "Electric Eel\r",
+    "name": "Electric Eel",
     "level": 1,
     "art": "electric-eel.webp"
   },
@@ -1051,7 +1051,7 @@
     "id": "esipil",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "Ipbn4WsIT4DxAWEH",
-    "name": "Esipil\r",
+    "name": "Esipil",
     "level": 1,
     "art": "esipil.webp"
   },
@@ -1059,7 +1059,7 @@
     "id": "fire_scamp",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "UwvAf8riRdMaitA4",
-    "name": "Fire Scamp\r",
+    "name": "Fire Scamp",
     "level": 1,
     "art": "fire-scamp.webp"
   },
@@ -1067,7 +1067,7 @@
     "id": "forager",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "JWhmMRoFHl2tmDS9",
-    "name": "Forager\r",
+    "name": "Forager",
     "level": 1,
     "art": "forager.webp"
   },
@@ -1075,7 +1075,7 @@
     "id": "barkeep",
     "pack": "pf2e.npc-gallery",
     "docId": "6IADTZHYowxObqAk",
-    "name": "Barkeep\r",
+    "name": "Barkeep",
     "level": 1,
     "art": "barkeep.webp"
   },
@@ -1083,7 +1083,7 @@
     "id": "doru",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "cneF8jYlvluvLkZM",
-    "name": "Doru\r",
+    "name": "Doru",
     "level": 1,
     "art": "doru.webp"
   },
@@ -1091,7 +1091,7 @@
     "id": "drow_fighter",
     "pack": "pf2e.pathfinder-bestiary",
     "docId": "dTz1SQvJIUsB9S2w",
-    "name": "Drow Fighter\r",
+    "name": "Drow Fighter",
     "level": 1,
     "art": "drow-fighter.webp"
   },
@@ -1099,7 +1099,7 @@
     "id": "druid_initiate",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "J0JoIeg82JCQj3Fm",
-    "name": "Druid Initiate\r",
+    "name": "Druid Initiate",
     "level": 1,
     "art": "druid-initiate.webp"
   },
@@ -1107,7 +1107,7 @@
     "id": "earth_scamp",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "4n0nhynklrs2iHUJ",
-    "name": "Earth Scamp\r",
+    "name": "Earth Scamp",
     "level": 1,
     "art": "earth-scamp.webp"
   },
@@ -1115,7 +1115,7 @@
     "id": "flumph",
     "pack": "pf2e.pathfinder-bestiary-3",
     "docId": "4cfi0BksjHbFVY0A",
-    "name": "Flumph\r",
+    "name": "Flumph",
     "level": 1,
     "art": "flumph.webp"
   },
@@ -1123,7 +1123,7 @@
     "id": "cassisian",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "9qERA2jk7Yv74Hqq",
-    "name": "Cassisian\r",
+    "name": "Cassisian",
     "level": 1,
     "art": "cassisian.webp"
   },
@@ -1131,7 +1131,7 @@
     "id": "abbot_of_abadar",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "oAKCSQ9z2bLTO9sr",
-    "name": "Abbot of Abadar\r",
+    "name": "Abbot of Abadar",
     "level": 1,
     "art": "abbot-of-abadar.webp"
   },
@@ -1139,7 +1139,7 @@
     "id": "combat_engineer",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "szslWxJGvht4aM3j",
-    "name": "Combat Engineer\r",
+    "name": "Combat Engineer",
     "level": 1,
     "art": "combat-engineer.webp"
   },
@@ -1147,7 +1147,7 @@
     "id": "earth_mephit",
     "pack": "pf2e.pathfinder-bestiary",
     "docId": "x23aXeWTo026pMui",
-    "name": "Earth Mephit\r",
+    "name": "Earth Mephit",
     "level": 1,
     "art": "earth-mephit.webp"
   },
@@ -1155,7 +1155,7 @@
     "id": "elf_ranger",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "sd6BsHgVrw4FgR70",
-    "name": "Elf Ranger\r",
+    "name": "Elf Ranger",
     "level": 1,
     "art": "elf-ranger.webp"
   },
@@ -1163,7 +1163,7 @@
     "id": "fire_mephit",
     "pack": "pf2e.pathfinder-bestiary",
     "docId": "k9fM0vufbdsDPQul",
-    "name": "Fire Mephit\r",
+    "name": "Fire Mephit",
     "level": 1,
     "art": "fire-mephit.webp"
   },
@@ -1171,7 +1171,7 @@
     "id": "air_scamp",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "MSm1im7lZA5i82rz",
-    "name": "Air Scamp\r",
+    "name": "Air Scamp",
     "level": 1,
     "art": "air-scamp.webp"
   },
@@ -1179,7 +1179,7 @@
     "id": "brownie",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "SjTv1ayVrguLsnTX",
-    "name": "Brownie\r",
+    "name": "Brownie",
     "level": 1,
     "art": "brownie.webp"
   },
@@ -1187,7 +1187,7 @@
     "id": "festrog",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "NQlPvg8SaIb9jzDl",
-    "name": "Festrog\r",
+    "name": "Festrog",
     "level": 1,
     "art": "festrog.webp"
   },
@@ -1195,7 +1195,7 @@
     "id": "camel",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "ZAXM01KREZECWRvz",
-    "name": "Camel\r",
+    "name": "Camel",
     "level": 1,
     "art": "camel.webp"
   },
@@ -1203,7 +1203,7 @@
     "id": "catfolk_pouncer",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "PvYl5kItb7xoE8Is",
-    "name": "Catfolk Pouncer\r",
+    "name": "Catfolk Pouncer",
     "level": 1,
     "art": "catfolk-pouncer.webp"
   },
@@ -1211,7 +1211,7 @@
     "id": "fetchling_scout",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "WQdWybW4owJWdEnQ",
-    "name": "Fetchling Scout\r",
+    "name": "Fetchling Scout",
     "level": 1,
     "art": "fetchling-scout.webp"
   },
@@ -1219,7 +1219,7 @@
     "id": "acolyte_of_nethys",
     "pack": "pf2e.npc-gallery",
     "docId": "crTWewxna93vEt6B",
-    "name": "Acolyte of Nethys\r",
+    "name": "Acolyte of Nethys",
     "level": 1,
     "art": "acolyte-of-nethys.webp"
   },
@@ -1227,7 +1227,7 @@
     "id": "caligni_dancer",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "SZCf0IZkf36plwVd",
-    "name": "Caligni Dancer\r",
+    "name": "Caligni Dancer",
     "level": 1,
     "art": "caligni-dancer.webp"
   },
@@ -1235,7 +1235,7 @@
     "id": "cave_scorpion",
     "pack": "pf2e.pathfinder-bestiary-2",
     "docId": "e0YvEWJ5zpU946G4",
-    "name": "Cave Scorpion\r",
+    "name": "Cave Scorpion",
     "level": 1,
     "art": "cave-scorpion.webp"
   },
@@ -1243,7 +1243,7 @@
     "id": "boggard_scout",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "s2TkernjfKVEhlJY",
-    "name": "Boggard Scout\r",
+    "name": "Boggard Scout",
     "level": 1,
     "art": "boggard-scout.webp"
   },
@@ -1251,7 +1251,7 @@
     "id": "deep_one",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "HH93tN1gMZXr3jvf",
-    "name": "Deep One\r",
+    "name": "Deep One",
     "level": 1,
     "art": "deep-one.webp"
   },
@@ -1259,7 +1259,7 @@
     "id": "fuath",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "M6c9Trk8tzwZ2wVf",
-    "name": "Fuath\r",
+    "name": "Fuath",
     "level": 1,
     "art": "fuath.webp"
   },
@@ -1267,7 +1267,7 @@
     "id": "ghoul",
     "pack": "pf2e.pathfinder-bestiary",
     "docId": "LHHgGSs0ELCR4CYK",
-    "name": "Ghoul\r",
+    "name": "Ghoul",
     "level": 1,
     "art": "ghoul.webp"
   },
@@ -1275,7 +1275,7 @@
     "id": "giant_amoeba",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "37VjWGXq40eLfrl6",
-    "name": "Giant Amoeba\r",
+    "name": "Giant Amoeba",
     "level": 1,
     "art": "giant-amoeba.webp"
   },
@@ -1283,7 +1283,7 @@
     "id": "giant_fly",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "DEBxtP23o93Qq1n6",
-    "name": "Giant Fly\r",
+    "name": "Giant Fly",
     "level": 1,
     "art": "giant-fly.webp"
   },
@@ -1291,7 +1291,7 @@
     "id": "giant_frog",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "jiLbjz3kic9Uv5b6",
-    "name": "Giant Frog\r",
+    "name": "Giant Frog",
     "level": 1,
     "art": "giant-frog.webp"
   },
@@ -1299,7 +1299,7 @@
     "id": "giant_skunk",
     "pack": "pf2e.pathfinder-bestiary-3",
     "docId": "nr4E59Xu10nWYsyO",
-    "name": "Giant Skunk\r",
+    "name": "Giant Skunk",
     "level": 1,
     "art": "giant-skunk.webp"
   },
@@ -1307,7 +1307,7 @@
     "id": "gnome_bard",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "9XccneFB5DmMHig0",
-    "name": "Gnome Bard\r",
+    "name": "Gnome Bard",
     "level": 1,
     "art": "gnome-bard.webp"
   },
@@ -1315,7 +1315,7 @@
     "id": "goblin_dog",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "yclRuradTmZbdKFQ",
-    "name": "Goblin Dog\r",
+    "name": "Goblin Dog",
     "level": 1,
     "art": "goblin-dog.webp"
   },
@@ -1323,7 +1323,7 @@
     "id": "goblin_snake",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "S4jkgQ7Ni3w8kZ7I",
-    "name": "Goblin Snake\r",
+    "name": "Goblin Snake",
     "level": 1,
     "art": "goblin-snake.webp"
   },
@@ -1331,7 +1331,7 @@
     "id": "grave_robber",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "sYcMzx8RcgaIxyLu",
-    "name": "Grave Robber\r",
+    "name": "Grave Robber",
     "level": 1,
     "art": "grave-robber.webp"
   },
@@ -1339,7 +1339,7 @@
     "id": "gravedigger",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "0t2jNg5tpwWbCYx4",
-    "name": "Gravedigger\r",
+    "name": "Gravedigger",
     "level": 1,
     "art": "gravedigger.webp"
   },
@@ -1347,7 +1347,7 @@
     "id": "halfling_troublemaker",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "L39Fr3dewrvIK2LE",
-    "name": "Halfling Troublemaker\r",
+    "name": "Halfling Troublemaker",
     "level": 1,
     "art": "halfling-troublemaker.webp"
   },
@@ -1355,7 +1355,7 @@
     "id": "hippocampus",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "CHVMOXznjUDcb3XP",
-    "name": "Hippocampus\r",
+    "name": "Hippocampus",
     "level": 1,
     "art": "hippocampus.webp"
   },
@@ -1363,7 +1363,7 @@
     "id": "hryngar_bombardier",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "KDbJ402jFuvn5frX",
-    "name": "Hryngar Bombardier\r",
+    "name": "Hryngar Bombardier",
     "level": 1,
     "art": "hryngar-bombardier.webp"
   },
@@ -1371,7 +1371,7 @@
     "id": "hunting_spider",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "A4VgQIHsqJKssQOM",
-    "name": "Hunting Spider\r",
+    "name": "Hunting Spider",
     "level": 1,
     "art": "hunting-spider.webp"
   },
@@ -1379,7 +1379,7 @@
     "id": "kholo_pragmatist",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "AhyWwDKH1gIVSfys",
-    "name": "Kholo Pragmatist\r",
+    "name": "Kholo Pragmatist",
     "level": 1,
     "art": "kholo-pragmatist.webp"
   },
@@ -1387,7 +1387,7 @@
     "id": "lantern_archon",
     "pack": "pf2e.pathfinder-bestiary",
     "docId": "0HjVFx8qIKDCfblg",
-    "name": "Lantern Archon\r",
+    "name": "Lantern Archon",
     "level": 1,
     "art": "lantern-archon.webp"
   },
@@ -1395,7 +1395,7 @@
     "id": "lizardfolk_defender",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "WZRHV2WU0SkpbtJI",
-    "name": "Lizardfolk Defender\r",
+    "name": "Lizardfolk Defender",
     "level": 1,
     "art": "lizardfolk-defender.webp"
   },
@@ -1403,7 +1403,7 @@
     "id": "lizardfolk_scout",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "V8w4iOwUMPqYnqVE",
-    "name": "Lizardfolk Scout\r",
+    "name": "Lizardfolk Scout",
     "level": 1,
     "art": "lizardfolk-scout.webp"
   },
@@ -1411,7 +1411,7 @@
     "id": "lyrakien",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "iNwaxIYuD0OTDNjJ",
-    "name": "Lyrakien\r",
+    "name": "Lyrakien",
     "level": 1,
     "art": "lyrakien.webp"
   },
@@ -1419,7 +1419,7 @@
     "id": "giant_gecko",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "mathcxCcrQmn9Jj8",
-    "name": "Giant Gecko\r",
+    "name": "Giant Gecko",
     "level": 1,
     "art": "giant-gecko.webp"
   },
@@ -1427,7 +1427,7 @@
     "id": "goblin_chef",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "DsyCuAx23QkztXNF",
-    "name": "Goblin Chef\r",
+    "name": "Goblin Chef",
     "level": 1,
     "art": "goblin-chef.webp"
   },
@@ -1435,7 +1435,7 @@
     "id": "goblin_pyro",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "Ky5eNRvN71O0tY9l",
-    "name": "Goblin Pyro\r",
+    "name": "Goblin Pyro",
     "level": 1,
     "art": "goblin-pyro.webp"
   },
@@ -1443,7 +1443,7 @@
     "id": "grippli_scout",
     "pack": "pf2e.pathfinder-bestiary-2",
     "docId": "rpq2rHlZjy5g31xo",
-    "name": "Grippli Scout\r",
+    "name": "Grippli Scout",
     "level": 1,
     "art": "grippli-scout.webp"
   },
@@ -1451,7 +1451,7 @@
     "id": "mechanic",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "Koz2GhqliCU5sIJl",
-    "name": "Mechanic\r",
+    "name": "Mechanic",
     "level": 1,
     "art": "mechanic.webp"
   },
@@ -1459,7 +1459,7 @@
     "id": "goblin_war_chanter",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "wepiUEi2Lxl8j1BH",
-    "name": "Goblin War Chanter\r",
+    "name": "Goblin War Chanter",
     "level": 1,
     "art": "goblin-war-chanter.webp"
   },
@@ -1467,7 +1467,7 @@
     "id": "hobgoblin_soldier",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "NW68bxCLC6oDHxL9",
-    "name": "Hobgoblin Soldier\r",
+    "name": "Hobgoblin Soldier",
     "level": 1,
     "art": "hobgoblin-soldier.webp"
   },
@@ -1475,7 +1475,7 @@
     "id": "hyena",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "tUWchW8dXavTFeBy",
-    "name": "Hyena\r",
+    "name": "Hyena",
     "level": 1,
     "art": "hyena.webp"
   },
@@ -1483,7 +1483,7 @@
     "id": "guard",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "Aktz95gNNzfAiTzk",
-    "name": "Guard\r",
+    "name": "Guard",
     "level": 1,
     "art": "guard.webp"
   },
@@ -1491,7 +1491,7 @@
     "id": "innkeeper",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "BYpxg06tP5hI6CzQ",
-    "name": "Innkeeper\r",
+    "name": "Innkeeper",
     "level": 1,
     "art": "innkeeper.webp"
   },
@@ -1499,7 +1499,7 @@
     "id": "kobold_scout",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "PcHQDmPTztw32PhL",
-    "name": "Kobold Scout\r",
+    "name": "Kobold Scout",
     "level": 1,
     "art": "kobold-scout.webp"
   },
@@ -1507,7 +1507,7 @@
     "id": "local_herbalist",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "3m8fkhbaUubLeckt",
-    "name": "Local Herbalist\r",
+    "name": "Local Herbalist",
     "level": 1,
     "art": "local-herbalist.webp"
   },
@@ -1515,7 +1515,7 @@
     "id": "manta_ray",
     "pack": "pf2e.pathfinder-bestiary-2",
     "docId": "ACIqdW6VsFA1TCpN",
-    "name": "Manta Ray\r",
+    "name": "Manta Ray",
     "level": 1,
     "art": "manta-ray.webp"
   },
@@ -1523,7 +1523,7 @@
     "id": "giant_cockroach",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "UWRydTp1UvpsOWYO",
-    "name": "Giant Cockroach\r",
+    "name": "Giant Cockroach",
     "level": 1,
     "art": "giant-cockroach.webp"
   },
@@ -1531,7 +1531,7 @@
     "id": "giant_solifugid",
     "pack": "pf2e.pathfinder-bestiary-2",
     "docId": "C7LvY2Xxzm2xRL1M",
-    "name": "Giant Solifugid\r",
+    "name": "Giant Solifugid",
     "level": 1,
     "art": "giant-solifugid.webp"
   },
@@ -1539,7 +1539,7 @@
     "id": "giant_tick",
     "pack": "pf2e.pathfinder-bestiary-2",
     "docId": "le7VaOJyQQnl37Wa",
-    "name": "Giant Tick\r",
+    "name": "Giant Tick",
     "level": 1,
     "art": "giant-tick.webp"
   },
@@ -1547,7 +1547,7 @@
     "id": "goblin_commando",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "sA2dFdRUwiapo69Z",
-    "name": "Goblin Commando\r",
+    "name": "Goblin Commando",
     "level": 1,
     "art": "goblin-commando.webp"
   },
@@ -1555,7 +1555,7 @@
     "id": "gourd_leshy",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "f9fjSDdcBKkEPoIi",
-    "name": "Gourd Leshy\r",
+    "name": "Gourd Leshy",
     "level": 1,
     "art": "gourd-leshy.webp"
   },
@@ -1563,7 +1563,7 @@
     "id": "gunsmith",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "GuYToKMrt5mxxZW6",
-    "name": "Gunsmith\r",
+    "name": "Gunsmith",
     "level": 1,
     "art": "gunsmith.webp"
   },
@@ -1571,7 +1571,7 @@
     "id": "jinkin",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "lFDYJOIp2knQ0IRY",
-    "name": "Jinkin\r",
+    "name": "Jinkin",
     "level": 1,
     "art": "jinkin.webp"
   },
@@ -1579,7 +1579,7 @@
     "id": "merfolk_warrior",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "YiGZxwT2xTVYQyTu",
-    "name": "Merfolk Warrior\r",
+    "name": "Merfolk Warrior",
     "level": 1,
     "art": "merfolk-warrior.webp"
   },
@@ -1587,7 +1587,7 @@
     "id": "grig",
     "pack": "pf2e.pathfinder-bestiary",
     "docId": "j1mm6bb3hZ56jSrK",
-    "name": "Grig\r",
+    "name": "Grig",
     "level": 1,
     "art": "grig.webp"
   },
@@ -1595,7 +1595,7 @@
     "id": "naari_pyrochemist",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "M0R0oJXi5e01jxWe",
-    "name": "Naari Pyrochemist\r",
+    "name": "Naari Pyrochemist",
     "level": 1,
     "art": "naari-pyrochemist.webp"
   },
@@ -1603,7 +1603,7 @@
     "id": "oread_guard",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "gZL6zc7tQAmBKXpx",
-    "name": "Oread Guard\r",
+    "name": "Oread Guard",
     "level": 1,
     "art": "oread-guard.webp"
   },
@@ -1611,7 +1611,7 @@
     "id": "plague_zombie",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "aWiTcxAySoYjUP6T",
-    "name": "Plague Zombie\r",
+    "name": "Plague Zombie",
     "level": 1,
     "art": "plague-zombie.webp"
   },
@@ -1619,7 +1619,7 @@
     "id": "raktavarna",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "nFhAJSpbJz1w71EU",
-    "name": "Raktavarna\r",
+    "name": "Raktavarna",
     "level": 1,
     "art": "raktavarna.webp"
   },
@@ -1627,7 +1627,7 @@
     "id": "reef_octopus",
     "pack": "pf2e.pathfinder-bestiary-2",
     "docId": "RknMXlwJcbvGhk3n",
-    "name": "Reef Octopus\r",
+    "name": "Reef Octopus",
     "level": 1,
     "art": "reef-octopus.webp"
   },
@@ -1635,7 +1635,7 @@
     "id": "riding_dog",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "ECe2DkOgSSqXHBqv",
-    "name": "Riding Dog\r",
+    "name": "Riding Dog",
     "level": 1,
     "art": "riding-dog.webp"
   },
@@ -1643,7 +1643,7 @@
     "id": "riding_horse",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "CLf9k9A9ApTAkZeL",
-    "name": "Riding Horse\r",
+    "name": "Riding Horse",
     "level": 1,
     "art": "riding-horse.webp"
   },
@@ -1651,7 +1651,7 @@
     "id": "rigger",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "hBSGQAonirqUAHCP",
-    "name": "Rigger\r",
+    "name": "Rigger",
     "level": 1,
     "art": "rigger.webp"
   },
@@ -1659,7 +1659,7 @@
     "id": "sewer_ooze",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "9InGpxq5xbbHaL9f",
-    "name": "Sewer Ooze\r",
+    "name": "Sewer Ooze",
     "level": 1,
     "art": "sewer-ooze.webp"
   },
@@ -1667,7 +1667,7 @@
     "id": "shade_dead_vault",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "iOvt926hGa6ci3Q2",
-    "name": "Shade (Dead Vault)\r",
+    "name": "Shade (Dead Vault)",
     "level": 1,
     "art": "shade-dead-vault.webp"
   },
@@ -1675,7 +1675,7 @@
     "id": "shade_maelstrom",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "dwE8vdnqBGjRWU46",
-    "name": "Shade (Maelstrom)\r",
+    "name": "Shade (Maelstrom)",
     "level": 1,
     "art": "shade-maelstrom.webp"
   },
@@ -1683,7 +1683,7 @@
     "id": "shade_outer_rifts",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "0phL9JgjsbcPsuoS",
-    "name": "Shade (Outer Rifts)\r",
+    "name": "Shade (Outer Rifts)",
     "level": 1,
     "art": "shade-outer-rifts.webp"
   },
@@ -1691,7 +1691,7 @@
     "id": "shade_plane_of_fire",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "LIeIU7FCSZr25ss7",
-    "name": "Shade (Plane of Fire)\r",
+    "name": "Shade (Plane of Fire)",
     "level": 1,
     "art": "shade-plane-of-fire.webp"
   },
@@ -1699,7 +1699,7 @@
     "id": "shade_plane_of_metal",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "nX0oonECc1yyxSyc",
-    "name": "Shade (Plane of Metal)\r",
+    "name": "Shade (Plane of Metal)",
     "level": 1,
     "art": "shade-plane-of-metal.webp"
   },
@@ -1707,7 +1707,7 @@
     "id": "prisoner",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "oIHp4amcx8ecZRwM",
-    "name": "Prisoner\r",
+    "name": "Prisoner",
     "level": 1,
     "art": "prisoner.webp"
   },
@@ -1715,7 +1715,7 @@
     "id": "python",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "Yadztw8CmYuWfA7k",
-    "name": "Python\r",
+    "name": "Python",
     "level": 1,
     "art": "python.webp"
   },
@@ -1723,7 +1723,7 @@
     "id": "shade_boneyard",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "j6E7RLYuFNuFgLlS",
-    "name": "Shade (Boneyard)\r",
+    "name": "Shade (Boneyard)",
     "level": 1,
     "art": "shade-boneyard.webp"
   },
@@ -1731,7 +1731,7 @@
     "id": "shade_creations_forge",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "aPyQVT1a4UdY4dDn",
-    "name": "Shade (Creation's Forge)\r",
+    "name": "Shade (Creation's Forge)",
     "level": 1,
     "art": "shade-creations-forge.webp"
   },
@@ -1739,7 +1739,7 @@
     "id": "shade_heaven",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "sxgfInlzlVdZS7KD",
-    "name": "Shade (Heaven)\r",
+    "name": "Shade (Heaven)",
     "level": 1,
     "art": "shade-heaven.webp"
   },
@@ -1747,7 +1747,7 @@
     "id": "shade_hell",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "5BgI2GFP6D9B3wIN",
-    "name": "Shade (Hell)\r",
+    "name": "Shade (Hell)",
     "level": 1,
     "art": "shade-hell.webp"
   },
@@ -1755,7 +1755,7 @@
     "id": "shade_nirvana",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "5bhKDPTVzQJoVGv7",
-    "name": "Shade (Nirvana)\r",
+    "name": "Shade (Nirvana)",
     "level": 1,
     "art": "shade-nirvana.webp"
   },
@@ -1763,7 +1763,7 @@
     "id": "shade_plane_of_wood",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "loSwEJV8C5Xa9Lko",
-    "name": "Shade (Plane of Wood)\r",
+    "name": "Shade (Plane of Wood)",
     "level": 1,
     "art": "shade-plane-of-wood.webp"
   },
@@ -1771,7 +1771,7 @@
     "id": "ostovite",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "A53wPFx58XRx0UZ7",
-    "name": "Ostovite\r",
+    "name": "Ostovite",
     "level": 1,
     "art": "ostovite.webp"
   },
@@ -1779,7 +1779,7 @@
     "id": "shade_astral_plane",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "2ZJo8mtDRD4Xffto",
-    "name": "Shade (Astral Plane)\r",
+    "name": "Shade (Astral Plane)",
     "level": 1,
     "art": "shade-astral-plane.webp"
   },
@@ -1787,7 +1787,7 @@
     "id": "shade_ethereal_plane",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "assVtFdE3wpL41nf",
-    "name": "Shade (Ethereal Plane)\r",
+    "name": "Shade (Ethereal Plane)",
     "level": 1,
     "art": "shade-ethereal-plane.webp"
   },
@@ -1795,7 +1795,7 @@
     "id": "shade_plane_of_water",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "Wk5flXpCpPzCNfs8",
-    "name": "Shade (Plane of Water)\r",
+    "name": "Shade (Plane of Water)",
     "level": 1,
     "art": "shade-plane-of-water.webp"
   },
@@ -1803,7 +1803,7 @@
     "id": "messenger",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "z1tLeckmpJuStmlx",
-    "name": "Messenger\r",
+    "name": "Messenger",
     "level": 1,
     "art": "messenger.webp"
   },
@@ -1811,7 +1811,7 @@
     "id": "quasit",
     "pack": "pf2e.pathfinder-bestiary",
     "docId": "9jF564DF6ylEovna",
-    "name": "Quasit\r",
+    "name": "Quasit",
     "level": 1,
     "art": "quasit.webp"
   },
@@ -1819,7 +1819,7 @@
     "id": "shade_dreamlands",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "oDSlHEEOL2C5ioHb",
-    "name": "Shade (Dreamlands)\r",
+    "name": "Shade (Dreamlands)",
     "level": 1,
     "art": "shade-dreamlands.webp"
   },
@@ -1827,7 +1827,7 @@
     "id": "shade_elysium",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "BnHYkRRddyGcgIl3",
-    "name": "Shade (Elysium)\r",
+    "name": "Shade (Elysium)",
     "level": 1,
     "art": "shade-elysium.webp"
   },
@@ -1835,7 +1835,7 @@
     "id": "shade_netherworld",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "Xmo4EAdMgltKqjah",
-    "name": "Shade (Netherworld)\r",
+    "name": "Shade (Netherworld)",
     "level": 1,
     "art": "shade-netherworld.webp"
   },
@@ -1843,7 +1843,7 @@
     "id": "nixie",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "X4gmFWEuhtpjBj4P",
-    "name": "Nixie\r",
+    "name": "Nixie",
     "level": 1,
     "art": "nixie.webp"
   },
@@ -1851,7 +1851,7 @@
     "id": "nosoi",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "5KstOkXabrOlZaKR",
-    "name": "Nosoi\r",
+    "name": "Nosoi",
     "level": 1,
     "art": "nosoi.webp"
   },
@@ -1859,7 +1859,7 @@
     "id": "orc_agriculturist",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "8WFse73d3kgTPbje",
-    "name": "Orc Agriculturist\r",
+    "name": "Orc Agriculturist",
     "level": 1,
     "art": "orc-agriculturist.webp"
   },
@@ -1867,7 +1867,7 @@
     "id": "orc_veteran",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "V90OYOMyyPLPJuod",
-    "name": "Orc Veteran\r",
+    "name": "Orc Veteran",
     "level": 1,
     "art": "orc-veteran.webp"
   },
@@ -1875,7 +1875,7 @@
     "id": "shade_abaddon",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "mJye6dqtmF7xquE3",
-    "name": "Shade (Abaddon)\r",
+    "name": "Shade (Abaddon)",
     "level": 1,
     "art": "shade-abaddon.webp"
   },
@@ -1883,7 +1883,7 @@
     "id": "shade_plane_of_earth",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "SN5yHit6vkKd4HQJ",
-    "name": "Shade (Plane of Earth)\r",
+    "name": "Shade (Plane of Earth)",
     "level": 1,
     "art": "shade-plane-of-earth.webp"
   },
@@ -1891,7 +1891,7 @@
     "id": "shade_plane_of_air",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "MqEpezChWmV14FHa",
-    "name": "Shade (Plane of Air)\r",
+    "name": "Shade (Plane of Air)",
     "level": 1,
     "art": "shade-plane-of-air.webp"
   },
@@ -1899,7 +1899,7 @@
     "id": "shade_universe",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "3orVmNKI1518s4m7",
-    "name": "Shade (Universe)\r",
+    "name": "Shade (Universe)",
     "level": 1,
     "art": "shade-universe.webp"
   },
@@ -1907,7 +1907,7 @@
     "id": "silvanshee",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "UhnElzzdp553WUyM",
-    "name": "Silvanshee\r",
+    "name": "Silvanshee",
     "level": 1,
     "art": "silvanshee.webp"
   },
@@ -1915,7 +1915,7 @@
     "id": "skulk",
     "pack": "pf2e.pathfinder-bestiary-2",
     "docId": "uGXTQYuRNtgPt1Pp",
-    "name": "Skulk\r",
+    "name": "Skulk",
     "level": 1,
     "art": "skulk.webp"
   },
@@ -1923,7 +1923,7 @@
     "id": "spawning_soulrider_celestial",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "ZTH7qmzEVshknw41",
-    "name": "Spawning Soulrider (Celestial)\r",
+    "name": "Spawning Soulrider (Celestial)",
     "level": 1,
     "art": "spawning-soulrider-celestial.webp"
   },
@@ -1931,7 +1931,7 @@
     "id": "sunflower_leshy",
     "pack": "pf2e.pathfinder-bestiary-2",
     "docId": "Bz5wgKEVsHAyaYEx",
-    "name": "Sunflower Leshy\r",
+    "name": "Sunflower Leshy",
     "level": 1,
     "art": "sunflower-leshy.webp"
   },
@@ -1939,7 +1939,7 @@
     "id": "tunnel_viper",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "ETSHIHmTP0Yajsci",
-    "name": "Tunnel Viper\r",
+    "name": "Tunnel Viper",
     "level": 1,
     "art": "tunnel-viper.webp"
   },
@@ -1947,7 +1947,7 @@
     "id": "voidworm",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "ciLdEf6sld8h2a2j",
-    "name": "Voidworm\r",
+    "name": "Voidworm",
     "level": 1,
     "art": "voidworm.webp"
   },
@@ -1955,7 +1955,7 @@
     "id": "war_pony",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "BMpBXSq8T20WdUDl",
-    "name": "War Pony\r",
+    "name": "War Pony",
     "level": 1,
     "art": "war-pony.webp"
   },
@@ -1963,7 +1963,7 @@
     "id": "wolf",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "BN5Lb6IsQ9Wyu3rL",
-    "name": "Wolf\r",
+    "name": "Wolf",
     "level": 1,
     "art": "wolf.webp"
   },
@@ -1971,7 +1971,7 @@
     "id": "xulgath_warrior",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "5vBG8a8dnJfmVd3Y",
-    "name": "Xulgath Warrior\r",
+    "name": "Xulgath Warrior",
     "level": 1,
     "art": "xulgath-warrior.webp"
   },
@@ -1979,7 +1979,7 @@
     "id": "yzobu",
     "pack": "pf2e.pathfinder-bestiary-3",
     "docId": "H7PDLOIbDG9zt4H1",
-    "name": "Yzobu\r",
+    "name": "Yzobu",
     "level": 1,
     "art": "yzobu.webp"
   },
@@ -1987,7 +1987,7 @@
     "id": "zoaem",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "wycu7XN9VgiSpSfB",
-    "name": "Zoaem\r",
+    "name": "Zoaem",
     "level": 1,
     "art": "zoaem.webp"
   },
@@ -1995,7 +1995,7 @@
     "id": "cythnigot",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "YhVYGhzNrOFQROui",
-    "name": "Cythnigot\r",
+    "name": "Cythnigot",
     "level": 1,
     "art": "cythnigot.webp"
   },
@@ -2003,7 +2003,7 @@
     "id": "gathlain_wanderer",
     "pack": "pf2e.pathfinder-bestiary-3",
     "docId": "CSPuBqtPITQt43Md",
-    "name": "Gathlain Wanderer\r",
+    "name": "Gathlain Wanderer",
     "level": 1,
     "art": "gathlain-wanderer.webp"
   },
@@ -2011,7 +2011,7 @@
     "id": "grioth_scout",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "NeKtvaz1jB7D6oti",
-    "name": "Grioth Scout\r",
+    "name": "Grioth Scout",
     "level": 1,
     "art": "grioth-scout.webp"
   },
@@ -2019,7 +2019,7 @@
     "id": "ice_mephit",
     "pack": "pf2e.pathfinder-bestiary-2",
     "docId": "6Me4Q1JDupyCCnGg",
-    "name": "Ice Mephit\r",
+    "name": "Ice Mephit",
     "level": 1,
     "art": "ice-mephit.webp"
   },
@@ -2027,7 +2027,7 @@
     "id": "ooze_mephit",
     "pack": "pf2e.pathfinder-bestiary-2",
     "docId": "5FcYbQxHehjO4w1d",
-    "name": "Ooze Mephit\r",
+    "name": "Ooze Mephit",
     "level": 1,
     "art": "ooze-mephit.webp"
   },
@@ -2035,7 +2035,7 @@
     "id": "steam_mephit",
     "pack": "pf2e.pathfinder-bestiary-2",
     "docId": "ARw4pyNmuQxoZDke",
-    "name": "Steam Mephit\r",
+    "name": "Steam Mephit",
     "level": 1,
     "art": "steam-mephit.webp"
   },
@@ -2043,7 +2043,7 @@
     "id": "tanuki_village_hero",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "Y8rw1J79zfGyznoa",
-    "name": "Tanuki Village Hero\r",
+    "name": "Tanuki Village Hero",
     "level": 1,
     "art": "tanuki-village-hero.webp"
   },
@@ -2051,7 +2051,7 @@
     "id": "vanara_disciple",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "za4NM8NwZKumv3NM",
-    "name": "Vanara Disciple\r",
+    "name": "Vanara Disciple",
     "level": 1,
     "art": "vanara-disciple.webp"
   },
@@ -2059,7 +2059,7 @@
     "id": "wayang_whisperblade",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "wGnhBByFbXVFt9WX",
-    "name": "Wayang Whisperblade\r",
+    "name": "Wayang Whisperblade",
     "level": 1,
     "art": "wayang-whisperblade.webp"
   },
@@ -2067,7 +2067,7 @@
     "id": "stheno_harpist",
     "pack": "pf2e.pathfinder-bestiary-3",
     "docId": "74Sw9n7c4sMaK9Rx",
-    "name": "Stheno Harpist\r",
+    "name": "Stheno Harpist",
     "level": 1,
     "art": "stheno-harpist.webp"
   },
@@ -2075,7 +2075,7 @@
     "id": "wyrwood_sneak",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "eEnyd5lwBY9wtgSS",
-    "name": "Wyrwood Sneak\r",
+    "name": "Wyrwood Sneak",
     "level": 1,
     "art": "wyrwood-sneak.webp"
   },
@@ -2083,7 +2083,7 @@
     "id": "shade_axis",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "UfYZs75zqPmkUXjy",
-    "name": "Shade (Axis)\r",
+    "name": "Shade (Axis)",
     "level": 1,
     "art": "shade-axis.webp"
   },
@@ -2091,7 +2091,7 @@
     "id": "sylph_sneak",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "XbQEXEBwPsBMzxqN",
-    "name": "Sylph Sneak\r",
+    "name": "Sylph Sneak",
     "level": 1,
     "art": "sylph-sneak.webp"
   },
@@ -2099,7 +2099,7 @@
     "id": "umbral_gnome_scout",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "63gNd2JNUDcAjYzo",
-    "name": "Umbral Gnome Scout\r",
+    "name": "Umbral Gnome Scout",
     "level": 1,
     "art": "umbral-gnome-scout.webp"
   },
@@ -2107,7 +2107,7 @@
     "id": "undine_hydromancer",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "yFFw1Gsd4teXA97L",
-    "name": "Undine Hydromancer\r",
+    "name": "Undine Hydromancer",
     "level": 1,
     "art": "undine-hydromancer.webp"
   },
@@ -2115,7 +2115,7 @@
     "id": "vexgit",
     "pack": "pf2e.pathfinder-bestiary-2",
     "docId": "BbIyNJDPkGKLK0Rt",
-    "name": "Vexgit\r",
+    "name": "Vexgit",
     "level": 1,
     "art": "vexgit.webp"
   },
@@ -2123,7 +2123,7 @@
     "id": "naiad",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "Cqi8jadYpUTajIC6",
-    "name": "Naiad\r",
+    "name": "Naiad",
     "level": 1,
     "art": "naiad.webp"
   },
@@ -2131,7 +2131,7 @@
     "id": "water_mephit",
     "pack": "pf2e.pathfinder-bestiary",
     "docId": "KFf6pJmFmzj7HH9i",
-    "name": "Water Mephit\r",
+    "name": "Water Mephit",
     "level": 1,
     "art": "water-mephit.webp"
   },
@@ -2139,7 +2139,7 @@
     "id": "shokasura",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "K5ahJfASpyXA2WqM",
-    "name": "Shokasura\r",
+    "name": "Shokasura",
     "level": 1,
     "art": "shokasura.webp"
   },
@@ -2147,7 +2147,7 @@
     "id": "samsaran_anchorite",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "NBdVKrLxKhurBETJ",
-    "name": "Samsaran Anchorite\r",
+    "name": "Samsaran Anchorite",
     "level": 1,
     "art": "samsaran-anchorite.webp"
   },
@@ -2155,7 +2155,7 @@
     "id": "dust_mephit",
     "pack": "pf2e.pathfinder-bestiary-2",
     "docId": "m40M5R7wcm5DSVK2",
-    "name": "Dust Mephit\r",
+    "name": "Dust Mephit",
     "level": 1,
     "art": "dust-mephit.webp"
   },
@@ -2163,7 +2163,7 @@
     "id": "tripkee_scout_mc2",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "Eo3xxyRwtaynkjoD",
-    "name": "Tripkee Scout\r",
+    "name": "Tripkee Scout",
     "level": 1,
     "art": "tripkee-scout-mc2.webp"
   },
@@ -2171,7 +2171,7 @@
     "id": "tripkee_scout_npc",
     "pack": "pf2e.pathfinder-npc-core",
     "docId": "XfK0MATlH2WDNhAA",
-    "name": "Tripkee Scout\r",
+    "name": "Tripkee Scout",
     "level": 1,
     "art": "tripkee-scout-npc.webp"
   },
@@ -2179,7 +2179,7 @@
     "id": "velociraptor",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "ZW8ARUrNdc3zewLM",
-    "name": "Velociraptor\r",
+    "name": "Velociraptor",
     "level": 1,
     "art": "velociraptor.webp"
   },
@@ -2187,7 +2187,7 @@
     "id": "water_scamp",
     "pack": "pf2e.pathfinder-monster-core",
     "docId": "Fn5ZKPwiaXm242Np",
-    "name": "Water Scamp\r",
+    "name": "Water Scamp",
     "level": 1,
     "art": "water-scamp.webp"
   },
@@ -2195,7 +2195,7 @@
     "id": "shikigami",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "MovMBbHEln0TUlYh",
-    "name": "Shikigami\r",
+    "name": "Shikigami",
     "level": 1,
     "art": "shikigami.webp"
   },
@@ -2203,7 +2203,7 @@
     "id": "akata",
     "pack": "pf2e.pathfinder-bestiary-2",
     "docId": "nRsH7unLIRWq0ZHC",
-    "name": "Akata\r",
+    "name": "Akata",
     "level": 1,
     "art": "akata.webp"
   },
@@ -2211,7 +2211,7 @@
     "id": "spawning_soulrider_monitor",
     "pack": "pf2e.pathfinder-monster-core-2",
     "docId": "NnEnGsSuxgP1eY5Z",
-    "name": "Spawning Soulrider (Monitor)\r",
+    "name": "Spawning Soulrider (Monitor)",
     "level": 1,
     "art": "spawning-soulrider-monitor.webp"
   },
@@ -2219,8 +2219,336 @@
     "id": "void_zombie",
     "pack": "pf2e.pathfinder-bestiary-2",
     "docId": "cKu0rrZtEAFCosej",
-    "name": "Void Zombie\r",
+    "name": "Void Zombie",
     "level": 1,
     "art": "void-zombie.webp"
+  },
+  {
+    "id": "archer_sentry",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "fpwpA2JmpbwREa5a",
+    "name": "Archer Sentry",
+    "level": 2,
+    "art": "archer-sentry.webp"
+  },
+  {
+    "id": "azarketi_explorer",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "RTTs4lvkcPz8u6IY",
+    "name": "Azarketi Explorer",
+    "level": 2,
+    "art": "azarketi-explorer.webp"
+  },
+  {
+    "id": "black_bear",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "xxP5FJotshmUQNtY",
+    "name": "Black Bear",
+    "level": 2,
+    "art": "black-bear.webp"
+  },
+  {
+    "id": "blindheim",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "B8dOh27iarR7rZI3",
+    "name": "Blindheim",
+    "level": 2,
+    "art": "blindheim.webp"
+  },
+  {
+    "id": "boar",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "IyhbcdTVmkV4pSju",
+    "name": "Boar",
+    "level": 2,
+    "art": "boar.webp"
+  },
+  {
+    "id": "cactus_leshy",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "eGNpuEg60STItyGz",
+    "name": "Cactus Leshy",
+    "level": 2,
+    "art": "cactus-leshy.webp"
+  },
+  {
+    "id": "caligni_skulker",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "9YPFqikAmURwcTEO",
+    "name": "Caligni Skulker",
+    "level": 2,
+    "art": "caligni-skulker.webp"
+  },
+  {
+    "id": "cave_fisher",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "OERK0GGnaEOthcdV",
+    "name": "Cave Fisher",
+    "level": 2,
+    "art": "cave-fisher.webp"
+  },
+  {
+    "id": "choker",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "O69kXMo6shkA606k",
+    "name": "Choker",
+    "level": 2,
+    "art": "choker.webp"
+  },
+  {
+    "id": "construction_worker",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "lhhdqML98o90gXqO",
+    "name": "Construction Worker",
+    "level": 2,
+    "art": "construction-worker.webp"
+  },
+  {
+    "id": "crocodile",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "2rMLYkUR47ZCQMUg",
+    "name": "Crocodile",
+    "level": 2,
+    "art": "crocodile.webp"
+  },
+  {
+    "id": "domovoi",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "AzYYP23uGecb0Jmw",
+    "name": "Domovoi",
+    "level": 2,
+    "art": "domovoi.webp"
+  },
+  {
+    "id": "driver",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "XnfZwf1g4rfan1gY",
+    "name": "Driver",
+    "level": 2,
+    "art": "driver.webp"
+  },
+  {
+    "id": "drow_rogue",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "VBXjZ1jYxdKf64B7",
+    "name": "Drow Rogue",
+    "level": 2,
+    "art": "drow-rogue.webp"
+  },
+  {
+    "id": "drunkard",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "xxH95k9qf6lLit4W",
+    "name": "Drunkard",
+    "level": 2,
+    "art": "drunkard.webp"
+  },
+  {
+    "id": "ember_fox",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "xNn7kUg4GxyqCupT",
+    "name": "Ember Fox",
+    "level": 2,
+    "art": "ember-fox.webp"
+  },
+  {
+    "id": "fading_fox",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "GD8yAL8R8oft23Ml",
+    "name": "Fading Fox",
+    "level": 2,
+    "art": "fading-fox.webp"
+  },
+  {
+    "id": "flaming_skull",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "UfiWHXnDg13Gqyyu",
+    "name": "Flaming Skull",
+    "level": 2,
+    "art": "flaming-skull.webp"
+  },
+  {
+    "id": "giant_bat",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "xnpuGO8jEMba9wy5",
+    "name": "Giant Bat",
+    "level": 2,
+    "art": "giant-bat.webp"
+  },
+  {
+    "id": "arms_dealer",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "OB4x3FBwjJBfOsi3",
+    "name": "Arms Dealer",
+    "level": 2,
+    "art": "arms-dealer.webp"
+  },
+  {
+    "id": "astronomer",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "Y0MSOv0l5ePhP3Co",
+    "name": "Astronomer",
+    "level": 2,
+    "art": "astronomer.webp"
+  },
+  {
+    "id": "blasphemer_of_zon_kuthon",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "nh5QBC79HYRCSmLV",
+    "name": "Blasphemer of Zon-Kuthon",
+    "level": 2,
+    "art": "blasphemer-of-zon-kuthon.webp"
+  },
+  {
+    "id": "boggard_warrior",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "EH84J9FedbK3ax50",
+    "name": "Boggard Warrior",
+    "level": 2,
+    "art": "boggard-warrior.webp"
+  },
+  {
+    "id": "coven_aspirant",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "f6NqtcB94r3S7LCn",
+    "name": "Coven Aspirant",
+    "level": 2,
+    "art": "coven-aspirant.webp"
+  },
+  {
+    "id": "envyspawn",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "3nUt7cW8fqE5IpyE",
+    "name": "Envyspawn",
+    "level": 2,
+    "art": "envyspawn.webp"
+  },
+  {
+    "id": "fungus_leshy",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "BoXCGLACP9vuIZkZ",
+    "name": "Fungus Leshy",
+    "level": 2,
+    "art": "fungus-leshy.webp"
+  },
+  {
+    "id": "ghoul_soldier",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "2KUe0AMwqswKivRo",
+    "name": "Ghoul Soldier",
+    "level": 2,
+    "art": "ghoul-soldier.webp"
+  },
+  {
+    "id": "giant_ant",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "mEZUTqNIgu0ASApu",
+    "name": "Giant Ant",
+    "level": 2,
+    "art": "giant-ant.webp"
+  },
+  {
+    "id": "acrobat",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "5KojtpJA0T5xoum4",
+    "name": "Acrobat",
+    "level": 2,
+    "art": "acrobat.webp"
+  },
+  {
+    "id": "aiuvarin_elementalist",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "C9a1JvKRo43I1nx3",
+    "name": "Aiuvarin Elementalist",
+    "level": 2,
+    "art": "aiuvarin-elementalist.webp"
+  },
+  {
+    "id": "bugbear_prowler",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "9cBuzDV8seJqhNKJ",
+    "name": "Bugbear Prowler",
+    "level": 2,
+    "art": "bugbear-prowler.webp"
+  },
+  {
+    "id": "dhampir_wizard",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "bveW59P2mTiiFVIt",
+    "name": "Dhampir Wizard",
+    "level": 2,
+    "art": "dhampir-wizard.webp"
+  },
+  {
+    "id": "forlorn_artist",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "t5H1GbGqLLCU79cd",
+    "name": "Forlorn Artist",
+    "level": 2,
+    "art": "forlorn-artist.webp"
+  },
+  {
+    "id": "ghast",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "VC7rtYR4hLxwg7WZ",
+    "name": "Ghast",
+    "level": 2,
+    "art": "ghast.webp"
+  },
+  {
+    "id": "giant_crab",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "Lb11NsmTJpd4YS1p",
+    "name": "Giant Crab",
+    "level": 2,
+    "art": "giant-crab.webp"
+  },
+  {
+    "id": "bandit",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "FBq4bqtKUBpJUCMU",
+    "name": "Bandit",
+    "level": 2,
+    "art": "bandit.webp"
+  },
+  {
+    "id": "dromaar_mountaineer",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "WlbwkGQPAenbSUKJ",
+    "name": "Dromaar Mountaineer",
+    "level": 2,
+    "art": "dromaar-mountaineer.webp"
+  },
+  {
+    "id": "giant_badger",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "Y3wRpLSDZsYcigjX",
+    "name": "Giant Badger",
+    "level": 2,
+    "art": "giant-badger.webp"
+  },
+  {
+    "id": "courtesan",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "B9NoqcAASkg2Gjz3",
+    "name": "Courtesan",
+    "level": 2,
+    "art": "courtesan.webp"
+  },
+  {
+    "id": "dero_stalker",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "BxOlYmZiwLRpxGWp",
+    "name": "Dero Stalker",
+    "level": 2,
+    "art": "dero-stalker.webp"
+  },
+  {
+    "id": "deinonychus",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "wNkS1ArFjS6ZsrPS",
+    "name": "Deinonychus",
+    "level": 2,
+    "art": "deinonychus.webp"
   }
 ]
