@@ -5,7 +5,8 @@ import {
   DUNGEON_SOUND_FILES,
   strikeHitSoundKey,
   strikeSoundPath,
-  spellSoundPath,
+  spellSaveSoundPath,
+  spellAttackSoundPath,
 } from "../scripts/dungeon-sound.mjs";
 
 const assetsDir = fileURLToPath(new URL("../assets/sounds/", import.meta.url));
@@ -113,24 +114,48 @@ describe("strikeSoundPath", () => {
   });
 });
 
-describe("spellSoundPath", () => {
+describe("spellSaveSoundPath", () => {
   const SOUND_DIR = "modules/deck-of-many-more-things/assets/sounds";
 
   it("a failed save (the spell lands) plays the hit sound", () => {
-    expect(spellSoundPath("failure")).toBe(`${SOUND_DIR}/card-arcane.ogg`);
-    expect(spellSoundPath("criticalFailure")).toBe(
+    expect(spellSaveSoundPath("failure")).toBe(`${SOUND_DIR}/card-arcane.ogg`);
+    expect(spellSaveSoundPath("criticalFailure")).toBe(
       `${SOUND_DIR}/card-arcane.ogg`,
     );
   });
 
   it("a successful save (the spell does little or nothing) plays the miss sound", () => {
-    expect(spellSoundPath("success")).toBe(`${SOUND_DIR}/card-query.ogg`);
-    expect(spellSoundPath("criticalSuccess")).toBe(
+    expect(spellSaveSoundPath("success")).toBe(`${SOUND_DIR}/card-query.ogg`);
+    expect(spellSaveSoundPath("criticalSuccess")).toBe(
       `${SOUND_DIR}/card-query.ogg`,
     );
   });
 
   it("returns null for an unrecognized outcome", () => {
-    expect(spellSoundPath(null)).toBeNull();
+    expect(spellSaveSoundPath(null)).toBeNull();
+  });
+});
+
+describe("spellAttackSoundPath", () => {
+  const SOUND_DIR = "modules/deck-of-many-more-things/assets/sounds";
+
+  it("is NOT inverted like spellSaveSoundPath -- success/criticalSuccess is a hit", () => {
+    expect(spellAttackSoundPath("success")).toBe(
+      `${SOUND_DIR}/card-arcane.ogg`,
+    );
+    expect(spellAttackSoundPath("criticalSuccess")).toBe(
+      `${SOUND_DIR}/card-arcane.ogg`,
+    );
+  });
+
+  it("failure/criticalFailure is a miss", () => {
+    expect(spellAttackSoundPath("failure")).toBe(`${SOUND_DIR}/card-query.ogg`);
+    expect(spellAttackSoundPath("criticalFailure")).toBe(
+      `${SOUND_DIR}/card-query.ogg`,
+    );
+  });
+
+  it("returns null for an unrecognized outcome", () => {
+    expect(spellAttackSoundPath(null)).toBeNull();
   });
 });

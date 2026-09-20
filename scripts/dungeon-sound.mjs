@@ -117,12 +117,30 @@ export function strikeSoundPath(
  * The sound path for one save-based spell outcome, or `null`. Inverted from
  * a strike's outcome semantics: the *target's save* succeeding means the
  * spell did little or nothing to them (a "miss" from the caster's
- * perspective), and the save failing means the spell landed.
+ * perspective), and the save failing means the spell landed. For
+ * castSpellAndApplySave/castAreaSpellAndApplySaves.
  */
-export function spellSoundPath(outcome) {
+export function spellSaveSoundPath(outcome) {
   if (outcome === "criticalFailure" || outcome === "failure")
     return SPELL_HIT_SOUND;
   if (outcome === "success" || outcome === "criticalSuccess")
+    return SPELL_MISS_SOUND;
+  return null;
+}
+
+/**
+ * The sound path for one attack-roll spell outcome, or `null`. NOT inverted
+ * -- an attack-roll spell (castAttackSpellAndApplyRoll) resolves exactly
+ * like a strike against the target's AC, so success/criticalSuccess is a
+ * hit and failure/criticalFailure is a miss, same direction as
+ * strikeSoundPath. Kept as its own function rather than a shared one with a
+ * boolean flag: the two are different mechanics that happen to want the
+ * same two sound files, not one mechanic with a variant.
+ */
+export function spellAttackSoundPath(outcome) {
+  if (outcome === "success" || outcome === "criticalSuccess")
+    return SPELL_HIT_SOUND;
+  if (outcome === "failure" || outcome === "criticalFailure")
     return SPELL_MISS_SOUND;
   return null;
 }
@@ -132,8 +150,13 @@ export function playStrikeSound(outcome, context) {
   if (p) playSound(p);
 }
 
-export function playSpellSound(outcome) {
-  const p = spellSoundPath(outcome);
+export function playSpellSaveSound(outcome) {
+  const p = spellSaveSoundPath(outcome);
+  if (p) playSound(p);
+}
+
+export function playAttackSpellSound(outcome) {
+  const p = spellAttackSoundPath(outcome);
   if (p) playSound(p);
 }
 

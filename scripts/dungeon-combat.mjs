@@ -30,7 +30,8 @@ import { findPath, blockedEdgesFromWalls } from "./pathfinding.mjs";
 import { coverBlocksLineOfFire, COVER_EFFECT_DATA } from "./cover-items.mjs";
 import {
   playStrikeSound,
-  playSpellSound,
+  playSpellSaveSound,
+  playAttackSpellSound,
   playCreatureDeathSound,
 } from "./dungeon-sound.mjs";
 
@@ -947,36 +948,44 @@ export function getPendingAgentTurn(combat) {
     )
     .filter(Boolean);
 
-  const readyAreaSpells = (combatant.actor?.spellcasting?.contents ?? [])
-    .flatMap((entry) =>
-      (entry.spells?.contents ?? []).filter(isAreaSpellInScope).map((spell) => {
-        const radiusSquares = (spell.system.area.value ?? 0) / gridDistanceFt;
-        const withinRadius = (centerToken) =>
-          rawOpponents
-            .filter(
-              (o) => chebyshevSquares(centerToken, o.token, gridSize) <= radiusSquares,
-            )
-            .map((o) => ({ id: o.id, name: o.name }));
-        const placements =
-          spell.system.area.type === "emanation"
-            ? [{ centerType: "self", centerId: null, affected: withinRadius(combatant.token) }]
-            : rawOpponents.map((center) => ({
-                centerType: "opponent",
-                centerId: center.id,
-                affected: withinRadius(center.token),
-              }));
-        return {
-          id: spell.id,
-          slug: spell.slug,
-          label: spell.name,
-          cost: Number(spell.system.time.value),
-          save: spell.system.defense.save.statistic,
-          basic: spell.system.defense.save.basic,
-          entryId: entry.id,
-          placements,
-        };
-      }),
-    );
+  const readyAreaSpells = (
+    combatant.actor?.spellcasting?.contents ?? []
+  ).flatMap((entry) =>
+    (entry.spells?.contents ?? []).filter(isAreaSpellInScope).map((spell) => {
+      const radiusSquares = (spell.system.area.value ?? 0) / gridDistanceFt;
+      const withinRadius = (centerToken) =>
+        rawOpponents
+          .filter(
+            (o) =>
+              chebyshevSquares(centerToken, o.token, gridSize) <= radiusSquares,
+          )
+          .map((o) => ({ id: o.id, name: o.name }));
+      const placements =
+        spell.system.area.type === "emanation"
+          ? [
+              {
+                centerType: "self",
+                centerId: null,
+                affected: withinRadius(combatant.token),
+              },
+            ]
+          : rawOpponents.map((center) => ({
+              centerType: "opponent",
+              centerId: center.id,
+              affected: withinRadius(center.token),
+            }));
+      return {
+        id: spell.id,
+        slug: spell.slug,
+        label: spell.name,
+        cost: Number(spell.system.time.value),
+        save: spell.system.defense.save.statistic,
+        basic: spell.system.defense.save.basic,
+        entryId: entry.id,
+        placements,
+      };
+    }),
+  );
 
   const readyAttackSpells = (combatant.actor?.spellcasting?.contents ?? [])
     .flatMap((entry) =>
@@ -1165,7 +1174,7 @@ async function castSpellAndApplySave(
     await saveStat.roll({ dc: { value: dc }, createMessage: true });
     const outcome =
       game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
-    playSpellSound(outcome);
+    playSpellSaveSound(outcome);
     const damageRoll = await spell.rollDamage?.({
       target: targetRef,
       outcome,
@@ -1201,7 +1210,13 @@ async function castSpellAndApplySave(
  * per-target save/damage/apply sequence #118's castSpellAndApplySave uses
  * for a single target, just once per affected creature.
  */
-async function castAreaSpellAndApplySaves(combatant, targets, spellId, entryId, save) {
+async function castAreaSpellAndApplySaves(
+  combatant,
+  targets,
+  spellId,
+  entryId,
+  save,
+) {
   const entry = combatant.actor?.spellcasting?.contents?.find(
     (e) => e.id === entryId,
   );
@@ -1225,6 +1240,7 @@ async function castAreaSpellAndApplySaves(combatant, targets, spellId, entryId, 
       await saveStat.roll({ dc: { value: dc }, createMessage: true });
       const outcome =
         game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
+      playSpellSaveSound(outcome);
       const damageRoll = await spell.rollDamage?.({
         target: targetRef,
         outcome,
@@ -1266,7 +1282,12 @@ async function castAreaSpellAndApplySaves(combatant, targets, spellId, entryId, 
  * miss. `attackNumber` is always 1 — no spell-attack MAP tracking in v1,
  * matching #118/#119's spells (only a Strike bumps `mapIncrement`).
  */
-async function castAttackSpellAndApplyRoll(combatant, target, spellId, entryId) {
+async function castAttackSpellAndApplyRoll(
+  combatant,
+  target,
+  spellId,
+  entryId,
+) {
   const entry = combatant.actor?.spellcasting?.contents?.find(
     (e) => e.id === entryId,
   );
@@ -1288,6 +1309,7 @@ async function castAttackSpellAndApplyRoll(combatant, target, spellId, entryId) 
     });
     const outcome =
       game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
+    playAttackSpellSound(outcome);
     if (outcome === "success" || outcome === "criticalSuccess") {
       const damageRoll = await spell.rollDamage?.({
         target: targetRef,
