@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   initAgentTurnState, buildMovementCandidates, buildStrikeCandidates, buildSpellCandidates,
-  buildAreaSpellCandidates, endTurnCandidate,
+  buildAreaSpellCandidates, buildAttackSpellCandidates, endTurnCandidate,
   buildCandidateList, applyCandidateToTurnState, buildDecisionContext,
   MAX_ACTIONS_PER_TURN, AGENT_MELEE_REACH_SQUARES
 } from '../scripts/agent-candidates.mjs';
@@ -162,6 +162,29 @@ describe('buildAreaSpellCandidates', () => {
   });
 });
 
+describe('buildAttackSpellCandidates', () => {
+  const rayOfFrost = { id: 'sp4', slug: 'ray-of-frost', label: 'Ray of Frost', cost: 2, rangeSquares: 6, entryId: 'entry1' };
+  const opponentInRange = { id: 'opp1', name: 'Fighter', distanceSquares: 5 };
+  const opponentOutOfRange = { id: 'opp2', name: 'Cleric', distanceSquares: 10 };
+
+  it('offers a castAttack against every opponent within range when enough actions remain', () => {
+    const candidates = buildAttackSpellCandidates({ readyAttackSpells: [rayOfFrost], opponents: [opponentInRange, opponentOutOfRange], actionsRemaining: 3 });
+    expect(candidates).toEqual([
+      { id: 'castAttack:ray-of-frost:opp1', type: 'castAttack', spellId: 'sp4', entryId: 'entry1', targetId: 'opp1', cost: 2, summary: 'Ray of Frost vs Fighter' }
+    ]);
+  });
+
+  it('omits a spell whose cost exceeds the actions remaining', () => {
+    const candidates = buildAttackSpellCandidates({ readyAttackSpells: [rayOfFrost], opponents: [opponentInRange], actionsRemaining: 1 });
+    expect(candidates).toEqual([]);
+  });
+
+  it('omits an opponent outside the spell\'s range', () => {
+    const candidates = buildAttackSpellCandidates({ readyAttackSpells: [rayOfFrost], opponents: [opponentOutOfRange], actionsRemaining: 3 });
+    expect(candidates).toEqual([]);
+  });
+});
+
 describe('endTurnCandidate', () => {
   it('is always the same zero-cost candidate', () => {
     expect(endTurnCandidate()).toEqual({ id: 'endTurn', type: 'endTurn', cost: 0, summary: 'End turn' });
@@ -206,6 +229,13 @@ describe('buildCandidateList', () => {
     const turnState = { actionsRemaining: 3, mapIncrement: 0 };
     const candidates = buildCandidateList({ opponents: [opponent], readyActions: [claw], readyAreaSpells: [quench], turnState, hazard: null, hasRangedOrReach: false });
     expect(candidates.map((c) => c.id)).toEqual(['strike:claw:opp1', 'castArea:quench:self', 'endTurn']);
+  });
+
+  it('includes an affordable attack-roll spell candidate alongside strikes', () => {
+    const rayOfFrost = { id: 'sp4', slug: 'ray-of-frost', label: 'Ray of Frost', cost: 1, rangeSquares: 6, entryId: 'entry1' };
+    const turnState = { actionsRemaining: 3, mapIncrement: 0 };
+    const candidates = buildCandidateList({ opponents: [opponent], readyActions: [claw], readyAttackSpells: [rayOfFrost], turnState, hazard: null, hasRangedOrReach: false });
+    expect(candidates.map((c) => c.id)).toEqual(['strike:claw:opp1', 'castAttack:ray-of-frost:opp1', 'endTurn']);
   });
 });
 

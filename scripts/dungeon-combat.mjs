@@ -397,6 +397,27 @@ function isAreaSpellInScope(spell) {
 }
 
 /**
+ * True for a spell squarely inside #120's scope: single-target, attack-roll
+ * damage (confirmed live: `system.defense = {passive: {statistic: 'ac'},
+ * save: null}` is the real discriminator — `rollAttack`/`rollDamage` exist
+ * as methods on every spell document regardless of type, so their mere
+ * presence isn't a signal), a non-empty damage instance, and a fixed 1/2/3
+ * action cost. Unlike #118's `isSpellInScope`, `target.value` must be
+ * exactly `"1 creature"` rather than matched with a loose leading-"1"
+ * regex — sampling turned up real spells like Slashing Gust
+ * (`"1 or 2 creatures"`) that a looser match would wrongly let through.
+ */
+function isAttackSpellInScope(spell) {
+  const system = spell.system ?? {};
+  if (system.area != null) return false;
+  if ((system.target?.value ?? "") !== "1 creature") return false;
+  if (system.defense?.passive?.statistic !== "ac") return false;
+  if (system.defense?.save != null) return false;
+  if (!Object.keys(system.damage ?? {}).length) return false;
+  return /^[123]$/.test(system.time?.value ?? "");
+}
+
+/**
  * The raw stored `agentTurnState` flag, but only when it actually belongs to
  * this exact turn — same `combatantId` *and* the same `round`/`turn` the
  * Combat is on right now. `combatantId` alone isn't enough: the same
@@ -908,6 +929,25 @@ export function getPendingAgentTurn(combat) {
       }),
     );
 
+  const readyAttackSpells = (combatant.actor?.spellcasting?.contents ?? [])
+    .flatMap((entry) =>
+      (entry.spells?.contents ?? [])
+        .filter(isAttackSpellInScope)
+        .map((spell) => {
+          const rangeSquares = spellRangeSquares(spell, gridDistanceFt);
+          if (rangeSquares == null) return null;
+          return {
+            id: spell.id,
+            slug: spell.slug,
+            label: spell.name,
+            cost: Number(spell.system.time.value),
+            rangeSquares,
+            entryId: entry.id,
+          };
+        }),
+    )
+    .filter(Boolean);
+
   const self = {
     name: combatant.name,
     hp: combatant.actor?.system?.attributes?.hp?.value ?? null,
@@ -921,6 +961,7 @@ export function getPendingAgentTurn(combat) {
     readyActions,
     readySpells,
     readyAreaSpells,
+    readyAttackSpells,
     turnState,
     hazard: null,
     hasRangedOrReach,
@@ -1158,6 +1199,69 @@ async function castAreaSpellAndApplySaves(combatant, targets, spellId, entryId, 
 }
 
 /**
+ * Casts `spellId` (from spellcasting entry `entryId`) at `target` and rolls
+ * a spell attack against its AC, applying damage only on a hit — confirmed
+ * live this mirrors rollAndApplyStrike's own success/criticalSuccess gate,
+ * not #118/#119's always-roll-damage save pattern (a miss on an attack roll
+ * deals no damage at all, unlike a passed save which still takes half).
+ * `spell.rollAttack(event, attackNumber, options)` takes its options as the
+ * *third* argument (confirmed live — passing them first silently no-ops),
+ * and needs `options.target` to be the bare target Actor rather than
+ * `{document: token}`: it resolves the target internally via
+ * `actor.getActiveTokens()`, which only finds tokens on the currently
+ * *viewed* canvas scene — a real dependency, unlike every other roll in
+ * this file, that holds naturally during actual play (the GM has the
+ * combat's own scene open) but is worth calling out since it's easy to
+ * miss. `attackNumber` is always 1 — no spell-attack MAP tracking in v1,
+ * matching #118/#119's spells (only a Strike bumps `mapIncrement`).
+ */
+async function castAttackSpellAndApplyRoll(combatant, target, spellId, entryId) {
+  const entry = combatant.actor?.spellcasting?.contents?.find(
+    (e) => e.id === entryId,
+  );
+  const spell = entry?.spells?.contents?.find((s) => s.id === spellId);
+  if (!entry || !spell) return null;
+
+  const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
+  const prevShowDamage = game.user.flags?.pf2e?.settings?.showDamageDialogs;
+  await game.user.update({
+    "flags.pf2e.settings.showCheckDialogs": false,
+    "flags.pf2e.settings.showDamageDialogs": false,
+  });
+  try {
+    const targetRef = { document: target.token };
+    await entry.cast(spell, { target: targetRef, createMessage: true });
+    await spell.rollAttack(null, 1, {
+      target: target.actor,
+      createMessage: true,
+    });
+    const outcome =
+      game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
+    if (outcome === "success" || outcome === "criticalSuccess") {
+      const damageRoll = await spell.rollDamage?.({
+        target: targetRef,
+        outcome,
+        createMessage: true,
+      });
+      if (damageRoll) {
+        await target.actor.applyDamage({
+          damage: damageRoll,
+          token: target.token,
+          outcome,
+        });
+        await applyDefeatIfReducedToZero(target);
+      }
+    }
+    return outcome;
+  } finally {
+    await game.user.update({
+      "flags.pf2e.settings.showCheckDialogs": prevShowCheck,
+      "flags.pf2e.settings.showDamageDialogs": prevShowDamage,
+    });
+  }
+}
+
+/**
  * Executes exactly one chosen candidate for `combatantId`'s current turn in
  * `combat`, updates the per-turn state, and advances the turn once actions
  * run out or `endTurn` was chosen. Returns the pending-turn shape for the
@@ -1214,6 +1318,17 @@ export async function applyAgentDecision(combat, combatantId, candidateId) {
         candidate.spellId,
         candidate.entryId,
         candidate.save,
+      );
+  } else if (candidate.type === "castAttack") {
+    const target = combatantOpponents(combat, combatant).find(
+      (c) => c.id === candidate.targetId,
+    );
+    if (target)
+      await castAttackSpellAndApplyRoll(
+        combatant,
+        target,
+        candidate.spellId,
+        candidate.entryId,
       );
   }
 
