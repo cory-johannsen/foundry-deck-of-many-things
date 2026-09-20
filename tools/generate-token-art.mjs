@@ -101,6 +101,17 @@ export const STYLE = 'dark fantasy illustration, full color illustration, intric
 //     genuine scenery instead (a farmer's open field, a splashing ocean
 //     backdrop under a dolphin) — folded into the existing landscape/water
 //     terms below rather than given a new cluster.
+//   - symmetrical flanking objects: recurred independently on `trained-raven`
+//     (jeweled candelabra) and then again on ITEM-18 level 1's
+//     `abbot-of-abadar` and `acolyte-of-nethys` (matching ornate gold
+//     pillars either side of the figure) and `caligni-dancer` (mirrored
+//     candelabra/urns) — the same "religious/ceremonial figure" pull toward
+//     a symmetrical shrine composition each time, never fixed at the source
+//     before now.
+//   - smoke/fog/cloud backdrop: `cave-scorpion` came back with a swirling
+//     white smoke haze filling the frame instead of a plain black field —
+//     dark enough at the very corners to slip past `backgroundScore` but
+//     clearly not "nothing else in it" on review.
 export const NEGATIVE = 'text, letters, words, watermark, signature, logo, frame, border, ornate border, '
   + 'parchment, paper texture, scroll, background scenery, landscape, architecture, interior, '
   + 'multiple figures, crowd, full body, tiny figure, blurry, deformed hands, extra limbs, '
@@ -119,7 +130,11 @@ export const NEGATIVE = 'text, letters, words, watermark, signature, logo, frame
   + 'grey background, gray background, neutral grey backdrop, studio grey background, '
   + 'grey gradient, radial grey vignette, grey studio backdrop, white background, '
   + 'pale grey backdrop, plain field, open landscape, sky, clouds, horizon line, splashing water, '
-  + 'ocean spray, water splash effect';
+  + 'ocean spray, water splash effect, '
+  + 'ornamental pillar, decorative panel, flanking pillars, symmetrical urns, candelabra, '
+  + 'symmetrical mirrored composition, ornamental object flanking subject, matching objects '
+  + 'either side of subject, smoke backdrop, fog backdrop, mist backdrop, cloud backdrop, '
+  + 'hazy cloud vignette, ground fog';
 
 /**
  * A style for creatures that have no head to make a bust of.
@@ -848,17 +863,24 @@ export const MONSTER_ART = [
     prompt: "A small floating sphere of foam and swirling water, faint soft ripples of light pulsing within its translucent form, no solid limbs or body, drifting gently with a gentle, nurturing presence",
     avoid: "humanoid, face, solid body" },
   { id: 'abbot-of-abadar', file: 'abbot-of-abadar', dir: 'assets/creature-art',
-    prompt: "A devout human abbot of Abadar, greying temples, plain but well-kept robes in gold and blue, a small keystone holy symbol at his chest, hands folded, calm authoritative bearing befitting the head of a religious institution." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a devout human abbot of Abadar, greying temples, plain but "
+      + "well-kept robes in gold and blue, a small keystone holy symbol at his chest, hands "
+      + "folded, calm authoritative bearing.",
+    avoid: "ornamental pillar, decorative panel, tablet, frame either side of subject" },
   { id: 'acolyte-of-iomedae', file: 'acolyte-of-iomedae', dir: 'assets/creature-art',
     prompt: "A young human acolyte of Iomedae, simple traveling armor over a temple tunic, a longsword holy symbol at the neck, earnest determined expression of someone still learning the tenets of faith and combat." },
   { id: 'acolyte-of-nethys', file: 'acolyte-of-nethys', dir: 'assets/creature-art',
-    prompt: "A human acolyte of Nethys, plain scholarly robes lined with small pockets for scrolls, an open-book holy symbol pendant, watchful curious eyes of someone sequestered in study and devotion." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a human acolyte of Nethys, plain scholarly robes lined with small "
+      + "pockets for scrolls, an open-book holy symbol pendant, watchful curious eyes.",
+    avoid: "ornamental pillar, decorative panel, tablet, frame either side of subject" },
   { id: 'air-mephit', file: 'air-mephit', dir: 'assets/creature-art',
     prompt: "A small pale blue bipedal mephit, thin paper-like bat wings trailing wisps of vapor as it flaps, oversized eyes, a mischievous grin, wreathed in a faint drifting cloud.",
     avoid: "feathered wings, bird wings, solid ground shadow" },
   { id: 'air-scamp', file: 'air-scamp', dir: 'assets/creature-art',
-    prompt: "A small pale blue elemental scamp, its head and paper-thin bat wings peeking out from a clinging wisp of cloud, wide short-sighted eyes, a reckless mischievous grin.",
-    avoid: "feathered wings, bird wings" },
+    prompt: "A small pale blue elemental scamp, its head and paper-thin bat wings peeking out from a clinging wisp of cloud, wide short-sighted eyes, a reckless mischievous grin, floating alone against a background that is solid black with nothing else in it.",
+    avoid: "feathered wings, bird wings, grey background, colored background" },
   { id: 'akata', file: 'akata', dir: 'assets/creature-art', shapeless: true,
     prompt: "A hairless blue-skinned quadruped akata, fearsome jaws, glowing eyes, a pair of thin whipping tails, a mane of writhing tentacles along its neck, utterly silent and alert, crouched low.",
     avoid: "ears, fur, humanoid posture" },
@@ -875,25 +897,44 @@ export const MONSTER_ART = [
   { id: 'boggard-scout', file: 'boggard-scout', dir: 'assets/creature-art',
     prompt: "A boggard scout, a warty mottled green-brown amphibian humanoid with a wide frog-like mouth and bulging eyes, muscular crouched build, gripping a barbed spear, patrolling watchfully." },
   { id: 'brownie', file: 'brownie', dir: 'assets/creature-art',
-    prompt: "A tiny brownie barely two feet tall, clothes patched together from leaves and plant fiber, a belt lined with small tool pouches, a disgusted scowl at being addressed rudely, a small sword at its hip." },
+    prompt: "A tiny brownie barely two feet tall, clothes patched together from leaves and plant fiber, a belt lined with small tool pouches, a disgusted scowl at being addressed rudely, a small sword at its hip, standing against a background that is solid black with nothing else in it." },
   { id: 'cacodaemon', file: 'cacodaemon', dir: 'assets/creature-art', shapeless: true,
     prompt: "A tiny gnashing sphere of daemonkind, its surface a writhing mass of small teeth, fins, and spines, no discernible face, radiating cold spiteful hunger.",
     avoid: "limbs, humanoid body, single mouth" },
   { id: 'caligni-dancer', file: 'caligni-dancer', dir: 'assets/creature-art',
-    prompt: "A caligni dancer, small and gaunt with pale subterranean flesh and solid white eyes, moving in a fluid negotiating pose, ornamented with simple trade tokens, physically fragile but composed." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a caligni dancer, small and gaunt with pale subterranean flesh and "
+      + "solid white eyes, a simple fluid dancer's pose, plain traveling clothes with a few "
+      + "small trade tokens sewn on, physically fragile but composed.",
+    avoid: "elaborate gown, ornate dress, symmetrical pose, mirrored pose, jewelry-laden" },
   { id: 'camel', file: 'camel', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A tall sturdy camel with a shaggy tan coat, one or two humps, long curved neck, wide splayed feet, three protective eyelids, chewing placidly with a bored expression.",
-    avoid: "humps as bags, saddle riders" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a tall sturdy camel with a shaggy tan coat rendered in full rich "
+      + "color, one or two humps, long curved neck, wide splayed feet, three protective "
+      + "eyelids, chewing placidly with a bored expression.",
+    avoid: "humps as bags, saddle riders, white background, monochrome, line art, sketch, "
+      + "black and white, ground, floor, horizon, desert, sand, night sky, stars" },
   { id: 'cassisian', file: 'cassisian', dir: 'assets/creature-art', shapeless: true,
     prompt: "A tiny cherubic angel, little more than a serene winged head trailing small feathered wings, faintly glowing skin, an attentive innocent expression of a lackey messenger.",
     avoid: "full body, arms, legs" },
   { id: 'catfolk-pouncer', file: 'catfolk-pouncer', dir: 'assets/creature-art',
-    prompt: "A lithe catfolk pouncer, feline features and a long expressive tail, coiled in a springy ready-to-pounce stance, a gregarious curious grin, light traveling gear slung across its back." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame, full color illustration: a lithe catfolk pouncer, feline features "
+      + "with orange-brown fur and a long expressive tail, coiled in a springy ready-to-pounce "
+      + "stance, a gregarious curious grin, light traveling gear slung across its back.",
+    avoid: "monochrome, black and white, grayscale, greyscale, climbing, rope, pole, branch" },
   { id: 'cave-scorpion', file: 'cave-scorpion', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A pale nearly colorless cave scorpion, ghostly translucent segmented armor, large pincers raised, a curled venomous tail stinger poised to strike, lurking at the edge of darkness.",
-    avoid: "bright coloration, vivid patterns" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a pale nearly colorless cave scorpion, ghostly translucent "
+      + "segmented armor, large pincers raised, a curled venomous tail stinger poised to "
+      + "strike.",
+    avoid: "bright coloration, vivid patterns, lurking in a dark cave, cave walls, rock "
+      + "formations, smoke, fog, mist, cloud, haze" },
   { id: 'combat-engineer', file: 'combat-engineer', dir: 'assets/creature-art',
-    prompt: "A rugged human combat engineer, sturdy work clothes dusted with sawdust, a coil of rope and a hammer at the belt, studying a set of rolled construction plans, determined focus." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a rugged human combat engineer, sturdy work clothes dusted with "
+      + "sawdust, a coil of rope and a hammer at the belt, a rolled set of construction plans "
+      + "tucked under one arm, determined focus." },
   { id: 'cultist', file: 'cultist', dir: 'assets/creature-art',
     prompt: "A hooded human cultist in dark ceremonial robes, a ritual dagger held reverently, secretive downturned eyes, an unsettling look of fervent devotion to hidden powers." },
   { id: 'cunning-fox', file: 'cunning-fox', dir: 'assets/creature-art', shapeless: true,
@@ -921,8 +962,8 @@ export const MONSTER_ART = [
   { id: 'dwarf-warrior', file: 'dwarf-warrior', dir: 'assets/creature-art',
     prompt: "A stout bearded dwarf warrior in finely crafted plate armor, gripping a heavy battleaxe, a stoic determined expression, standing with unshakable ground-set bravery." },
   { id: 'earth-mephit', file: 'earth-mephit', dir: 'assets/creature-art',
-    prompt: "A stout bipedal mephit with a dark brown-gray body caked in layers of dirt and filth, small bat-like wings kept close to the ground, a humorless weary expression.",
-    avoid: "feathered wings, bird wings" },
+    prompt: "A stout bipedal mephit with a dark brown-gray body caked in layers of dirt and filth, small bat-like wings kept close to the ground, a humorless weary expression, floating alone against a background that is solid black with nothing else in it.",
+    avoid: "feathered wings, bird wings, grey background, colored background, dirt ground, floor" },
   { id: 'earth-scamp', file: 'earth-scamp', dir: 'assets/creature-art',
     prompt: "A small rocky-skinned elemental scamp camouflaged among loose stones, large eyes and small bat-like wings kept folded, nestled close to the ground, reluctant to fly.",
     avoid: "feathered wings, bird wings" },
@@ -930,18 +971,27 @@ export const MONSTER_ART = [
     prompt: "A long sinuous electric eel gliding through murky water, smooth slate-grey skin, small fins along its flanks, faint sparks of static crackling near its head.",
     avoid: "legs, scales, bright colors" },
   { id: 'elf-ranger', file: 'elf-ranger', dir: 'assets/creature-art',
-    prompt: "An elf ranger with a longbow slung across the back, graceful poised stance, keen alert eyes scanning the treeline, light practical leather gear suited to travel and stealth." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: an elf ranger with a longbow slung across the back, graceful "
+      + "poised stance, keen alert eyes, light practical leather gear suited to travel and "
+      + "stealth.",
+    avoid: "treeline, forest, trees, foliage" },
   { id: 'esipil', file: 'esipil', dir: 'assets/creature-art', shapeless: true,
     prompt: "A small fiend caught mid-transformation, an elongated wormlike body with a dog-like snout, writhing fleshy tendrils of viscera spilling from its open maw as both tongue and weapon.",
     avoid: "fur, cute dog appearance, legs" },
   { id: 'festrog', file: 'festrog', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A decaying humanoid corpse-creature running low on all fours, elongated clawed arms, jagged teeth, bone-like spikes jutting from its upper back, hunting with unnerving animal cunning.",
-    avoid: "upright bipedal stance, fresh flesh" },
+    prompt: "A decaying humanoid corpse-creature crouched low on all fours, elongated clawed arms, jagged teeth, bone-like spikes jutting from its upper back, an unnerving animal cunning in its eyes, floating alone against a background that is solid black with nothing else in it.",
+    avoid: "upright bipedal stance, fresh flesh, ground, floor" },
   { id: 'fetchling-scout', file: 'fetchling-scout', dir: 'assets/creature-art',
-    prompt: "A fetchling scout, monochrome gray-toned skin and lithe willowy limbs, solid pale-yellow eyes, wrapped in a drab hooded cloak, watchful and pragmatic, patrolling the borders of shadow." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a fetchling scout, ashen slate-grey skin and lithe willowy limbs, "
+      + "solid pale-yellow eyes, wrapped in a drab hooded cloak, a watchful pragmatic "
+      + "expression.",
+    avoid: "monochrome, black and white, grayscale, greyscale, forest, trees, bare trees, "
+      + "woods, dusk sky, ground, field" },
   { id: 'fire-mephit', file: 'fire-mephit', dir: 'assets/creature-art',
-    prompt: "A small bipedal mephit with bright orange skin, wisps of flame flickering along its bat-like wings as it flaps, a conniving quick-tempered smirk.",
-    avoid: "feathered wings, bird wings" },
+    prompt: "A small bipedal mephit with bright orange skin, wisps of flame flickering along its bat-like wings as it flaps, a conniving quick-tempered smirk, floating alone against a background that is solid black with nothing else in it.",
+    avoid: "feathered wings, bird wings, grey background, colored background" },
   { id: 'fire-scamp', file: 'fire-scamp', dir: 'assets/creature-art',
     prompt: "A small elemental scamp with skin like glowing coals, playful flames dancing along its bat-like wings, a delighted mischievous grin, reveling in its own fire.",
     avoid: "feathered wings, bird wings" },

@@ -950,5 +950,293 @@
     "name": "Vine Leshy\r",
     "level": 0,
     "art": "vine-leshy.webp"
+  },
+  {
+    "id": "acolyte_of_iomedae",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "dwzAEnCBpDWnZBWr",
+    "name": "Acolyte of Iomedae\r",
+    "level": 1,
+    "art": "acolyte-of-iomedae.webp"
+  },
+  {
+    "id": "air_mephit",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "KDRlxdIUADWHI6Vr",
+    "name": "Air Mephit\r",
+    "level": 1,
+    "art": "air-mephit.webp"
+  },
+  {
+    "id": "arbiter",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "oaxKg1yQDmK2PWXG",
+    "name": "Arbiter\r",
+    "level": 1,
+    "art": "arbiter.webp"
+  },
+  {
+    "id": "augur",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "hfA1xQSk1dPVwt00",
+    "name": "Augur\r",
+    "level": 1,
+    "art": "augur.webp"
+  },
+  {
+    "id": "bodyguard",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "3jkmJgV4zwygUqLy",
+    "name": "Bodyguard\r",
+    "level": 1,
+    "art": "bodyguard.webp"
+  },
+  {
+    "id": "cacodaemon",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "9Bl1ua3uLqodv47s",
+    "name": "Cacodaemon\r",
+    "level": 1,
+    "art": "cacodaemon.webp"
+  },
+  {
+    "id": "cultist",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "GbPDSJeXjHc1VRN2",
+    "name": "Cultist\r",
+    "level": 1,
+    "art": "cultist.webp"
+  },
+  {
+    "id": "cunning_fox",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "Olett4ib6Xik7qYt",
+    "name": "Cunning Fox\r",
+    "level": 1,
+    "art": "cunning-fox.webp"
+  },
+  {
+    "id": "dancer",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "r7nprCpuqhEulxjD",
+    "name": "Dancer\r",
+    "level": 1,
+    "art": "dancer.webp"
+  },
+  {
+    "id": "deep_one_hybrid",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "uH1EFwWGCyrMcsbb",
+    "name": "Deep One Hybrid\r",
+    "level": 1,
+    "art": "deep-one-hybrid.webp"
+  },
+  {
+    "id": "dwarf_warrior",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "IjFlp5eVVTEg902W",
+    "name": "Dwarf Warrior\r",
+    "level": 1,
+    "art": "dwarf-warrior.webp"
+  },
+  {
+    "id": "electric_eel",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "gCmfPEfqS60BiuVP",
+    "name": "Electric Eel\r",
+    "level": 1,
+    "art": "electric-eel.webp"
+  },
+  {
+    "id": "esipil",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "Ipbn4WsIT4DxAWEH",
+    "name": "Esipil\r",
+    "level": 1,
+    "art": "esipil.webp"
+  },
+  {
+    "id": "fire_scamp",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "UwvAf8riRdMaitA4",
+    "name": "Fire Scamp\r",
+    "level": 1,
+    "art": "fire-scamp.webp"
+  },
+  {
+    "id": "forager",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "JWhmMRoFHl2tmDS9",
+    "name": "Forager\r",
+    "level": 1,
+    "art": "forager.webp"
+  },
+  {
+    "id": "barkeep",
+    "pack": "pf2e.npc-gallery",
+    "docId": "6IADTZHYowxObqAk",
+    "name": "Barkeep\r",
+    "level": 1,
+    "art": "barkeep.webp"
+  },
+  {
+    "id": "doru",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "cneF8jYlvluvLkZM",
+    "name": "Doru\r",
+    "level": 1,
+    "art": "doru.webp"
+  },
+  {
+    "id": "drow_fighter",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "dTz1SQvJIUsB9S2w",
+    "name": "Drow Fighter\r",
+    "level": 1,
+    "art": "drow-fighter.webp"
+  },
+  {
+    "id": "druid_initiate",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "J0JoIeg82JCQj3Fm",
+    "name": "Druid Initiate\r",
+    "level": 1,
+    "art": "druid-initiate.webp"
+  },
+  {
+    "id": "earth_scamp",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "4n0nhynklrs2iHUJ",
+    "name": "Earth Scamp\r",
+    "level": 1,
+    "art": "earth-scamp.webp"
+  },
+  {
+    "id": "flumph",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "4cfi0BksjHbFVY0A",
+    "name": "Flumph\r",
+    "level": 1,
+    "art": "flumph.webp"
+  },
+  {
+    "id": "cassisian",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "9qERA2jk7Yv74Hqq",
+    "name": "Cassisian\r",
+    "level": 1,
+    "art": "cassisian.webp"
+  },
+  {
+    "id": "abbot_of_abadar",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "oAKCSQ9z2bLTO9sr",
+    "name": "Abbot of Abadar\r",
+    "level": 1,
+    "art": "abbot-of-abadar.webp"
+  },
+  {
+    "id": "combat_engineer",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "szslWxJGvht4aM3j",
+    "name": "Combat Engineer\r",
+    "level": 1,
+    "art": "combat-engineer.webp"
+  },
+  {
+    "id": "earth_mephit",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "x23aXeWTo026pMui",
+    "name": "Earth Mephit\r",
+    "level": 1,
+    "art": "earth-mephit.webp"
+  },
+  {
+    "id": "elf_ranger",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "sd6BsHgVrw4FgR70",
+    "name": "Elf Ranger\r",
+    "level": 1,
+    "art": "elf-ranger.webp"
+  },
+  {
+    "id": "fire_mephit",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "k9fM0vufbdsDPQul",
+    "name": "Fire Mephit\r",
+    "level": 1,
+    "art": "fire-mephit.webp"
+  },
+  {
+    "id": "air_scamp",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "MSm1im7lZA5i82rz",
+    "name": "Air Scamp\r",
+    "level": 1,
+    "art": "air-scamp.webp"
+  },
+  {
+    "id": "brownie",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "SjTv1ayVrguLsnTX",
+    "name": "Brownie\r",
+    "level": 1,
+    "art": "brownie.webp"
+  },
+  {
+    "id": "festrog",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "NQlPvg8SaIb9jzDl",
+    "name": "Festrog\r",
+    "level": 1,
+    "art": "festrog.webp"
+  },
+  {
+    "id": "camel",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "ZAXM01KREZECWRvz",
+    "name": "Camel\r",
+    "level": 1,
+    "art": "camel.webp"
+  },
+  {
+    "id": "catfolk_pouncer",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "PvYl5kItb7xoE8Is",
+    "name": "Catfolk Pouncer\r",
+    "level": 1,
+    "art": "catfolk-pouncer.webp"
+  },
+  {
+    "id": "fetchling_scout",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "WQdWybW4owJWdEnQ",
+    "name": "Fetchling Scout\r",
+    "level": 1,
+    "art": "fetchling-scout.webp"
+  },
+  {
+    "id": "acolyte_of_nethys",
+    "pack": "pf2e.npc-gallery",
+    "docId": "crTWewxna93vEt6B",
+    "name": "Acolyte of Nethys\r",
+    "level": 1,
+    "art": "acolyte-of-nethys.webp"
+  },
+  {
+    "id": "caligni_dancer",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "SZCf0IZkf36plwVd",
+    "name": "Caligni Dancer\r",
+    "level": 1,
+    "art": "caligni-dancer.webp"
+  },
+  {
+    "id": "cave_scorpion",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "e0YvEWJ5zpU946G4",
+    "name": "Cave Scorpion\r",
+    "level": 1,
+    "art": "cave-scorpion.webp"
   }
 ]
