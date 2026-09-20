@@ -336,6 +336,36 @@ async function stepToward(combat, combatant, target, distanceSquares) {
 }
 
 /**
+ * PF2e's own `applyDamage` never applies any condition on its own — confirmed
+ * live (#107): a real critical hit took a scratch NPC from 1 HP to 0 with
+ * zero condition change. `Combatant#isDefeated` (which `combatSideStatus`
+ * needs to auto-resolve a fight) only needs the raw `defeated` flag or the
+ * actor having PF2e's 'dead' status — neither happens on its own, so without
+ * this, combat can never auto-resolve once a strike (heuristic or
+ * agent-controlled) reduces someone to 0 HP.
+ *
+ * For an NPC, setting `defeated` directly is sufficient — confirmed live to
+ * be identical to what the GM's own Combat Tracker skull-toggle does, no
+ * actor condition required, simpler and safer than fabricating a 'dead'
+ * status ourselves. For a party member, PF2e's own `actor.increaseCondition
+ * ('dying')` is the correct call: it's the system's real API and correctly
+ * cascades Unconscious/Blinded/Prone/Off-Guard automatically (confirmed
+ * live) — hand-rolling that cascade ourselves would risk getting real PF2e
+ * rules wrong against an actual player's character. Called on every hit that
+ * leaves HP at or below 0, not just the first — a party member already
+ * dying who's hit again should have their dying value increase further, per
+ * PF2e's own rules, not be skipped as "already handled."
+ */
+async function applyDefeatIfReducedToZero(target) {
+  if ((target.actor?.system?.attributes?.hp?.value ?? 1) > 0) return;
+  if (target.actor?.type === 'character') {
+    await target.actor.increaseCondition('dying');
+  } else if (!target.isDefeated) {
+    await target.update({ defeated: true });
+  }
+}
+
+/**
  * Rolls `combatant`'s first ready strike against `target` and, on a hit,
  * rolls and applies damage — confirmed live (see ITEM-8 in docs/backlog.md):
  * a strike's own roll()/damage() never forwards a skipDialog option, so the
@@ -361,7 +391,10 @@ async function rollAndApplyStrike(combatant, target) {
     const outcome = game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
     if (outcome === 'success' || outcome === 'criticalSuccess') {
       const damageRoll = await strike.damage({ target: targetRef, outcome, createMessage: true });
-      if (damageRoll) await target.actor.applyDamage({ damage: damageRoll, token: target.token, outcome });
+      if (damageRoll) {
+        await target.actor.applyDamage({ damage: damageRoll, token: target.token, outcome });
+        await applyDefeatIfReducedToZero(target);
+      }
     }
     return outcome;
   } finally {
@@ -525,7 +558,10 @@ async function rollAndApplyStrikeAtVariant(combatant, target, actionSlug, varian
     const outcome = game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
     if (outcome === 'success' || outcome === 'criticalSuccess') {
       const damageRoll = await strike.damage({ target: targetRef, outcome, createMessage: true });
-      if (damageRoll) await target.actor.applyDamage({ damage: damageRoll, token: target.token, outcome });
+      if (damageRoll) {
+        await target.actor.applyDamage({ damage: damageRoll, token: target.token, outcome });
+        await applyDefeatIfReducedToZero(target);
+      }
     }
     return outcome;
   } finally {
