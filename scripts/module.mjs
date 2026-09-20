@@ -20,7 +20,10 @@ import { generateEncounter } from './encounter-generator.mjs';
 import { DungeonApp, resolveCurrentRoom } from './ui/dungeon-app.mjs';
 import { abandonRun, getRunState } from './dungeon-runner.mjs';
 import { handleDungeonDoorOpened, teardownDungeonRun } from './dungeon-scene.mjs';
-import { maybeResolveCombatForActor, maybeResolveCombatForCombatant, autoPlayCombatantTurnIfDue } from './dungeon-combat.mjs';
+import {
+  maybeResolveCombatForActor, maybeResolveCombatForCombatant, autoPlayCombatantTurnIfDue,
+  getPendingAgentTurn, applyAgentDecision, toggleAgentControlled
+} from './dungeon-combat.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 
@@ -97,6 +100,18 @@ Hooks.once('ready', async () => {
       const state = getRunState(targetSceneId);
       await abandonRun({ sceneId: targetSceneId });
       if (scene) await teardownDungeonRun(scene, { previousSceneId: state?.previousSceneId ?? null });
+    },
+    // The only surface tools/agent-loop's poller ever calls — read the
+    // current decision point for whichever agent-controlled combatant's
+    // turn is due, or apply exactly one chosen candidate. Never exposes
+    // arbitrary script access.
+    getPendingAgentTurn: (combatId) => {
+      const combat = game.combats.get(combatId ?? game.combat?.id);
+      return combat ? getPendingAgentTurn(combat) : null;
+    },
+    applyAgentDecision: (combatId, combatantId, candidateId) => {
+      const combat = game.combats.get(combatId);
+      return combat ? applyAgentDecision(combat, combatantId, candidateId) : null;
     }
   };
   if (game.user.isGM) {
@@ -275,6 +290,28 @@ Hooks.on('getSceneControlButtons', (controls) => {
   } else if (tokenControl.tools && typeof tokenControl.tools === 'object') {
     tokenControl.tools['dommt-deck'] = button;
   }
+});
+
+/**
+ * GM per-combatant override for the agentControlled default (Task 2) — an
+ * extra entry on every NPC row's context menu in Foundry's own Combat
+ * Tracker sidebar. Deliberately not dungeon-specific UI, since it needs to
+ * cover the standalone "DOMMT: Generate Encounter" macro's combats too
+ * (ITEM-6's original scope), not just dungeon rooms.
+ */
+Hooks.on('getCombatTrackerEntryContext', (html, menuItems) => {
+  menuItems.push({
+    name: 'DOMMT.Dungeon.Combat.ToggleAgentControlLabel',
+    icon: '<i class="fa-solid fa-robot"></i>',
+    condition: (li) => {
+      const combatant = game.combat?.combatants.get(li.dataset.combatantId);
+      return !!combatant && !game.actors?.party?.members?.some((m) => m.id === combatant.actor?.id);
+    },
+    callback: (li) => {
+      const combatant = game.combat?.combatants.get(li.dataset.combatantId);
+      if (combatant) toggleAgentControlled(combatant);
+    }
+  });
 });
 
 async function drawForced(cardId, { actorId = null } = {}) {
