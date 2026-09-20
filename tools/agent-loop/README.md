@@ -27,6 +27,15 @@ for the full design.
    `FOUNDRY_CLIENT_ID` and `DOMMT_AGENT_PROVIDER` (default `claude`) and
    `DOMMT_POLL_INTERVAL_MS` (default `3000`) are optional overrides.
 
+   **To use Laya instead of Claude** (`DOMMT_AGENT_PROVIDER=laya`), add:
+   ```
+   LAYA_API_KEY=<your Laya deployment's key, if auth is enabled>
+   LAYA_BASE_URL=<your Laya deployment, default https://laya.johannsen.cloud>
+   ```
+   Laya never generates a `rationale` (it's non-autoregressive, calibrated
+   probabilities only) — decisions still work, just without the "why" text
+   Claude's adapter includes.
+
 3. **Run it** alongside your Foundry session:
    ```bash
    node tools/agent-loop/poll.mjs
