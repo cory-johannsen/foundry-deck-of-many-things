@@ -1,7 +1,7 @@
 // tests/agent-candidates.test.mjs
 import { describe, it, expect } from 'vitest';
 import {
-  initAgentTurnState, buildMovementCandidates, buildStrikeCandidates, endTurnCandidate,
+  initAgentTurnState, buildMovementCandidates, buildStrikeCandidates, buildSpellCandidates, endTurnCandidate,
   buildCandidateList, applyCandidateToTurnState, buildDecisionContext,
   MAX_ACTIONS_PER_TURN, AGENT_MELEE_REACH_SQUARES
 } from '../scripts/agent-candidates.mjs';
@@ -85,6 +85,29 @@ describe('buildStrikeCandidates', () => {
   });
 });
 
+describe('buildSpellCandidates', () => {
+  const spiritBlast = { id: 'sp1', slug: 'spirit-blast', label: 'Spirit Blast', cost: 2, rangeSquares: 6, save: 'fortitude', basic: true, entryId: 'entry1' };
+  const opponentInRange = { id: 'opp1', name: 'Fighter', distanceSquares: 5 };
+  const opponentOutOfRange = { id: 'opp2', name: 'Cleric', distanceSquares: 10 };
+
+  it('offers a cast against every opponent within range when enough actions remain', () => {
+    const candidates = buildSpellCandidates({ readySpells: [spiritBlast], opponents: [opponentInRange, opponentOutOfRange], actionsRemaining: 3 });
+    expect(candidates).toEqual([
+      { id: 'cast:spirit-blast:opp1', type: 'cast', spellId: 'sp1', entryId: 'entry1', targetId: 'opp1', cost: 2, save: 'fortitude', basic: true, summary: 'Spirit Blast vs Fighter' }
+    ]);
+  });
+
+  it('omits a spell whose cost exceeds the actions remaining', () => {
+    const candidates = buildSpellCandidates({ readySpells: [spiritBlast], opponents: [opponentInRange], actionsRemaining: 1 });
+    expect(candidates).toEqual([]);
+  });
+
+  it('omits an opponent outside the spell\'s range', () => {
+    const candidates = buildSpellCandidates({ readySpells: [spiritBlast], opponents: [opponentOutOfRange], actionsRemaining: 3 });
+    expect(candidates).toEqual([]);
+  });
+});
+
 describe('endTurnCandidate', () => {
   it('is always the same zero-cost candidate', () => {
     expect(endTurnCandidate()).toEqual({ id: 'endTurn', type: 'endTurn', cost: 0, summary: 'End turn' });
@@ -106,6 +129,20 @@ describe('buildCandidateList', () => {
     const candidates = buildCandidateList({ opponents: [opponent], readyActions: [claw], turnState, hazard: null, hasRangedOrReach: false });
     expect(candidates).toEqual([endTurnCandidate()]);
   });
+
+  it('includes affordable spell candidates alongside strikes', () => {
+    const spiritBlast = { id: 'sp1', slug: 'spirit-blast', label: 'Spirit Blast', cost: 2, rangeSquares: 6, save: 'fortitude', basic: true };
+    const turnState = { actionsRemaining: 3, mapIncrement: 0 };
+    const candidates = buildCandidateList({ opponents: [opponent], readyActions: [claw], readySpells: [spiritBlast], turnState, hazard: null, hasRangedOrReach: false });
+    expect(candidates.map((c) => c.id)).toEqual(['strike:claw:opp1', 'cast:spirit-blast:opp1', 'endTurn']);
+  });
+
+  it('omits a spell that the remaining action budget cannot afford', () => {
+    const spiritBlast = { id: 'sp1', slug: 'spirit-blast', label: 'Spirit Blast', cost: 2, rangeSquares: 6, save: 'fortitude', basic: true };
+    const turnState = { actionsRemaining: 1, mapIncrement: 0 };
+    const candidates = buildCandidateList({ opponents: [opponent], readyActions: [claw], readySpells: [spiritBlast], turnState, hazard: null, hasRangedOrReach: false });
+    expect(candidates.map((c) => c.id)).toEqual(['strike:claw:opp1', 'endTurn']);
+  });
 });
 
 describe('applyCandidateToTurnState', () => {
@@ -122,6 +159,11 @@ describe('applyCandidateToTurnState', () => {
   it('zeroes actionsRemaining for endTurn regardless of what remained', () => {
     const next = applyCandidateToTurnState({ actionsRemaining: 2, mapIncrement: 1 }, { type: 'endTurn', cost: 0 });
     expect(next).toEqual({ actionsRemaining: 0, mapIncrement: 1 });
+  });
+
+  it('decrements actionsRemaining by a spell\'s own cost and never touches mapIncrement', () => {
+    const next = applyCandidateToTurnState({ actionsRemaining: 3, mapIncrement: 1 }, { type: 'cast', cost: 2 });
+    expect(next).toEqual({ actionsRemaining: 1, mapIncrement: 1 });
   });
 });
 
