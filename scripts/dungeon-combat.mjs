@@ -39,17 +39,38 @@ function combatantTokens(scene, flagKey, flagValue) {
   return [...monsterTokens, ...partyTokens];
 }
 
+/**
+ * Every non-party combatant defaults to agent-controlled (flags.dommt.
+ * agentControlled) the instant it's added to a Combat — a GM can disable it
+ * per-combatant via the Combat Tracker's own context menu (module.mjs's
+ * getCombatTrackerEntryContext hook). Party combatants never get the flag,
+ * matching the partyActorIds() split ITEM-8's own reopening already uses.
+ */
 async function startCombat(scene, flagKey, flagValue) {
   const tokens = combatantTokens(scene, flagKey, flagValue);
   if (!tokens.length) return null;
   const combat = await Combat.create({ scene: scene.id });
   await combat.setFlag(MODULE_ID, flagKey, flagValue);
+  const partyIds = partyActorIds();
   const combatants = await combat.createEmbeddedDocuments(
-    'Combatant', tokens.map((t) => ({ tokenId: t.id, sceneId: scene.id }))
+    'Combatant', tokens.map((t) => ({
+      tokenId: t.id, sceneId: scene.id,
+      ...(partyIds.has(t.actor?.id) ? {} : { flags: { [MODULE_ID]: { agentControlled: true } } })
+    }))
   );
   await combat.rollInitiative(combatants.map((c) => c.id), { skipDialog: true });
   await combat.startCombat();
   return combat;
+}
+
+/** Flips a single combatant's agentControlled flag — the GM's per-combatant
+ * override (module.mjs's Combat Tracker context-menu entry). A no-op guard
+ * against toggling a real party member on by mistake, since one should
+ * never have the flag in the first place. */
+export async function toggleAgentControlled(combatant) {
+  if (partyActorIds().has(combatant.actor?.id)) return;
+  const current = combatant.getFlag(MODULE_ID, 'agentControlled') ?? false;
+  await combatant.setFlag(MODULE_ID, 'agentControlled', !current);
 }
 
 export const startCombatForSlot = (scene, slot) => startCombat(scene, 'dungeonSlot', slot);
@@ -151,6 +172,30 @@ export function maybeResolveCombatForCombatant(combatant, changes) {
 // --- ITEM-8: automating a non-player combatant's own turn ---------------
 
 const AUTO_PLAY_DELAY_MS = 700;
+
+// How long an agent-controlled combatant's turn waits for an external
+// decision (via getPendingAgentTurn/applyAgentDecision, Task 3) before
+// falling back to the heuristic for the rest of that turn — re-armed after
+// every applied action, not just once per turn, so a poller that stalls
+// mid-turn (rather than never starting at all) still recovers.
+export const AGENT_TIMEOUT_MS = 45000;
+
+/** Waits AGENT_TIMEOUT_MS, then — if nothing external acted on this exact
+ * turn in the meantime — notifies the GM and finishes the turn with the
+ * heuristic instead of leaving it stalled forever. */
+export async function armAgentTimeout(combat, combatant) {
+  await new Promise((resolve) => setTimeout(resolve, AGENT_TIMEOUT_MS));
+  if (!game.combats.has(combat.id) || combat.combatant?.id !== combatant.id) return;
+  ui.notifications.warn(
+    game.i18n.format('DOMMT.Dungeon.Combat.AgentTimeoutWarning', { name: combatant.name })
+  );
+  const gmIds = ChatMessage.getWhisperRecipients('GM').map((u) => u.id);
+  await ChatMessage.create({
+    content: game.i18n.format('DOMMT.Dungeon.Combat.AgentTimeoutChat', { name: combatant.name }),
+    whisper: gmIds
+  });
+  await playHeuristicTurn(combat, combatant);
+}
 
 /** Every other still-alive combatant on the opposing side (token disposition
  * differs from `combatant`'s own) — "opposing side" here is just disposition,
@@ -275,17 +320,32 @@ export async function autoPlayCombatantTurnIfDue(combat) {
     return;
   }
 
+  if (combatant.getFlag(MODULE_ID, 'agentControlled')) {
+    // Not awaited — arms a background timeout and returns immediately, same
+    // fire-and-forget style module.mjs's own updateCombat hook already uses
+    // to call this function. getPendingAgentTurn/applyAgentDecision (Task 3)
+    // are the only things that act on this turn in the meantime.
+    armAgentTimeout(combat, combatant);
+    return;
+  }
+
   await new Promise((resolve) => setTimeout(resolve, AUTO_PLAY_DELAY_MS));
   // Another client (or the combat auto-resolving mid-wait) may have already
   // moved things on — don't act on a stale turn.
   if (!game.combats.has(combat.id) || combat.combatant?.id !== combatant.id) return;
+  await playHeuristicTurn(combat, combatant);
+}
 
+/** ITEM-8's original heuristic turn: move adjacent to the nearest opponent
+ * if not already, strike once, apply the result, advance the turn — shared
+ * by the non-agent-controlled path above and the agent-timeout fallback
+ * below, so both use exactly the same behavior. */
+export async function playHeuristicTurn(combat, combatant) {
   const target = nearestOpponent(combat, combatant);
   if (target) {
     await stepToward(combat, combatant, target.combatant, target.distanceSquares);
     await rollAndApplyStrike(combatant, target.combatant);
   }
-
   if (game.combats.has(combat.id) && combat.combatant?.id === combatant.id) {
     await combat.nextTurn();
   }
