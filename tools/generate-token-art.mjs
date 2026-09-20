@@ -957,8 +957,10 @@ export const MONSTER_ART = [
   { id: 'druid-initiate', file: 'druid-initiate', dir: 'assets/creature-art',
     prompt: "A young human druid initiate, simple earth-toned robes, small leaves and twigs woven through their hair, gripping a plain wooden staff, an eager but still-uncertain expression." },
   { id: 'dust-mephit', file: 'dust-mephit', dir: 'assets/creature-art',
-    prompt: "A thin gaunt bipedal mephit with dusky brown-gray skin and small ragged wings, coated in a fine layer of dust, a melodramatic doom-laden scowl on its whining face.",
-    avoid: "feathered wings, bird wings" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a thin gaunt bipedal mephit with dusky brown-gray skin and small "
+      + "ragged wings, coated in a fine layer of dust, a melodramatic doom-laden scowl.",
+    avoid: "feathered wings, bird wings, grey background, colored background" },
   { id: 'dwarf-warrior', file: 'dwarf-warrior', dir: 'assets/creature-art',
     prompt: "A stout bearded dwarf warrior in finely crafted plate armor, gripping a heavy battleaxe, a stoic determined expression, standing with unshakable ground-set bravery." },
   { id: 'earth-mephit', file: 'earth-mephit', dir: 'assets/creature-art',
@@ -1268,8 +1270,12 @@ export const MONSTER_ART = [
   { id: 'shade-universe', file: 'shade-universe', dir: 'assets/creature-art',
     prompt: "A plain unremarkable humanoid shade, muted ordinary features and drab neutral clothing, an utterly forgettable bland version of a mortal self, among the rarest of shades." },
   { id: 'shikigami', file: 'shikigami', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A small paper shikigami, a folded and molded paper doll given fragile three-dimensional form, crisp white creases, standing guard with a tiny garden spade.",
-    avoid: "cloth, flesh, humanoid skin" },
+    prompt: "Full color illustration on a plain solid black background with absolutely nothing "
+      + "else in the frame: a small paper shikigami, a folded and molded paper doll given "
+      + "fragile three-dimensional form, crisp white creases with subtle colored ink accents, "
+      + "standing guard with a tiny garden spade.",
+    avoid: "cloth, flesh, humanoid skin, monochrome, black and white, grayscale, garden, "
+      + "flowers, plants, forest, animal companion" },
   { id: 'shokasura', file: 'shokasura', dir: 'assets/creature-art', shapeless: true,
     prompt: "A gaunt spectral shokasura, a tragic asura spirit with a sorrow-worn translucent face and tattered ethereal robes, trailing faint wisps of despair." },
   { id: 'silvanshee', file: 'silvanshee', dir: 'assets/creature-art', shapeless: true,
@@ -1290,7 +1296,11 @@ export const MONSTER_ART = [
     prompt: "A stheno harpist, a humanoid with living snakes for hair each with its own small mind, playing a harp with careful precise fingers, an independent watchful expression.",
     avoid: "stone skin, petrified statue, single large snake body" },
   { id: 'suli-dune-dancer', file: 'suli-dune-dancer', dir: 'assets/creature-art',
-    prompt: "A suli dune dancer, a genie-touched human with a confident boastful flourish, sand-colored desert wraps, mid-pose in a dramatic dance, a proud theatrical grin." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a suli dune dancer, a genie-touched human with a confident "
+      + "boastful flourish, sand-colored desert wraps, mid-pose in a dramatic dance, a proud "
+      + "theatrical grin.",
+    avoid: "desert, sand dunes, sky, stars" },
   { id: 'sunflower-leshy', file: 'sunflower-leshy', dir: 'assets/creature-art',
     prompt: "A sunflower leshy, petals radiating from its head in warm glowing hues, a serrated leafy beard-like ruff, small plant-formed body, eyes bright with collected sunlight." },
   { id: 'sylph-sneak', file: 'sylph-sneak', dir: 'assets/creature-art',
@@ -1306,8 +1316,10 @@ export const MONSTER_ART = [
   { id: 'vanara-disciple', file: 'vanara-disciple', dir: 'assets/creature-art',
     prompt: "A vanara disciple, a monkey-like humanoid with fur, a long dexterous tail, and nimble fingers, simple monastic robes, a curious friendly expression." },
   { id: 'velociraptor', file: 'velociraptor', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A feathered velociraptor, plumage running along its back and limbs, a scaly underbelly, sharp curved claws, low in a predatory hunting crouch.",
-    avoid: "humanoid posture, full bird body" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a feathered velociraptor, plumage running along its back and "
+      + "limbs, a scaly underbelly, sharp curved claws, low in a predatory hunting crouch.",
+    avoid: "humanoid posture, full bird body, grey background, colored background" },
   { id: 'vexgit', file: 'vexgit', dir: 'assets/creature-art', shapeless: true,
     prompt: "A tiny vexgit gremlin encased head to toe in a clattering crustacean-like exoskeleton, gripping an oversized hammer in stubby claws, a destructive gleam in its eyes.",
     avoid: "soft skin, large size" },
@@ -1324,8 +1336,11 @@ export const MONSTER_ART = [
     prompt: "A small bipedal mephit with blue-green skin that shimmers like fish scales, wings more like webbed fins than membrane, a mischievous jovial grin.",
     avoid: "feathered wings, bird wings" },
   { id: 'water-scamp', file: 'water-scamp', dir: 'assets/creature-art',
-    prompt: "A small elemental scamp with sleek water-slicked fur trapping a layer of moisture against its skin, folded bat-like wings, an exuberant playful expression.",
-    avoid: "feathered wings, bird wings" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a small elemental scamp with sleek water-slicked fur trapping a "
+      + "layer of moisture against its skin, folded bat-like wings, an exuberant playful "
+      + "expression.",
+    avoid: "feathered wings, bird wings, grey background, colored background" },
   { id: 'wayang-whisperblade', file: 'wayang-whisperblade', dir: 'assets/creature-art',
     prompt: "A gaunt wayang whisperblade, dusky shadow-touched skin marked with tattooed white dots forming small pictures, stringy hair decorated with beads, a dagger wreathed in curling shadow." },
   { id: 'wolf', file: 'wolf', dir: 'assets/creature-art', shapeless: true,
@@ -1342,9 +1357,15 @@ export const MONSTER_ART = [
     prompt: "A zoaem archon, spinning wheels of golden light given corporeal shape, endlessly curious, radiant geometric rings turning slowly in midair.",
     avoid: "humanoid features, wings, solid body" },
   { id: 'tripkee-scout-mc2', file: 'tripkee-scout-mc2', dir: 'assets/creature-art',
-    prompt: "A tripkee scout, a green frog-like humanoid with oversized eyes and wide sticky toes for climbing, perched watchfully on a branch at the edge of a treetop settlement." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a tripkee scout, a green frog-like humanoid with oversized eyes "
+      + "and wide sticky toes for climbing, a watchful alert posture.",
+    avoid: "branch, tree, foliage, leaves, settlement, village, sky" },
   { id: 'tripkee-scout-npc', file: 'tripkee-scout-npc', dir: 'assets/creature-art',
-    prompt: "A tripkee scout, a frog-like humanoid with large keen eyes and broad climbing toes, crouched low and alert in dense foliage, first line of defense for a hidden treetop village." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing "
+      + "else in the frame: a tripkee scout, a frog-like humanoid with large keen eyes and "
+      + "broad climbing toes, crouched low and alert.",
+    avoid: "branch, tree, foliage, leaves, settlement, village, sky" },
   { id: 'acrobat', file: 'acrobat', dir: 'assets/creature-art',
     prompt: "A human acrobat mid-performance, lean athletic build in a fitted tumbler’s costume, balanced on one hand or caught mid-flip, focused calm expression, muscles taut with controlled effort" },
   { id: 'archer-sentry', file: 'archer-sentry', dir: 'assets/creature-art',
