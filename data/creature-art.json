@@ -622,5 +622,333 @@
     "name": "Halfling Street Watcher",
     "level": -1,
     "art": "halfling-street-watcher.webp"
+  },
+  {
+    "id": "air_wisp",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "Q6oMLXjmGqF6dxzp",
+    "name": "Air Wisp\r",
+    "level": 0,
+    "art": "air-wisp.webp"
+  },
+  {
+    "id": "badger",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "DMoeZLBSXHO4nibR",
+    "name": "Badger\r",
+    "level": 0,
+    "art": "badger.webp"
+  },
+  {
+    "id": "blue_ringed_octopus",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "WxSpfUReYJb4StxG",
+    "name": "Blue-Ringed Octopus\r",
+    "level": 0,
+    "art": "blue-ringed-octopus.webp"
+  },
+  {
+    "id": "bone_scavenger",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "8IVbWVMYUhBE4Yyc",
+    "name": "Bone Scavenger\r",
+    "level": 0,
+    "art": "bone-scavenger.webp"
+  },
+  {
+    "id": "giant_maggot",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "e0Jxg2AHeQSDGNnV",
+    "name": "Giant Maggot\r",
+    "level": 0,
+    "art": "giant-maggot.webp"
+  },
+  {
+    "id": "mayor",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "HKQofrjurRdgEq3p",
+    "name": "Mayor\r",
+    "level": 0,
+    "art": "mayor.webp"
+  },
+  {
+    "id": "melixie",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "dkDbXG0boTkddHSG",
+    "name": "Melixie\r",
+    "level": 0,
+    "art": "melixie.webp"
+  },
+  {
+    "id": "miner",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "GKDMvepxkEsUnN5d",
+    "name": "Miner\r",
+    "level": 0,
+    "art": "miner.webp"
+  },
+  {
+    "id": "pugwampi",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "aeOzCBpwnUVcpqxI",
+    "name": "Pugwampi\r",
+    "level": 0,
+    "art": "pugwampi.webp"
+  },
+  {
+    "id": "sea_snake",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "rVzdgqUn7slx2WSS",
+    "name": "Sea Snake\r",
+    "level": 0,
+    "art": "sea-snake.webp"
+  },
+  {
+    "id": "soulbound_homunculus",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "qDTbixJDMopR0ixh",
+    "name": "Soulbound Homunculus\r",
+    "level": 0,
+    "art": "soulbound-homunculus.webp"
+  },
+  {
+    "id": "spear_frog",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "KIwZekBcdyBX8X9k",
+    "name": "Spear Frog\r",
+    "level": 0,
+    "art": "spear-frog.webp"
+  },
+  {
+    "id": "toady",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "BbFb0HC3vMBGP5WN",
+    "name": "Toady\r",
+    "level": 0,
+    "art": "toady.webp"
+  },
+  {
+    "id": "torchbearer",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "xjJV1G5FBeLV4KPQ",
+    "name": "Torchbearer\r",
+    "level": 0,
+    "art": "torchbearer.webp"
+  },
+  {
+    "id": "vampire_squid",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "3MDlKPlPhHBo1DId",
+    "name": "Vampire Squid\r",
+    "level": 0,
+    "art": "vampire-squid.webp"
+  },
+  {
+    "id": "water_wisp",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "PV8ex8ivTfD7bzEP",
+    "name": "Water Wisp\r",
+    "level": 0,
+    "art": "water-wisp.webp"
+  },
+  {
+    "id": "bottlenose_dolphin",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "YZ4G7eRQ49dTVtjb",
+    "name": "Bottlenose Dolphin\r",
+    "level": 0,
+    "art": "bottlenose-dolphin.webp"
+  },
+  {
+    "id": "envoy",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "9wdaQ6ZuBAZx9Vjk",
+    "name": "Envoy\r",
+    "level": 0,
+    "art": "envoy.webp"
+  },
+  {
+    "id": "orc_scrapper",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "YReM6QbqwUz3UTP7",
+    "name": "Orc Scrapper\r",
+    "level": 0,
+    "art": "orc-scrapper.webp"
+  },
+  {
+    "id": "ringhorn_ram",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "S6V3z6bE6G9J68tE",
+    "name": "Ringhorn Ram\r",
+    "level": 0,
+    "art": "ringhorn-ram.webp"
+  },
+  {
+    "id": "azarketi_crab_catcher",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "ZXiFjrQbhvboEZTL",
+    "name": "Azarketi Crab Catcher\r",
+    "level": 0,
+    "art": "azarketi-crab-catcher.webp"
+  },
+  {
+    "id": "earth_wisp",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "5YmEdbkqk1IYWL7B",
+    "name": "Earth Wisp\r",
+    "level": 0,
+    "art": "earth-wisp.webp"
+  },
+  {
+    "id": "poppet_attendant",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "AlvTmrsJXarVlgDZ",
+    "name": "Poppet Attendant\r",
+    "level": 0,
+    "art": "poppet-attendant.webp"
+  },
+  {
+    "id": "ioton",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "FXwgsLTRneGzclsw",
+    "name": "Ioton\r",
+    "level": 0,
+    "art": "ioton.webp"
+  },
+  {
+    "id": "political_upstart",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "HVUlGw83Hf4YmW0p",
+    "name": "Political Upstart\r",
+    "level": 0,
+    "art": "political-upstart.webp"
+  },
+  {
+    "id": "stingray",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "HXWT5QxmOCn0poMt",
+    "name": "Stingray\r",
+    "level": 0,
+    "art": "stingray.webp"
+  },
+  {
+    "id": "aiuvarin_translator",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "9p0WMNDYyeW5sqGX",
+    "name": "Aiuvarin Translator\r",
+    "level": 0,
+    "art": "aiuvarin-translator.webp"
+  },
+  {
+    "id": "dwarf_smith",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "rY3uqGq5QyvNOU91",
+    "name": "Dwarf Smith\r",
+    "level": 0,
+    "art": "dwarf-smith.webp"
+  },
+  {
+    "id": "dream_spider",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "4SfnQzORMdmBsp49",
+    "name": "Dream Spider\r",
+    "level": 0,
+    "art": "dream-spider.webp"
+  },
+  {
+    "id": "conspiracist",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "W3uePAytelIvWOuV",
+    "name": "Conspiracist\r",
+    "level": 0,
+    "art": "conspiracist.webp"
+  },
+  {
+    "id": "penitent_of_calistria",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "uTGGtpKUotQep27v",
+    "name": "Penitent of Calistria\r",
+    "level": 0,
+    "art": "penitent-of-calistria.webp"
+  },
+  {
+    "id": "drover",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "aq5spzk2UZrI0ZwK",
+    "name": "Drover\r",
+    "level": 0,
+    "art": "drover.webp"
+  },
+  {
+    "id": "fisher",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "LbSA6uGVafcosT0X",
+    "name": "Fisher\r",
+    "level": 0,
+    "art": "fisher.webp"
+  },
+  {
+    "id": "dockhand",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "Wv4jaiD6X8negvH2",
+    "name": "Dockhand\r",
+    "level": 0,
+    "art": "dockhand.webp"
+  },
+  {
+    "id": "farmer",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "bZRZahVaMyzTbJ4u",
+    "name": "Farmer\r",
+    "level": 0,
+    "art": "farmer.webp"
+  },
+  {
+    "id": "hryngar_sharpshooter",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "Ytp0kRaG8iexmPfN",
+    "name": "Hryngar Sharpshooter\r",
+    "level": 0,
+    "art": "hryngar-sharpshooter.webp"
+  },
+  {
+    "id": "kangaroo",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "rOFpnEic0eJdaxiM",
+    "name": "Kangaroo\r",
+    "level": 0,
+    "art": "kangaroo.webp"
+  },
+  {
+    "id": "prime_minister",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "KV9WeA9fq5HuCxxx",
+    "name": "Prime Minister\r",
+    "level": 0,
+    "art": "prime-minister.webp"
+  },
+  {
+    "id": "puppet",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "r75kLP8MgLx46ZTO",
+    "name": "Puppet\r",
+    "level": 0,
+    "art": "puppet.webp"
+  },
+  {
+    "id": "riding_pony",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "F3ungAqpGjFotwUK",
+    "name": "Riding Pony\r",
+    "level": 0,
+    "art": "riding-pony.webp"
+  },
+  {
+    "id": "vine_leshy",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "H8PaAZanEOT85KjD",
+    "name": "Vine Leshy\r",
+    "level": 0,
+    "art": "vine-leshy.webp"
   }
 ]
