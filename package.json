@@ -16,7 +16,8 @@
     "prompts": "node tools/token-prompts.mjs",
     "tokens": "node tools/generate-token-art.mjs",
     "tokens:check": "node tools/check-token-art.mjs",
-    "tokens:import": "node tools/import-token.mjs"
+    "tokens:import": "node tools/import-token.mjs",
+    "agent-loop": "node tools/agent-loop/poll.mjs"
   },
   "devDependencies": {
     "ajv": "^8.17.1",
