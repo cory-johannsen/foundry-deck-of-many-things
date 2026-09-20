@@ -16,6 +16,9 @@
  */
 import { makeFoundryApi } from './foundry-api.mjs';
 import { totalCombatXp, xpPerSurvivor, lootGpForXp } from './combat-rewards.mjs';
+import {
+  initAgentTurnState, buildCandidateList, applyCandidateToTurnState, buildDecisionContext
+} from './agent-candidates.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 
@@ -39,17 +42,38 @@ function combatantTokens(scene, flagKey, flagValue) {
   return [...monsterTokens, ...partyTokens];
 }
 
+/**
+ * Every non-party combatant defaults to agent-controlled (flags.dommt.
+ * agentControlled) the instant it's added to a Combat — a GM can disable it
+ * per-combatant via the Combat Tracker's own context menu (module.mjs's
+ * getCombatTrackerEntryContext hook). Party combatants never get the flag,
+ * matching the partyActorIds() split ITEM-8's own reopening already uses.
+ */
 async function startCombat(scene, flagKey, flagValue) {
   const tokens = combatantTokens(scene, flagKey, flagValue);
   if (!tokens.length) return null;
   const combat = await Combat.create({ scene: scene.id });
   await combat.setFlag(MODULE_ID, flagKey, flagValue);
+  const partyIds = partyActorIds();
   const combatants = await combat.createEmbeddedDocuments(
-    'Combatant', tokens.map((t) => ({ tokenId: t.id, sceneId: scene.id }))
+    'Combatant', tokens.map((t) => ({
+      tokenId: t.id, sceneId: scene.id,
+      ...(partyIds.has(t.actor?.id) ? {} : { flags: { [MODULE_ID]: { agentControlled: true } } })
+    }))
   );
   await combat.rollInitiative(combatants.map((c) => c.id), { skipDialog: true });
   await combat.startCombat();
   return combat;
+}
+
+/** Flips a single combatant's agentControlled flag — the GM's per-combatant
+ * override (module.mjs's Combat Tracker context-menu entry). A no-op guard
+ * against toggling a real party member on by mistake, since one should
+ * never have the flag in the first place. */
+export async function toggleAgentControlled(combatant) {
+  if (partyActorIds().has(combatant.actor?.id)) return;
+  const current = combatant.getFlag(MODULE_ID, 'agentControlled') ?? false;
+  await combatant.setFlag(MODULE_ID, 'agentControlled', !current);
 }
 
 export const startCombatForSlot = (scene, slot) => startCombat(scene, 'dungeonSlot', slot);
@@ -152,6 +176,47 @@ export function maybeResolveCombatForCombatant(combatant, changes) {
 
 const AUTO_PLAY_DELAY_MS = 700;
 
+// How long an agent-controlled combatant's turn waits for an external
+// decision (via getPendingAgentTurn/applyAgentDecision, Task 3) before
+// falling back to the heuristic for the rest of that turn — re-armed after
+// every applied action, not just once per turn, so a poller that stalls
+// mid-turn (rather than never starting at all) still recovers.
+export const AGENT_TIMEOUT_MS = 45000;
+
+/**
+ * Waits AGENT_TIMEOUT_MS, then fires the heuristic fallback for `combatant`
+ * — but only if this exact timer is still the freshest thing watching this
+ * exact turn. It is NOT a guarantee that nothing else happened in the
+ * meantime: `applyAgentDecision` arms a fresh timer after every action, so a
+ * multi-action turn can have several of these outstanding at once. What it
+ * does guarantee is that a superseded timer bails out silently instead of
+ * firing on top of a turn something else already advanced — it captures the
+ * combat's `round`/`turn` and the per-turn write counter at arm time, and on
+ * fire, re-checks the combatant is still current, the round/turn haven't
+ * moved on (catches the same combatant's *next* turn, not just a different
+ * one), and the counter is unchanged (catches a decision already applied by
+ * this same turn's more-recently-armed timer or the external poller).
+ */
+export async function armAgentTimeout(combat, combatant) {
+  const armedRound = combat.round;
+  const armedTurn = combat.turn;
+  const armedCounter = currentStoredAgentTurnState(combat, combatant.id)?.counter ?? 0;
+  await new Promise((resolve) => setTimeout(resolve, AGENT_TIMEOUT_MS));
+  if (!game.combats.has(combat.id) || combat.combatant?.id !== combatant.id) return;
+  if (combat.round !== armedRound || combat.turn !== armedTurn) return;
+  const currentCounter = currentStoredAgentTurnState(combat, combatant.id)?.counter ?? 0;
+  if (currentCounter !== armedCounter) return;
+  ui.notifications.warn(
+    game.i18n.format('DOMMT.Dungeon.Combat.AgentTimeoutWarning', { name: combatant.name })
+  );
+  const gmIds = ChatMessage.getWhisperRecipients('GM').map((u) => u.id);
+  await ChatMessage.create({
+    content: game.i18n.format('DOMMT.Dungeon.Combat.AgentTimeoutChat', { name: combatant.name }),
+    whisper: gmIds
+  });
+  await playHeuristicTurn(combat, combatant);
+}
+
 /** Every other still-alive combatant on the opposing side (token disposition
  * differs from `combatant`'s own) — "opposing side" here is just disposition,
  * the same two-bucket split combatSideStatus already uses. */
@@ -168,6 +233,61 @@ function combatantOpponents(combat, combatant) {
  * movement rules. */
 function chebyshevSquares(a, b, gridSize) {
   return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) / gridSize;
+}
+
+/** Reach for one ready action, in squares — a `reach-N` trait (N in feet)
+ * takes priority; otherwise a ranged action's own range increment (feet);
+ * otherwise plain melee reach. Confirmed live during planning: a PF2e
+ * strike's own `.traits` array carries entries like `{name: 'reach-20', ...}`,
+ * and `.item.system.range` is `{increment, max}` in feet for a ranged
+ * attack, `null` for melee. */
+function actionReachSquares(action, gridDistanceFt) {
+  const reachTrait = (action.traits ?? []).find((t) => /^reach-\d+$/.test(t.name ?? ''));
+  if (reachTrait) return Number(reachTrait.name.split('-')[1]) / gridDistanceFt;
+  const rangeIncrement = action.item?.system?.range?.increment;
+  if (rangeIncrement) return rangeIncrement / gridDistanceFt;
+  return MELEE_REACH_SQUARES;
+}
+
+/**
+ * The raw stored `agentTurnState` flag, but only when it actually belongs to
+ * this exact turn — same `combatantId` *and* the same `round`/`turn` the
+ * Combat is on right now. `combatantId` alone isn't enough: the same
+ * combatant returns to this same check on every one of its future turns, so
+ * comparing only `combatantId` can't tell "still mid-turn" from "this
+ * combatant's turn again, next round" — which is exactly what left a lone
+ * agent-controlled NPC permanently passive from round 2 onward (its
+ * exhausted `actionsRemaining: 0` from the previous round kept matching).
+ * Returns `null` whenever the stored flag doesn't match, so callers fall
+ * back to a fresh state.
+ */
+function currentStoredAgentTurnState(combat, combatantId) {
+  const stored = combat.getFlag(MODULE_ID, 'agentTurnState');
+  if (stored?.combatantId === combatantId && stored.round === combat.round && stored.turn === combat.turn) return stored;
+  return null;
+}
+
+/** Reads back Combat's own per-turn agent bookkeeping, or a fresh one
+ * (`initAgentTurnState()`) if this is the first decision seen for this exact
+ * combatant/round/turn — see `currentStoredAgentTurnState` above. */
+function getAgentTurnState(combat, combatantId) {
+  const stored = currentStoredAgentTurnState(combat, combatantId);
+  return stored ? { actionsRemaining: stored.actionsRemaining, mapIncrement: stored.mapIncrement } : initAgentTurnState();
+}
+
+/** Writes the per-turn state back, tagged with the combat's current
+ * `round`/`turn` (so a later turn can never mistake this for "still
+ * current," see `currentStoredAgentTurnState`) and a `counter` that
+ * increments on every write for this same turn. `armAgentTimeout` captures
+ * that counter at arm time and re-checks it before firing its fallback, so
+ * a timer superseded by a real decision already applied can tell it's stale
+ * instead of firing on top of a turn that's still being played. */
+async function setAgentTurnState(combat, combatantId, turnState) {
+  const counter = (currentStoredAgentTurnState(combat, combatantId)?.counter ?? 0) + 1;
+  await combat.setFlag(MODULE_ID, 'agentTurnState', {
+    combatantId, round: combat.round, turn: combat.turn,
+    actionsRemaining: turnState.actionsRemaining, mapIncrement: turnState.mapIncrement, counter
+  });
 }
 
 /** The closest opposing combatant, or null if none remain. */
@@ -275,18 +395,180 @@ export async function autoPlayCombatantTurnIfDue(combat) {
     return;
   }
 
+  if (combatant.getFlag(MODULE_ID, 'agentControlled')) {
+    // Not awaited — arms a background timeout and returns immediately, same
+    // fire-and-forget style module.mjs's own updateCombat hook already uses
+    // to call this function. getPendingAgentTurn/applyAgentDecision (Task 3)
+    // are the only things that act on this turn in the meantime.
+    armAgentTimeout(combat, combatant);
+    return;
+  }
+
   await new Promise((resolve) => setTimeout(resolve, AUTO_PLAY_DELAY_MS));
   // Another client (or the combat auto-resolving mid-wait) may have already
   // moved things on — don't act on a stale turn.
   if (!game.combats.has(combat.id) || combat.combatant?.id !== combatant.id) return;
+  await playHeuristicTurn(combat, combatant);
+}
 
+/** ITEM-8's original heuristic turn: move adjacent to the nearest opponent
+ * if not already, strike once, apply the result, advance the turn — shared
+ * by the non-agent-controlled path above and the agent-timeout fallback
+ * below, so both use exactly the same behavior. */
+export async function playHeuristicTurn(combat, combatant) {
   const target = nearestOpponent(combat, combatant);
   if (target) {
     await stepToward(combat, combatant, target.combatant, target.distanceSquares);
     await rollAndApplyStrike(combatant, target.combatant);
   }
-
   if (game.combats.has(combat.id) && combat.combatant?.id === combatant.id) {
     await combat.nextTurn();
   }
+}
+
+// --- Task 3: external agent-controlled turn decisions --------------------
+
+/**
+ * The current decision point for the due combatant, or `null` if there's
+ * nothing for an external agent to decide right now (no combat due, the
+ * current combatant isn't agent-controlled, or it's already defeated). The
+ * *only* read surface `tools/agent-loop`'s poller uses — see module.mjs's
+ * api.getPendingAgentTurn.
+ */
+export function getPendingAgentTurn(combat) {
+  if (!isModuleCombat(combat)) return null;
+  const combatant = combat.combatant;
+  if (!combatant || combatant.isDefeated || !combatant.getFlag(MODULE_ID, 'agentControlled')) return null;
+
+  const turnState = getAgentTurnState(combat, combatant.id);
+  const gridSize = combat.scene?.grid?.size ?? 100;
+  const gridDistanceFt = combat.scene?.grid?.distance ?? 5;
+
+  const opponents = combatantOpponents(combat, combatant).map((c) => ({
+    id: c.id, name: c.name,
+    distanceSquares: chebyshevSquares(combatant.token, c.token, gridSize),
+    hp: c.actor?.system?.attributes?.hp?.value ?? null
+  }));
+
+  const readyActions = (combatant.actor?.system?.actions ?? [])
+    .filter((a) => a.type === 'strike' && a.ready !== false)
+    .map((a) => ({
+      slug: a.item?.slug ?? a.slug ?? a.label,
+      label: a.label,
+      variantCount: a.variants?.length ?? 1,
+      reachSquares: actionReachSquares(a, gridDistanceFt)
+    }));
+  const hasRangedOrReach = readyActions.some((a) => a.reachSquares > MELEE_REACH_SQUARES);
+
+  const self = {
+    name: combatant.name,
+    hp: combatant.actor?.system?.attributes?.hp?.value ?? null,
+    conditions: Array.from(combatant.actor?.conditions ?? []).map((c) => c.slug)
+  };
+
+  const candidates = buildCandidateList({ opponents, readyActions, turnState, hazard: null, hasRangedOrReach });
+  return {
+    combatId: combat.id,
+    combatantId: combatant.id,
+    context: buildDecisionContext({ self, opponents, candidates, roundNumber: combat.round }),
+    candidates
+  };
+}
+
+/** Moves `combatant`'s token up to its own speed, straight toward or away
+ * from `target`'s token depending on `posture`, parameterized by direction
+ * instead of always approaching (no wall-avoidance, no real pathfinding, see
+ * #100). For `approach`, clamps to stop adjacent to the target rather than
+ * overshooting past it — the same distance clamp stepToward already uses.
+ * `retreat` has no "don't overshoot" concept, so it's unclamped, bounded only
+ * by speed. A no-op if already at the desired distance or with no speed to
+ * move. */
+async function strideByPosture(combat, combatant, posture, target) {
+  const gridSize = combat.scene?.grid?.size ?? 100;
+  const gridDistanceFt = combat.scene?.grid?.distance ?? 5;
+  const speedFt = combatant.actor?.system?.movement?.speeds?.land?.value ?? 0;
+  const speedSquares = Math.floor(speedFt / gridDistanceFt);
+  if (speedSquares <= 0 || !target) return;
+
+  const me = combatant.token;
+  const dest = target.token;
+  const steps = posture === 'approach'
+    ? Math.min(speedSquares, Math.floor(chebyshevSquares(me, dest, gridSize) - MELEE_REACH_SQUARES))
+    : speedSquares;
+  if (steps <= 0) return;
+
+  const dx = Math.sign(dest.x - me.x) || 0;
+  const dy = Math.sign(dest.y - me.y) || 0;
+  const sign = posture === 'retreat' ? -1 : 1;
+  await me.update({ x: me.x + sign * dx * gridSize * steps, y: me.y + sign * dy * gridSize * steps });
+}
+
+/** Rolls one strike at a specific MAP `variantIndex` against `target` and
+ * applies damage on a hit — the same dialog-suppression/roll/damage/
+ * applyDamage sequence rollAndApplyStrike already uses, generalized to a
+ * caller-chosen variant instead of always variants[0]. */
+async function rollAndApplyStrikeAtVariant(combatant, target, actionSlug, variantIndex) {
+  const strike = (combatant.actor?.system?.actions ?? [])
+    .find((a) => a.type === 'strike' && a.ready !== false && (a.item?.slug ?? a.slug ?? a.label) === actionSlug);
+  if (!strike) return null;
+
+  const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
+  const prevShowDamage = game.user.flags?.pf2e?.settings?.showDamageDialogs;
+  await game.user.update({
+    'flags.pf2e.settings.showCheckDialogs': false,
+    'flags.pf2e.settings.showDamageDialogs': false
+  });
+  try {
+    const targetRef = { document: target.token };
+    const variant = strike.variants[Math.min(variantIndex, strike.variants.length - 1)];
+    await variant.roll({ target: targetRef, createMessage: true });
+    const outcome = game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
+    if (outcome === 'success' || outcome === 'criticalSuccess') {
+      const damageRoll = await strike.damage({ target: targetRef, outcome, createMessage: true });
+      if (damageRoll) await target.actor.applyDamage({ damage: damageRoll, token: target.token, outcome });
+    }
+    return outcome;
+  } finally {
+    await game.user.update({
+      'flags.pf2e.settings.showCheckDialogs': prevShowCheck,
+      'flags.pf2e.settings.showDamageDialogs': prevShowDamage
+    });
+  }
+}
+
+/**
+ * Executes exactly one chosen candidate for `combatantId`'s current turn in
+ * `combat`, updates the per-turn state, and advances the turn once actions
+ * run out or `endTurn` was chosen. Returns the pending-turn shape for the
+ * *next* iteration (same shape getPendingAgentTurn returns), or `null` once
+ * the turn has actually ended. The only mutation path an external process
+ * ever reaches — see module.mjs's api.applyAgentDecision.
+ */
+export async function applyAgentDecision(combat, combatantId, candidateId) {
+  const pending = getPendingAgentTurn(combat);
+  if (!pending || pending.combatantId !== combatantId) return null;
+  const candidate = pending.candidates.find((c) => c.id === candidateId);
+  if (!candidate) return null;
+
+  const combatant = combat.combatant;
+  if (candidate.type === 'stride') {
+    const target = candidate.targetId ? combatantOpponents(combat, combatant).find((c) => c.id === candidate.targetId) : null;
+    await strideByPosture(combat, combatant, candidate.posture, target);
+  } else if (candidate.type === 'strike') {
+    const target = combatantOpponents(combat, combatant).find((c) => c.id === candidate.targetId);
+    if (target) await rollAndApplyStrikeAtVariant(combatant, target, candidate.actionSlug, candidate.variantIndex);
+  }
+
+  const turnState = getAgentTurnState(combat, combatantId);
+  const nextTurnState = applyCandidateToTurnState(turnState, candidate);
+  await setAgentTurnState(combat, combatantId, nextTurnState);
+
+  if (nextTurnState.actionsRemaining <= 0) {
+    if (game.combats.has(combat.id) && combat.combatant?.id === combatantId) await combat.nextTurn();
+    return null;
+  }
+  // Actions remain — re-arm the timeout for the next decision rather than
+  // leaving this turn permanently unwatched after one action.
+  armAgentTimeout(combat, combatant);
+  return getPendingAgentTurn(combat);
 }
