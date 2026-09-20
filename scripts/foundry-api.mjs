@@ -11,9 +11,19 @@
  * and replayed only once the GM confirms.
  */
 export const WRITE_METHODS = [
-  'updateActor', 'increaseCondition', 'createEffect', 'postChatCard',
-  'addCoins', 'grantItems', 'removeItems', 'spawnCreatures', 'grantInnateSpells',
-  'removeCoins', 'etchRune', 'spawnBuiltCreature'
+  "updateActor",
+  "increaseCondition",
+  "createEffect",
+  "postChatCard",
+  "addCoins",
+  "grantItems",
+  "removeItems",
+  "spawnCreatures",
+  "grantInnateSpells",
+  "removeCoins",
+  "etchRune",
+  "spawnBuiltCreature",
+  "spawnCoverItems",
 ];
 
 /**
@@ -24,13 +34,31 @@ export const WRITE_METHODS = [
  * primary creature source, not an extra. A card looking for a homunculus found
  * none, because the only ones are in Monster Core.
  */
-import { freeSpot, freeSpotInRect, footprint, partyLevelFrom } from './placement.mjs';
+import {
+  freeSpot,
+  freeSpotInRect,
+  footprint,
+  overlaps,
+  partyLevelFrom,
+} from "./placement.mjs";
+import { splitmix32, seedFromString } from "./prng.mjs";
+import { buildCoverItemActorData, MODULE_ID } from "./cover-items.mjs";
 
-export const CREATURE_PACK_PATTERN = /bestiary|monster-core|npc-core|npc-gallery/i;
+export const CREATURE_PACK_PATTERN =
+  /bestiary|monster-core|npc-core|npc-gallery/i;
 
-export const READ_METHODS = ['findItems', 'findCreatures', 'listCreatureTraits', 'listItems',
-                             'findWorldActors', 'listLanguages', 'getCoins', 'listGear',
-                             'ancestrySpeed', 'partyLevel'];
+export const READ_METHODS = [
+  "findItems",
+  "findCreatures",
+  "listCreatureTraits",
+  "listItems",
+  "findWorldActors",
+  "listLanguages",
+  "getCoins",
+  "listGear",
+  "ancestrySpeed",
+  "partyLevel",
+];
 
 // Module-scope, not per-`makeFoundryApi()` call — the theme dialog calls
 // `listCreatureTraits` fresh every time it opens, and re-scanning ~60 packs
@@ -41,19 +69,36 @@ let CREATURE_TRAITS_CACHE = null;
  * PF2e's size codes, smallest first, with the words a card is likely to use.
  * A card asking for "large" means the code "lg".
  */
-export const SIZE_ORDER = ['tiny', 'sm', 'med', 'lg', 'huge', 'grg'];
-const SIZE_WORDS = { tiny: 'tiny', small: 'sm', sm: 'sm', medium: 'med', med: 'med',
-                     large: 'lg', lg: 'lg', huge: 'huge', gargantuan: 'grg', grg: 'grg' };
+export const SIZE_ORDER = ["tiny", "sm", "med", "lg", "huge", "grg"];
+const SIZE_WORDS = {
+  tiny: "tiny",
+  small: "sm",
+  sm: "sm",
+  medium: "med",
+  med: "med",
+  large: "lg",
+  lg: "lg",
+  huge: "huge",
+  gargantuan: "grg",
+  grg: "grg",
+};
 
 export function sizeAtLeast(size, min) {
   if (!min) return true;
   const want = SIZE_ORDER.indexOf(SIZE_WORDS[String(min).toLowerCase()] ?? min);
   if (want < 0) return true;
-  return SIZE_ORDER.indexOf(size ?? 'med') >= want;
+  return SIZE_ORDER.indexOf(size ?? "med") >= want;
 }
 
 /** Grades that a rune's name carries at the end and its key carries at the front. */
-const RUNE_GRADES = ['lesser', 'moderate', 'greater', 'major', 'true', 'supreme'];
+const RUNE_GRADES = [
+  "lesser",
+  "moderate",
+  "greater",
+  "major",
+  "true",
+  "supreme",
+];
 
 /**
  * The key a weapon's property array wants, from the slug the compendium uses.
@@ -65,20 +110,25 @@ const RUNE_GRADES = ['lesser', 'moderate', 'greater', 'major', 'true', 'supreme'
  * against a real weapon, which renames itself when the rune takes.
  */
 export function runeKey(slug) {
-  const parts = String(slug ?? '').split('-').filter(Boolean);
-  if (!parts.length) return '';
+  const parts = String(slug ?? "")
+    .split("-")
+    .filter(Boolean);
+  if (!parts.length) return "";
   const grade = RUNE_GRADES.includes(parts.at(-1)) ? parts.pop() : null;
   const ordered = grade ? [grade, ...parts] : parts;
   return ordered
     .map((p, i) => (i === 0 ? p : p[0].toUpperCase() + p.slice(1)))
-    .join('');
+    .join("");
 }
 
 /** PF2e rarities in ascending order, for "uncommon or better" style filters. */
-const RARITY_ORDER = ['common', 'uncommon', 'rare', 'unique'];
+const RARITY_ORDER = ["common", "uncommon", "rare", "unique"];
 
 export function rarityAtLeast(rarity, min) {
-  return RARITY_ORDER.indexOf(rarity ?? 'common') >= RARITY_ORDER.indexOf(min ?? 'common');
+  return (
+    RARITY_ORDER.indexOf(rarity ?? "common") >=
+    RARITY_ORDER.indexOf(min ?? "common")
+  );
 }
 
 export function makeFoundryApi() {
@@ -96,10 +146,16 @@ export function makeFoundryApi() {
      * Returns plain objects ({pack, id, name, type, level, rarity}) rather than
      * documents, so a plan can be described, logged and replayed cheaply.
      */
-    async findItems({ types = [], minRarity = 'common', maxLevel = null, traits = [],
-                      namePattern = null, packs = ['pf2e.equipment-srd'] } = {}) {
+    async findItems({
+      types = [],
+      minRarity = "common",
+      maxLevel = null,
+      traits = [],
+      namePattern = null,
+      packs = ["pf2e.equipment-srd"],
+    } = {}) {
       const found = [];
-      const re = namePattern ? new RegExp(namePattern, 'i') : null;
+      const re = namePattern ? new RegExp(namePattern, "i") : null;
       for (const id of packs) {
         const pack = game.packs.get(id);
         if (!pack) continue;
@@ -107,53 +163,83 @@ export function makeFoundryApi() {
           // A spell's tradition is not among its traits — it lives in its own
           // array, so it has to be asked for explicitly or spells arrive
           // looking traditionless. Usage distinguishes a rune from a thing.
-          fields: ['type', 'system.level.value', 'system.traits.rarity',
-                   'system.traits.value', 'system.traits.traditions',
-                   'system.usage.value', 'system.slug']
+          fields: [
+            "type",
+            "system.level.value",
+            "system.traits.rarity",
+            "system.traits.value",
+            "system.traits.traditions",
+            "system.usage.value",
+            "system.slug",
+          ],
         });
         for (const e of index) {
           if (types.length && !types.includes(e.type)) continue;
-          const rarity = e.system?.traits?.rarity ?? 'common';
+          const rarity = e.system?.traits?.rarity ?? "common";
           if (!rarityAtLeast(rarity, minRarity)) continue;
           const level = e.system?.level?.value ?? 0;
           if (maxLevel != null && level > maxLevel) continue;
           const has = e.system?.traits?.value ?? [];
           if (traits.length && !traits.every((t) => has.includes(t))) continue;
           if (re && !re.test(e.name)) continue;
-          found.push({ pack: id, id: e._id, name: e.name, type: e.type, level, rarity,
-                       traits: has, traditions: e.system?.traits?.traditions ?? [],
-                       // Runes are plain `equipment` with no distinguishing trait;
-                       // only their usage says they are etched onto something else.
-                       usage: e.system?.usage?.value ?? null,
-                       slug: e.system?.slug ?? null });
+          found.push({
+            pack: id,
+            id: e._id,
+            name: e.name,
+            type: e.type,
+            level,
+            rarity,
+            traits: has,
+            traditions: e.system?.traits?.traditions ?? [],
+            // Runes are plain `equipment` with no distinguishing trait;
+            // only their usage says they are etched onto something else.
+            usage: e.system?.usage?.value ?? null,
+            slug: e.system?.slug ?? null,
+          });
         }
       }
       return found;
     },
-
 
     /**
      * Creature index entries matching a filter, same shape as findItems.
      *
      * Every installed creature pack is searched by default.
      */
-    async findCreatures({ minLevel = null, maxLevel = null, traits = [], namePattern = null,
-                          minSize = null, excludeTraits = [], speaksLanguage = false,
-                          packs = null, requireTrait = null } = {}) {
+    async findCreatures({
+      minLevel = null,
+      maxLevel = null,
+      traits = [],
+      namePattern = null,
+      minSize = null,
+      excludeTraits = [],
+      speaksLanguage = false,
+      packs = null,
+      requireTrait = null,
+    } = {}) {
       packs ??= game.packs
-        .filter((p) => p.documentName === 'Actor' && CREATURE_PACK_PATTERN.test(p.collection))
+        .filter(
+          (p) =>
+            p.documentName === "Actor" &&
+            CREATURE_PACK_PATTERN.test(p.collection),
+        )
         .map((p) => p.collection);
       const found = [];
-      const re = namePattern ? new RegExp(namePattern, 'i') : null;
+      const re = namePattern ? new RegExp(namePattern, "i") : null;
       for (const id of packs) {
         const pack = game.packs.get(id);
         if (!pack) continue;
         const index = await pack.getIndex({
-          fields: ['type', 'system.details.level.value', 'system.traits.value',
-                   'system.traits.size.value', 'system.details.languages.value']
+          fields: [
+            "type",
+            "system.details.level.value",
+            "system.traits.value",
+            "system.traits.size.value",
+            "system.details.languages.value",
+          ],
         });
         for (const e of index) {
-          if (e.type !== 'npc') continue;
+          if (e.type !== "npc") continue;
           const level = e.system?.details?.level?.value ?? 0;
           if (minLevel != null && level < minLevel) continue;
           if (maxLevel != null && level > maxLevel) continue;
@@ -165,11 +251,19 @@ export function makeFoundryApi() {
           if (requireTrait && !has.includes(requireTrait)) continue;
           if (excludeTraits.some((t) => has.includes(t))) continue;
           if (re && !re.test(e.name)) continue;
-          const size = e.system?.traits?.size?.value ?? 'med';
+          const size = e.system?.traits?.size?.value ?? "med";
           if (!sizeAtLeast(size, minSize)) continue;
           const languages = e.system?.details?.languages?.value ?? [];
           if (speaksLanguage && !languages.length) continue;
-          found.push({ pack: id, id: e._id, name: e.name, level, traits: has, size, languages });
+          found.push({
+            pack: id,
+            id: e._id,
+            name: e.name,
+            level,
+            traits: has,
+            size,
+            languages,
+          });
         }
       }
       return found;
@@ -188,12 +282,18 @@ export function makeFoundryApi() {
      */
     async listCreatureTraits() {
       if (CREATURE_TRAITS_CACHE) return CREATURE_TRAITS_CACHE;
-      const packs = game.packs.filter((p) => p.documentName === 'Actor' && CREATURE_PACK_PATTERN.test(p.collection));
+      const packs = game.packs.filter(
+        (p) =>
+          p.documentName === "Actor" &&
+          CREATURE_PACK_PATTERN.test(p.collection),
+      );
       const traits = new Set();
       for (const pack of packs) {
-        const index = await pack.getIndex({ fields: ['type', 'system.traits.value'] });
+        const index = await pack.getIndex({
+          fields: ["type", "system.traits.value"],
+        });
         for (const e of index) {
-          if (e.type !== 'npc') continue;
+          if (e.type !== "npc") continue;
           for (const t of e.system?.traits?.value ?? []) traits.add(t);
         }
       }
@@ -207,30 +307,59 @@ export function makeFoundryApi() {
      * already know — which is a different thing from summoning a stranger out
      * of a bestiary.
      */
-    async findWorldActors({ types = ['npc'], traits = [], minLevel = null, maxLevel = null,
-                            minSize = null, excludeTraits = [], excludeIds = [],
-                            speaksLanguage = false, withArtOnly = false } = {}) {
+    async findWorldActors({
+      types = ["npc"],
+      traits = [],
+      minLevel = null,
+      maxLevel = null,
+      minSize = null,
+      excludeTraits = [],
+      excludeIds = [],
+      speaksLanguage = false,
+      withArtOnly = false,
+    } = {}) {
       const skip = new Set(excludeIds);
-      const isDefaultArt = (src) => !src || /mystery-man|default-icons|\.svg$/i.test(src);
+      const isDefaultArt = (src) =>
+        !src || /mystery-man|default-icons|\.svg$/i.test(src);
       return game.actors
-        .filter((a) => types.includes(a.type) && !skip.has(a.id) && a.name?.trim())
-        .filter((a) => !traits.length
-          || traits.some((t) => (a.system?.traits?.value ?? []).includes(t)))
-        .filter((a) => !excludeTraits.some((t) => (a.system?.traits?.value ?? []).includes(t)))
+        .filter(
+          (a) => types.includes(a.type) && !skip.has(a.id) && a.name?.trim(),
+        )
+        .filter(
+          (a) =>
+            !traits.length ||
+            traits.some((t) => (a.system?.traits?.value ?? []).includes(t)),
+        )
+        .filter(
+          (a) =>
+            !excludeTraits.some((t) =>
+              (a.system?.traits?.value ?? []).includes(t),
+            ),
+        )
         .filter((a) => {
           const lvl = a.system?.details?.level?.value ?? 0;
-          return (minLevel == null || lvl >= minLevel) && (maxLevel == null || lvl <= maxLevel);
+          return (
+            (minLevel == null || lvl >= minLevel) &&
+            (maxLevel == null || lvl <= maxLevel)
+          );
         })
-        .filter((a) => !withArtOnly || !isDefaultArt(a.prototypeToken?.texture?.src))
+        .filter(
+          (a) => !withArtOnly || !isDefaultArt(a.prototypeToken?.texture?.src),
+        )
         .filter((a) => sizeAtLeast(a.system?.traits?.size?.value, minSize))
-        .filter((a) => !speaksLanguage || (a.system?.details?.languages?.value ?? []).length > 0)
+        .filter(
+          (a) =>
+            !speaksLanguage ||
+            (a.system?.details?.languages?.value ?? []).length > 0,
+        )
         .map((a) => ({
-          id: a.id, name: a.name,
+          id: a.id,
+          name: a.name,
           level: a.system?.details?.level?.value ?? 0,
-          size: a.system?.traits?.size?.value ?? 'med',
+          size: a.system?.traits?.size?.value ?? "med",
           languages: a.system?.details?.languages?.value ?? [],
           folder: a.folder?.name ?? null,
-          hasArt: !isDefaultArt(a.prototypeToken?.texture?.src)
+          hasArt: !isDefaultArt(a.prototypeToken?.texture?.src),
         }));
     },
 
@@ -244,7 +373,10 @@ export function makeFoundryApi() {
       const known = new Set(actor?.system?.details?.languages?.value ?? []);
       return Object.entries(CONFIG.PF2E?.languages ?? {})
         .filter(([slug]) => !known.has(slug))
-        .map(([slug, label]) => ({ value: slug, label: game.i18n.localize(label) }))
+        .map(([slug, label]) => ({
+          value: slug,
+          label: game.i18n.localize(label),
+        }))
         .sort((a, b) => a.label.localeCompare(b.label));
     },
 
@@ -253,16 +385,19 @@ export function makeFoundryApi() {
      * them — needed by anything that wants to modify what someone wields
      * rather than hand them another object.
      */
-    async listGear(actorId, { types = ['weapon', 'armor'] } = {}) {
+    async listGear(actorId, { types = ["weapon", "armor"] } = {}) {
       const actor = getActor(actorId);
       return actor.items
         .filter((i) => types.includes(i.type))
         .map((i) => ({
-          id: i.id, name: i.name, type: i.type,
-          wielded: (i.system?.equipped?.handsHeld ?? 0) > 0
-            || i.system?.equipped?.carryType === 'held'
-            || i.system?.equipped?.inSlot === true,
-          propertyRunes: [...(i.system?.runes?.property ?? [])]
+          id: i.id,
+          name: i.name,
+          type: i.type,
+          wielded:
+            (i.system?.equipped?.handsHeld ?? 0) > 0 ||
+            i.system?.equipped?.carryType === "held" ||
+            i.system?.equipped?.inSlot === true,
+          propertyRunes: [...(i.system?.runes?.property ?? [])],
         }));
     },
 
@@ -273,11 +408,14 @@ export function makeFoundryApi() {
      */
     async ancestrySpeed(name) {
       if (!name) return null;
-      const pack = game.packs.get('pf2e.ancestries');
+      const pack = game.packs.get("pf2e.ancestries");
       if (!pack) return null;
-      const index = await pack.getIndex({ fields: ['type', 'system.speed'] });
-      const hit = [...index].find((e) => e.type === 'ancestry'
-        && e.name.toLowerCase() === String(name).toLowerCase());
+      const index = await pack.getIndex({ fields: ["type", "system.speed"] });
+      const hit = [...index].find(
+        (e) =>
+          e.type === "ancestry" &&
+          e.name.toLowerCase() === String(name).toLowerCase(),
+      );
       return hit?.system?.speed ?? null;
     },
 
@@ -293,26 +431,42 @@ export function makeFoundryApi() {
      * `magical` selects which side of the line: 'only' for the enchanted ones,
      * 'exclude' for mundane wealth, and null for everything.
      */
-    async listItems(actorId, { types = null, magical = null, magicalOnly = false,
-                               includeCoinage = false } = {}) {
+    async listItems(
+      actorId,
+      {
+        types = null,
+        magical = null,
+        magicalOnly = false,
+        includeCoinage = false,
+      } = {},
+    ) {
       const actor = getActor(actorId);
-      const mode = magicalOnly ? 'only' : magical;
-      const isMagical = (i) => (i.system?.traits?.value ?? []).includes('magical')
-        || (i.system?.traits?.rarity ?? 'common') !== 'common';
+      const mode = magicalOnly ? "only" : magical;
+      const isMagical = (i) =>
+        (i.system?.traits?.value ?? []).includes("magical") ||
+        (i.system?.traits?.rarity ?? "common") !== "common";
       // Coins are treasure items in PF2e — "Gold Pieces" sits in the same list
       // as a gemstone. They are excluded by default because coin is handled
       // through the inventory's own coin api, and listing them here would mean
       // taking the same money twice.
-      const isCoinage = (i) => i.isCoinage ?? i.system?.stackGroup === 'coins';
-      return actor.items
-        .filter((i) => (!types || types.includes(i.type)))
-        .filter((i) => includeCoinage || !isCoinage(i))
-        .filter((i) => mode === null
-          || (mode === 'only' ? isMagical(i) : !isMagical(i)))
-        // The module's own flags come along so a card can recognise what an
-        // earlier card left behind.
-        .map((i) => ({ id: i.id, name: i.name, type: i.type,
-                       dommt: i.flags?.['deck-of-many-more-things'] ?? null }));
+      const isCoinage = (i) => i.isCoinage ?? i.system?.stackGroup === "coins";
+      return (
+        actor.items
+          .filter((i) => !types || types.includes(i.type))
+          .filter((i) => includeCoinage || !isCoinage(i))
+          .filter(
+            (i) =>
+              mode === null || (mode === "only" ? isMagical(i) : !isMagical(i)),
+          )
+          // The module's own flags come along so a card can recognise what an
+          // earlier card left behind.
+          .map((i) => ({
+            id: i.id,
+            name: i.name,
+            type: i.type,
+            dommt: i.flags?.["deck-of-many-more-things"] ?? null,
+          }))
+      );
     },
 
     // ---- writes ------------------------------------------------------------
@@ -323,25 +477,28 @@ export function makeFoundryApi() {
 
     async increaseCondition(actorId, condition, value) {
       const actor = getActor(actorId);
-      if (typeof actor.increaseCondition === 'function') {
+      if (typeof actor.increaseCondition === "function") {
         return actor.increaseCondition(condition, { value });
       }
       const cond = game.pf2e?.ConditionManager?.getCondition(condition);
       if (cond) {
         const itemData = cond.toObject();
         if (value != null) itemData.system.value = { isValued: true, value };
-        return actor.createEmbeddedDocuments('Item', [itemData]);
+        return actor.createEmbeddedDocuments("Item", [itemData]);
       }
-      console.warn(`Cannot apply condition ${condition} to ${actorId} — PF2e ConditionManager unavailable`);
+      console.warn(
+        `Cannot apply condition ${condition} to ${actorId} — PF2e ConditionManager unavailable`,
+      );
     },
 
     async createEffect(actorId, effectData) {
-      return getActor(actorId).createEmbeddedDocuments('Item', [effectData]);
+      return getActor(actorId).createEmbeddedDocuments("Item", [effectData]);
     },
 
     async addCoins(actorId, coins) {
       const actor = getActor(actorId);
-      if (typeof actor.inventory?.addCoins === 'function') return actor.inventory.addCoins(coins);
+      if (typeof actor.inventory?.addCoins === "function")
+        return actor.inventory.addCoins(coins);
       throw new Error(`Actor ${actorId} has no inventory to add coins to`);
     },
 
@@ -361,7 +518,7 @@ export function makeFoundryApi() {
         sources.push(updates ? foundry.utils.mergeObject(obj, updates) : obj);
       }
       if (!sources.length) return null;
-      return actor.createEmbeddedDocuments('Item', sources);
+      return actor.createEmbeddedDocuments("Item", sources);
     },
 
     /**
@@ -377,20 +534,32 @@ export function makeFoundryApi() {
      * ahead of time cannot know an id for a document that does not exist yet.
      * The module keeps a single entry per actor and adds to it.
      */
-    async grantInnateSpells(actorId, entries, { tradition = 'primal', ability = 'cha',
-                                                uses = null, entryName = 'Deck of Many More Things' } = {}) {
+    async grantInnateSpells(
+      actorId,
+      entries,
+      {
+        tradition = "primal",
+        ability = "cha",
+        uses = null,
+        entryName = "Deck of Many More Things",
+      } = {},
+    ) {
       const actor = getActor(actorId);
-      let entry = actor.itemTypes.spellcastingEntry?.find((e) => e.name === entryName);
+      let entry = actor.itemTypes.spellcastingEntry?.find(
+        (e) => e.name === entryName,
+      );
       if (!entry) {
-        [entry] = await actor.createEmbeddedDocuments('Item', [{
-          name: entryName,
-          type: 'spellcastingEntry',
-          system: {
-            prepared: { value: 'innate' },
-            tradition: { value: tradition },
-            ability: { value: ability }
-          }
-        }]);
+        [entry] = await actor.createEmbeddedDocuments("Item", [
+          {
+            name: entryName,
+            type: "spellcastingEntry",
+            system: {
+              prepared: { value: "innate" },
+              tradition: { value: tradition },
+              ability: { value: ability },
+            },
+          },
+        ]);
       }
 
       const sources = [];
@@ -401,12 +570,12 @@ export function makeFoundryApi() {
         obj.system.location = {
           value: entry.id,
           // A cantrip is at-will; anything else carries a daily allowance.
-          ...(uses ? { uses: { value: uses, max: uses } } : {})
+          ...(uses ? { uses: { value: uses, max: uses } } : {}),
         };
         sources.push(obj);
       }
       if (!sources.length) return null;
-      return actor.createEmbeddedDocuments('Item', sources);
+      return actor.createEmbeddedDocuments("Item", sources);
     },
 
     /**
@@ -423,16 +592,16 @@ export function makeFoundryApi() {
       const runes = item.system?.runes ?? {};
       const current = runes.property ?? [];
       if (current.includes(key)) return null;
-      const updates = { 'system.runes.property': [...current, key] };
+      const updates = { "system.runes.property": [...current, key] };
       // A property rune needs a potency rune to sit on. Without one PF2e drops
       // the property array entirely, and the etching silently does nothing.
-      if (!(runes.potency > 0)) updates['system.runes.potency'] = 1;
+      if (!(runes.potency > 0)) updates["system.runes.potency"] = 1;
       return item.update(updates);
     },
 
     async removeCoins(actorId, coins) {
       const actor = getActor(actorId);
-      if (typeof actor.inventory?.removeCoins === 'function') {
+      if (typeof actor.inventory?.removeCoins === "function") {
         return actor.inventory.removeCoins(coins);
       }
       throw new Error(`Actor ${actorId} has no inventory to take coins from`);
@@ -442,7 +611,7 @@ export function makeFoundryApi() {
       const actor = getActor(actorId);
       const present = itemIds.filter((id) => actor.items.get(id));
       if (!present.length) return null;
-      return actor.deleteEmbeddedDocuments('Item', present);
+      return actor.deleteEmbeddedDocuments("Item", present);
     },
 
     /**
@@ -455,25 +624,40 @@ export function makeFoundryApi() {
      * from the area's own center and is clamped to its bounds via
      * freeSpotInRect, rather than freeSpot's unbounded ring search.
      */
-    async spawnCreatures(entries, { nearActorId = null, disposition = -1, img = null,
-                                    imgFallback = null, place = 'beside', hidden = false,
-                                    originArea = null, extraFlags = null } = {}) {
+    async spawnCreatures(
+      entries,
+      {
+        nearActorId = null,
+        disposition = -1,
+        img = null,
+        imgFallback = null,
+        place = "beside",
+        hidden = false,
+        originArea = null,
+        extraFlags = null,
+      } = {},
+    ) {
       const scene = canvas?.scene;
-      if (!scene) throw new Error('No active scene to place creatures on');
+      if (!scene) throw new Error("No active scene to place creatures on");
       const grid = scene.grid?.size ?? 100;
-      const focus = (!originArea && nearActorId)
-        ? canvas.tokens?.placeables?.find((t) => t.actor?.id === nearActorId)
+      const focus =
+        !originArea && nearActorId
+          ? canvas.tokens?.placeables?.find((t) => t.actor?.id === nearActorId)
+          : null;
+      const areaRectGrid = originArea
+        ? {
+            gx: Math.round(originArea.x / grid),
+            gy: Math.round(originArea.y / grid),
+            gw: Math.round(originArea.width / grid),
+            gh: Math.round(originArea.height / grid),
+          }
         : null;
-      const areaRectGrid = originArea ? {
-        gx: Math.round(originArea.x / grid), gy: Math.round(originArea.y / grid),
-        gw: Math.round(originArea.width / grid), gh: Math.round(originArea.height / grid)
-      } : null;
       const originX = originArea
         ? originArea.x + originArea.width / 2
-        : focus?.document?.x ?? (scene.width ?? grid * 10) / 2;
+        : (focus?.document?.x ?? (scene.width ?? grid * 10) / 2);
       const originY = originArea
         ? originArea.y + originArea.height / 2
-        : focus?.document?.y ?? (scene.height ?? grid * 10) / 2;
+        : (focus?.document?.y ?? (scene.height ?? grid * 10) / 2);
 
       // Everything already on the scene, in squares. Creatures placed by this
       // call are added as they go, so a card summoning several does not stack
@@ -484,7 +668,8 @@ export function makeFoundryApi() {
       // over anything set on the token — a summoned ally created straight from
       // a bestiary entry came out hostile, because every bestiary NPC is
       // `opposition`. So the alliance is set on the actor first.
-      const alliance = disposition > 0 ? 'party' : disposition < 0 ? 'opposition' : null;
+      const alliance =
+        disposition > 0 ? "party" : disposition < 0 ? "opposition" : null;
 
       const created = [];
       for (const [i, entry] of entries.entries()) {
@@ -500,8 +685,9 @@ export function makeFoundryApi() {
         // fills in when it has nothing — which is what a card wants when the
         // creature is drawn at random and could be anything. Overriding there
         // would put one picture on every possible answer.
-        const existing = doc.prototypeToken?.texture?.src ?? '';
-        const bare = !existing || /mystery-man|default-icons|\.svg$/i.test(existing);
+        const existing = doc.prototypeToken?.texture?.src ?? "";
+        const bare =
+          !existing || /mystery-man|default-icons|\.svg$/i.test(existing);
         // A per-entry img/imgFallback overrides the call-level default for
         // just that one creature — needed because a single `foes` call can
         // spawn several different creatures needing different art. Entries
@@ -510,13 +696,13 @@ export function makeFoundryApi() {
         const entryImgFallback = entry.imgFallback ?? imgFallback;
         const art = entryImg ?? (bare ? entryImgFallback : null);
         const overrides = {
-          'ownership.default': 0,
-          'system.details.alliance': alliance,
-          'prototypeToken.disposition': disposition,
-          ...(art ? { img: art, 'prototypeToken.texture.src': art } : {})
+          "ownership.default": 0,
+          "system.details.alliance": alliance,
+          "prototypeToken.disposition": disposition,
+          ...(art ? { img: art, "prototypeToken.texture.src": art } : {}),
         };
         const [actor] = await Actor.createDocuments([
-          foundry.utils.mergeObject(doc.toObject(), overrides)
+          foundry.utils.mergeObject(doc.toObject(), overrides),
         ]);
         // Most summons stand next to the character. Ooze lands *on* them: the
         // card is explicit that the thing appears in your space, and a cube
@@ -526,9 +712,11 @@ export function makeFoundryApi() {
         const tw = Math.max(1, Math.round(actor.prototypeToken?.width ?? 1));
         const th = Math.max(1, Math.round(actor.prototypeToken?.height ?? 1));
         let spot;
-        if (place === 'on') {
-          spot = { x: originX - grid * Math.floor((tw - 1) / 2),
-                   y: originY - grid * Math.floor((th - 1) / 2) };
+        if (place === "on") {
+          spot = {
+            x: originX - grid * Math.floor((tw - 1) / 2),
+            y: originY - grid * Math.floor((th - 1) / 2),
+          };
         } else {
           // The first empty place big enough, searched outward. Landing one
           // square east regardless is how a witchwarg and an avatar of death
@@ -537,20 +725,27 @@ export function makeFoundryApi() {
             ? freeSpotInRect({ occupied, rect: areaRectGrid, gw: tw, gh: th })
             : freeSpot({
                 occupied,
-                gx: Math.round(originX / grid), gy: Math.round(originY / grid),
-                gw: tw, gh: th
+                gx: Math.round(originX / grid),
+                gy: Math.round(originY / grid),
+                gw: tw,
+                gh: th,
               });
           spot = free
             ? { x: free.gx * grid, y: free.gy * grid }
             : { x: originX + grid * (i + 1), y: originY };
         }
         occupied.push(footprint({ ...spot, width: tw, height: th }, grid));
-        const td = await actor.getTokenDocument({ ...spot, disposition, hidden });
+        const td = await actor.getTokenDocument({
+          ...spot,
+          disposition,
+          hidden,
+        });
         const obj = td.toObject();
         obj.disposition = disposition;
         obj.hidden = hidden;
-        if (extraFlags) obj.flags = foundry.utils.mergeObject(obj.flags ?? {}, extraFlags);
-        await scene.createEmbeddedDocuments('Token', [obj]);
+        if (extraFlags)
+          obj.flags = foundry.utils.mergeObject(obj.flags ?? {}, extraFlags);
+        await scene.createEmbeddedDocuments("Token", [obj]);
         created.push(actor.name);
       }
       return created;
@@ -561,9 +756,12 @@ export function makeFoundryApi() {
      * Shares the placement logic with spawnCreatures so a built summons lands
      * beside the character the same way a found one does.
      */
-    async spawnBuiltCreature(data, { nearActorId = null, disposition = 1 } = {}) {
+    async spawnBuiltCreature(
+      data,
+      { nearActorId = null, disposition = 1 } = {},
+    ) {
       const scene = canvas?.scene;
-      if (!scene) throw new Error('No active scene to place a creature on');
+      if (!scene) throw new Error("No active scene to place a creature on");
       const grid = scene.grid?.size ?? 100;
       const focus = nearActorId
         ? canvas.tokens?.placeables?.find((t) => t.actor?.id === nearActorId)
@@ -571,25 +769,112 @@ export function makeFoundryApi() {
       const originX = focus?.document?.x ?? (scene.width ?? grid * 10) / 2;
       const originY = focus?.document?.y ?? (scene.height ?? grid * 10) / 2;
 
-      const [actor] = await Actor.createDocuments([foundry.utils.mergeObject(data, {
-        'system.details.alliance': disposition > 0 ? 'party' : 'opposition',
-        'prototypeToken.disposition': disposition
-      })]);
+      const [actor] = await Actor.createDocuments([
+        foundry.utils.mergeObject(data, {
+          "system.details.alliance": disposition > 0 ? "party" : "opposition",
+          "prototypeToken.disposition": disposition,
+        }),
+      ]);
       // The same search a found creature gets. Skull's avatar and Monstrosity's
       // beast came out of two separate draws onto the same square.
       const gw = Math.max(1, Math.round(actor.prototypeToken?.width ?? 1));
       const gh = Math.max(1, Math.round(actor.prototypeToken?.height ?? 1));
       const free = freeSpot({
         occupied: scene.tokens.map((t) => footprint(t, grid)),
-        gx: Math.round(originX / grid), gy: Math.round(originY / grid), gw, gh
+        gx: Math.round(originX / grid),
+        gy: Math.round(originY / grid),
+        gw,
+        gh,
       });
       const x = free ? free.gx * grid : originX + grid;
       const y = free ? free.gy * grid : originY;
       const td = await actor.getTokenDocument({ x, y, disposition });
       const obj = td.toObject();
       obj.disposition = disposition;
-      await scene.createEmbeddedDocuments('Token', [obj]);
+      await scene.createEmbeddedDocuments("Token", [obj]);
       return actor.name;
+    },
+
+    /**
+     * Place destructible cover items (#96) — crates, barrels, rubble, each a
+     * real PF2e hazard actor (cover-items.mjs) with genuine HP/hardness, so
+     * they're attackable and destroyable through Foundry's normal
+     * target-and-strike flow with no special-casing needed here. `typeIds`
+     * is a list of cover-items.mjs type ids (from `chooseCoverItemTypes`).
+     *
+     * Placement is bounded to `originArea` (the encounter's own room, same
+     * shape spawnCreatures' own originArea takes), at a random cell within
+     * it rather than always searching outward from center the way
+     * freeSpotInRect does for creatures — cover items shouldn't cluster in
+     * the same spot in every room. A handful of random attempts, skipping an
+     * item entirely rather than overlapping something already there
+     * (another cover item, a spawned creature) — a room with too little
+     * free space just gets fewer than `typeIds.length`, not one stacked on
+     * top of another.
+     *
+     * `extraFlags` merges onto each token the same way spawnCreatures'
+     * own does — the caller passes the encounter's own `encounterId`/
+     * `dungeonSlot` flags here so resolveCombat (dungeon-combat.mjs) can
+     * find and clean these up alongside the encounter's monsters when the
+     * fight ends, instead of leaving them piled up in the world forever
+     * the way #98 found defeated monsters doing before that flag-scoping
+     * existed at all.
+     */
+    async spawnCoverItems(
+      typeIds,
+      { originArea = null, seed = "", extraFlags = null } = {},
+    ) {
+      const scene = canvas?.scene;
+      if (!scene || !originArea || !typeIds.length) return [];
+      const grid = scene.grid?.size ?? 100;
+      const rect = {
+        gx: Math.round(originArea.x / grid),
+        gy: Math.round(originArea.y / grid),
+        gw: Math.max(1, Math.round(originArea.width / grid)),
+        gh: Math.max(1, Math.round(originArea.height / grid)),
+      };
+      const occupied = scene.tokens.map((t) => footprint(t, grid));
+      const rand = splitmix32(seedFromString(`${seed}-cover-placement`));
+
+      const created = [];
+      for (const typeId of typeIds) {
+        let spot = null;
+        for (let attempt = 0; attempt < 12 && !spot; attempt += 1) {
+          const candidate = {
+            gx: rect.gx + Math.floor(rand() * rect.gw),
+            gy: rect.gy + Math.floor(rand() * rect.gh),
+            gw: 1,
+            gh: 1,
+          };
+          if (!occupied.some((o) => overlaps(candidate, o))) spot = candidate;
+        }
+        if (!spot) continue;
+
+        const [actor] = await Actor.createDocuments([
+          buildCoverItemActorData(typeId),
+        ]);
+        occupied.push(spot);
+        const td = await actor.getTokenDocument({
+          x: spot.gx * grid,
+          y: spot.gy * grid,
+          disposition: 0,
+        });
+        const obj = td.toObject();
+        obj.disposition = 0;
+        // buildCoverItemActorData's own coverItem flag lives on the Actor,
+        // which a Token built from it does not automatically inherit (flags
+        // are a separate namespace per document) — dungeon-combat.mjs's
+        // activeCoverCells reads it straight off the Token, so it needs its
+        // own copy here, same as extraFlags below.
+        const coverFlags = { [MODULE_ID]: { coverItem: typeId } };
+        obj.flags = foundry.utils.mergeObject(
+          foundry.utils.mergeObject(obj.flags ?? {}, coverFlags),
+          extraFlags ?? {},
+        );
+        await scene.createEmbeddedDocuments("Token", [obj]);
+        created.push(actor.name);
+      }
+      return created;
     },
 
     /**
@@ -604,9 +889,14 @@ export function makeFoundryApi() {
       const fromParty = partyLevelFrom(party?.members ?? null);
       if (fromParty != null) return fromParty;
       // No party actor: the characters a player actually owns.
-      const owned = (game.actors ?? []).filter((a) => a.type === 'character'
-        && Object.entries(a.ownership ?? {}).some(([id, lvl]) =>
-          lvl === 3 && game.users?.get(id) && !game.users.get(id).isGM));
+      const owned = (game.actors ?? []).filter(
+        (a) =>
+          a.type === "character" &&
+          Object.entries(a.ownership ?? {}).some(
+            ([id, lvl]) =>
+              lvl === 3 && game.users?.get(id) && !game.users.get(id).isGM,
+          ),
+      );
       return partyLevelFrom(owned);
     },
 
@@ -614,8 +904,9 @@ export function makeFoundryApi() {
       // whisperGM lets a handler tell the GM something the players must not
       // read — Rogue's new enemy is secret until someone reveals them.
       const { whisperGM, ...rest } = payload;
-      if (whisperGM) rest.whisper = ChatMessage.getWhisperRecipients('GM').map((u) => u.id);
+      if (whisperGM)
+        rest.whisper = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
       return ChatMessage.create(rest);
-    }
+    },
   };
 }
