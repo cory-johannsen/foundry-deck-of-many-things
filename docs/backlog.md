@@ -13,7 +13,7 @@ Migrated on 2026-09-20 (issue number — item — state at migration):
 - [#96](https://github.com/cory-johannsen/foundry-deck-of-many-things/issues/96) — ITEM-15: Randomly place destructible cover items in rooms — `backlog`
 - [#97](https://github.com/cory-johannsen/foundry-deck-of-many-things/issues/97) — ITEM-3: Expand trap/puzzle generation with realistic content — `backlog`
 
-Issues use `state:backlog` / `state:spec` / `state:planned` / `state:in-progress` labels mirroring this file's old state field.
+Issues use `state:backlog` / `state:spec` / `state:planned` / `state:in-progress` labels mirroring this file's old state field. See `.claude/skills/backlog/SKILL.md` (project-scoped, overrides the global `backlog` skill in this repo) for the full workflow — adding items, changing state, checking priority, and closing.
 
 ## Done
 
