@@ -25,6 +25,7 @@ import {
   buildCandidateList,
   applyCandidateToTurnState,
   buildDecisionContext,
+  parseConditionsByOutcome,
 } from "./agent-candidates.mjs";
 import { findPath, blockedEdgesFromWalls } from "./pathfinding.mjs";
 import { coverBlocksLineOfFire, COVER_EFFECT_DATA } from "./cover-items.mjs";
@@ -415,6 +416,31 @@ function isAttackSpellInScope(spell) {
   if (system.defense?.save != null) return false;
   if (!Object.keys(system.damage ?? {}).length) return false;
   return /^[123]$/.test(system.time?.value ?? "");
+}
+
+/**
+ * True for a spell squarely inside #121's scope: single-target, save-based,
+ * no damage component (a pure debuff/condition spell — #118 already covers
+ * save-based *damage* spells), a fixed 1/2/3 action cost, and — the part
+ * that actually determines whether this module can do anything useful with
+ * it — at least one outcome in its raw description text tags a condition
+ * via `parseConditionsByOutcome`'s `@UUID[...]{...}` syntax. A spell that's
+ * otherwise in scope but has zero parseable condition tags (a narrative-only
+ * effect like "the target must commit to an action") is deliberately
+ * excluded rather than offered as a cast-with-no-automated-effect
+ * candidate — confirmed live this scope filter would only pick up a
+ * meaningful subset of narratively-varied debuff spells, by design.
+ */
+function isDebuffSpellInScope(spell) {
+  const system = spell.system ?? {};
+  if (system.area != null) return false;
+  if ((system.target?.value ?? "") !== "1 creature") return false;
+  if (!system.defense?.save?.statistic) return false;
+  if (Object.keys(system.damage ?? {}).length) return false;
+  if (!/^[123]$/.test(system.time?.value ?? "")) return false;
+  return /@UUID\[Compendium\.pf2e\.conditionitems\.Item\.[^\]]+\]\{[^}]+\}/.test(
+    system.description?.value ?? "",
+  );
 }
 
 /**
@@ -948,6 +974,31 @@ export function getPendingAgentTurn(combat) {
     )
     .filter(Boolean);
 
+  const readyDebuffSpells = (combatant.actor?.spellcasting?.contents ?? [])
+    .flatMap((entry) =>
+      (entry.spells?.contents ?? [])
+        .filter(isDebuffSpellInScope)
+        .map((spell) => {
+          const rangeSquares = spellRangeSquares(spell, gridDistanceFt);
+          if (rangeSquares == null) return null;
+          const conditionsByOutcome = parseConditionsByOutcome(
+            spell.system.description?.value ?? "",
+          );
+          if (!Object.keys(conditionsByOutcome).length) return null;
+          return {
+            id: spell.id,
+            slug: spell.slug,
+            label: spell.name,
+            cost: Number(spell.system.time.value),
+            rangeSquares,
+            save: spell.system.defense.save.statistic,
+            entryId: entry.id,
+            conditionsByOutcome,
+          };
+        }),
+    )
+    .filter(Boolean);
+
   const self = {
     name: combatant.name,
     hp: combatant.actor?.system?.attributes?.hp?.value ?? null,
@@ -962,6 +1013,7 @@ export function getPendingAgentTurn(combat) {
     readySpells,
     readyAreaSpells,
     readyAttackSpells,
+    readyDebuffSpells,
     turnState,
     hazard: null,
     hasRangedOrReach,
@@ -1262,6 +1314,59 @@ async function castAttackSpellAndApplyRoll(combatant, target, spellId, entryId) 
 }
 
 /**
+ * Casts `spellId` (from spellcasting entry `entryId`) at `target`, rolls its
+ * own save, and applies whichever conditions `conditionsByOutcome` maps to
+ * the outcome that actually occurred — `getPendingAgentTurn` already parsed
+ * this once per spell via `parseConditionsByOutcome`, so this never touches
+ * the spell's description text itself. An outcome absent from the map
+ * (parsed with nothing tagged for that tier) applies nothing — a safe
+ * no-op, not a missed error. No damage-dialog suppression needed: #121's
+ * spells carry no damage component by definition.
+ */
+async function castDebuffSpellAndApplyCondition(
+  combatant,
+  target,
+  spellId,
+  entryId,
+  save,
+  conditionsByOutcome,
+) {
+  const entry = combatant.actor?.spellcasting?.contents?.find(
+    (e) => e.id === entryId,
+  );
+  const spell = entry?.spells?.contents?.find((s) => s.id === spellId);
+  if (!entry || !spell) return null;
+
+  const saveStat = target.actor?.saves?.[save];
+  if (!saveStat) return null;
+
+  const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
+  await game.user.update({
+    "flags.pf2e.settings.showCheckDialogs": false,
+  });
+  try {
+    const targetRef = { document: target.token };
+    await entry.cast(spell, { target: targetRef, createMessage: true });
+    const dc = entry.statistic?.dc?.value ?? 10;
+    await saveStat.roll({ dc: { value: dc }, createMessage: true });
+    const outcome =
+      game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
+    const conditions = conditionsByOutcome?.[outcome] ?? [];
+    for (const { slug, value } of conditions) {
+      await target.actor.increaseCondition(
+        slug,
+        value != null ? { value } : undefined,
+      );
+    }
+    return outcome;
+  } finally {
+    await game.user.update({
+      "flags.pf2e.settings.showCheckDialogs": prevShowCheck,
+    });
+  }
+}
+
+/**
  * Executes exactly one chosen candidate for `combatantId`'s current turn in
  * `combat`, updates the per-turn state, and advances the turn once actions
  * run out or `endTurn` was chosen. Returns the pending-turn shape for the
@@ -1329,6 +1434,19 @@ export async function applyAgentDecision(combat, combatantId, candidateId) {
         target,
         candidate.spellId,
         candidate.entryId,
+      );
+  } else if (candidate.type === "castDebuff") {
+    const target = combatantOpponents(combat, combatant).find(
+      (c) => c.id === candidate.targetId,
+    );
+    if (target)
+      await castDebuffSpellAndApplyCondition(
+        combatant,
+        target,
+        candidate.spellId,
+        candidate.entryId,
+        candidate.save,
+        candidate.conditionsByOutcome,
       );
   }
 
