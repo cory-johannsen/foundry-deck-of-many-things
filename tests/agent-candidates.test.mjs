@@ -2,7 +2,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   initAgentTurnState, buildMovementCandidates, buildStrikeCandidates, buildSpellCandidates,
-  buildAreaSpellCandidates, buildAttackSpellCandidates, endTurnCandidate,
+  buildAreaSpellCandidates, buildAttackSpellCandidates, buildDebuffSpellCandidates,
+  parseConditionsByOutcome, endTurnCandidate,
   buildCandidateList, applyCandidateToTurnState, buildDecisionContext,
   MAX_ACTIONS_PER_TURN, AGENT_MELEE_REACH_SQUARES
 } from '../scripts/agent-candidates.mjs';
@@ -185,6 +186,78 @@ describe('buildAttackSpellCandidates', () => {
   });
 });
 
+describe('parseConditionsByOutcome', () => {
+  it('extracts a directly-tagged condition and its value per outcome (Fear-shaped)', () => {
+    const description = `
+      <p><strong>Critical Success</strong> The target is unaffected.</p>
+      <p><strong>Success</strong> The target is @UUID[Compendium.pf2e.conditionitems.Item.TBSHQspnbcqxsmjL]{Frightened 1}.</p>
+      <p><strong>Failure</strong> The target is @UUID[Compendium.pf2e.conditionitems.Item.TBSHQspnbcqxsmjL]{Frightened 2}.</p>
+      <p><strong>Critical Failure</strong> The target is @UUID[Compendium.pf2e.conditionitems.Item.TBSHQspnbcqxsmjL]{Frightened 3} and @UUID[Compendium.pf2e.conditionitems.Item.sDPxOjQ9kx2RZE8D]{Fleeing} for 1 round.</p>
+    `;
+    expect(parseConditionsByOutcome(description)).toEqual({
+      success: [{ slug: 'frightened', value: 1 }],
+      failure: [{ slug: 'frightened', value: 2 }],
+      criticalFailure: [{ slug: 'frightened', value: 3 }, { slug: 'fleeing', value: null }]
+    });
+  });
+
+  it('omits an outcome with no tag entirely, even if it mentions a condition in plain text', () => {
+    const description = `
+      <p><strong>Success</strong> The target is @UUID[Compendium.pf2e.conditionitems.Item.i3OJZU2nk64Df3xm]{Clumsy 1} and takes a penalty.</p>
+      <p><strong>Failure</strong> The target is clumsy 3 and takes a bigger penalty.</p>
+    `;
+    expect(parseConditionsByOutcome(description)).toEqual({
+      success: [{ slug: 'clumsy', value: 1 }]
+    });
+  });
+
+  it('returns an empty object for a description with no condition tags at all', () => {
+    const description = '<p><strong>Success</strong> The creature is pushed 5 feet away from you.</p>';
+    expect(parseConditionsByOutcome(description)).toEqual({});
+  });
+
+  it('ignores non-outcome headings like Heightened', () => {
+    const description = `
+      <p><strong>Failure</strong> The target is @UUID[Compendium.pf2e.conditionitems.Item.TBSHQspnbcqxsmjL]{Frightened 2}.</p>
+      <p><strong>Heightened (3rd)</strong> You can target up to five creatures.</p>
+    `;
+    expect(parseConditionsByOutcome(description)).toEqual({
+      failure: [{ slug: 'frightened', value: 2 }]
+    });
+  });
+});
+
+describe('buildDebuffSpellCandidates', () => {
+  const fear = {
+    id: 'sp5', slug: 'fear', label: 'Fear', cost: 2, rangeSquares: 6, save: 'will', entryId: 'entry1',
+    conditionsByOutcome: { failure: [{ slug: 'frightened', value: 2 }] }
+  };
+  const opponentInRange = { id: 'opp1', name: 'Fighter', distanceSquares: 5 };
+  const opponentOutOfRange = { id: 'opp2', name: 'Cleric', distanceSquares: 10 };
+
+  it('offers a castDebuff against every opponent within range when enough actions remain', () => {
+    const candidates = buildDebuffSpellCandidates({ readyDebuffSpells: [fear], opponents: [opponentInRange, opponentOutOfRange], actionsRemaining: 3 });
+    expect(candidates).toEqual([
+      {
+        id: 'castDebuff:fear:opp1', type: 'castDebuff', spellId: 'sp5', entryId: 'entry1',
+        targetId: 'opp1', cost: 2, save: 'will',
+        conditionsByOutcome: { failure: [{ slug: 'frightened', value: 2 }] },
+        summary: 'Fear vs Fighter'
+      }
+    ]);
+  });
+
+  it('omits a spell whose cost exceeds the actions remaining', () => {
+    const candidates = buildDebuffSpellCandidates({ readyDebuffSpells: [fear], opponents: [opponentInRange], actionsRemaining: 1 });
+    expect(candidates).toEqual([]);
+  });
+
+  it('omits an opponent outside the spell\'s range', () => {
+    const candidates = buildDebuffSpellCandidates({ readyDebuffSpells: [fear], opponents: [opponentOutOfRange], actionsRemaining: 3 });
+    expect(candidates).toEqual([]);
+  });
+});
+
 describe('endTurnCandidate', () => {
   it('is always the same zero-cost candidate', () => {
     expect(endTurnCandidate()).toEqual({ id: 'endTurn', type: 'endTurn', cost: 0, summary: 'End turn' });
@@ -236,6 +309,16 @@ describe('buildCandidateList', () => {
     const turnState = { actionsRemaining: 3, mapIncrement: 0 };
     const candidates = buildCandidateList({ opponents: [opponent], readyActions: [claw], readyAttackSpells: [rayOfFrost], turnState, hazard: null, hasRangedOrReach: false });
     expect(candidates.map((c) => c.id)).toEqual(['strike:claw:opp1', 'castAttack:ray-of-frost:opp1', 'endTurn']);
+  });
+
+  it('includes an affordable debuff spell candidate alongside strikes', () => {
+    const fear = {
+      id: 'sp5', slug: 'fear', label: 'Fear', cost: 2, rangeSquares: 6, save: 'will', entryId: 'entry1',
+      conditionsByOutcome: { failure: [{ slug: 'frightened', value: 2 }] }
+    };
+    const turnState = { actionsRemaining: 3, mapIncrement: 0 };
+    const candidates = buildCandidateList({ opponents: [opponent], readyActions: [claw], readyDebuffSpells: [fear], turnState, hazard: null, hasRangedOrReach: false });
+    expect(candidates.map((c) => c.id)).toEqual(['strike:claw:opp1', 'castDebuff:fear:opp1', 'endTurn']);
   });
 });
 

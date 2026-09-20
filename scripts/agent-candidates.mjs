@@ -152,13 +152,79 @@ export function buildAttackSpellCandidates({ readyAttackSpells, opponents, actio
   return candidates;
 }
 
+/**
+ * A spell's outcome→conditions map, parsed from the *raw* description HTML
+ * PF2e stores on the item (`spell.system.description.value`), which uses
+ * Foundry's `@UUID[Compendium.pf2e.conditionitems.Item.<id>]{<Label> <N>}`
+ * enricher syntax to reference a condition inline — confirmed live this is
+ * present for many but not all debuff spells, and even within one spell not
+ * every outcome tier necessarily tags its condition directly (some restate
+ * "as failure, but..." in plain text instead). Each outcome paragraph is
+ * parsed independently: an outcome with no tag simply gets no entry (a safe
+ * no-op at cast time, not a wrong answer) — cross-tier "as X, but also Y"
+ * inheritance is not resolved. A condition mention with a trailing number
+ * ("Frightened 2") becomes `{slug: 'frightened', value: 2}`; one without
+ * ("Fleeing") becomes `{slug: 'fleeing', value: null}`.
+ */
+const OUTCOME_HEADINGS = {
+  'Critical Success': 'criticalSuccess',
+  'Success': 'success',
+  'Failure': 'failure',
+  'Critical Failure': 'criticalFailure'
+};
+
+export function parseConditionsByOutcome(descriptionHtml) {
+  const byOutcome = {};
+  for (const paragraph of descriptionHtml.matchAll(/<strong>([^<]+)<\/strong>([\s\S]*?)<\/p>/g)) {
+    const outcome = OUTCOME_HEADINGS[paragraph[1].trim()];
+    if (!outcome) continue;
+    const conditions = Array.from(
+      paragraph[2].matchAll(/@UUID\[Compendium\.pf2e\.conditionitems\.Item\.[^\]]+\]\{([^}]+)\}/g)
+    ).map((tag) => {
+      const label = tag[1].trim();
+      const withValue = /^(.+?)\s+(\d+)$/.exec(label);
+      const name = withValue ? withValue[1] : label;
+      const value = withValue ? Number(withValue[2]) : null;
+      const slug = name.toLowerCase().replace(/[^a-z]+/g, '-').replace(/(^-|-$)/g, '');
+      return { slug, value };
+    });
+    if (conditions.length) byOutcome[outcome] = conditions;
+  }
+  return byOutcome;
+}
+
+/**
+ * One candidate per ready single-target, save-based debuff/condition spell
+ * x each opponent within range — same shape as buildSpellCandidates, with
+ * `save` (which statistic the target rolls) but no `basic` (there's no
+ * damage to halve) and `conditionsByOutcome` carried through so
+ * dungeon-combat.mjs's castDebuffSpellAndApplyCondition can apply whichever
+ * conditions match the save's actual outcome without re-parsing anything.
+ */
+export function buildDebuffSpellCandidates({ readyDebuffSpells, opponents, actionsRemaining }) {
+  const candidates = [];
+  for (const spell of readyDebuffSpells) {
+    if (spell.cost > actionsRemaining) continue;
+    for (const opponent of opponents) {
+      if (opponent.distanceSquares > spell.rangeSquares) continue;
+      candidates.push({
+        id: `castDebuff:${spell.slug}:${opponent.id}`, type: 'castDebuff',
+        spellId: spell.id, entryId: spell.entryId, targetId: opponent.id, cost: spell.cost,
+        save: spell.save, conditionsByOutcome: spell.conditionsByOutcome,
+        summary: `${spell.label} vs ${opponent.name}`
+      });
+    }
+  }
+  return candidates;
+}
+
 /** Always available — lets the agent stop spending actions early. */
 export function endTurnCandidate() {
   return { id: 'endTurn', type: 'endTurn', cost: 0, summary: 'End turn' };
 }
 
 /** Full candidate list for one decision iteration. */
-export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], readyAttackSpells = [], turnState, hazard = null, hasRangedOrReach = false }) {
+export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], readyAttackSpells = [], readyDebuffSpells = [], turnState, hazard = null, hasRangedOrReach = false }) {
   if (turnState.actionsRemaining <= 0) return [endTurnCandidate()];
   return [
     ...buildMovementCandidates({ opponents, hazard, hasRangedOrReach }),
@@ -166,6 +232,7 @@ export function buildCandidateList({ opponents, readyActions, readySpells = [], 
     ...buildSpellCandidates({ readySpells, opponents, actionsRemaining: turnState.actionsRemaining }),
     ...buildAreaSpellCandidates({ readyAreaSpells, actionsRemaining: turnState.actionsRemaining }),
     ...buildAttackSpellCandidates({ readyAttackSpells, opponents, actionsRemaining: turnState.actionsRemaining }),
+    ...buildDebuffSpellCandidates({ readyDebuffSpells, opponents, actionsRemaining: turnState.actionsRemaining }),
     endTurnCandidate()
   ];
 }
