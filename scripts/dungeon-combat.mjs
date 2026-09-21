@@ -18,7 +18,6 @@ import { makeFoundryApi } from "./foundry-api.mjs";
 import {
   totalCombatXp,
   xpPerSurvivor,
-  lootGpForXp,
 } from "./combat-rewards.mjs";
 import {
   initAgentTurnState,

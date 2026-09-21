@@ -12,12 +12,3 @@ export function totalCombatXp(defeatedHostileLevels, partyLevel) {
 export function xpPerSurvivor(totalXp, partySize) {
   return partySize > 0 ? Math.floor(totalXp / partySize) : 0;
 }
-
-// Placeholder heuristic, not a real treasure table — see ITEM-6's Spec
-// non-goals in docs/backlog.md. Loot roughly scales with the XP just earned;
-// nothing fancier than that until a real treasure-table pass exists.
-export const LOOT_GP_PER_XP = 1;
-
-export function lootGpForXp(totalXp) {
-  return totalXp * LOOT_GP_PER_XP;
-}
