@@ -395,13 +395,41 @@ export function buildChainSpellCandidates({ readyChainSpells, opponents, actions
   return candidates;
 }
 
+/**
+ * One candidate per ready heal spell x each injured ally within range —
+ * same shape as buildSpellCandidates (#118's single-target spells), but
+ * targeting `allies` instead of `opponents` and never offering a candidate
+ * for an ally already at full HP (healing them would be a wasted action —
+ * confirmed live this needs `ally.hp`/`ally.maxHp`, not just an id/name).
+ * No `save`/`basic` here: confirmed live a healing-trait spell's damage
+ * roll applies unconditionally (no save, no outcome-based scaling) when
+ * targeting a willing living creature — see dungeon-combat.mjs's
+ * castHealSpellAndApply.
+ */
+export function buildHealSpellCandidates({ readyHealSpells, allies, actionsRemaining }) {
+  const candidates = [];
+  for (const spell of readyHealSpells) {
+    if (spell.cost > actionsRemaining) continue;
+    for (const ally of allies) {
+      if (ally.distanceSquares > spell.rangeSquares) continue;
+      if (ally.hp >= ally.maxHp) continue;
+      candidates.push({
+        id: `castHeal:${spell.slug}:${ally.id}`, type: 'castHeal',
+        spellId: spell.id, entryId: spell.entryId, targetId: ally.id, cost: spell.cost,
+        summary: `${spell.label} on ${ally.name}`
+      });
+    }
+  }
+  return candidates;
+}
+
 /** Always available — lets the agent stop spending actions early. */
 export function endTurnCandidate() {
   return { id: 'endTurn', type: 'endTurn', cost: 0, summary: 'End turn' };
 }
 
 /** Full candidate list for one decision iteration. */
-export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], readyAttackSpells = [], readyDebuffSpells = [], readyBreathWeapons = [], readyChainSpells = [], turnState, hazard = null, hasRangedOrReach = false }) {
+export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], readyAttackSpells = [], readyDebuffSpells = [], readyBreathWeapons = [], readyChainSpells = [], readyHealSpells = [], allies = [], turnState, hazard = null, hasRangedOrReach = false }) {
   if (turnState.actionsRemaining <= 0) return [endTurnCandidate()];
   return [
     ...buildMovementCandidates({ opponents, hazard, hasRangedOrReach }),
@@ -412,6 +440,7 @@ export function buildCandidateList({ opponents, readyActions, readySpells = [], 
     ...buildDebuffSpellCandidates({ readyDebuffSpells, opponents, actionsRemaining: turnState.actionsRemaining }),
     ...buildBreathWeaponCandidates({ readyBreathWeapons, actionsRemaining: turnState.actionsRemaining }),
     ...buildChainSpellCandidates({ readyChainSpells, opponents, actionsRemaining: turnState.actionsRemaining }),
+    ...buildHealSpellCandidates({ readyHealSpells, allies, actionsRemaining: turnState.actionsRemaining }),
     endTurnCandidate()
   ];
 }
@@ -426,6 +455,6 @@ export function applyCandidateToTurnState(turnState, candidate) {
 /** The JSON context handed to a decision provider alongside its candidates
  * — candidates are trimmed to `{id, summary}` since a provider only ever
  * needs to pick an id, never the caller-side execution details. */
-export function buildDecisionContext({ self, opponents, candidates, roundNumber }) {
-  return { self, opponents, candidates: candidates.map(({ id, summary }) => ({ id, summary })), roundNumber };
+export function buildDecisionContext({ self, opponents, allies = [], candidates, roundNumber }) {
+  return { self, opponents, allies, candidates: candidates.map(({ id, summary }) => ({ id, summary })), roundNumber };
 }

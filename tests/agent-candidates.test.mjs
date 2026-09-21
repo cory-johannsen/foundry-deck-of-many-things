@@ -5,7 +5,8 @@ import {
   buildAreaSpellCandidates, buildAttackSpellCandidates, buildDebuffSpellCandidates,
   parseConditionsByOutcome, hasSpellUsesRemaining,
   parseBreathWeaponEffect, buildBreathWeaponCandidates,
-  parseChainHopDistance, buildChainSpellCandidates, endTurnCandidate,
+  parseChainHopDistance, buildChainSpellCandidates,
+  buildHealSpellCandidates, endTurnCandidate,
   buildCandidateList, applyCandidateToTurnState, buildDecisionContext,
   MAX_ACTIONS_PER_TURN, AGENT_MELEE_REACH_SQUARES
 } from '../scripts/agent-candidates.mjs';
@@ -460,6 +461,39 @@ describe('buildChainSpellCandidates', () => {
   });
 });
 
+describe('buildHealSpellCandidates', () => {
+  const heal = { id: 'sp1', slug: 'heal', label: 'Heal', cost: 1, rangeSquares: 1, entryId: 'entry1' };
+  const injuredAllyInRange = { id: 'ally1', name: 'Cleric', distanceSquares: 1, hp: 40, maxHp: 100 };
+  const fullHpAllyInRange = { id: 'ally2', name: 'Fighter', distanceSquares: 1, hp: 100, maxHp: 100 };
+  const injuredAllyOutOfRange = { id: 'ally3', name: 'Rogue', distanceSquares: 5, hp: 20, maxHp: 100 };
+
+  it('offers a heal candidate for an injured ally within range', () => {
+    const candidates = buildHealSpellCandidates({ readyHealSpells: [heal], allies: [injuredAllyInRange], actionsRemaining: 3 });
+    expect(candidates).toEqual([
+      {
+        id: 'castHeal:heal:ally1', type: 'castHeal',
+        spellId: 'sp1', entryId: 'entry1', targetId: 'ally1', cost: 1,
+        summary: 'Heal on Cleric'
+      }
+    ]);
+  });
+
+  it('omits an ally already at full HP', () => {
+    const candidates = buildHealSpellCandidates({ readyHealSpells: [heal], allies: [fullHpAllyInRange], actionsRemaining: 3 });
+    expect(candidates).toEqual([]);
+  });
+
+  it('omits an injured ally outside the spell\'s range', () => {
+    const candidates = buildHealSpellCandidates({ readyHealSpells: [heal], allies: [injuredAllyOutOfRange], actionsRemaining: 3 });
+    expect(candidates).toEqual([]);
+  });
+
+  it('omits a spell whose cost exceeds the actions remaining', () => {
+    const candidates = buildHealSpellCandidates({ readyHealSpells: [heal], allies: [injuredAllyInRange], actionsRemaining: 0 });
+    expect(candidates).toEqual([]);
+  });
+});
+
 describe('endTurnCandidate', () => {
   it('is always the same zero-cost candidate', () => {
     expect(endTurnCandidate()).toEqual({ id: 'endTurn', type: 'endTurn', cost: 0, summary: 'End turn' });
@@ -533,6 +567,14 @@ describe('buildCandidateList', () => {
     const candidates = buildCandidateList({ opponents: [opponent], readyActions: [claw], readyBreathWeapons: [poisonBreath], turnState, hazard: null, hasRangedOrReach: false });
     expect(candidates.map((c) => c.id)).toEqual(['strike:claw:opp1', 'breathWeapon:poison-breath:opponent:opp1', 'endTurn']);
   });
+
+  it('includes an affordable heal spell candidate alongside strikes', () => {
+    const heal = { id: 'sp6', slug: 'heal', label: 'Heal', cost: 1, rangeSquares: 1, entryId: 'entry1' };
+    const injuredAlly = { id: 'ally1', name: 'Cleric', distanceSquares: 1, hp: 40, maxHp: 100 };
+    const turnState = { actionsRemaining: 3, mapIncrement: 0 };
+    const candidates = buildCandidateList({ opponents: [opponent], readyActions: [claw], readyHealSpells: [heal], allies: [injuredAlly], turnState, hazard: null, hasRangedOrReach: false });
+    expect(candidates.map((c) => c.id)).toEqual(['strike:claw:opp1', 'castHeal:heal:ally1', 'endTurn']);
+  });
 });
 
 describe('applyCandidateToTurnState', () => {
@@ -568,8 +610,20 @@ describe('buildDecisionContext', () => {
     expect(context).toEqual({
       self: { name: 'Yamaraj', hp: 40 },
       opponents: [{ id: 'opp1', name: 'Fighter', distanceSquares: 1, hp: 30 }],
+      allies: [],
       candidates: [{ id: 'strike:claw:opp1', summary: 'Claw vs Fighter (variant 0)' }],
       roundNumber: 2
     });
+  });
+
+  it('includes allies when given (#132)', () => {
+    const context = buildDecisionContext({
+      self: { name: 'Yamaraj', hp: 40 },
+      opponents: [],
+      allies: [{ id: 'ally1', name: 'Cleric', distanceSquares: 1, hp: 40, maxHp: 100 }],
+      candidates: [],
+      roundNumber: 2
+    });
+    expect(context.allies).toEqual([{ id: 'ally1', name: 'Cleric', distanceSquares: 1, hp: 40, maxHp: 100 }]);
   });
 });

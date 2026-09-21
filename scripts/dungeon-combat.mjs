@@ -443,10 +443,18 @@ function actionReachSquares(action, gridDistanceFt) {
  * cost (excludes a variable range like "1 to 3" and a ritual-style
  * duration like "1 hour"). Confirmed live against the real bestiary
  * (Spirit Blast, Void Warp, Vitality Lash all match; Chain Lightning,
- * Harm/Heal's variable cost, and no-save utility spells don't).
+ * Harm/Heal's variable cost, and no-save utility spells don't). Also
+ * excludes any spell with the `healing` trait (#132) — confirmed live that
+ * casting a dual-nature heal-the-living/damage-the-undead spell like Heal
+ * at a living enemy via this exact save/damage mechanism produces zero
+ * effect (a wasted turn, not a harmful one): the resulting damage roll
+ * carries ambiguous `kinds: ["damage", "healing"]` that `applyDamage`
+ * doesn't resolve on its own. Harm itself has no `healing` trait and stays
+ * in scope — it's a genuine damage spell against a living target.
  */
 function isSpellInScope(spell) {
   const system = spell.system ?? {};
+  if (system.traits?.value?.includes("healing")) return false;
   if (system.area != null) return false;
   const targetValue = system.target?.value ?? "";
   if (!/^1\b/.test(targetValue) || /plus|additional/i.test(targetValue))
@@ -481,10 +489,17 @@ function spellRangeSquares(spell, gridDistanceFt) {
  * willing creatures", "1 or more creatures", "1 creature per action
  * spent...") because they either end in a plural "creatures" or have
  * trailing text after the final "creature"/"undead", neither of which
- * this pattern allows.
+ * this pattern allows. Also excludes any spell with the `healing` trait
+ * (#132) — Heal itself matches this filter's other criteria exactly (it's
+ * variable-cost, has `defense.save`, and non-empty `damage`), but confirmed
+ * live that casting it at a living enemy this way produces zero effect
+ * rather than damage, since its damage roll carries ambiguous
+ * `kinds: ["damage", "healing"]` — Harm has no `healing` trait and stays
+ * in scope.
  */
 function isVariableCostSpellInScope(spell) {
   const system = spell.system ?? {};
+  if (system.traits?.value?.includes("healing")) return false;
   if (system.area != null) return false;
   const targetValue = system.target?.value ?? "";
   if (
@@ -587,6 +602,53 @@ function isDebuffSpellInScope(spell) {
   return /@UUID\[Compendium\.pf2e\.conditionitems\.Item\.[^\]]+\]\{[^}]+\}/.test(
     system.description?.value ?? "",
   );
+}
+
+/**
+ * True for a spell squarely inside #132's scope: single-target, has the
+ * `healing` trait (confirmed live this is the real, structured signal for
+ * "this spell heals a living creature" — the static `system.damage[].kinds`
+ * field is empty at the data level, only the *rolled* result carries
+ * `["damage", "healing"]`, so trait is the only reliable pre-cast check),
+ * and a fixed 1/2/3 *or* variable ("1 to 3") action cost — Heal itself is
+ * variable-cost, so this accepts both shapes and `healSpellCost` picks the
+ * right one, reusing #122's minimum-tier convention for the variable case.
+ * Deliberately excludes multi-target phrasing ("you and up to 9 allies",
+ * Soothing Ballad's shape) — single-ally healing only for v1, matching
+ * every other slice's narrow-first pattern; ally buffs (a different
+ * mechanic — typically unconditional, no save) are a separate follow-up.
+ */
+function isHealSpellInScope(spell) {
+  const system = spell.system ?? {};
+  if (!system.traits?.value?.includes("healing")) return false;
+  if (system.area != null) return false;
+  const targetValue = system.target?.value ?? "";
+  if (!/^1\b/.test(targetValue)) return false;
+  if (/plus|additional|allies|and up to/i.test(targetValue)) return false;
+  if (!Object.keys(system.damage ?? {}).length) return false;
+  const timeValue = system.time?.value ?? "";
+  return /^[123]$/.test(timeValue) || /^[123]\s+to\s+[123]$/.test(timeValue);
+}
+
+/** The action cost to cast a #132-scoped heal spell — its own fixed 1/2/3
+ * value, or (for a variable-cost spell like Heal) the cheapest tier via
+ * #122's `minimumVariableCost`. */
+function healSpellCost(spell) {
+  const timeValue = spell.system?.time?.value ?? "";
+  if (/^[123]$/.test(timeValue)) return Number(timeValue);
+  return minimumVariableCost(spell);
+}
+
+/** The range (in squares) of a #132-scoped heal spell — reuses #122's
+ * `minimumTierRangeSquares` for a variable-cost spell like Heal (whose
+ * range is "varies", touch-only at the minimum tier), or plain
+ * `spellRangeSquares` for a fixed-cost one. */
+function healSpellRangeSquares(spell, gridDistanceFt) {
+  const timeValue = spell.system?.time?.value ?? "";
+  if (/^[123]\s+to\s+[123]$/.test(timeValue)) {
+    return minimumTierRangeSquares(spell, gridDistanceFt);
+  }
+  return spellRangeSquares(spell, gridDistanceFt);
 }
 
 /**
@@ -1267,6 +1329,13 @@ export async function getPendingAgentTurn(combat) {
     distanceSquares: chebyshevSquares(combatant.token, c.token, gridSize),
     hp: c.actor?.system?.attributes?.hp?.value ?? null,
   }));
+  const allies = rawAllies.map((c) => ({
+    id: c.id,
+    name: c.name,
+    distanceSquares: chebyshevSquares(combatant.token, c.token, gridSize),
+    hp: c.actor?.system?.attributes?.hp?.value ?? null,
+    maxHp: c.actor?.system?.attributes?.hp?.max ?? null,
+  }));
 
   const readyActions = (combatant.actor?.system?.actions ?? [])
     .filter((a) => a.type === "strike" && a.ready !== false)
@@ -1465,6 +1534,26 @@ export async function getPendingAgentTurn(combat) {
     )
     .filter(Boolean);
 
+  const readyHealSpells = (combatant.actor?.spellcasting?.contents ?? [])
+    .flatMap((entry) =>
+      (entry.spells?.contents ?? [])
+        .filter(isHealSpellInScope)
+        .filter(hasSpellUsesRemaining)
+        .map((spell) => {
+          const rangeSquares = healSpellRangeSquares(spell, gridDistanceFt);
+          if (rangeSquares == null) return null;
+          return {
+            id: spell.id,
+            slug: spell.slug,
+            label: spell.name,
+            cost: healSpellCost(spell),
+            rangeSquares,
+            entryId: entry.id,
+          };
+        }),
+    )
+    .filter(Boolean);
+
   const readyBreathWeapons = [];
   for (const item of combatant.actor?.items ?? []) {
     if (!isBreathWeaponInScope(item)) continue;
@@ -1510,6 +1599,8 @@ export async function getPendingAgentTurn(combat) {
     readyDebuffSpells,
     readyBreathWeapons,
     readyChainSpells,
+    readyHealSpells,
+    allies,
     turnState,
     hazard: null,
     hasRangedOrReach,
@@ -1520,6 +1611,7 @@ export async function getPendingAgentTurn(combat) {
     context: buildDecisionContext({
       self,
       opponents,
+      allies,
       candidates,
       roundNumber: combat.round,
     }),
@@ -1949,6 +2041,55 @@ async function castChainSpellAndApplySaves(
 }
 
 /**
+ * Casts a #132-scoped heal spell at `target` and restores HP — no save
+ * roll at all (confirmed live the living/healing branch of a dual-nature
+ * spell like Heal doesn't call for one, only its undead/damage branch
+ * does) and no outcome-based scaling (the full rolled amount always
+ * applies). Confirmed live that `spell.rollDamage()`'s result for a
+ * healing-trait spell carries ambiguous `kinds: ["damage", "healing"]` that
+ * `applyDamage` doesn't resolve into an actual HP change on its own — but
+ * passing the *negated* rolled total as a plain number does: `applyDamage`
+ * routes any negative `finalDamage` through its own `"healing-received"`
+ * path, confirmed live this restores HP correctly (clamped at the actor's
+ * own max, matching how any other HP update works) without needing to
+ * disambiguate the roll's kind at all.
+ */
+async function castHealSpellAndApply(combatant, target, spellId, entryId) {
+  const entry = combatant.actor?.spellcasting?.contents?.find(
+    (e) => e.id === entryId,
+  );
+  const spell = entry?.spells?.contents?.find((s) => s.id === spellId);
+  if (!entry || !spell) return null;
+
+  const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
+  const prevShowDamage = game.user.flags?.pf2e?.settings?.showDamageDialogs;
+  await game.user.update({
+    "flags.pf2e.settings.showCheckDialogs": false,
+    "flags.pf2e.settings.showDamageDialogs": false,
+  });
+  try {
+    const targetRef = { document: target.token };
+    await entry.cast(spell, { target: targetRef, createMessage: true });
+    const healRoll = await spell.rollDamage?.({
+      target: targetRef,
+      createMessage: true,
+    });
+    if (healRoll?.total != null) {
+      await target.actor.applyDamage({
+        damage: -healRoll.total,
+        token: target.token,
+      });
+    }
+    return healRoll?.total ?? null;
+  } finally {
+    await game.user.update({
+      "flags.pf2e.settings.showCheckDialogs": prevShowCheck,
+      "flags.pf2e.settings.showDamageDialogs": prevShowDamage,
+    });
+  }
+}
+
+/**
  * Rolls each of `targets`' own saves against `dc` and applies
  * basic-save-scaled damage on any outcome but a critical success, then
  * records the ability's recharge timer. Unlike every spell execution
@@ -2168,6 +2309,17 @@ export async function applyAgentDecision(
         candidate.spellId,
         candidate.entryId,
         candidate.save,
+      );
+  } else if (candidate.type === "castHeal") {
+    const target = combatantAllies(combat, combatant).find(
+      (c) => c.id === candidate.targetId,
+    );
+    if (target)
+      await castHealSpellAndApply(
+        combatant,
+        target,
+        candidate.spellId,
+        candidate.entryId,
       );
   }
 
