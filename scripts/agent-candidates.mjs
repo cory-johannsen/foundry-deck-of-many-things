@@ -194,6 +194,27 @@ export function parseConditionsByOutcome(descriptionHtml) {
 }
 
 /**
+ * False once a limited-use spell has been exhausted for the day — confirmed
+ * live this is a real gap none of #118-122 checked: `entry.cast()`
+ * decrements `spell.system.location.uses` on a successful cast but does
+ * NOT refuse or error once it hits 0, so without this check an
+ * agent-controlled NPC could keep "casting" an exhausted spell every turn.
+ * A spell with no `location.uses` at all (most non-innate casting, or a
+ * cantrip) is always available. A spell whose name ends in `(At will)` or
+ * `(Constant)` — the bestiary's own naming convention for genuinely
+ * unlimited spells — is also always available: confirmed live these carry
+ * the exact same `uses` shape and decrement identically, never refilling,
+ * so checking `uses` for them would wrongly disable a spell meant to be
+ * castable indefinitely.
+ */
+export function hasSpellUsesRemaining(spell) {
+  if (/\((at will|constant)\)$/i.test(spell.name ?? '')) return true;
+  const uses = spell.system?.location?.uses;
+  if (!uses) return true;
+  return uses.value > 0;
+}
+
+/**
  * One candidate per ready single-target, save-based debuff/condition spell
  * x each opponent within range — same shape as buildSpellCandidates, with
  * `save` (which statistic the target rolls) but no `basic` (there's no
