@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { applyCardEffect } from '../scripts/card-effects.mjs';
 import { planCardEffect, replayPlan } from '../scripts/effect-plan.mjs';
-import { freeSpot, footprint, overlaps, partyLevelFrom } from '../../foundry-pf2e-dungeon-crawl/scripts/placement.mjs';
+import { freeSpot, footprint, overlaps, partyLevelFrom } from '../../pf2e-dungeon-crawl/scripts/placement.mjs';
 
 const cards = JSON.parse(readFileSync(new URL('../data/cards.json', import.meta.url)));
 const BY_ID = new Map(cards.map((c) => [c.id, c]));
@@ -597,7 +597,7 @@ describe('Ruin does not take the same money twice', () => {
   it('leaves coin items to the coin api', async () => {
     // PF2e keeps coins as treasure items: "Gold Pieces" sits in the same list
     // as a gemstone, so listing treasure naively removes coin a second time.
-    const { makeFoundryApi } = await import('../../foundry-pf2e-dungeon-crawl/scripts/foundry-api.mjs');
+    const { makeFoundryApi } = await import('../../pf2e-dungeon-crawl/scripts/foundry-api.mjs');
     const items = [
       { id: 'c1', name: 'Gold Pieces', type: 'treasure', isCoinage: true, system: { stackGroup: 'coins', traits: {} } },
       { id: 'g1', name: 'Hematite', type: 'treasure', isCoinage: false, system: { stackGroup: 'gems', traits: {} } }
@@ -677,20 +677,20 @@ describe('rune keys and fundamentals', () => {
   it('converts a compendium slug into the key a weapon expects', async () => {
     // PF2e stores whatever slug it is handed and applies nothing when the two
     // disagree, so a wrong key looks exactly like a working one.
-    const { runeKey } = await import('../../foundry-pf2e-dungeon-crawl/scripts/foundry-api.mjs');
+    const { runeKey } = await import('../../pf2e-dungeon-crawl/scripts/foundry-api.mjs');
     expect(runeKey('giant-killing')).toBe('giantKilling');
     expect(runeKey('hauling')).toBe('hauling');
   });
 
   it('moves a grade to the front, as the system keys it', async () => {
-    const { runeKey } = await import('../../foundry-pf2e-dungeon-crawl/scripts/foundry-api.mjs');
+    const { runeKey } = await import('../../pf2e-dungeon-crawl/scripts/foundry-api.mjs');
     expect(runeKey('giant-killing-greater')).toBe('greaterGiantKilling');
     expect(runeKey('corrosive-major')).toBe('majorCorrosive');
     expect(runeKey('flaming-lesser')).toBe('lesserFlaming');
   });
 
   it('copes with an empty or missing slug', async () => {
-    const { runeKey } = await import('../../foundry-pf2e-dungeon-crawl/scripts/foundry-api.mjs');
+    const { runeKey } = await import('../../pf2e-dungeon-crawl/scripts/foundry-api.mjs');
     expect(runeKey('')).toBe('');
     expect(runeKey(null)).toBe('');
   });
@@ -781,7 +781,7 @@ describe('Monstrosity respects the size its card demands', () => {
 
 describe('sizeAtLeast', () => {
   it('reads the word a card uses as the code PF2e stores', async () => {
-    const { sizeAtLeast } = await import('../../foundry-pf2e-dungeon-crawl/scripts/foundry-api.mjs');
+    const { sizeAtLeast } = await import('../../pf2e-dungeon-crawl/scripts/foundry-api.mjs');
     expect(sizeAtLeast('lg', 'large')).toBe(true);
     expect(sizeAtLeast('sm', 'large')).toBe(false);
     expect(sizeAtLeast('huge', 'large')).toBe(true);
@@ -790,13 +790,13 @@ describe('sizeAtLeast', () => {
   });
 
   it('treats a missing size as medium', async () => {
-    const { sizeAtLeast } = await import('../../foundry-pf2e-dungeon-crawl/scripts/foundry-api.mjs');
+    const { sizeAtLeast } = await import('../../pf2e-dungeon-crawl/scripts/foundry-api.mjs');
     expect(sizeAtLeast(undefined, 'large')).toBe(false);
     expect(sizeAtLeast(undefined, 'med')).toBe(true);
   });
 
   it('imposes nothing when no minimum is asked for', async () => {
-    const { sizeAtLeast } = await import('../../foundry-pf2e-dungeon-crawl/scripts/foundry-api.mjs');
+    const { sizeAtLeast } = await import('../../pf2e-dungeon-crawl/scripts/foundry-api.mjs');
     expect(sizeAtLeast('tiny', null)).toBe(true);
   });
 });
@@ -1129,7 +1129,7 @@ describe('creature packs', () => {
   it('searches Monster Core, not only the bestiaries', async () => {
     // Matching on "bestiary" alone missed 1,214 creatures across four packs,
     // Monster Core among them — where the only homunculus lives.
-    const { CREATURE_PACK_PATTERN } = await import('../../foundry-pf2e-dungeon-crawl/scripts/foundry-api.mjs');
+    const { CREATURE_PACK_PATTERN } = await import('../../pf2e-dungeon-crawl/scripts/foundry-api.mjs');
     for (const pack of ['pf2e.pathfinder-bestiary', 'pf2e.pathfinder-monster-core',
                         'pf2e.pathfinder-monster-core-2', 'pf2e.pathfinder-npc-core',
                         'pf2e.npc-gallery']) {
@@ -1138,7 +1138,7 @@ describe('creature packs', () => {
   });
 
   it('leaves non-creature packs alone', async () => {
-    const { CREATURE_PACK_PATTERN } = await import('../../foundry-pf2e-dungeon-crawl/scripts/foundry-api.mjs');
+    const { CREATURE_PACK_PATTERN } = await import('../../pf2e-dungeon-crawl/scripts/foundry-api.mjs');
     for (const pack of ['pf2e.equipment-srd', 'pf2e.spells-srd', 'pf2e.ancestries']) {
       expect(CREATURE_PACK_PATTERN.test(pack), pack).toBe(false);
     }
