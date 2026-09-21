@@ -689,3 +689,137 @@ export async function applyPuzzleCustomization(
   await persist(sceneId, newState, settingsRef);
   return newState;
 }
+
+/**
+ * Attaches `setpiece`'s own archetype-specific content to `roomId` as
+ * persisted `room.narrative` state (#167) — a no-op if that room already
+ * has one. Unlike puzzle/skill_challenge, a narrative room has no evolving
+ * mechanical state of its own (#165's own design: it resolves in a single
+ * Continue action, nothing to track across attempts), so this exists
+ * purely to give an external agent's customization somewhere durable to
+ * land — without it, a customization would overwrite nothing (#165 read
+ * every field straight off the shared, immutable setpiece template) and
+ * be invisible the next render, the exact bug #139 caught and fixed for
+ * puzzles before #139 ever shipped. Flags the room `customization:
+ * {status: 'pending'}`, read back by `getPendingNarrativeCustomization`/
+ * `applyNarrativeCustomization` below.
+ */
+export async function ensureNarrativeState(
+  sceneId,
+  roomId,
+  { setpiece },
+  { settingsRef = defaultSettingsRef() } = {},
+) {
+  const state = getRunState(sceneId, { settingsRef });
+  if (!state) return null;
+  const room = state.rooms.find((r) => r.id === roomId);
+  if (!room || room.narrative) return state;
+  const narrative = {
+    archetype: setpiece.archetype,
+    name: setpiece.name,
+    summary: setpiece.summary,
+    revealText: setpiece.revealText ?? null,
+    npcName: setpiece.npcName ?? null,
+    npcHook: setpiece.npcHook ?? null,
+    options: setpiece.options ?? null,
+    suggestedObjective: setpiece.suggestedObjective ?? null,
+    customization: { status: "pending" },
+  };
+  const rooms = state.rooms.map((r) =>
+    r.id === roomId ? { ...r, narrative } : r,
+  );
+  const newState = { ...state, rooms };
+  await persist(sceneId, newState, settingsRef);
+  return newState;
+}
+
+/**
+ * The narrative room whose `narrative.customization.status === 'pending'`
+ * (#167), still unresolved — mirrors `getPendingPuzzleCustomization`
+ * exactly, adapted for narrative's own state. Unlike puzzle/skill_challenge
+ * (each tracks its own `resolved` flag on its own state object, flipped by
+ * a dedicated reducer), a narrative room's resolution goes straight through
+ * the shared `markRoomOutcome` path without ever touching `room.narrative`
+ * itself — so "already resolved" is read off `state.history` instead, the
+ * same check `ui/dungeon-app.mjs`'s own `currentRoomResolved` already
+ * computes. The *only* read surface `tools/agent-loop`'s poller uses for
+ * this.
+ */
+export function getPendingNarrativeCustomization(
+  sceneId,
+  { settingsRef = defaultSettingsRef() } = {},
+) {
+  const state = getRunState(sceneId, { settingsRef });
+  if (!state) return null;
+  const room = state.rooms.find(
+    (r) =>
+      r.narrative?.customization?.status === "pending" &&
+      !state.history.some((h) => h.roomId === r.id),
+  );
+  if (!room) return null;
+  const n = room.narrative;
+  return {
+    sceneId,
+    roomId: room.id,
+    archetype: n.archetype,
+    name: n.name ?? null,
+    summary: n.summary ?? null,
+    revealText: n.revealText ?? null,
+    npcName: n.npcName ?? null,
+    npcHook: n.npcHook ?? null,
+    options: n.options ?? null,
+    suggestedObjective: n.suggestedObjective ?? null,
+    locationTag: room.locationTag,
+  };
+}
+
+/**
+ * Applies an external agent's customized content to `roomId`'s own pending
+ * narrative state (#167) — a no-op if that room has no narrative state at
+ * all. Only ever touches display fields (name/summary plus whichever of
+ * revealText/npcName/npcHook/options/suggestedObjective the archetype
+ * actually uses), the same boundary `applyPuzzleCustomization`/
+ * `applySkillChallengeCustomization` already draw — there's no separate
+ * "mechanical" field to protect here at all, since a narrative room has no
+ * mechanics beyond the single Continue action every archetype shares.
+ * `options` replaces wholesale rather than merging (unlike `skillFlavor`/
+ * `stageFlavor`'s key-based merge) — its two entries are a matched pair,
+ * not independently addressable slots, so a partial override wouldn't mean
+ * anything coherent. See module.mjs's api.applyNarrativeCustomization.
+ */
+export async function applyNarrativeCustomization(
+  sceneId,
+  roomId,
+  {
+    name = null,
+    summary = null,
+    revealText = null,
+    npcName = null,
+    npcHook = null,
+    options = null,
+    suggestedObjective = null,
+  } = {},
+  { settingsRef = defaultSettingsRef() } = {},
+) {
+  const state = getRunState(sceneId, { settingsRef });
+  if (!state) return null;
+  const room = state.rooms.find((r) => r.id === roomId);
+  if (!room?.narrative) return state;
+  const narrative = {
+    ...room.narrative,
+    name: name ?? room.narrative.name,
+    summary: summary ?? room.narrative.summary,
+    revealText: revealText ?? room.narrative.revealText,
+    npcName: npcName ?? room.narrative.npcName,
+    npcHook: npcHook ?? room.narrative.npcHook,
+    options: options ?? room.narrative.options,
+    suggestedObjective: suggestedObjective ?? room.narrative.suggestedObjective,
+    customization: { status: "customized" },
+  };
+  const rooms = state.rooms.map((r) =>
+    r.id === roomId ? { ...r, narrative } : r,
+  );
+  const newState = { ...state, rooms };
+  await persist(sceneId, newState, settingsRef);
+  return newState;
+}
