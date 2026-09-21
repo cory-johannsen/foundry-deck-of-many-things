@@ -3,7 +3,8 @@ import { describe, it, expect } from 'vitest';
 import {
   initAgentTurnState, buildMovementCandidates, buildStrikeCandidates, buildSpellCandidates,
   buildAreaSpellCandidates, buildAttackSpellCandidates, buildDebuffSpellCandidates,
-  parseConditionsByOutcome, hasSpellUsesRemaining, endTurnCandidate,
+  parseConditionsByOutcome, hasSpellUsesRemaining,
+  parseBreathWeaponEffect, buildBreathWeaponCandidates, endTurnCandidate,
   buildCandidateList, applyCandidateToTurnState, buildDecisionContext,
   MAX_ACTIONS_PER_TURN, AGENT_MELEE_REACH_SQUARES
 } from '../scripts/agent-candidates.mjs';
@@ -249,6 +250,77 @@ describe('hasSpellUsesRemaining', () => {
   });
 });
 
+describe('parseBreathWeaponEffect', () => {
+  it('parses a real basic-save breath weapon description (Poison Breath-shaped)', () => {
+    const description = 'The dragon breathes a toxic cloud that deals @Damage[13d6[poison]|options:area-damage] damage in a @Template[cone|distance:50] (@Check[fortitude|dc:31|basic|options:area-effect] save). They can\'t use Poison Breath again for [[/gmr 1d4 #Recharge Poison Breath]]{1d4 rounds}.';
+    expect(parseBreathWeaponEffect(description)).toEqual({
+      damageFormula: '13d6', damageType: 'poison', areaType: 'cone', distanceFeet: 50,
+      save: 'fortitude', dc: 31, rechargeFormula: '1d4'
+    });
+  });
+
+  it('returns a null rechargeFormula when there is no recharge text', () => {
+    const description = 'Deals @Damage[13d6[poison]] damage in a @Template[cone|distance:50] (@Check[fortitude|dc:31|basic] save).';
+    expect(parseBreathWeaponEffect(description)).toEqual({
+      damageFormula: '13d6', damageType: 'poison', areaType: 'cone', distanceFeet: 50,
+      save: 'fortitude', dc: 31, rechargeFormula: null
+    });
+  });
+
+  it('returns null for a non-basic save (out of scope - v1 only supports basic saves)', () => {
+    const description = 'Deals @Damage[15d6[mental]] damage in a @Template[cone|distance:40] (@Check[will|dc:39|options:area-effect] save).';
+    expect(parseBreathWeaponEffect(description)).toBeNull();
+  });
+
+  it('returns null when there is no @Check at all', () => {
+    const description = 'Deals @Damage[13d6[poison]] damage in a @Template[cone|distance:50].';
+    expect(parseBreathWeaponEffect(description)).toBeNull();
+  });
+
+  it('returns null when there is no @Damage at all', () => {
+    const description = 'Creatures in a @Template[cone|distance:50] must succeed at a @Check[fortitude|dc:31|basic] save.';
+    expect(parseBreathWeaponEffect(description)).toBeNull();
+  });
+});
+
+describe('buildBreathWeaponCandidates', () => {
+  const opp1 = { id: 'opp1', name: 'Fighter' };
+  const opp2 = { id: 'opp2', name: 'Cleric' };
+  const opp3 = { id: 'opp3', name: 'Rogue' };
+
+  const poisonBreath = {
+    itemId: 'item1', slug: 'poison-breath', label: 'Poison Breath', cost: 2,
+    damageFormula: '13d6', damageType: 'poison', save: 'fortitude', dc: 31,
+    placements: [
+      { centerType: 'opponent', centerId: 'opp1', affected: [opp1, opp2] },
+      { centerType: 'opponent', centerId: 'opp3', affected: [opp3] }
+    ]
+  };
+
+  it('offers one candidate, centered on whichever placement catches the most opponents', () => {
+    const candidates = buildBreathWeaponCandidates({ readyBreathWeapons: [poisonBreath], actionsRemaining: 3 });
+    expect(candidates).toEqual([
+      {
+        id: 'breathWeapon:poison-breath:opponent:opp1', type: 'breathWeapon',
+        itemId: 'item1', cost: 2, damageFormula: '13d6', damageType: 'poison', save: 'fortitude', dc: 31,
+        centerType: 'opponent', centerId: 'opp1', affectedIds: ['opp1', 'opp2'],
+        summary: 'Poison Breath (hits Fighter, Cleric)'
+      }
+    ]);
+  });
+
+  it('omits an ability whose cost exceeds the actions remaining', () => {
+    const candidates = buildBreathWeaponCandidates({ readyBreathWeapons: [poisonBreath], actionsRemaining: 1 });
+    expect(candidates).toEqual([]);
+  });
+
+  it('omits an ability where every placement catches zero opponents', () => {
+    const noTargets = { ...poisonBreath, placements: [{ centerType: 'opponent', centerId: 'opp1', affected: [] }] };
+    const candidates = buildBreathWeaponCandidates({ readyBreathWeapons: [noTargets], actionsRemaining: 3 });
+    expect(candidates).toEqual([]);
+  });
+});
+
 describe('buildDebuffSpellCandidates', () => {
   const fear = {
     id: 'sp5', slug: 'fear', label: 'Fear', cost: 2, rangeSquares: 6, save: 'will', entryId: 'entry1',
@@ -341,6 +413,17 @@ describe('buildCandidateList', () => {
     const turnState = { actionsRemaining: 3, mapIncrement: 0 };
     const candidates = buildCandidateList({ opponents: [opponent], readyActions: [claw], readyDebuffSpells: [fear], turnState, hazard: null, hasRangedOrReach: false });
     expect(candidates.map((c) => c.id)).toEqual(['strike:claw:opp1', 'castDebuff:fear:opp1', 'endTurn']);
+  });
+
+  it('includes an affordable breath weapon candidate alongside strikes', () => {
+    const poisonBreath = {
+      itemId: 'item1', slug: 'poison-breath', label: 'Poison Breath', cost: 2,
+      damageFormula: '13d6', damageType: 'poison', save: 'fortitude', dc: 31,
+      placements: [{ centerType: 'opponent', centerId: 'opp1', affected: [{ id: 'opp1', name: 'Fighter' }] }]
+    };
+    const turnState = { actionsRemaining: 3, mapIncrement: 0 };
+    const candidates = buildCandidateList({ opponents: [opponent], readyActions: [claw], readyBreathWeapons: [poisonBreath], turnState, hazard: null, hasRangedOrReach: false });
+    expect(candidates.map((c) => c.id)).toEqual(['strike:claw:opp1', 'breathWeapon:poison-breath:opponent:opp1', 'endTurn']);
   });
 });
 

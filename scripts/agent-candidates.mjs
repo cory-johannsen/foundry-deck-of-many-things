@@ -215,6 +215,69 @@ export function hasSpellUsesRemaining(spell) {
 }
 
 /**
+ * The mechanical effect of a non-spell NPC action (a breath weapon, for
+ * #123's v1 scope), extracted from its raw description text — unlike a
+ * spell, an action item has no structured system.damage/defense/area
+ * fields at all; everything lives in inline text enrichers. Confirmed live
+ * across four real dragon breath weapons that `@Damage[NdM[type]]` +
+ * `@Template[cone|distance:N]` + `@Check[save|dc:N|basic]` is a consistent
+ * pattern. `null` when any of the three enrichers is missing, or when the
+ * save isn't tagged `|basic` — a handful of sampled breath weapons use a
+ * non-basic save with its own bespoke per-outcome text (matching #121's
+ * discovery that condition/effect text isn't uniformly structured), which
+ * v1 doesn't attempt to parse; only the well-understood basic-save halving/
+ * doubling rule is handled here. The optional trailing
+ * `[[/gmr NdM #Recharge ...]]` roll becomes `rechargeFormula`, or `null`
+ * when the ability has no recharge text at all.
+ */
+export function parseBreathWeaponEffect(descriptionHtml) {
+  const damageMatch = /@Damage\[(\d+d\d+)\[(\w+)\]/.exec(descriptionHtml);
+  const templateMatch = /@Template\[(\w+)\|distance:(\d+)\]/.exec(descriptionHtml);
+  const checkMatch = /@Check\[(\w+)\|dc:(\d+)\|basic\b/.exec(descriptionHtml);
+  if (!damageMatch || !templateMatch || !checkMatch) return null;
+  const rechargeMatch = /\[\[\/gmr (\d+d\d+) #Recharge/.exec(descriptionHtml);
+  return {
+    damageFormula: damageMatch[1],
+    damageType: damageMatch[2],
+    areaType: templateMatch[1],
+    distanceFeet: Number(templateMatch[2]),
+    save: checkMatch[1],
+    dc: Number(checkMatch[2]),
+    rechargeFormula: rechargeMatch ? rechargeMatch[1] : null,
+  };
+}
+
+/**
+ * One candidate per ready breath weapon, centered at whichever
+ * caller-precomputed placement catches the most opponents — same
+ * best-placement selection as buildAreaSpellCandidates, but for a plain
+ * action item (`itemId`, no spellcasting entry involved) carrying its own
+ * parsed damage formula/type and save/DC through to execution instead of
+ * a spell's save/basic pair.
+ */
+export function buildBreathWeaponCandidates({ readyBreathWeapons, actionsRemaining }) {
+  const candidates = [];
+  for (const ability of readyBreathWeapons) {
+    if (ability.cost > actionsRemaining) continue;
+    const best = ability.placements
+      .filter((p) => p.affected.length > 0)
+      .reduce((a, b) => (!a || b.affected.length > a.affected.length ? b : a), null);
+    if (!best) continue;
+    const idSuffix = best.centerId ? `:${best.centerId}` : '';
+    candidates.push({
+      id: `breathWeapon:${ability.slug}:${best.centerType}${idSuffix}`, type: 'breathWeapon',
+      itemId: ability.itemId, cost: ability.cost,
+      damageFormula: ability.damageFormula, damageType: ability.damageType,
+      save: ability.save, dc: ability.dc,
+      centerType: best.centerType, centerId: best.centerId,
+      affectedIds: best.affected.map((o) => o.id),
+      summary: `${ability.label} (hits ${best.affected.map((o) => o.name).join(', ')})`
+    });
+  }
+  return candidates;
+}
+
+/**
  * One candidate per ready single-target, save-based debuff/condition spell
  * x each opponent within range — same shape as buildSpellCandidates, with
  * `save` (which statistic the target rolls) but no `basic` (there's no
@@ -245,7 +308,7 @@ export function endTurnCandidate() {
 }
 
 /** Full candidate list for one decision iteration. */
-export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], readyAttackSpells = [], readyDebuffSpells = [], turnState, hazard = null, hasRangedOrReach = false }) {
+export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], readyAttackSpells = [], readyDebuffSpells = [], readyBreathWeapons = [], turnState, hazard = null, hasRangedOrReach = false }) {
   if (turnState.actionsRemaining <= 0) return [endTurnCandidate()];
   return [
     ...buildMovementCandidates({ opponents, hazard, hasRangedOrReach }),
@@ -254,6 +317,7 @@ export function buildCandidateList({ opponents, readyActions, readySpells = [], 
     ...buildAreaSpellCandidates({ readyAreaSpells, actionsRemaining: turnState.actionsRemaining }),
     ...buildAttackSpellCandidates({ readyAttackSpells, opponents, actionsRemaining: turnState.actionsRemaining }),
     ...buildDebuffSpellCandidates({ readyDebuffSpells, opponents, actionsRemaining: turnState.actionsRemaining }),
+    ...buildBreathWeaponCandidates({ readyBreathWeapons, actionsRemaining: turnState.actionsRemaining }),
     endTurnCandidate()
   ];
 }
