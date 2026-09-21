@@ -7,6 +7,7 @@ import {
   canUndoRoomEntry,
   ensureSkillChallenge,
   recordSkillChallengeAttempt,
+  setObjective,
 } from "../dungeon-runner.mjs";
 import { depthBiasFor } from "../dungeon-deck.mjs";
 import { makeFoundryApi } from "../foundry-api.mjs";
@@ -130,6 +131,7 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       openCombatTracker: DungeonApp.#onOpenCombatTracker,
       hide: DungeonApp.#onHide,
       attemptSkillChallenge: DungeonApp.#onAttemptSkillChallenge,
+      continueNarrative: DungeonApp.#onContinueNarrative,
     },
   };
 
@@ -240,6 +242,20 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       }
     }
 
+    // #163: a narrative room is never succeeded/failed the way every other
+    // resolvable room kind is — it's not a check or a fight, so it always
+    // resolves as succeeded (still running the room's own Reward-side
+    // Journey Spread outcome via the usual markRoomOutcome/resolveCurrentRoom
+    // path, just never the Ruin side) via a single Continue action instead
+    // of the plain Succeed/Fail choice. `setpieceId` is never actually
+    // assigned for a narrative room yet (dungeon-deck.mjs's buildRoomSequence
+    // only does that for puzzle_or_trap — a future narrative template
+    // library, #165, is what would change that), so `setpiece` here is
+    // always null in practice for now; the template falls back to a plain
+    // placeholder rather than showing nothing.
+    const isNarrativeRoom =
+      currentRoom?.kind === "narrative" && !currentRoomResolved;
+
     return {
       hasScene: true,
       hasRun: true,
@@ -275,6 +291,12 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       // still uses.
       isSkillChallenge,
       challenge,
+      // #163: a narrative room's own "direction for the rest of the run" —
+      // run-wide, not per-room, so it's shown here regardless of which
+      // room kind is actually current, the same way it persists in
+      // `state.objective` regardless of which room set it.
+      isNarrativeRoom,
+      objective: state.objective ?? null,
       partyMembers: (game.actors?.party?.members ?? [])
         .filter((m) => m.type === "character")
         .map((m) => ({ id: m.id, name: m.name })),
@@ -427,6 +449,26 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const resolved = newState?.rooms.find((r) => r.id === currentRoom.id)
       ?.challenge?.resolved;
     if (resolved) await resolveCurrentRoom(resolved === "success");
+    this.render();
+  }
+
+  /**
+   * A narrative room's own resolution (#163): saves whatever's in the
+   * objective textarea (if anything — a blank field just leaves whatever
+   * objective was already set alone, `setObjective` itself only clears on
+   * an explicit `null`/whitespace-only call, and an empty textarea here
+   * means "nothing new to set," not "clear it") and always resolves the
+   * room succeeded, since a narrative beat has nothing to fail.
+   */
+  static async #onContinueNarrative() {
+    const sceneId = canvas?.scene?.id;
+    if (!sceneId) return;
+    const textarea = this.element.querySelector(
+      '[name="dommt-narrative-objective"]',
+    );
+    const value = textarea?.value?.trim();
+    if (value) await setObjective(sceneId, value);
+    await resolveCurrentRoom(true);
     this.render();
   }
 
