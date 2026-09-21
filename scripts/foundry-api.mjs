@@ -43,14 +43,21 @@ import {
 } from "./placement.mjs";
 import { splitmix32, seedFromString } from "./prng.mjs";
 import { buildCoverItemActorData, MODULE_ID } from "./cover-items.mjs";
+import { classifyTrap } from "./trap-combat.mjs";
 
 export const CREATURE_PACK_PATTERN =
   /bestiary|monster-core|npc-core|npc-gallery/i;
+
+// Trap-tagged hazards (#135) live only here, never in a pack
+// CREATURE_PACK_PATTERN would match.
+export const HAZARD_PACKS = ["pf2e.hazards"];
 
 export const READ_METHODS = [
   "findItems",
   "findCreatures",
   "listCreatureTraits",
+  "findHazards",
+  "classifyHazard",
   "listItems",
   "findWorldActors",
   "listLanguages",
@@ -299,6 +306,60 @@ export function makeFoundryApi() {
       }
       CREATURE_TRAITS_CACHE = [...traits].sort();
       return CREATURE_TRAITS_CACHE;
+    },
+
+    /**
+     * Trap-tagged hazard index entries from `pf2e.hazards` (#135), same
+     * shape/pattern as `findCreatures` but for `type: "hazard"` — hazards
+     * are explicitly excluded from `findCreatures` above (`e.type !== "npc"`),
+     * and live in their own compendium, never the bestiary packs
+     * `CREATURE_PACK_PATTERN` matches. `requireTrait` defaults to `'trap'`
+     * rather than being left for the caller to remember, since every real
+     * caller wants exactly that — `pf2e.hazards` also has non-trap hazards
+     * (environmental features, etc.) this module has no use for yet.
+     */
+    async findHazards({
+      minLevel = null,
+      maxLevel = null,
+      requireTrait = "trap",
+      excludeTraits = [],
+      packs = HAZARD_PACKS,
+    } = {}) {
+      const found = [];
+      for (const id of packs) {
+        const pack = game.packs.get(id);
+        if (!pack) continue;
+        const index = await pack.getIndex({
+          fields: ["type", "system.details.level.value", "system.traits.value"],
+        });
+        for (const e of index) {
+          if (e.type !== "hazard") continue;
+          const level = e.system?.details?.level?.value ?? 0;
+          if (minLevel != null && level < minLevel) continue;
+          if (maxLevel != null && level > maxLevel) continue;
+          const has = e.system?.traits?.value ?? [];
+          if (requireTrait && !has.includes(requireTrait)) continue;
+          if (excludeTraits.some((t) => has.includes(t))) continue;
+          found.push({ pack: id, id: e._id, name: e.name, level, traits: has });
+        }
+      }
+      return found;
+    },
+
+    /**
+     * Whether a specific `pf2e.hazards` entry is one #134's automation can
+     * actually run (`isSimpleAutomatableTrap`) — needs the *full* document,
+     * not the index `findHazards` above works from (`isComplex`/`actions`/
+     * `disable` are derived PF2e Actor data, not raw index-queryable
+     * fields), so this is a separate, per-candidate call rather than folded
+     * into `findHazards` itself. `trap-library.mjs`'s `selectTrap` calls
+     * this against `findHazards`'s (small, already level-filtered) result
+     * set to prefer a trap the engine can actually run when one's
+     * available, rather than picking blind.
+     */
+    async classifyHazard({ pack, id }) {
+      const doc = await game.packs.get(pack)?.getDocument(id);
+      return doc ? classifyTrap(doc) : null;
     },
 
     /**
