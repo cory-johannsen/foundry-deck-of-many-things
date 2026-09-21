@@ -9,7 +9,7 @@ import {
   recordSkillChallengeAttempt,
   setObjective,
 } from "../dungeon-runner.mjs";
-import { depthBiasFor } from "../dungeon-deck.mjs";
+import { depthBiasFor, lootGpForTreasureRoom } from "../dungeon-deck.mjs";
 import { makeFoundryApi } from "../foundry-api.mjs";
 import { rollSkillChallengeAttempt } from "../skill-challenge.mjs";
 import {
@@ -49,6 +49,7 @@ const ROOM_KIND_KEYS = {
   skill_challenge: "DOMMT.Dungeon.Kind.skill_challenge",
   puzzle_or_trap: "DOMMT.Dungeon.Kind.puzzle_or_trap",
   narrative: "DOMMT.Dungeon.Kind.narrative",
+  treasure: "DOMMT.Dungeon.Kind.treasure",
   safe_entry: "DOMMT.Dungeon.Kind.safe_entry",
   safe_rest: "DOMMT.Dungeon.Kind.safe_rest",
 };
@@ -136,6 +137,7 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       hide: DungeonApp.#onHide,
       attemptSkillChallenge: DungeonApp.#onAttemptSkillChallenge,
       continueNarrative: DungeonApp.#onContinueNarrative,
+      claimTreasure: DungeonApp.#onClaimTreasure,
     },
   };
 
@@ -275,6 +277,12 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // placeholder rather than showing nothing.
     const isNarrativeRoom =
       currentRoom?.kind === "narrative" && !currentRoomResolved;
+    // #169: a treasure room, like a narrative room, is never succeeded/
+    // failed the plain way — it always has something to find, so claiming
+    // it always succeeds (still running the usual Reward-side Journey
+    // Spread outcome via resolveCurrentRoom/markRoomOutcome).
+    const isTreasureRoom =
+      currentRoom?.kind === "treasure" && !currentRoomResolved;
 
     return {
       hasScene: true,
@@ -316,6 +324,7 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       // room kind is actually current, the same way it persists in
       // `state.objective` regardless of which room set it.
       isNarrativeRoom,
+      isTreasureRoom,
       objective: state.objective ?? null,
       partyMembers: (game.actors?.party?.members ?? [])
         .filter((m) => m.type === "character")
@@ -488,6 +497,41 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     );
     const value = textarea?.value?.trim();
     if (value) await setObjective(sceneId, value);
+    await resolveCurrentRoom(true);
+    this.render();
+  }
+
+  /**
+   * A treasure room's own resolution (#169): grants real coins to the party
+   * actor, scaled by party level and the room's own depthBiasFor ramp
+   * (lootGpForTreasureRoom), then always resolves succeeded — same "nothing
+   * to fail at" shape as #onContinueNarrative. Silently grants nothing if
+   * there's no party actor to fund (matches resolveSlotCombat's own
+   * `game.actors.party` guard for its combat-loot grant).
+   */
+  static async #onClaimTreasure() {
+    const sceneId = canvas?.scene?.id;
+    if (!sceneId) return;
+    const state = getRunState(sceneId);
+    const currentRoom = state?.rooms[state.currentIndex];
+    const physicalSlot = currentRoom
+      ? state.physicalSlotByRoomId[currentRoom.id]
+      : null;
+    if (physicalSlot == null) return;
+    if (game.actors.party) {
+      const api = makeFoundryApi();
+      const partyLevel = await api.partyLevel();
+      const gp = lootGpForTreasureRoom({
+        partyLevel,
+        physicalSlot,
+        roomCount: state.rooms.length,
+        isGoal: currentRoom.isGoal,
+      });
+      await api.addCoins(game.actors.party.id, { gp });
+      ui.notifications.info(
+        game.i18n.format("DOMMT.Dungeon.Treasure.Found", { gp }),
+      );
+    }
     await resolveCurrentRoom(true);
     this.render();
   }

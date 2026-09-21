@@ -11,7 +11,11 @@ import {
   LOCATION_TAGS,
   roomArtVariantAt,
   ROOM_ART_VARIANTS,
-  MID_DUNGEON_REST_THRESHOLD
+  MID_DUNGEON_REST_THRESHOLD,
+  ROOM_KIND_WEIGHTS,
+  roomKindAt,
+  lootGpForTreasureRoom,
+  TREASURE_GP_PER_LEVEL
 } from '../scripts/dungeon-deck.mjs';
 
 describe('buildRoomSequence', () => {
@@ -219,6 +223,54 @@ describe('depthBiasFor', () => {
   it('never exceeds MAX_DEPTH_BIAS', () => {
     for (let slot = 0; slot < 10; slot += 1) {
       expect(depthBiasFor({ physicalSlot: slot, roomCount: 10, isGoal: false })).toBeLessThanOrEqual(MAX_DEPTH_BIAS);
+    }
+  });
+});
+
+describe('ROOM_KIND_WEIGHTS', () => {
+  it('includes a treasure kind (#169)', () => {
+    expect(ROOM_KIND_WEIGHTS.some((w) => w.kind === 'treasure')).toBe(true);
+  });
+});
+
+describe('roomKindAt', () => {
+  it('can produce a treasure room', () => {
+    const kinds = new Set();
+    for (let i = 0; i < 200; i += 1) kinds.add(roomKindAt('probe-seed', i));
+    expect(kinds).toContain('treasure');
+  });
+});
+
+describe('lootGpForTreasureRoom', () => {
+  it('follows the documented placeholder formula', () => {
+    const args = { partyLevel: 5, physicalSlot: 0, roomCount: 8, isGoal: false };
+    const expected = Math.round(5 * TREASURE_GP_PER_LEVEL);
+    expect(lootGpForTreasureRoom(args)).toBe(expected);
+  });
+
+  it('is 0 for party level 0', () => {
+    expect(lootGpForTreasureRoom({ partyLevel: 0, physicalSlot: 0, roomCount: 8, isGoal: false })).toBe(0);
+  });
+
+  it('scales up with party level', () => {
+    const low = lootGpForTreasureRoom({ partyLevel: 2, physicalSlot: 0, roomCount: 8, isGoal: false });
+    const high = lootGpForTreasureRoom({ partyLevel: 10, physicalSlot: 0, roomCount: 8, isGoal: false });
+    expect(high).toBeGreaterThan(low);
+  });
+
+  it('doubles the base amount at maximum depth bias (the goal room)', () => {
+    const base = lootGpForTreasureRoom({ partyLevel: 6, physicalSlot: 0, roomCount: 8, isGoal: false });
+    const atGoal = lootGpForTreasureRoom({ partyLevel: 6, physicalSlot: 7, roomCount: 8, isGoal: true });
+    expect(atGoal).toBe(base * 2);
+  });
+
+  it('is monotonically non-decreasing with depth for a fixed party level', () => {
+    const roomCount = 9;
+    let previous = -Infinity;
+    for (let slot = 0; slot < roomCount - 1; slot += 1) {
+      const gp = lootGpForTreasureRoom({ partyLevel: 4, physicalSlot: slot, roomCount, isGoal: false });
+      expect(gp).toBeGreaterThanOrEqual(previous);
+      previous = gp;
     }
   });
 });
