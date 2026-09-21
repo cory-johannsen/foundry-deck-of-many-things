@@ -4854,5 +4854,157 @@
     "name": "Hadrosaurid",
     "level": 4,
     "art": "hadrosaurid.webp"
+  },
+  {
+    "id": "barghest_mc",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "8CYHgj4SV2LvlaUs",
+    "name": "Barghest",
+    "level": 4,
+    "art": "barghest-mc.webp"
+  },
+  {
+    "id": "ice_troll",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "dmg1WSBW5eWktUYc",
+    "name": "Ice Troll",
+    "level": 4,
+    "art": "ice-troll.webp"
+  },
+  {
+    "id": "jann",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "Ccjg08wVRO43YlTf",
+    "name": "Jann",
+    "level": 4,
+    "art": "jann.webp"
+  },
+  {
+    "id": "kelpie",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "QAa0xdLT9cBxw2zh",
+    "name": "Kelpie",
+    "level": 4,
+    "art": "kelpie.webp"
+  },
+  {
+    "id": "kholo_sergeant",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "SipdgBCL7XuuEjn6",
+    "name": "Kholo Sergeant",
+    "level": 4,
+    "art": "kholo-sergeant.webp"
+  },
+  {
+    "id": "living_thunderclap",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "UIRu1RDIjv8ueYJr",
+    "name": "Living Thunderclap",
+    "level": 4,
+    "art": "living-thunderclap.webp"
+  },
+  {
+    "id": "mandragora",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "V96EY8vLy7alnun9",
+    "name": "Mandragora",
+    "level": 4,
+    "art": "mandragora.webp"
+  },
+  {
+    "id": "mimic",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "h74BX4Iw78gWewa4",
+    "name": "Mimic",
+    "level": 4,
+    "art": "mimic.webp"
+  },
+  {
+    "id": "mist_stalker",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "vYpuSMLX0yQSDyFn",
+    "name": "Mist Stalker",
+    "level": 4,
+    "art": "mist-stalker.webp"
+  },
+  {
+    "id": "myceloid",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "jWsHDhzrIOqOp29p",
+    "name": "Myceloid",
+    "level": 4,
+    "art": "myceloid.webp"
+  },
+  {
+    "id": "nucol",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "ANptV6ltBi9C3P1l",
+    "name": "Nucol",
+    "level": 4,
+    "art": "nucol.webp"
+  },
+  {
+    "id": "ovinnik",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "8uUkBJlMvKlJWtKx",
+    "name": "Ovinnik",
+    "level": 4,
+    "art": "ovinnik.webp"
+  },
+  {
+    "id": "pixie",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "Ehtm5k9iBYTvSUcZ",
+    "name": "Pixie",
+    "level": 4,
+    "art": "pixie.webp"
+  },
+  {
+    "id": "qarna",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "QJgC1lWvwekWJjkD",
+    "name": "Qarna",
+    "level": 4,
+    "art": "qarna.webp"
+  },
+  {
+    "id": "ratfolk_grenadier",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "C1gYuDSwTkTIkAcC",
+    "name": "Ratfolk Grenadier",
+    "level": 4,
+    "art": "ratfolk-grenadier.webp"
+  },
+  {
+    "id": "rhinoceros",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "LiURMjxzav8SBKSq",
+    "name": "Rhinoceros",
+    "level": 4,
+    "art": "rhinoceros.webp"
+  },
+  {
+    "id": "scarecrow",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "2p7MEk4SdXfLbzxO",
+    "name": "Scarecrow",
+    "level": 4,
+    "art": "scarecrow.webp"
+  },
+  {
+    "id": "sedacthy_marauder",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "VzkfSgbtsGV79WZH",
+    "name": "Sedacthy Marauder",
+    "level": 4,
+    "art": "sedacthy-marauder.webp"
+  },
+  {
+    "id": "shadow",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "VotlWUsFKdOrHWF6",
+    "name": "Shadow",
+    "level": 4,
+    "art": "shadow.webp"
   }
 ]
