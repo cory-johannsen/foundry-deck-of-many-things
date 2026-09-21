@@ -226,6 +226,15 @@ export function selectSkillChallengeTemplate(entries, seed, roomId) {
  * generic pick when hand-authored content doesn't cover this" shape #135
  * already uses for traps, adapted for hand-authored rather than
  * compendium-sourced content per #164's own explicit scope.
+ *
+ * `name`/`summary`/`skillFlavor` are persisted directly on the returned
+ * state (from `template` when valid, else `null`/`{}`) rather than
+ * re-derived from a freshly-reselected template on every render, the way
+ * an earlier version of this pairing (#164) worked — #166 needs a stable
+ * place for an external agent's customization to land and stick, and
+ * persisting these once here, at creation, is what makes that possible:
+ * `dungeon-runner.mjs`'s `applySkillChallengeCustomization` overwrites
+ * exactly these three fields, nothing else.
  */
 export function initSkillChallengeState({
   seed,
@@ -234,12 +243,16 @@ export function initSkillChallengeState({
   partySize,
   template = null,
 }) {
+  const valid = isValidSkillChallengeTemplate(template);
   return {
     vpTarget: VP_TARGET,
     attemptBudget: attemptBudgetForPartySize(partySize),
-    specialtySkills: isValidSkillChallengeTemplate(template)
+    specialtySkills: valid
       ? template.specialtySkills
       : chooseSpecialtySkills(seed, roomId, locationTag),
+    name: valid ? (template.name ?? null) : null,
+    summary: valid ? (template.summary ?? null) : null,
+    skillFlavor: valid ? (template.skillFlavor ?? {}) : {},
     vp: 0,
     attemptsUsed: 0,
     resolved: null, // null while in progress, else 'success' | 'failure'

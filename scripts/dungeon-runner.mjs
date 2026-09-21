@@ -329,6 +329,18 @@ export async function abandonRun(
  * `selectSkillChallengeTemplate` — passes straight through to
  * `initSkillChallengeState`, which falls back to its own generic pick when
  * none is given.
+ *
+ * Also flags the new challenge `customization: {status: 'pending'}` (#166)
+ * — read back by `getPendingSkillChallengeCustomization` for
+ * `tools/agent-loop`'s poller to offer an external agent a chance to
+ * rewrite its name/summary/skillFlavor. Unlike a trap (spawned hidden,
+ * with a real window to customize before the party ever sees it), a
+ * skill-challenge room's content is shown the instant the room becomes
+ * current — there's no hidden window here, so the party may well see the
+ * un-customized name/summary first and see it update in place once (and
+ * if) the agent's customization lands and something re-renders the
+ * tracker. Accepted as the honest v1 trade-off rather than blocking room
+ * display on it, matching #94's own "never stalls" fallback contract.
  */
 export async function ensureSkillChallenge(
   sceneId,
@@ -340,13 +352,90 @@ export async function ensureSkillChallenge(
   if (!state) return null;
   const room = state.rooms.find((r) => r.id === roomId);
   if (!room || room.challenge) return state;
-  const challenge = initSkillChallengeState({
-    seed,
-    roomId,
-    locationTag,
-    partySize,
-    template,
-  });
+  const challenge = {
+    ...initSkillChallengeState({
+      seed,
+      roomId,
+      locationTag,
+      partySize,
+      template,
+    }),
+    customization: { status: "pending" },
+  };
+  const rooms = state.rooms.map((r) =>
+    r.id === roomId ? { ...r, challenge } : r,
+  );
+  const newState = { ...state, rooms };
+  await persist(sceneId, newState, settingsRef);
+  return newState;
+}
+
+/**
+ * The skill-challenge room whose `challenge.customization.status ===
+ * 'pending'` (#166), still unresolved — mirrors `trap-combat.mjs`'s
+ * `getPendingTrapCustomization` exactly, adapted for a challenge's own
+ * persisted state instead of a live Foundry Actor (a skill challenge has
+ * no document of its own to flag; its "pending" marker lives directly on
+ * the room's own `challenge` object in this run's persisted state).
+ * Stops offering a challenge once it's resolved, the same "don't rewrite
+ * something the party's already finished with" reasoning the trap
+ * version's "stop once revealed" gate uses. `null` if nothing's pending.
+ * The *only* read surface `tools/agent-loop`'s poller uses for this.
+ */
+export function getPendingSkillChallengeCustomization(
+  sceneId,
+  { settingsRef = defaultSettingsRef() } = {},
+) {
+  const state = getRunState(sceneId, { settingsRef });
+  if (!state) return null;
+  const room = state.rooms.find(
+    (r) =>
+      r.challenge?.customization?.status === "pending" && !r.challenge.resolved,
+  );
+  if (!room) return null;
+  const c = room.challenge;
+  return {
+    sceneId,
+    roomId: room.id,
+    name: c.name,
+    summary: c.summary,
+    specialtySkills: c.specialtySkills,
+    skillFlavor: c.skillFlavor,
+    locationTag: room.locationTag,
+  };
+}
+
+/**
+ * Applies an external agent's customized name/summary/skillFlavor to
+ * `roomId`'s own pending challenge (#166) — a no-op if that room has no
+ * challenge at all. Only ever touches these three display fields, never
+ * `specialtySkills`/`vpTarget`/`attemptBudget`/DCs — this cannot change
+ * which skills are mechanically eligible or how hard the challenge
+ * actually is, by construction, the same boundary `applyTrapCustomization`
+ * already draws for a trap's own name/description. `skillFlavor` merges
+ * onto the existing map rather than replacing it wholesale, so a partial
+ * customization (flavor for only some of the 3 specialty skills) doesn't
+ * blank out the rest. See module.mjs's api.applySkillChallengeCustomization.
+ */
+export async function applySkillChallengeCustomization(
+  sceneId,
+  roomId,
+  { name = null, summary = null, skillFlavor = null } = {},
+  { settingsRef = defaultSettingsRef() } = {},
+) {
+  const state = getRunState(sceneId, { settingsRef });
+  if (!state) return null;
+  const room = state.rooms.find((r) => r.id === roomId);
+  if (!room?.challenge) return state;
+  const challenge = {
+    ...room.challenge,
+    name: name ?? room.challenge.name,
+    summary: summary ?? room.challenge.summary,
+    skillFlavor: skillFlavor
+      ? { ...room.challenge.skillFlavor, ...skillFlavor }
+      : room.challenge.skillFlavor,
+    customization: { status: "customized" },
+  };
   const rooms = state.rooms.map((r) =>
     r.id === roomId ? { ...r, challenge } : r,
   );
