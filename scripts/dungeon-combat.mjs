@@ -386,6 +386,22 @@ function combatantOpponents(combat, combatant) {
   );
 }
 
+/** Every other still-alive combatant on `combatant`'s own side — the
+ * mirror image of `combatantOpponents`, added for #126's ally-aware area
+ * spell placement scoring (which opponents an area candidate catches is
+ * only half the picture; which allies it would also catch is the other
+ * half). */
+function combatantAllies(combat, combatant) {
+  const mySide = combatant.token?.disposition;
+  return combat.combatants.filter(
+    (c) =>
+      c.id !== combatant.id &&
+      !c.isDefeated &&
+      c.token &&
+      c.token.disposition === mySide,
+  );
+}
+
 /** Chebyshev (8-directional) grid distance between two tokens' positions, in
  * squares — matches how this module already measures everything else
  * (dungeon-layout.mjs's grid-unit geometry), not true PF2e diagonal-cost
@@ -1198,6 +1214,7 @@ export async function getPendingAgentTurn(combat) {
   const gridDistanceFt = combat.scene?.grid?.distance ?? 5;
 
   const rawOpponents = combatantOpponents(combat, combatant);
+  const rawAllies = combatantAllies(combat, combatant);
   const opponents = rawOpponents.map((c) => ({
     id: c.id,
     name: c.name,
@@ -1272,14 +1289,16 @@ export async function getPendingAgentTurn(combat) {
       .filter(hasSpellUsesRemaining)
       .map((spell) => {
         const radiusSquares = (spell.system.area.value ?? 0) / gridDistanceFt;
-        const withinRadius = (centerToken) =>
-          rawOpponents
+        const withinRadiusOf = (pool) => (centerToken) =>
+          pool
             .filter(
               (o) =>
                 chebyshevSquares(centerToken, o.token, gridSize) <=
                 radiusSquares,
             )
             .map((o) => ({ id: o.id, name: o.name }));
+        const withinRadius = withinRadiusOf(rawOpponents);
+        const withinRadiusAllies = withinRadiusOf(rawAllies);
         const placements =
           spell.system.area.type === "emanation"
             ? [
@@ -1287,12 +1306,14 @@ export async function getPendingAgentTurn(combat) {
                   centerType: "self",
                   centerId: null,
                   affected: withinRadius(combatant.token),
+                  affectedAllies: withinRadiusAllies(combatant.token),
                 },
               ]
             : rawOpponents.map((center) => ({
                 centerType: "opponent",
                 centerId: center.id,
                 affected: withinRadius(center.token),
+                affectedAllies: withinRadiusAllies(center.token),
               }));
         return {
           id: spell.id,
