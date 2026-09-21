@@ -18,7 +18,17 @@ import {
 } from "./scene-divination.mjs";
 import { generateEncounter } from "./encounter-generator.mjs";
 import { DungeonApp, resolveCurrentRoom } from "./ui/dungeon-app.mjs";
-import { abandonRun, getRunState } from "./dungeon-runner.mjs";
+import {
+  abandonRun,
+  getRunState,
+  findActiveHostedRun,
+} from "./dungeon-runner.mjs";
+import {
+  canActOnDungeon,
+  decideOpenDungeon,
+  decideGmLessBroadcast,
+  withSettingsModifyGrantedTo,
+} from "./dungeon-permissions.mjs";
 import {
   handleDungeonDoorOpened,
   teardownDungeonRun,
@@ -127,22 +137,31 @@ Hooks.once("ready", async () => {
     installDivinationScene: () => ensureDivinationScene(),
     generateEncounter: (options) => generateEncounter(options),
     openDungeon: () => {
-      if (!game.user.isGM)
+      const decision = decideOpenDungeon(findActiveHostedRun());
+      if (decision.action === "warnGmOnly")
         return ui.notifications.warn(
           game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
         );
+      if (decision.action === "warnAlreadyHosted") {
+        const hostUser = game.users.get(decision.hostUserId);
+        return ui.notifications.warn(
+          game.i18n.format("DOMMT.Dungeon.AlreadyHostedWarning", {
+            host: hostUser?.name ?? "?",
+          }),
+        );
+      }
       return new DungeonApp().render(true);
     },
     // Same cancellation teardown the tracker's Abandon button runs (ITEM-18)
     // — party moved out, every NPC actor the run spawned deleted, scene
     // deleted — for GMs who'd rather script it than click through the app.
     resetDungeon: async (sceneId) => {
-      if (!game.user.isGM)
+      const targetSceneId = sceneId ?? canvas?.scene?.id;
+      if (!targetSceneId) return;
+      if (!canActOnDungeon(getRunState(targetSceneId)))
         return ui.notifications.warn(
           game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
         );
-      const targetSceneId = sceneId ?? canvas?.scene?.id;
-      if (!targetSceneId) return;
       const scene = game.scenes.get(targetSceneId);
       const state = getRunState(targetSceneId);
       await abandonRun({ sceneId: targetSceneId });
@@ -156,11 +175,12 @@ Hooks.once("ready", async () => {
     // turn is due, or apply exactly one chosen candidate. Never exposes
     // arbitrary script access.
     getPendingAgentTurn: async (combatId) => {
-      if (!game.user.isGM)
+      const combat = game.combats.get(combatId ?? game.combat?.id);
+      const run = combat?.scene ? getRunState(combat.scene.id) : null;
+      if (!canActOnDungeon(run))
         return ui.notifications.warn(
           game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
         );
-      const combat = game.combats.get(combatId ?? game.combat?.id);
       return combat ? await getPendingAgentTurn(combat) : null;
     },
     applyAgentDecision: (
@@ -169,11 +189,12 @@ Hooks.once("ready", async () => {
       candidateId,
       rationale = null,
     ) => {
-      if (!game.user.isGM)
+      const combat = game.combats.get(combatId);
+      const run = combat?.scene ? getRunState(combat.scene.id) : null;
+      if (!canActOnDungeon(run))
         return ui.notifications.warn(
           game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
         );
-      const combat = game.combats.get(combatId);
       return combat
         ? applyAgentDecision(combat, combatantId, candidateId, rationale)
         : null;
@@ -186,7 +207,7 @@ Hooks.once("ready", async () => {
       provider = null,
       pollIntervalMs = null,
     } = {}) => {
-      if (!game.user.isGM)
+      if (!canActOnDungeon(findActiveHostedRun()))
         return ui.notifications.warn(
           game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
         );
@@ -197,7 +218,7 @@ Hooks.once("ready", async () => {
       });
     },
     getAgentLoopStatus: () => {
-      if (!game.user.isGM)
+      if (!canActOnDungeon(findActiveHostedRun()))
         return ui.notifications.warn(
           game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
         );
@@ -207,7 +228,7 @@ Hooks.once("ready", async () => {
     // control button below and callable anytime, not just when a timeout
     // has already fired.
     postAgentLoopStatus: async () => {
-      if (!game.user.isGM)
+      if (!canActOnDungeon(findActiveHostedRun()))
         return ui.notifications.warn(
           game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
         );
@@ -228,14 +249,15 @@ Hooks.once("ready", async () => {
     // applyAgentDecision give tools/agent-loop's poller for combat turns,
     // for a spawned trap's own pending narrative customization instead.
     getPendingTrapCustomization: (sceneId) => {
-      if (!game.user.isGM)
+      const targetSceneId = sceneId ?? canvas?.scene?.id;
+      if (!canActOnDungeon(getRunState(targetSceneId)))
         return ui.notifications.warn(
           game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
         );
-      return getPendingTrapCustomization(sceneId ?? canvas?.scene?.id);
+      return getPendingTrapCustomization(targetSceneId);
     },
     applyTrapCustomization: (actorId, customization) => {
-      if (!game.user.isGM)
+      if (!canActOnDungeon(findActiveHostedRun()))
         return ui.notifications.warn(
           game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
         );
@@ -252,6 +274,20 @@ Hooks.once("ready", async () => {
       await ensureDivinationScene();
     } catch (e) {
       console.error(`${MODULE_ID} | ensureDivinationScene failed`, e);
+    }
+    // #109: a non-GM host writing the dungeonRuns (or any other world)
+    // setting needs Foundry's own SETTINGS_MODIFY permission — a plain
+    // isGM check in this module's own code is not enough, Foundry enforces
+    // this itself server-side. Idempotent: only writes when a role is
+    // actually missing, and preserves every existing grant.
+    try {
+      const updated = withSettingsModifyGrantedTo(
+        game.settings.get("core", "permissions"),
+        [CONST.USER_ROLES.PLAYER, CONST.USER_ROLES.TRUSTED],
+      );
+      if (updated) await game.settings.set("core", "permissions", updated);
+    } catch (e) {
+      console.error(`${MODULE_ID} | granting SETTINGS_MODIFY failed`, e);
     }
   }
   console.log(
@@ -406,6 +442,31 @@ Hooks.on("updateWall", async (wall, changes) => {
   );
   if (autoOpenTracker) openDungeonTrackerIfNotOpen();
 });
+
+/**
+ * #109: keeps every non-host, non-GM client's DungeonApp in sync with a
+ * GM-less run — opens a read-only copy when one starts, re-renders it on
+ * every change, and closes it once the run ends. The host's own window is
+ * already open from calling the macro and manages itself via its own
+ * action handlers' render() calls; a GM is never auto-opened.
+ */
+function syncGmLessDungeonBroadcast() {
+  const existing = foundry.applications.instances.get("dommt-dungeon-app");
+  const decision = decideGmLessBroadcast(findActiveHostedRun(), !!existing);
+  if (decision.action === "open") new DungeonApp().render(true);
+  else if (decision.action === "render") existing.render();
+  else if (decision.action === "close") existing.close();
+}
+
+Hooks.on("updateSetting", (setting) => {
+  if (setting.key !== `${MODULE_ID}.dungeonRuns`) return;
+  syncGmLessDungeonBroadcast();
+});
+// A client's canvas may still be mid-transition to the dungeon scene when
+// the setting update above first fires (see ui/dungeon-app.mjs's own
+// _onRender comment on the same scene.activate() timing) — canvasReady
+// re-syncs once it's settled.
+Hooks.on("canvasReady", syncGmLessDungeonBroadcast);
 
 /**
  * Advances a dungeon room the instant its Combat auto-resolves (every
