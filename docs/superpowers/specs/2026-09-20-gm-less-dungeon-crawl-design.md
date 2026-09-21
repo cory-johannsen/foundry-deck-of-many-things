@@ -14,6 +14,12 @@ The dungeon crawl (`DungeonApp`, `scripts/module.mjs`'s `openDungeon()`) only st
 
 Let a player start and run a full crawl with no GM client present: the initial setup dialog (room count, traits) works unchanged for whoever ran the macro; every other GM-only decision point in the flow either transfers to that player (room resolution) or is skipped in favor of automatic acceptance (combat encounter preview); every other connected player sees the crawl's state live, read-only.
 
+## Permission prerequisite (verified live)
+
+Relaxing our own `isGM` checks is not sufficient by itself: Foundry enforces its own server-side permission on `game.settings.set()` for `scope: "world"` settings, independent of anything this module's code decides. It requires the connecting user to hold Foundry's `SETTINGS_MODIFY` permission (`CONST.USER_PERMISSIONS.SETTINGS_MODIFY`), which is a per-role grant configured in `game.permissions` (Foundry's "Configure Permissions" menu). Confirmed live against the project's world: `SETTINGS_MODIFY` is currently granted only to roles `[3, 4]` (Assistant GM, Gamemaster) — every actual player account is role `2` (Trusted) and cannot write world settings today. `Setting` documents also have no `ownership` field (confirmed from `foundry.documents.BaseSetting`'s schema: `_id, key, value, user, _stats`), so a per-document ownership override — the alternative considered — isn't available for this document type.
+
+The fix: the module's existing GM-gated `ready`-hook setup (`Hooks.once("ready")` in `module.mjs`, which already runs `ensureWorldMacros`/`ensureDivinationScene` only `if (game.user.isGM)`) also idempotently merges roles `PLAYER` (1) and `TRUSTED` (2) into `game.permissions.SETTINGS_MODIFY`, preserving whatever roles are already granted rather than overwriting them. This runs automatically the next time a GM logs in — no manual "Configure Permissions" step for the user. Everything else in this design (the `canActOnDungeon` checks, `hostUserId` tracking) remains the actual authorization layer on top of this baseline Foundry permission; granting `SETTINGS_MODIFY` only makes the write *possible*, not unconditional.
+
 ## Data model
 
 `dungeonRuns` world-setting entry (`scripts/dungeon-runner.mjs`) gains one field, alongside the existing `previousSceneId`:
