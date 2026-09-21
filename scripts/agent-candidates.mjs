@@ -626,6 +626,66 @@ export function buildBreathWeaponCandidates({ readyBreathWeapons, actionsRemaini
   return candidates;
 }
 
+const MULTI_STRIKE_WORD_NUMBERS = { one: 1, two: 2, three: 3, four: 4, five: 5 };
+
+/**
+ * The named-Strike breakdown of a multi-strike bundle ability (Draconic
+ * Frenzy-shaped: a `type: "action"` item with a fixed `system.actions.value`
+ * and pure prose naming which of the actor's own Strikes it bundles, e.g.
+ * "The dragon makes two claw Strikes and one tail Strike in any order.") —
+ * confirmed live across 16+ real dragon bestiary actors that there is no
+ * structured field for this at all, only this "N <name> Strike(s) ... in
+ * any order" prose shape. Written as a general pattern (not hardcoded to
+ * Draconic Frenzy specifically); a real observed phrasing quirk uses a
+ * plural noun as the strike name ("one horns Strike"), left as-is here —
+ * fuzzy-matching that name against the actor's real Strike slugs is
+ * dungeon-combat.mjs's job, not this pure parser's. Requires "in any
+ * order" to appear at all (guards against unrelated prose that happens to
+ * mention "Strike"); returns `null` when that guard fails or no "N <name>
+ * Strike(s)" clause is found.
+ */
+export function parseMultiStrikeBundle(descriptionHtml) {
+  if (!/in any order/i.test(descriptionHtml)) return null;
+  const strikeRegex = /\b(one|two|three|four|five|\d+)\s+([a-z][a-z\s]*?)\s+Strikes?\b/gi;
+  const strikes = [];
+  let match;
+  while ((match = strikeRegex.exec(descriptionHtml))) {
+    const countToken = match[1].toLowerCase();
+    const count = MULTI_STRIKE_WORD_NUMBERS[countToken] ?? Number(countToken);
+    const name = match[2].trim().toLowerCase();
+    if (!count || !name) continue;
+    strikes.push({ count, name });
+  }
+  return strikes.length ? strikes : null;
+}
+
+/**
+ * One candidate per ready multi-strike bundle x each opponent within the
+ * bundle's own reach (the caller resolves `strikes` to the actor's real
+ * matched Strike slugs and computes `reachSquares` as the minimum reach
+ * among them — see dungeon-combat.mjs — since every bundle strike found in
+ * practice targets a single opponent, "in any order," not separate ones).
+ * `mapIncrement` isn't threaded through here: it's resolved fresh at
+ * execution time (dungeon-combat.mjs), same as a plain strike candidate's
+ * own variant resolution.
+ */
+export function buildMultiStrikeCandidates({ readyMultiStrikeBundles, opponents, actionsRemaining }) {
+  const candidates = [];
+  for (const bundle of readyMultiStrikeBundles) {
+    if (bundle.cost > actionsRemaining) continue;
+    for (const opponent of opponents) {
+      if (opponent.distanceSquares > bundle.reachSquares) continue;
+      candidates.push({
+        id: `multiStrike:${bundle.slug}:${opponent.id}`, type: 'multiStrike',
+        itemId: bundle.itemId, targetId: opponent.id, cost: bundle.cost,
+        strikes: bundle.strikes,
+        summary: `${bundle.label} vs ${opponent.name}`
+      });
+    }
+  }
+  return candidates;
+}
+
 /**
  * One candidate per ready single-target, save-based debuff/condition spell
  * x each opponent within range — same shape as buildSpellCandidates, with
@@ -766,7 +826,7 @@ export function endTurnCandidate() {
 }
 
 /** Full candidate list for one decision iteration. */
-export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], readyAttackSpells = [], readyDebuffSpells = [], readyBreathWeapons = [], readyChainSpells = [], readyHealSpells = [], readyTierScalingAreaSpells = [], readyDualNatureSpells = [], readyTargetCountSpells = [], readyAutoHitAreaSpells = [], allies = [], turnState, hazard = null, hasRangedOrReach = false }) {
+export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], readyAttackSpells = [], readyDebuffSpells = [], readyBreathWeapons = [], readyMultiStrikeBundles = [], readyChainSpells = [], readyHealSpells = [], readyTierScalingAreaSpells = [], readyDualNatureSpells = [], readyTargetCountSpells = [], readyAutoHitAreaSpells = [], allies = [], turnState, hazard = null, hasRangedOrReach = false }) {
   if (turnState.actionsRemaining <= 0) return [endTurnCandidate()];
   return [
     ...buildMovementCandidates({ opponents, hazard, hasRangedOrReach }),
@@ -776,6 +836,7 @@ export function buildCandidateList({ opponents, readyActions, readySpells = [], 
     ...buildAttackSpellCandidates({ readyAttackSpells, opponents, actionsRemaining: turnState.actionsRemaining }),
     ...buildDebuffSpellCandidates({ readyDebuffSpells, opponents, actionsRemaining: turnState.actionsRemaining }),
     ...buildBreathWeaponCandidates({ readyBreathWeapons, actionsRemaining: turnState.actionsRemaining }),
+    ...buildMultiStrikeCandidates({ readyMultiStrikeBundles, opponents, actionsRemaining: turnState.actionsRemaining }),
     ...buildChainSpellCandidates({ readyChainSpells, opponents, actionsRemaining: turnState.actionsRemaining }),
     ...buildHealSpellCandidates({ readyHealSpells, allies, actionsRemaining: turnState.actionsRemaining }),
     ...buildTierScalingAreaSpellCandidates({ readyTierScalingAreaSpells, actionsRemaining: turnState.actionsRemaining }),
@@ -789,7 +850,11 @@ export function buildCandidateList({ opponents, readyActions, readySpells = [], 
 /** New turn state after applying `candidate` — a pure transition, no side effects. */
 export function applyCandidateToTurnState(turnState, candidate) {
   if (candidate.type === 'endTurn') return { ...turnState, actionsRemaining: 0 };
-  const mapIncrement = candidate.type === 'strike' ? turnState.mapIncrement + 1 : turnState.mapIncrement;
+  let mapIncrement = turnState.mapIncrement;
+  if (candidate.type === 'strike') mapIncrement += 1;
+  else if (candidate.type === 'multiStrike') {
+    mapIncrement += candidate.strikes.reduce((sum, s) => sum + s.count, 0);
+  }
   return { actionsRemaining: turnState.actionsRemaining - candidate.cost, mapIncrement };
 }
 
