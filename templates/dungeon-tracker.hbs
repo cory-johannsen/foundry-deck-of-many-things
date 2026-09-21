@@ -152,6 +152,25 @@
                     "DOMMT.Dungeon.Narrative.Placeholder"
                   }}</p>
               {{/unless}}
+              {{! #165: archetype-specific extras — none, one, or another of
+                these renders depending on which archetype was drawn; the
+                shared name/summary already rendered above via the generic
+                currentRoom.setpiece block. }}
+              {{#if narrative.revealText}}
+                <p class="dommt-dungeon__narrative-reveal">{{narrative.revealText}}</p>
+              {{/if}}
+              {{#if narrative.npcHook}}
+                <p class="dommt-dungeon__narrative-npc">
+                  <strong>{{narrative.npcName}}</strong> — {{narrative.npcHook}}
+                </p>
+              {{/if}}
+              {{#if narrative.options}}
+                <ul class="dommt-dungeon__narrative-options">
+                  {{#each narrative.options}}
+                    <li><strong>{{this.label}}</strong> — {{this.consequence}}</li>
+                  {{/each}}
+                </ul>
+              {{/if}}
               <form class="dommt-dungeon__narrative-form">
                 <label>
                   {{localize "DOMMT.Dungeon.Narrative.ObjectiveLabel"}}
@@ -160,7 +179,7 @@
                     placeholder="{{localize
                       'DOMMT.Dungeon.Narrative.ObjectivePlaceholder'
                     }}"
-                  ></textarea>
+                  >{{narrative.suggestedObjective}}</textarea>
                 </label>
                 <button type="button" data-action="continueNarrative">{{localize
                     "DOMMT.Dungeon.Narrative.ContinueButton"

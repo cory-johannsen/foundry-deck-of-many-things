@@ -152,9 +152,9 @@ export function outcomeSlotAt(seed, index) {
  * rarely repeats a set-piece and a long one cycles rather than repeating the
  * same one back-to-back. Returns null when no set-pieces are available.
  */
-export function setpieceAt(seed, occurrenceIndex, setpieceIds) {
+export function setpieceAt(seed, occurrenceIndex, setpieceIds, salt = 'setpiece-order') {
   if (!setpieceIds?.length) return null;
-  const rand = splitmix32(seedFromString(`${seed}-setpiece-order`));
+  const rand = splitmix32(seedFromString(`${seed}-${salt}`));
   const order = shuffle(setpieceIds, rand);
   return order[occurrenceIndex % order.length];
 }
@@ -172,7 +172,7 @@ export const MID_DUNGEON_REST_THRESHOLD = 6;
  * with no outcome slot — the climactic fight, and the end of the line for
  * reward/ruin resolution.
  */
-export function buildRoomSequence({ seed, roomCount, setpieceIds = [] }) {
+export function buildRoomSequence({ seed, roomCount, setpieceIds = [], narrativeSetpieceIds = [] }) {
   if (!Number.isInteger(roomCount) || roomCount < 2) {
     throw new Error('roomCount must be an integer of at least 2 (rooms plus a goal room)');
   }
@@ -189,9 +189,17 @@ export function buildRoomSequence({ seed, roomCount, setpieceIds = [] }) {
   // around it rather than the rest landing right before the goal.
   const restAfterIndex = roomCount > MID_DUNGEON_REST_THRESHOLD ? Math.floor((roomCount - 2) / 2) : -1;
   let puzzleOccurrence = 0;
+  let narrativeOccurrence = 0;
   for (let i = 0; i < roomCount - 1; i += 1) {
     const kind = roomKindAt(seed, i);
-    const setpieceId = kind === 'puzzle_or_trap' ? setpieceAt(seed, puzzleOccurrence++, setpieceIds) : null;
+    // #165: narrative rooms get a set-piece the same way puzzle_or_trap
+    // rooms already do — a separate occurrence counter and a separate
+    // salted shuffle (`narrative-setpiece-order`) over its own pool, so
+    // drawing one never depends on or exhausts the puzzle/trap pool.
+    const setpieceId =
+      kind === 'puzzle_or_trap' ? setpieceAt(seed, puzzleOccurrence++, setpieceIds)
+      : kind === 'narrative' ? setpieceAt(seed, narrativeOccurrence++, narrativeSetpieceIds, 'narrative-setpiece-order')
+      : null;
     const outcomeSlot = outcomeSlotAt(seed, i);
     rooms.push({
       id: `room-${i}`, kind, isGoal: false, setpieceId, outcomeSlotId: outcomeSlot.id,
@@ -239,7 +247,7 @@ export function resolveRoomOutcome(outcomeSlotTemplate, succeeded) {
  * the goal, and `insert_after` always lands strictly before it since the
  * goal room is never `currentIndex`'s neighbour once it's still ahead.
  */
-export function applySequenceMutation(rooms, currentIndex, mutation, { seed, setpieceIds = [] } = {}) {
+export function applySequenceMutation(rooms, currentIndex, mutation, { seed, setpieceIds = [], narrativeSetpieceIds = [] } = {}) {
   if (mutation === 'remove_next') {
     const next = rooms[currentIndex + 1];
     if (!next || next.isGoal) return rooms;
@@ -249,7 +257,10 @@ export function applySequenceMutation(rooms, currentIndex, mutation, { seed, set
     const salt = `extra-${currentIndex}-${rooms.length}`;
     const kind = pickAt(seed, `${salt}-kind`, ROOM_KIND_WEIGHTS).kind;
     const outcomeTemplate = pickAt(seed, `${salt}-outcome`, OUTCOME_SLOT_TEMPLATES);
-    const setpieceId = kind === 'puzzle_or_trap' ? setpieceAt(seed, rooms.length, setpieceIds) : null;
+    const setpieceId =
+      kind === 'puzzle_or_trap' ? setpieceAt(seed, rooms.length, setpieceIds)
+      : kind === 'narrative' ? setpieceAt(seed, rooms.length, narrativeSetpieceIds, 'narrative-setpiece-order')
+      : null;
     const newRoom = {
       id: `room-${salt}`,
       kind,

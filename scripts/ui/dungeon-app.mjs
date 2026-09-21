@@ -16,6 +16,7 @@ import { makeFoundryApi } from "../foundry-api.mjs";
 import { rollSkillChallengeAttempt } from "../skill-challenge.mjs";
 import { rollPuzzleStageAttempt } from "../puzzle.mjs";
 import { ALL_SKILLS, dcForAttempt } from "../skill-challenge-mechanics.mjs";
+import { isValidNarrativeTemplate } from "../narrative-mechanics.mjs";
 import {
   traitFieldHtml,
   wireTraitPickerButtons,
@@ -107,7 +108,20 @@ export async function resolveCurrentRoom(succeeded, { scene } = {}) {
   const { state, mutation, nextRoomId, nextPhysicalSlot } =
     await markRoomOutcome(
       { sceneId: scene.id, succeeded },
-      { setpieceIds: setpieces.map((s) => s.id) },
+      {
+        // #165: filtered by kind so a puzzle_or_trap room's own draw can
+        // never land on a skill_challenge or narrative entry (those never
+        // use setpieceId at all — skill_challenge picks its own template
+        // separately, and neither would populate anything if drawn here) —
+        // a real, pre-existing bug this filter also fixes, not just a
+        // narrative-specific concern.
+        setpieceIds: setpieces
+          .filter((s) => s.kind === "puzzle" || s.kind === "trap")
+          .map((s) => s.id),
+        narrativeSetpieceIds: setpieces
+          .filter((s) => s.kind === "narrative")
+          .map((s) => s.id),
+      },
     );
   if (mutation === "rerun_encounter")
     ui.notifications.warn(
@@ -137,7 +151,17 @@ export async function startDungeonRun({
       previousSceneId,
       hostUserId,
     },
-    { setpieceIds: setpieces.map((s) => s.id) },
+    {
+      // #165: same kind-filtering as resolveCurrentRoom's own markRoomOutcome
+      // call — see its comment for why an unfiltered pool is a real bug, not
+      // just a narrative-specific concern.
+      setpieceIds: setpieces
+        .filter((s) => s.kind === "puzzle" || s.kind === "trap")
+        .map((s) => s.id),
+      narrativeSetpieceIds: setpieces
+        .filter((s) => s.kind === "narrative")
+        .map((s) => s.id),
+    },
   );
 
   // Room 0 is always the safe entry — no encounter, trap or puzzle ever
@@ -510,14 +534,30 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // resolves as succeeded (still running the room's own Reward-side
     // Journey Spread outcome via the usual markRoomOutcome/resolveCurrentRoom
     // path, just never the Ruin side) via a single Continue action instead
-    // of the plain Succeed/Fail choice. `setpieceId` is never actually
-    // assigned for a narrative room yet (dungeon-deck.mjs's buildRoomSequence
-    // only does that for puzzle_or_trap — a future narrative template
-    // library, #165, is what would change that), so `setpiece` here is
-    // always null in practice for now; the template falls back to a plain
-    // placeholder rather than showing nothing.
+    // of the plain Succeed/Fail choice.
     const isNarrativeRoom =
       currentRoom?.kind === "narrative" && !currentRoomResolved;
+    // #165: unlike puzzle/skill_challenge, a narrative room has no evolving
+    // mechanical state (no successes counter, no attempts) — it's resolved
+    // in a single Continue action — so there's nothing to lazily attach or
+    // persist here. This just reads the archetype-specific fields straight
+    // off the raw setpiece `dungeon-deck.mjs`'s buildRoomSequence already
+    // resolved via `setpieceId`, the same "read what's already there" shape
+    // the puzzle_or_trap branch's own trap half uses. `setpiece.name`/
+    // `.summary` render for free through the generic `currentRoom.setpiece`
+    // block above — this only carries the archetype extras that block
+    // doesn't know about.
+    let narrative = null;
+    if (isNarrativeRoom && setpiece && isValidNarrativeTemplate(setpiece)) {
+      narrative = {
+        archetype: setpiece.archetype,
+        revealText: setpiece.revealText ?? null,
+        npcName: setpiece.npcName ?? null,
+        npcHook: setpiece.npcHook ?? null,
+        options: setpiece.options ?? null,
+        suggestedObjective: setpiece.suggestedObjective ?? null,
+      };
+    }
     // #169: a treasure room, like a narrative room, is never succeeded/
     // failed the plain way — it always has something to find, so claiming
     // it always succeeds (still running the usual Reward-side Journey
@@ -571,6 +611,11 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       // room kind is actually current, the same way it persists in
       // `state.objective` regardless of which room set it.
       isNarrativeRoom,
+      // #165: the selected archetype's own extra fields (revealText,
+      // npcName/npcHook, options, suggestedObjective) — null when the room
+      // has no valid narrative template (no set-pieces available yet, or
+      // this run predates #165).
+      narrative,
       isTreasureRoom,
       objective: state.objective ?? null,
       partyMembers: (game.actors?.party?.members ?? [])

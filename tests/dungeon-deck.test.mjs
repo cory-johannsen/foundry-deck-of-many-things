@@ -137,6 +137,35 @@ describe('buildRoomSequence', () => {
     const withoutPieces = buildRoomSequence({ seed: 'delta', roomCount: 12, setpieceIds: [] });
     for (const room of withoutPieces) expect(room.setpieceId).toBeNull();
   });
+
+  it('only assigns a set-piece to narrative rooms, and only when narrative set-pieces are supplied (#165)', () => {
+    // seed 'gamma' + roomCount 12 is confirmed (roomKindAt) to include at
+    // least one narrative-kind room, so this actually exercises the
+    // assignment rather than passing vacuously.
+    const withPieces = buildRoomSequence({
+      seed: 'gamma', roomCount: 12, narrativeSetpieceIds: ['n1', 'n2']
+    });
+    expect(withPieces.some((r) => r.kind === 'narrative')).toBe(true);
+    for (const room of withPieces) {
+      if (room.kind === 'narrative') expect(['n1', 'n2']).toContain(room.setpieceId);
+      else expect(room.setpieceId).toBeNull();
+    }
+    const withoutPieces = buildRoomSequence({ seed: 'gamma', roomCount: 12, narrativeSetpieceIds: [] });
+    for (const room of withoutPieces) expect(room.setpieceId).toBeNull();
+  });
+
+  it('draws puzzle_or_trap and narrative set-pieces from independent pools (#165)', () => {
+    const rooms = buildRoomSequence({
+      seed: 'gamma', roomCount: 12, setpieceIds: ['p1', 'p2'], narrativeSetpieceIds: ['n1', 'n2']
+    });
+    expect(rooms.some((r) => r.kind === 'puzzle_or_trap')).toBe(true);
+    expect(rooms.some((r) => r.kind === 'narrative')).toBe(true);
+    for (const room of rooms) {
+      if (room.kind === 'puzzle_or_trap') expect(['p1', 'p2']).toContain(room.setpieceId);
+      else if (room.kind === 'narrative') expect(['n1', 'n2']).toContain(room.setpieceId);
+      else expect(room.setpieceId).toBeNull();
+    }
+  });
 });
 
 describe('resolveRoomOutcome', () => {
