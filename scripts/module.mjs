@@ -18,7 +18,12 @@ import {
 } from "./scene-divination.mjs";
 import { generateEncounter } from "./encounter-generator.mjs";
 import { DungeonApp, resolveCurrentRoom } from "./ui/dungeon-app.mjs";
-import { abandonRun, getRunState, findActiveHostedRun } from "./dungeon-runner.mjs";
+import {
+  abandonRun,
+  getRunState,
+  findActiveHostedRun,
+  findHostedRunForBroadcast,
+} from "./dungeon-runner.mjs";
 import { decideOpenDungeon, decideGmLessBroadcast } from "./dungeon-permissions.mjs";
 import { registerDungeonActionSocket } from "./dungeon-remote.mjs";
 import {
@@ -428,7 +433,7 @@ Hooks.on("updateWall", async (wall, changes) => {
  */
 function syncGmLessDungeonBroadcast() {
   const existing = foundry.applications.instances.get("dommt-dungeon-app");
-  const decision = decideGmLessBroadcast(findActiveHostedRun(), !!existing);
+  const decision = decideGmLessBroadcast(findHostedRunForBroadcast(), !!existing);
   if (decision.action === "open") new DungeonApp().render(true);
   else if (decision.action === "render") existing.render();
   else if (decision.action === "close") existing.close();

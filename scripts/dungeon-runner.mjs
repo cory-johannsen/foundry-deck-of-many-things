@@ -343,6 +343,25 @@ export function findActiveHostedRun({ settingsRef = defaultSettingsRef() } = {})
 }
 
 /**
+ * Like findActiveHostedRun, but also matches a run that just completed —
+ * used by the broadcast hook (module.mjs's syncGmLessDungeonBroadcast) so
+ * a run's completion is actually shown to everyone instead of silently
+ * closing their tracker the instant the goal room resolves. Only an
+ * abandoned/reset run (its entry deleted entirely from dungeonRuns) should
+ * ever stop showing up here — findActiveHostedRun's own `!completed`
+ * exclusion stays correct for its own purpose (openDungeon()'s "is a
+ * different host already running something" collision check, where a
+ * finished run shouldn't block a fresh start).
+ */
+export function findHostedRunForBroadcast({ settingsRef = defaultSettingsRef() } = {}) {
+  const all = settingsRef.get(MODULE_ID, "dungeonRuns") ?? {};
+  for (const [sceneId, state] of Object.entries(all)) {
+    if (state?.hostUserId) return { sceneId, hostUserId: state.hostUserId };
+  }
+  return null;
+}
+
+/**
  * Lazily attaches a fresh Victory Point challenge (#162) to `roomId`'s own
  * room object the first time it's needed — a no-op if that room already
  * has one, so a re-render (or a recovery retry) never rerolls its

@@ -68,8 +68,9 @@ export function decideGmLessBroadcast(
  * yet when this fires).
  */
 export function isAuthorizedRequest(actionName, requestingUserId, run) {
+  if (!requestingUserId) return false;
   if (actionName === "startRun") {
     return !run || run.hostUserId === requestingUserId;
   }
-  return !!run && run.hostUserId === requestingUserId;
+  return !!run?.hostUserId && run.hostUserId === requestingUserId;
 }

@@ -433,6 +433,7 @@ export async function populateSlotEncounter(
     levelOffsetBias,
     locationTag,
     skipThemeDialog: true,
+    scene,
     originArea: {
       x: toPixels(rect.gx),
       y: toPixels(rect.gy),
@@ -488,7 +489,7 @@ export async function populateSlotTrap(
   { partyLevel, levelOffsetBias = 0, locationTag = null, seed = "" } = {},
 ) {
   const rect = slotRect(seed, slot);
-  const api = makeFoundryApi();
+  const api = makeFoundryApi(scene);
   const rng = splitmix32(seedFromString(`${seed}-trap-${slot}`));
   const trap = await selectTrap({ api, partyLevel, levelOffsetBias, rng });
   if (!trap) {

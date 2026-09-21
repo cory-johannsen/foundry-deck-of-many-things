@@ -11,6 +11,7 @@ import {
   recordSkillChallengeAttempt,
   setObjective,
   findActiveHostedRun,
+  findHostedRunForBroadcast,
 } from "../scripts/dungeon-runner.mjs";
 
 function makeSettingsStub(initial = {}) {
@@ -143,6 +144,47 @@ describe("findActiveHostedRun", () => {
       "scene-1": completed,
     });
     expect(findActiveHostedRun({ settingsRef })).toBeNull();
+  });
+});
+
+describe("findHostedRunForBroadcast", () => {
+  it("returns the one active (not completed) hosted run — same as findActiveHostedRun would", async () => {
+    const settingsRef = makeSettingsStub();
+    await createRun({ sceneId: "scene-1", roomCount: 5 }, { settingsRef });
+    await createRun(
+      { sceneId: "scene-2", roomCount: 5, hostUserId: "player-1" },
+      { settingsRef },
+    );
+    expect(findHostedRunForBroadcast({ settingsRef })).toEqual({
+      sceneId: "scene-2",
+      hostUserId: "player-1",
+    });
+  });
+
+  it("still returns a completed hosted run — the behavioral difference from findActiveHostedRun, which excludes it", async () => {
+    const settingsRef = makeSettingsStub();
+    await createRun(
+      { sceneId: "scene-1", roomCount: 2, hostUserId: "player-1" },
+      { settingsRef },
+    );
+    // Resolve straight to the goal room to mark it completed.
+    const state = getRunState("scene-1", { settingsRef });
+    const completed = { ...state, completed: true };
+    await settingsRef.set("deck-of-many-more-things", "dungeonRuns", {
+      ...settingsRef.get("deck-of-many-more-things", "dungeonRuns"),
+      "scene-1": completed,
+    });
+    expect(findActiveHostedRun({ settingsRef })).toBeNull();
+    expect(findHostedRunForBroadcast({ settingsRef })).toEqual({
+      sceneId: "scene-1",
+      hostUserId: "player-1",
+    });
+  });
+
+  it("returns null when there's no run with a hostUserId at all", async () => {
+    const settingsRef = makeSettingsStub();
+    await createRun({ sceneId: "scene-1", roomCount: 5 }, { settingsRef });
+    expect(findHostedRunForBroadcast({ settingsRef })).toBeNull();
   });
 });
 

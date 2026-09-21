@@ -147,4 +147,23 @@ describe("isAuthorizedRequest", () => {
   it("denies any other action when there is no run at all", () => {
     expect(isAuthorizedRequest("resolveRoom", player.id, null)).toBe(false);
   });
+
+  it("denies a forged null requester against a normal GM-run game's run (hostUserId: null) — the exact bypass being closed", () => {
+    const normalRun = { sceneId: "scene-1", hostUserId: null };
+    expect(isAuthorizedRequest("resolveRoom", null, normalRun)).toBe(false);
+  });
+
+  it("denies a real requester against a normal GM-run game's run (hostUserId: null)", () => {
+    const normalRun = { sceneId: "scene-1", hostUserId: null };
+    expect(isAuthorizedRequest("resolveRoom", player.id, normalRun)).toBe(
+      false,
+    );
+  });
+
+  it("denies startRun with a falsy requestingUserId, regardless of run", () => {
+    expect(isAuthorizedRequest("startRun", null, null)).toBe(false);
+    expect(isAuthorizedRequest("startRun", undefined, null)).toBe(false);
+    const hosted = { sceneId: "scene-1", hostUserId: player.id };
+    expect(isAuthorizedRequest("startRun", null, hosted)).toBe(false);
+  });
 });

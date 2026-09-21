@@ -178,8 +178,10 @@ export async function generateEncounter({
   levelOffsetBias = 0,
   locationTag = null,
   skipThemeDialog = false,
+  scene: sceneOverride = null,
 } = {}) {
-  if (!canvas?.scene) {
+  const scene = sceneOverride ?? canvas?.scene;
+  if (!scene) {
     ui.notifications.warn(game.i18n.localize("DOMMT.Encounter.NoSceneWarning"));
     return;
   }
@@ -187,17 +189,18 @@ export async function generateEncounter({
     ui.notifications.warn(game.i18n.localize("DOMMT.Encounter.GmOnlyWarning"));
     return;
   }
-  // #109: canvas.scene is already the dungeon scene by the time a room
-  // population calls this (populateSlotEncounter never overrides it) — the
-  // standalone "DOMMT: Generate Encounter" macro's scene never has a run at
-  // all, so `run` is null there. A GM-less run's host isn't the one
-  // executing this (it always runs on whichever client is genuinely GM —
-  // see dungeon-remote.mjs), so nobody's watching this client's screen to
-  // click Accept/Reroll: the first dealt roster is used directly instead.
-  const run = getRunState(canvas.scene.id);
+  // #109: `scene` is already the dungeon scene by the time a room
+  // population calls this (populateSlotEncounter passes its own `scene`
+  // through) — the standalone "DOMMT: Generate Encounter" macro passes no
+  // override, so `scene` falls back to canvas?.scene there and `run` is
+  // null. A GM-less run's host isn't the one executing this (it always runs
+  // on whichever client is genuinely GM — see dungeon-remote.mjs), so
+  // nobody's watching this client's screen to click Accept/Reroll: the
+  // first dealt roster is used directly instead.
+  const run = getRunState(scene.id);
   const skipPreview = Boolean(run?.hostUserId);
 
-  const api = makeFoundryApi();
+  const api = makeFoundryApi(scene);
   const creatureArt = await loadCreatureArt();
   const partyLevel = await api.partyLevel();
   const partyMembers = (game.actors?.party?.members ?? []).filter(
@@ -278,6 +281,6 @@ export async function generateEncounter({
   // the moment it's merely built. The standalone macro has no such reveal
   // step, so it starts Combat immediately for whatever just spawned.
   if (!originArea) {
-    await startCombatForEncounterId(canvas.scene, encounterId);
+    await startCombatForEncounterId(scene, encounterId);
   }
 }

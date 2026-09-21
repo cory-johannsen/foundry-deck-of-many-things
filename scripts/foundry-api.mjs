@@ -138,7 +138,7 @@ export function rarityAtLeast(rarity, min) {
   );
 }
 
-export function makeFoundryApi() {
+export function makeFoundryApi(sceneRef = null) {
   const getActor = (actorId) => {
     const actor = game.actors.get(actorId);
     if (!actor) throw new Error(`No actor: ${actorId}`);
@@ -698,12 +698,12 @@ export function makeFoundryApi() {
         extraFlags = null,
       } = {},
     ) {
-      const scene = canvas?.scene;
+      const scene = sceneRef ?? canvas?.scene;
       if (!scene) throw new Error("No active scene to place creatures on");
       const grid = scene.grid?.size ?? 100;
       const focus =
         !originArea && nearActorId
-          ? canvas.tokens?.placeables?.find((t) => t.actor?.id === nearActorId)
+          ? scene.tokens.find((t) => t.actor?.id === nearActorId)
           : null;
       const areaRectGrid = originArea
         ? {
@@ -715,10 +715,10 @@ export function makeFoundryApi() {
         : null;
       const originX = originArea
         ? originArea.x + originArea.width / 2
-        : (focus?.document?.x ?? (scene.width ?? grid * 10) / 2);
+        : (focus?.x ?? (scene.width ?? grid * 10) / 2);
       const originY = originArea
         ? originArea.y + originArea.height / 2
-        : (focus?.document?.y ?? (scene.height ?? grid * 10) / 2);
+        : (focus?.y ?? (scene.height ?? grid * 10) / 2);
 
       // Everything already on the scene, in squares. Creatures placed by this
       // call are added as they go, so a card summoning several does not stack
@@ -833,14 +833,14 @@ export function makeFoundryApi() {
       data,
       { nearActorId = null, disposition = 1 } = {},
     ) {
-      const scene = canvas?.scene;
+      const scene = sceneRef ?? canvas?.scene;
       if (!scene) throw new Error("No active scene to place a creature on");
       const grid = scene.grid?.size ?? 100;
       const focus = nearActorId
-        ? canvas.tokens?.placeables?.find((t) => t.actor?.id === nearActorId)
+        ? scene.tokens.find((t) => t.actor?.id === nearActorId)
         : null;
-      const originX = focus?.document?.x ?? (scene.width ?? grid * 10) / 2;
-      const originY = focus?.document?.y ?? (scene.height ?? grid * 10) / 2;
+      const originX = focus?.x ?? (scene.width ?? grid * 10) / 2;
+      const originY = focus?.y ?? (scene.height ?? grid * 10) / 2;
 
       const [actor] = await Actor.createDocuments([
         foundry.utils.mergeObject(data, {
@@ -897,7 +897,7 @@ export function makeFoundryApi() {
       typeIds,
       { originArea = null, seed = "", extraFlags = null } = {},
     ) {
-      const scene = canvas?.scene;
+      const scene = sceneRef ?? canvas?.scene;
       if (!scene || !originArea || !typeIds.length) return [];
       const grid = scene.grid?.size ?? 100;
       const rect = {

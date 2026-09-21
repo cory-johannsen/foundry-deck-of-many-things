@@ -105,7 +105,9 @@ export function registerDungeonActionSocket() {
     if (msg?.type !== "dungeon-action-request") return;
     if (!game.user.isGM) return;
 
-    const handler = DUNGEON_ACTIONS[msg.actionName];
+    const handler = Object.hasOwn(DUNGEON_ACTIONS, msg.actionName)
+      ? DUNGEON_ACTIONS[msg.actionName]
+      : undefined;
     const run =
       msg.actionName === "startRun"
         ? findActiveHostedRun()
