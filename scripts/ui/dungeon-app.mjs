@@ -5,11 +5,11 @@ import {
   markRoomOutcome,
   abandonRun,
   canUndoRoomEntry,
-  ensureSkillChallenge,
   recordSkillChallengeAttempt,
   setObjective,
 } from "../dungeon-runner.mjs";
 import { canActOnDungeon } from "../dungeon-permissions.mjs";
+import { requestDungeonAction } from "../dungeon-remote.mjs";
 import { depthBiasFor } from "../dungeon-deck.mjs";
 import { makeFoundryApi } from "../foundry-api.mjs";
 import { rollSkillChallengeAttempt } from "../skill-challenge.mjs";
@@ -111,6 +111,148 @@ export async function resolveCurrentRoom(
 
   const nextRoom = state.rooms.find((r) => r.id === nextRoomId);
   await buildPopulateAndUnlockRoom(scene, state, nextRoom, nextPhysicalSlot);
+}
+
+export async function startDungeonRun({
+  roomCount,
+  traits,
+  excludeTraits,
+  previousSceneId,
+  hostUserId,
+}) {
+  const scene = await createDungeonScene();
+  const setpieces = await loadDungeonSetpieces();
+  const state = await createRun(
+    {
+      sceneId: scene.id,
+      roomCount,
+      traits,
+      excludeTraits,
+      previousSceneId,
+      hostUserId,
+    },
+    { setpieceIds: setpieces.map((s) => s.id) },
+  );
+
+  // Room 0 is always the safe entry — no encounter, trap or puzzle ever
+  // spawns there (see dungeon-deck.mjs's buildRoomSequence).
+  const entryRoom = state.rooms[0];
+  await buildRoomAtSlot(scene, 0, {
+    isGoal: entryRoom.isGoal,
+    locationTag: entryRoom.locationTag,
+    artVariant: entryRoom.artVariant,
+    seed: state.seed,
+  });
+
+  // A combat first room's build+populate is deliberately deferred to the
+  // next "Populate Next Room" action instead — see #onPopulateNext/
+  // populateNextRoom below (ITEM-11).
+  const firstRealRoom = state.rooms[1];
+  if (firstRealRoom && firstRealRoom.kind !== "combat") {
+    await buildPopulateAndUnlockRoom(scene, state, firstRealRoom, 1);
+  }
+
+  const partyMembers = (game.actors?.party?.members ?? []).filter(
+    (m) => m.type === "character",
+  );
+  await placePartyInSlot(scene, 0, partyMembers, state.seed);
+  await scene.activate();
+  // The canvas doesn't finish switching to the new scene the instant
+  // activate() resolves — animatePan needs a beat to land on it, same
+  // settling delay scene-divination.mjs already relies on for its own
+  // post-activate scene work.
+  await new Promise((r) => setTimeout(r, 400));
+  focusCameraOnSlot(scene, 0, state.seed);
+}
+
+export async function recordSkillChallengeOutcome(sceneId, roomId, outcome) {
+  const newState = await recordSkillChallengeAttempt(sceneId, roomId, outcome);
+  const resolved = newState?.rooms.find((r) => r.id === roomId)?.challenge
+    ?.resolved;
+  if (resolved)
+    await resolveCurrentRoom(resolved === "success", {
+      scene: game.scenes.get(sceneId),
+    });
+}
+
+/**
+ * A narrative room's own resolution (#163): saves whatever's in the
+ * objective textarea (if anything — see #onContinueNarrative's own comment
+ * on why a blank field leaves any existing objective alone) and always
+ * resolves the room succeeded, since a narrative beat has nothing to fail.
+ */
+export async function continueNarrativeRoom(sceneId, objective) {
+  if (objective) await setObjective(sceneId, objective);
+  await resolveCurrentRoom(true, { scene: game.scenes.get(sceneId) });
+}
+
+export async function resolveCombatRoomOutcome(sceneId, succeeded) {
+  const scene = game.scenes.get(sceneId);
+  const state = scene ? getRunState(sceneId) : null;
+  const currentRoom = state?.rooms[state.currentIndex];
+  const slot = currentRoom ? state.physicalSlotByRoomId[currentRoom.id] : null;
+  if (slot == null) return;
+  await resolveSlotCombat(
+    scene,
+    slot,
+    succeeded ? "victory" : "defeat",
+    makeFoundryApi(),
+  );
+  await resolveCurrentRoom(succeeded, { scene });
+}
+
+export async function startCombatRecoveryFor(sceneId) {
+  const scene = game.scenes.get(sceneId);
+  const state = scene ? getRunState(sceneId) : null;
+  const currentRoom = state?.rooms[state.currentIndex];
+  const slot = currentRoom ? state.physicalSlotByRoomId[currentRoom.id] : null;
+  if (slot == null) return;
+  await startCombatForSlot(scene, slot);
+}
+
+export async function populateNextRoom(sceneId) {
+  const scene = game.scenes.get(sceneId);
+  const state = scene ? getRunState(sceneId) : null;
+  const nextRoom = state?.rooms[state.currentIndex + 1] ?? null;
+  const slot = nextRoom ? state.physicalSlotByRoomId[nextRoom.id] : null;
+  if (!scene || slot == null) return;
+
+  // A combat first room's walls don't exist yet the first time this runs
+  // for it — startDungeonRun deliberately skipped building it — so build
+  // them here too, same as every other recovery this function already
+  // covers. A no-op for every normal case, where the room was already
+  // built back when the room before it resolved.
+  if (!isSlotBuilt(scene, slot)) {
+    await buildRoomAtSlot(scene, slot, {
+      isGoal: nextRoom.isGoal,
+      locationTag: nextRoom.locationTag,
+      artVariant: nextRoom.artVariant,
+      seed: state.seed,
+    });
+  }
+
+  await populateSlotEncounter(scene, slot, {
+    prefillTraits: state.traits,
+    prefillExcludeTraits: state.excludeTraits,
+    levelOffsetBias: depthBiasFor({
+      physicalSlot: slot,
+      roomCount: state.rooms.length,
+      isGoal: nextRoom.isGoal,
+    }),
+    locationTag: nextRoom.locationTag,
+    seed: state.seed,
+  });
+  if (isSlotPopulated(scene, slot)) await unlockDoorToSlot(scene, slot);
+}
+
+export async function abandonDungeonRun(sceneId) {
+  const scene = game.scenes.get(sceneId);
+  const state = getRunState(sceneId);
+  await abandonRun({ sceneId });
+  if (scene)
+    await teardownDungeonRun(scene, {
+      previousSceneId: state?.previousSceneId ?? null,
+    });
 }
 
 export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -219,52 +361,28 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       ? (game.users.get(state.hostUserId)?.name ?? "?")
       : null;
 
-    // #162: lazily attach a fresh Victory Point challenge to the current
-    // room the first time it's rendered — ensureSkillChallenge is itself a
-    // no-op if one's already attached, so a plain re-render never rerolls
-    // specialty skills mid-challenge.
+    // #162/#109: the challenge is now attached at room-build time
+    // (dungeon-scene.mjs's buildPopulateAndUnlockRoom), not lazily on
+    // render — this is a pure read of whatever's already persisted.
     const isSkillChallenge =
       currentRoom?.kind === "skill_challenge" && !currentRoomResolved;
     let challenge = null;
-    if (isSkillChallenge) {
-      // #109: ensureSkillChallenge is a dungeon-runner.mjs WRITE (it
-      // persists) — only the acting (interactive) client may lazily attach
-      // a fresh challenge. Every other render (a read-only broadcast
-      // viewer, or a host who's lost control because a GM connected) must
-      // just read whatever's already persisted on the room, without
-      // writing anything: `raw` stays whatever the last interactive
-      // render already saved, or undefined until that happens, in which
-      // case `challenge` below stays null and the template's existing
-      // null-handling applies until the next re-render picks up the
-      // host's own write.
-      let raw = currentRoom.challenge;
-      if (interactive) {
-        const partyMembers = (game.actors?.party?.members ?? []).filter(
-          (m) => m.type === "character",
-        );
-        const ensured = await ensureSkillChallenge(sceneId, currentRoom.id, {
-          seed: state.seed,
-          locationTag: currentRoom.locationTag,
-          partySize: partyMembers.length,
-        });
-        raw = ensured?.rooms.find((r) => r.id === currentRoom.id)?.challenge;
-      }
-      if (raw) {
-        challenge = {
-          vp: raw.vp,
-          vpTarget: raw.vpTarget,
-          attemptsRemaining: raw.attemptBudget - raw.attemptsUsed,
-          specialtySkills: raw.specialtySkills.map((slug) => ({
-            slug,
-            label: skillLabel(slug),
-          })),
-          allSkills: ALL_SKILLS.map((slug) => ({
-            slug,
-            label: skillLabel(slug),
-            isSpecialty: raw.specialtySkills.includes(slug),
-          })),
-        };
-      }
+    if (isSkillChallenge && currentRoom.challenge) {
+      const raw = currentRoom.challenge;
+      challenge = {
+        vp: raw.vp,
+        vpTarget: raw.vpTarget,
+        attemptsRemaining: raw.attemptBudget - raw.attemptsUsed,
+        specialtySkills: raw.specialtySkills.map((slug) => ({
+          slug,
+          label: skillLabel(slug),
+        })),
+        allSkills: ALL_SKILLS.map((slug) => ({
+          slug,
+          label: skillLabel(slug),
+          isSpecialty: raw.specialtySkills.includes(slug),
+        })),
+      };
     }
 
     // #163: a narrative room is never succeeded/failed the way every other
@@ -374,23 +492,25 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       // Not just `footer button[data-action]` — the skill-challenge
       // (#onAttemptSkillChallenge) and narrative (#onContinueNarrative)
       // action buttons live inside their own <form>, not the footer.
-      this.element.querySelectorAll("button[data-action]").forEach((btn) => {
-        if (btn.dataset.action !== "hide") btn.disabled = true;
-      });
+      // Scoped to .window-content, not the whole element — the frame's own
+      // header also has data-action buttons (close, toggleControls) that
+      // must stay usable for a read-only viewer.
+      this.element
+        .querySelectorAll(".window-content button[data-action]")
+        .forEach((btn) => {
+          if (btn.dataset.action !== "hide") btn.disabled = true;
+        });
     }
   }
 
+  /**
+   * Builds a fresh run's entry room, first real room, party placement, and
+   * scene activation — the actual privileged work `#onStart` either does
+   * directly (a GM) or asks the GM-side relay to do (dungeon-remote.mjs's
+   * "startRun" action, for a non-GM host). Never touches `canvas?.scene` —
+   * see this plan's Global Constraints.
+   */
   static async #onStart() {
-    // #109: openDungeon()/decideOpenDungeon only checked this at the moment
-    // the setup dialog was opened — a GM could connect in the window
-    // between that and this click. Re-check right here so a GM regaining
-    // exclusive control takes effect immediately, not just for the next
-    // open attempt.
-    if (!game.user.isGM && game.users.some((u) => u.isGM && u.active)) {
-      ui.notifications.warn(game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"));
-      return;
-    }
-
     const form = this.element.querySelector("form");
     const roomCount = Math.max(
       2,
@@ -400,75 +520,43 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const excludeTraits = readTraitField(this.element, "excludeTraits");
     // Wherever the GM/party were right before starting — teardownDungeonRun
     // (ITEM-18) sends them back here if this run is later abandoned.
-    // Captured before createDungeonScene/activate ever touch canvas.scene.
     const previousSceneId = canvas?.scene?.id ?? null;
 
-    const scene = await createDungeonScene();
-    const setpieces = await loadDungeonSetpieces();
-    const state = await createRun(
-      {
-        sceneId: scene.id,
+    if (game.user.isGM) {
+      await startDungeonRun({
         roomCount,
         traits,
         excludeTraits,
         previousSceneId,
-        // #109: null for a GM (a normal game); the caller's own id when a
-        // non-GM starts it — openDungeon() has already refused this call
-        // unless that's actually allowed (no GM active, no competing run).
-        hostUserId: game.user.isGM ? null : game.user.id,
-      },
-      { setpieceIds: setpieces.map((s) => s.id) },
-    );
-
-    // Room 0 is always the safe entry — no encounter, trap or puzzle ever
-    // spawns there (see dungeon-deck.mjs's buildRoomSequence).
-    const entryRoom = state.rooms[0];
-    await buildRoomAtSlot(scene, 0, {
-      isGoal: entryRoom.isGoal,
-      locationTag: entryRoom.locationTag,
-      artVariant: entryRoom.artVariant,
-      seed: state.seed,
-    });
-
-    // The entry has nothing to resolve, so — unlike every other room — its
-    // own exit is unlocked immediately, with no GM click required: "the exit
-    // from this room is always visible." That still holds outright for a
-    // non-combat first room (built and unlocked right here, same as always).
-    // A *combat* first room's build+populate is deliberately deferred to the
-    // GM's own "Populate Next Room" click instead (#onPopulateNext, below) —
-    // Start used to pop its Accept/Reroll preview immediately, before the GM
-    // had even seen the dungeon scene (ITEM-11 reopening).
-    const firstRealRoom = state.rooms[1];
-    if (firstRealRoom && firstRealRoom.kind !== "combat") {
-      await buildPopulateAndUnlockRoom(scene, state, firstRealRoom, 1);
+        hostUserId: null,
+      });
+    } else {
+      await requestDungeonAction("startRun", {
+        roomCount,
+        traits,
+        excludeTraits,
+        previousSceneId,
+      });
     }
-
-    const partyMembers = (game.actors?.party?.members ?? []).filter(
-      (m) => m.type === "character",
-    );
-    await placePartyInSlot(scene, 0, partyMembers, state.seed);
-    await scene.activate();
-    // The canvas doesn't finish switching to the new scene the instant
-    // activate() resolves — animatePan needs a beat to land on it, same
-    // settling delay scene-divination.mjs already relies on for its own
-    // post-activate scene work.
-    await new Promise((r) => setTimeout(r, 400));
-    focusCameraOnSlot(scene, 0, state.seed);
-
     this.render();
   }
 
   static async #onSucceed() {
-    const sceneId = canvas?.scene?.id;
-    if (!sceneId || !canActOnDungeon(getRunState(sceneId))) return;
-    await resolveCurrentRoom(true);
-    this.render();
+    await DungeonApp.#resolveRoom(this, true);
   }
   static async #onFail() {
+    await DungeonApp.#resolveRoom(this, false);
+  }
+
+  static async #resolveRoom(app, succeeded) {
     const sceneId = canvas?.scene?.id;
-    if (!sceneId || !canActOnDungeon(getRunState(sceneId))) return;
-    await resolveCurrentRoom(false);
-    this.render();
+    if (!sceneId) return;
+    if (game.user.isGM) {
+      await resolveCurrentRoom(succeeded, { scene: game.scenes.get(sceneId) });
+    } else {
+      await requestDungeonAction("resolveRoom", { sceneId, succeeded });
+    }
+    app.render();
   }
 
   /**
@@ -486,7 +574,6 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const scene = canvas?.scene;
     const sceneId = scene?.id;
     const state = sceneId ? getRunState(sceneId) : null;
-    if (!canActOnDungeon(state)) return;
     const currentRoom = state?.rooms[state.currentIndex];
     if (!currentRoom?.challenge) return;
 
@@ -506,34 +593,37 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const result = await rollSkillChallengeAttempt(actor, skill, dc);
     if (!result) return;
 
-    const newState = await recordSkillChallengeAttempt(
-      sceneId,
-      currentRoom.id,
-      result.outcome,
-    );
-    const resolved = newState?.rooms.find((r) => r.id === currentRoom.id)
-      ?.challenge?.resolved;
-    if (resolved) await resolveCurrentRoom(resolved === "success");
+    if (game.user.isGM) {
+      await recordSkillChallengeOutcome(
+        sceneId,
+        currentRoom.id,
+        result.outcome,
+      );
+    } else {
+      await requestDungeonAction("recordSkillChallengeOutcome", {
+        sceneId,
+        roomId: currentRoom.id,
+        outcome: result.outcome,
+      });
+    }
     this.render();
   }
 
-  /**
-   * A narrative room's own resolution (#163): saves whatever's in the
-   * objective textarea (if anything — a blank field just leaves whatever
-   * objective was already set alone, `setObjective` itself only clears on
-   * an explicit `null`/whitespace-only call, and an empty textarea here
-   * means "nothing new to set," not "clear it") and always resolves the
-   * room succeeded, since a narrative beat has nothing to fail.
-   */
   static async #onContinueNarrative() {
     const sceneId = canvas?.scene?.id;
-    if (!sceneId || !canActOnDungeon(getRunState(sceneId))) return;
+    if (!sceneId) return;
     const textarea = this.element.querySelector(
       '[name="dommt-narrative-objective"]',
     );
-    const value = textarea?.value?.trim();
-    if (value) await setObjective(sceneId, value);
-    await resolveCurrentRoom(true);
+    const objective = textarea?.value?.trim() || null;
+    if (game.user.isGM) {
+      await continueNarrativeRoom(sceneId, objective);
+    } else {
+      await requestDungeonAction("continueNarrativeRoom", {
+        sceneId,
+        objective,
+      });
+    }
     this.render();
   }
 
@@ -545,29 +635,20 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
    * instance binding Foundry's action dispatcher gives #onDeclareVictory
    * itself. */
   static async #onDeclareVictory() {
-    await DungeonApp.#resolveCombatRoom(this, true);
+    await DungeonApp.#declareOutcome(this, true);
   }
   static async #onDeclareDefeat() {
-    await DungeonApp.#resolveCombatRoom(this, false);
+    await DungeonApp.#declareOutcome(this, false);
   }
 
-  static async #resolveCombatRoom(app, succeeded) {
-    const scene = canvas?.scene;
-    const sceneId = scene?.id;
-    const state = sceneId ? getRunState(sceneId) : null;
-    if (!canActOnDungeon(state)) return;
-    const currentRoom = state?.rooms[state.currentIndex];
-    const slot = currentRoom
-      ? state.physicalSlotByRoomId[currentRoom.id]
-      : null;
-    if (slot == null) return;
-    await resolveSlotCombat(
-      scene,
-      slot,
-      succeeded ? "victory" : "defeat",
-      makeFoundryApi(),
-    );
-    await resolveCurrentRoom(succeeded);
+  static async #declareOutcome(app, succeeded) {
+    const sceneId = canvas?.scene?.id;
+    if (!sceneId) return;
+    if (game.user.isGM) {
+      await resolveCombatRoomOutcome(sceneId, succeeded);
+    } else {
+      await requestDungeonAction("declareOutcome", { sceneId, succeeded });
+    }
     app.render();
   }
 
@@ -575,16 +656,13 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
    * when something (a reload mid-flow, say) left a combat room without a
    * Combat despite its monsters already being visible. */
   static async #onStartCombatRecovery() {
-    const scene = canvas?.scene;
-    const sceneId = scene?.id;
-    const state = sceneId ? getRunState(sceneId) : null;
-    if (!canActOnDungeon(state)) return;
-    const currentRoom = state?.rooms[state.currentIndex];
-    const slot = currentRoom
-      ? state.physicalSlotByRoomId[currentRoom.id]
-      : null;
-    if (slot == null) return;
-    await startCombatForSlot(scene, slot);
+    const sceneId = canvas?.scene?.id;
+    if (!sceneId) return;
+    if (game.user.isGM) {
+      await startCombatRecoveryFor(sceneId);
+    } else {
+      await requestDungeonAction("startCombatRecovery", { sceneId });
+    }
     this.render();
   }
 
@@ -605,47 +683,24 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async #onPopulateNext() {
-    const scene = canvas?.scene;
-    const sceneId = scene?.id;
-    const state = sceneId ? getRunState(sceneId) : null;
-    if (!canActOnDungeon(state)) return;
-    const nextRoom = state?.rooms[state.currentIndex + 1] ?? null;
-    const slot = nextRoom ? state.physicalSlotByRoomId[nextRoom.id] : null;
-    if (slot == null) return;
-
-    // A combat first room's walls don't exist yet the first time this runs
-    // for it — Start deliberately skipped building it (see #onStart) — so
-    // build them here too, same as every other recovery this button already
-    // covers. A no-op for every normal case, where the room was already
-    // built back when the room before it resolved.
-    if (!isSlotBuilt(scene, slot)) {
-      await buildRoomAtSlot(scene, slot, {
-        isGoal: nextRoom.isGoal,
-        locationTag: nextRoom.locationTag,
-        artVariant: nextRoom.artVariant,
-        seed: state.seed,
-      });
+    const sceneId = canvas?.scene?.id;
+    if (!sceneId) return;
+    if (game.user.isGM) {
+      await populateNextRoom(sceneId);
+    } else {
+      await requestDungeonAction("populateNext", { sceneId });
     }
-
-    await populateSlotEncounter(scene, slot, {
-      prefillTraits: state.traits,
-      prefillExcludeTraits: state.excludeTraits,
-      levelOffsetBias: depthBiasFor({
-        physicalSlot: slot,
-        roomCount: state.rooms.length,
-        isGoal: nextRoom.isGoal,
-      }),
-      locationTag: nextRoom.locationTag,
-      seed: state.seed,
-    });
-    if (isSlotPopulated(scene, slot)) await unlockDoorToSlot(scene, slot);
     this.render();
   }
 
   static async #onUndo() {
     const sceneId = canvas?.scene?.id;
-    if (!sceneId || !canActOnDungeon(getRunState(sceneId))) return;
-    await undoRoomEntry(sceneId);
+    if (!sceneId) return;
+    if (game.user.isGM) {
+      await undoRoomEntry(sceneId);
+    } else {
+      await requestDungeonAction("undoRoomEntry", { sceneId });
+    }
     this.render();
   }
 
@@ -653,13 +708,13 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
    * Cancels the run (ITEM-18): confirms first — this now does far more than
    * clear a settings entry, it moves the party out, deletes every NPC actor
    * the run's encounters spawned, and deletes the dungeon scene itself, none
-   * of which is undoable — then hands off to teardownDungeonRun and closes
-   * the app, since its whole scene is gone by the time that returns.
+   * of which is undoable. The confirmation itself always happens locally
+   * (it's just a prompt); only the actual teardown is routed for a non-GM
+   * host.
    */
   static async #onAbandon() {
-    const scene = canvas?.scene;
-    const sceneId = scene?.id;
-    if (!sceneId || !canActOnDungeon(getRunState(sceneId))) return;
+    const sceneId = canvas?.scene?.id;
+    if (!sceneId) return;
 
     const confirmed = await foundry.applications.api.DialogV2.confirm({
       window: { title: game.i18n.localize("DOMMT.Dungeon.AbandonButton") },
@@ -668,11 +723,11 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     });
     if (!confirmed) return;
 
-    const state = getRunState(sceneId);
-    await abandonRun({ sceneId });
-    await teardownDungeonRun(scene, {
-      previousSceneId: state?.previousSceneId ?? null,
-    });
+    if (game.user.isGM) {
+      await abandonDungeonRun(sceneId);
+    } else {
+      await requestDungeonAction("abandonRun", { sceneId });
+    }
     this.close();
   }
 }
