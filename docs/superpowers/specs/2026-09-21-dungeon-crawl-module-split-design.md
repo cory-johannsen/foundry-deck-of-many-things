@@ -97,6 +97,36 @@ directly (which itself imports `choice-prompts.mjs`). All eleven stay here
 rather than moving, so neither module ends up with a dangling import or a
 duplicated copy.
 
+### Room-art and dungeon-sound assets stay behind too (discovered during implementation)
+
+`dungeon-scene.mjs`'s `ROOM_ART_DIR` and `dungeon-sound.mjs`'s `SOUND_DIR`
+hardcode `MODULE_ID = "deck-of-many-more-things"` and build their runtime
+asset paths from it (`modules/deck-of-many-more-things/assets/dungeon-rooms/...`,
+`.../assets/sounds/...`). This never showed up in the import-graph analysis
+above, since it's a runtime path string literal, not an `import` statement.
+
+`assets/sounds/` is a genuinely shared flat directory — `dungeon-sound.mjs`'s
+own `SPELL_HIT_SOUND` constant points at `card-arcane.ogg`, a card-sound
+asset also used by `card-sound.mjs` — so it cannot be split between the two
+repos. `assets/dungeon-rooms/` was never scheduled to move either.
+`dungeon-scene.mjs`'s `MODULE_ID` additionally namespaces dozens of
+Wall/Token/Scene flag reads/writes throughout the file, not just the asset
+path, so renaming it would be a large, separately-scoped refactor with no
+functional benefit (Foundry doesn't care which id a flag is namespaced
+under) and would conflict with the "no live migration for run state"
+decision above (existing flags on a live world's documents would silently
+stop resolving).
+
+**Ruling:** `MODULE_ID` stays `"deck-of-many-more-things"` in both files,
+even though the `.mjs` files themselves move to the new module.
+`assets/dungeon-rooms/` and `assets/sounds/` stay in
+`deck-of-many-more-things` permanently, alongside the eleven shared-infra
+scripts — this is the intended end state, not a defect for a later task to
+fix. A future maintainer wanting true asset/namespace independence for the
+new module faces a bounded, mechanical follow-up (copy the two asset
+directories, rename `MODULE_ID` at every flag call site in
+`dungeon-scene.mjs`), not a redesign.
+
 ### `module.mjs` splits
 
 `scripts/module.mjs` is the one file genuinely shared by intent (it's the
