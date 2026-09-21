@@ -248,5 +248,129 @@
       "chapter": null,
       "note": "Hand-authored — no PF2e compendium ships skill-challenge content; see #164."
     }
+  },
+  {
+    "id": "the_last_wardens_oath",
+    "kind": "narrative",
+    "archetype": "lore",
+    "name": "The Last Warden's Oath",
+    "complete": true,
+    "summary": "A collapsed guardpost holds the personal effects of whoever stood watch here last — a journal, a broken badge of office, and the plain evidence of how badly that watch ended.",
+    "revealText": "The journal's final entries aren't panicked — they're methodical, a soldier logging a losing position long after hope was reasonable. Whoever held this post knew exactly what was coming and stayed anyway. The dungeon's builders didn't just lose this ground; someone paid for every foot of it.",
+    "source": {
+      "chapter": null,
+      "note": "Hand-authored — no PF2e compendium ships narrative content; see #165."
+    }
+  },
+  {
+    "id": "echoes_of_the_first_seal",
+    "kind": "narrative",
+    "archetype": "lore",
+    "name": "Echoes of the First Seal",
+    "complete": true,
+    "summary": "A weathered mural, mostly intact, depicts the dungeon's original purpose — not a vault or a tomb, but a containment, built around something the mural's own artists were clearly afraid to render clearly.",
+    "revealText": "The mural's central figure is never fully shown — every version of it is obscured by ritual scarring, deliberate damage, or a painted-over patch layered on generations after the original work. Whatever this place was built to hold, the people who built it kept quietly trying to make sure no one could ever see all of it at once.",
+    "source": {
+      "chapter": null,
+      "note": "Hand-authored — no PF2e compendium ships narrative content; see #165."
+    }
+  },
+  {
+    "id": "the_bound_familiar",
+    "kind": "narrative",
+    "archetype": "ally",
+    "name": "The Bound Familiar",
+    "complete": true,
+    "summary": "A small, half-starved spirit creature is caught in a decaying binding circle — old work, long since abandoned by whoever cast it, and clearly desperate to be freed.",
+    "npcName": "Wick",
+    "npcHook": "A minor bound spirit, grateful and genuinely useful rather than a liability — once freed, it offers to scout quietly ahead of the party for the rest of the run, flagging danger it can slip past unnoticed.",
+    "source": {
+      "chapter": null,
+      "note": "Hand-authored — no PF2e compendium ships narrative content; see #165."
+    }
+  },
+  {
+    "id": "the_wandering_cartographer",
+    "kind": "narrative",
+    "archetype": "ally",
+    "name": "The Wandering Cartographer",
+    "complete": true,
+    "summary": "A survivor of an earlier expedition, half-lost and living off what the dungeon itself provides, has been quietly mapping the place for longer than anyone else has managed to survive it.",
+    "npcName": "Ashgrove",
+    "npcHook": "A grizzled, half-feral survivor who trusts maps more than people at this point — willing to trade what they know of the dungeon's layout ahead for real supplies or a promise of escort back out when the party's done.",
+    "source": {
+      "chapter": null,
+      "note": "Hand-authored — no PF2e compendium ships narrative content; see #165."
+    }
+  },
+  {
+    "id": "the_starving_prisoner",
+    "kind": "narrative",
+    "archetype": "choice",
+    "name": "The Starving Prisoner",
+    "complete": true,
+    "summary": "A cell holds someone who's clearly been here far too long — captured by whatever holds this dungeon, and just as clearly not the party's enemy, but freeing them costs time and might cost quiet.",
+    "options": [
+      {
+        "label": "Free them",
+        "consequence": "A grateful, weakened ally who owes the party — but also a witness who might draw attention, and someone to protect for the rest of the run."
+      },
+      {
+        "label": "Leave them",
+        "consequence": "No new burden and no new noise — but no ally either, and whatever they know about what's ahead stays with them."
+      }
+    ],
+    "source": {
+      "chapter": null,
+      "note": "Hand-authored — no PF2e compendium ships narrative content; see #165."
+    }
+  },
+  {
+    "id": "the_desecrated_shrine",
+    "kind": "narrative",
+    "archetype": "choice",
+    "name": "The Desecrated Shrine",
+    "complete": true,
+    "summary": "A small shrine has been deliberately defaced — not looted, defaced — and still holds whatever value it had. Restoring it costs time and gives nothing tangible; stripping it for value gives something real but leaves it broken.",
+    "options": [
+      {
+        "label": "Restore it",
+        "consequence": "No material gain, but whatever presence the shrine once served takes notice — a quiet, thematic favor rather than a mechanical reward, the GM's to decide how it shows up later."
+      },
+      {
+        "label": "Strip it for value",
+        "consequence": "Real, tangible value recovered now — and the shrine stays broken, for whatever that's worth to whoever notices."
+      }
+    ],
+    "source": {
+      "chapter": null,
+      "note": "Hand-authored — no PF2e compendium ships narrative content; see #165."
+    }
+  },
+  {
+    "id": "the_missing_relic",
+    "kind": "narrative",
+    "archetype": "goal",
+    "name": "The Missing Relic",
+    "complete": true,
+    "summary": "A hurried, half-burned set of notes makes clear that the party isn't the only one after something specific here — and whoever else is looking has a head start.",
+    "suggestedObjective": "Recover the relic before whoever else is after it does.",
+    "source": {
+      "chapter": null,
+      "note": "Hand-authored — no PF2e compendium ships narrative content; see #165."
+    }
+  },
+  {
+    "id": "the_sealed_door_beyond",
+    "kind": "narrative",
+    "archetype": "goal",
+    "name": "The Sealed Door Beyond",
+    "complete": true,
+    "summary": "Deeper markings make it clear what's actually waiting at the end of this run — not just a fight, but something specific the party now has to be ready for.",
+    "suggestedObjective": "Find a way to be ready for what's sealed beyond the final door.",
+    "source": {
+      "chapter": null,
+      "note": "Hand-authored — no PF2e compendium ships narrative content; see #165."
+    }
   }
 ]
