@@ -7,6 +7,8 @@ import {
   canUndoRoomEntry,
   abandonRun,
   getRunState,
+  ensureSkillChallenge,
+  recordSkillChallengeAttempt,
 } from "../scripts/dungeon-runner.mjs";
 
 function makeSettingsStub(initial = {}) {
@@ -426,5 +428,147 @@ describe("abandonRun", () => {
     await expect(
       abandonRun({ sceneId: "nothing" }, { settingsRef }),
     ).resolves.not.toThrow();
+  });
+});
+
+describe("ensureSkillChallenge / recordSkillChallengeAttempt", () => {
+  it("attaches a fresh challenge to the named room only", async () => {
+    const settingsRef = makeSettingsStub();
+    const created = await createRun(
+      { sceneId: "s", roomCount: 5, seed: "fixed" },
+      { settingsRef },
+    );
+    const roomId = created.rooms[1].id;
+    const state = await ensureSkillChallenge(
+      "s",
+      roomId,
+      { seed: "fixed", locationTag: "undead", partySize: 4 },
+      { settingsRef },
+    );
+    const room = state.rooms.find((r) => r.id === roomId);
+    expect(room.challenge).toBeTruthy();
+    expect(room.challenge.vp).toBe(0);
+    expect(room.challenge.resolved).toBeNull();
+    // Every other room stays untouched.
+    expect(
+      state.rooms.find((r) => r.id === created.rooms[2].id).challenge,
+    ).toBeUndefined();
+  });
+
+  it("is a no-op if the room already has a challenge (never rerolls it)", async () => {
+    const settingsRef = makeSettingsStub();
+    const created = await createRun(
+      { sceneId: "s", roomCount: 5, seed: "fixed" },
+      { settingsRef },
+    );
+    const roomId = created.rooms[1].id;
+    const first = await ensureSkillChallenge(
+      "s",
+      roomId,
+      { seed: "fixed", locationTag: "undead", partySize: 4 },
+      { settingsRef },
+    );
+    const firstChallenge = first.rooms.find((r) => r.id === roomId).challenge;
+    const second = await ensureSkillChallenge(
+      "s",
+      roomId,
+      { seed: "fixed", locationTag: "undead", partySize: 4 },
+      { settingsRef },
+    );
+    expect(second.rooms.find((r) => r.id === roomId).challenge).toEqual(
+      firstChallenge,
+    );
+  });
+
+  it("is a no-op with no run at all", async () => {
+    const settingsRef = makeSettingsStub();
+    const result = await ensureSkillChallenge(
+      "nope",
+      "room-x",
+      { seed: "s", locationTag: null, partySize: 4 },
+      { settingsRef },
+    );
+    expect(result).toBeNull();
+  });
+
+  it("records an attempt's VP delta against the room's own challenge", async () => {
+    const settingsRef = makeSettingsStub();
+    const created = await createRun(
+      { sceneId: "s", roomCount: 5, seed: "fixed" },
+      { settingsRef },
+    );
+    const roomId = created.rooms[1].id;
+    await ensureSkillChallenge(
+      "s",
+      roomId,
+      { seed: "fixed", locationTag: "undead", partySize: 4 },
+      { settingsRef },
+    );
+    const state = await recordSkillChallengeAttempt("s", roomId, "success", {
+      settingsRef,
+    });
+    const room = state.rooms.find((r) => r.id === roomId);
+    expect(room.challenge.vp).toBe(1);
+    expect(room.challenge.attemptsUsed).toBe(1);
+  });
+
+  it("is a no-op if the room has no challenge attached yet", async () => {
+    const settingsRef = makeSettingsStub();
+    const created = await createRun(
+      { sceneId: "s", roomCount: 5, seed: "fixed" },
+      { settingsRef },
+    );
+    const roomId = created.rooms[1].id;
+    const state = await recordSkillChallengeAttempt("s", roomId, "success", {
+      settingsRef,
+    });
+    const room = state.rooms.find((r) => r.id === roomId);
+    expect(room.challenge).toBeUndefined();
+  });
+
+  it("is a no-op once the challenge is already resolved", async () => {
+    const settingsRef = makeSettingsStub();
+    const created = await createRun(
+      { sceneId: "s", roomCount: 5, seed: "fixed" },
+      { settingsRef },
+    );
+    const roomId = created.rooms[1].id;
+    await ensureSkillChallenge(
+      "s",
+      roomId,
+      { seed: "fixed", locationTag: "undead", partySize: 4 },
+      { settingsRef },
+    );
+    // Drive it to a resolved failure (attemptBudget 6 for partySize 4).
+    let state;
+    for (let i = 0; i < 6; i += 1) {
+      state = await recordSkillChallengeAttempt("s", roomId, "failure", {
+        settingsRef,
+      });
+    }
+    const resolvedChallenge = state.rooms.find(
+      (r) => r.id === roomId,
+    ).challenge;
+    expect(resolvedChallenge.resolved).toBe("failure");
+    const again = await recordSkillChallengeAttempt(
+      "s",
+      roomId,
+      "criticalSuccess",
+      { settingsRef },
+    );
+    expect(again.rooms.find((r) => r.id === roomId).challenge).toEqual(
+      resolvedChallenge,
+    );
+  });
+
+  it("is a no-op with no run at all", async () => {
+    const settingsRef = makeSettingsStub();
+    const result = await recordSkillChallengeAttempt(
+      "nope",
+      "room-x",
+      "success",
+      { settingsRef },
+    );
+    expect(result).toBeNull();
   });
 });

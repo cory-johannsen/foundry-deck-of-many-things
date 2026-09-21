@@ -21,6 +21,10 @@ import {
   resolveRoomOutcome,
   applySequenceMutation,
 } from "./dungeon-deck.mjs";
+import {
+  initSkillChallengeState,
+  applySkillChallengeAttempt,
+} from "./skill-challenge-mechanics.mjs";
 
 const MODULE_ID = "deck-of-many-more-things";
 
@@ -305,4 +309,63 @@ export async function abandonRun(
   const rest = { ...all };
   delete rest[sceneId];
   await settingsRef.set(MODULE_ID, "dungeonRuns", rest);
+}
+
+/**
+ * Lazily attaches a fresh Victory Point challenge (#162) to `roomId`'s own
+ * room object the first time it's needed — a no-op if that room already
+ * has one, so a re-render (or a recovery retry) never rerolls its
+ * specialty skills mid-challenge. `initSkillChallengeState` itself is pure
+ * (`skill-challenge-mechanics.mjs`); this is only the read-mutate-persist
+ * wrapper around it, same shape every other room-state write in this file
+ * already uses.
+ */
+export async function ensureSkillChallenge(
+  sceneId,
+  roomId,
+  { seed, locationTag, partySize },
+  { settingsRef = defaultSettingsRef() } = {},
+) {
+  const state = getRunState(sceneId, { settingsRef });
+  if (!state) return null;
+  const room = state.rooms.find((r) => r.id === roomId);
+  if (!room || room.challenge) return state;
+  const challenge = initSkillChallengeState({
+    seed,
+    roomId,
+    locationTag,
+    partySize,
+  });
+  const rooms = state.rooms.map((r) =>
+    r.id === roomId ? { ...r, challenge } : r,
+  );
+  const newState = { ...state, rooms };
+  await persist(sceneId, newState, settingsRef);
+  return newState;
+}
+
+/**
+ * Records one resolved skill-challenge attempt (#162) against `roomId`'s
+ * own Victory Point state — a no-op if that room has no challenge attached
+ * yet (`ensureSkillChallenge` never ran) or it's already resolved
+ * (`applySkillChallengeAttempt` itself is already a no-op past that point
+ * too; this wrapper just avoids the pointless persist).
+ */
+export async function recordSkillChallengeAttempt(
+  sceneId,
+  roomId,
+  outcome,
+  { settingsRef = defaultSettingsRef() } = {},
+) {
+  const state = getRunState(sceneId, { settingsRef });
+  if (!state) return null;
+  const room = state.rooms.find((r) => r.id === roomId);
+  if (!room?.challenge || room.challenge.resolved) return state;
+  const challenge = applySkillChallengeAttempt(room.challenge, outcome);
+  const rooms = state.rooms.map((r) =>
+    r.id === roomId ? { ...r, challenge } : r,
+  );
+  const newState = { ...state, rooms };
+  await persist(sceneId, newState, settingsRef);
+  return newState;
 }
