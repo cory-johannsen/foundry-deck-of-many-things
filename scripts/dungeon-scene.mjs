@@ -623,29 +623,62 @@ async function placePartyNearSceneCenter(destScene, partyMembers) {
 }
 
 /**
+ * Deletes every non-party actor (and its token) still on `scene` — any
+ * NPC or converted loot corpse (#172) left over from this run's own
+ * encounters, since `spawnCreatures`/`spawnBuiltCreature` (foundry-api.mjs)
+ * always create a real, permanent world Actor that otherwise outlives its
+ * token forever (confirmed live: 72 such orphaned actors had accumulated in
+ * this world before `teardownDungeonRun` existed to catch them at Abandon
+ * time). Keyed purely on "not a party member," never on actor type, so an
+ * un-looted #172 corpse is swept exactly the same as an un-deleted NPC
+ * always was. Shared by `teardownDungeonRun` (scene is about to be deleted,
+ * so the token deletion below is redundant but harmless) and #204's
+ * completion-time sweep (the scene survives, so this is the only thing that
+ * actually removes them).
+ */
+async function sweepLooseNpcActors(scene) {
+  const partyIds = partyActorIds();
+  const looseTokens = scene.tokens.filter(
+    (t) => t.actor?.id && !partyIds.has(t.actor.id),
+  );
+  const npcTokenIds = looseTokens.map((t) => t.id);
+  const npcActorIds = [...new Set(looseTokens.map((t) => t.actor.id))];
+
+  if (npcTokenIds.length)
+    await scene.deleteEmbeddedDocuments("Token", npcTokenIds);
+  if (npcActorIds.length) await Actor.deleteDocuments(npcActorIds);
+
+  return npcActorIds.length;
+}
+
+/**
+ * Sweeps any #172 corpse (or plain leftover NPC) still on `scene` once a
+ * dungeon run completes normally — the goal room resolved, not the party
+ * abandoning the run (see `teardownDungeonRun` for that path). Unlike
+ * `teardownDungeonRun`, the scene itself is left alone and the party stays
+ * put: a completed dungeon is still a real place the party might keep
+ * exploring or looting, not something to be yanked out of automatically.
+ * Before this, only `teardownDungeonRun`'s Abandon-time sweep ever cleaned
+ * these up — a party that *wins* and walks away left every un-looted corpse
+ * behind indefinitely (#204).
+ */
+export async function sweepCompletedDungeonScene(scene) {
+  return sweepLooseNpcActors(scene);
+}
+
+/**
  * Full teardown for a cancelled dungeon run (ITEM-18). Moves the party back
  * to `previousSceneId` (wherever they were before the run started — see
  * dungeon-runner.mjs's createRun) if that scene still exists, or Foundry's
- * own built-in "Foundry Virtual Tabletop" default scene otherwise. Deletes
- * every NPC actor this run's encounters ever spawned — any non-party token
- * still on the scene when it's torn down, since `spawnCreatures`/
- * `spawnBuiltCreature` (foundry-api.mjs) always create a real, permanent
- * world Actor that otherwise outlives its token forever (confirmed live: 72
- * such orphaned actors had accumulated in this world before this existed).
- * Then deletes the dungeon scene itself.
+ * own built-in "Foundry Virtual Tabletop" default scene otherwise. Sweeps
+ * every non-party actor this run's encounters ever spawned (see
+ * `sweepLooseNpcActors`), then deletes the dungeon scene itself.
  */
 export async function teardownDungeonRun(
   scene,
   { previousSceneId = null } = {},
 ) {
   const partyIds = partyActorIds();
-  const npcActorIds = [
-    ...new Set(
-      scene.tokens
-        .filter((t) => t.actor?.id && !partyIds.has(t.actor.id))
-        .map((t) => t.actor.id),
-    ),
-  ];
   const partyMembers = (game.actors?.party?.members ?? []).filter((m) =>
     partyIds.has(m.id),
   );
@@ -660,12 +693,12 @@ export async function teardownDungeonRun(
     await destScene.activate();
   }
 
-  if (npcActorIds.length) await Actor.deleteDocuments(npcActorIds);
+  const deletedNpcActorCount = await sweepLooseNpcActors(scene);
   await scene.delete();
 
   return {
     destSceneId: destScene?.id ?? null,
-    deletedNpcActorCount: npcActorIds.length,
+    deletedNpcActorCount,
   };
 }
 
