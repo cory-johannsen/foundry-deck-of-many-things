@@ -9,6 +9,7 @@ import {
   buildHealSpellCandidates,
   parseAreaSpellTierOverrides, buildTierScalingAreaSpellCandidates, endTurnCandidate,
   parseActionGlyphTiers, buildDualNatureSpellCandidates,
+  parseTargetCountFormula, buildTargetCountSpellCandidates,
   buildCandidateList, applyCandidateToTurnState, buildDecisionContext,
   MAX_ACTIONS_PER_TURN, AGENT_MELEE_REACH_SQUARES
 } from '../scripts/agent-candidates.mjs';
@@ -341,6 +342,66 @@ describe('buildDualNatureSpellCandidates', () => {
   it('omits the area candidate when both harm and heal groups are empty', () => {
     const emptyArea = { ...spell, singleTargetTiers: [], areaTier: { cost: 3, harmTargets: [], healTargets: [] } };
     const candidates = buildDualNatureSpellCandidates({ readyDualNatureSpells: [emptyArea], actionsRemaining: 3 });
+    expect(candidates).toEqual([]);
+  });
+});
+
+describe('parseTargetCountFormula', () => {
+  it('parses Rebuke Death\'s real structured target text', () => {
+    expect(parseTargetCountFormula('1 living creature per action spent to Cast this Spell')).toEqual({ countPerAction: 1 });
+  });
+
+  it('parses an explicit "per N actions" denominator', () => {
+    expect(parseTargetCountFormula('1 creature per 2 actions spent')).toEqual({ countPerAction: 0.5 });
+  });
+
+  it('parses a numerator greater than 1', () => {
+    expect(parseTargetCountFormula('2 creatures per action spent')).toEqual({ countPerAction: 2 });
+  });
+
+  it('returns null for an ordinary single-target phrase', () => {
+    expect(parseTargetCountFormula('1 creature')).toBeNull();
+  });
+});
+
+describe('buildTargetCountSpellCandidates', () => {
+  const ally1 = { id: 'ally1', name: 'Fighter' };
+  const ally2 = { id: 'ally2', name: 'Cleric' };
+
+  const rebukeDeath = {
+    id: 'sp1', slug: 'rebuke-death', label: 'Rebuke Death', entryId: 'entry1', save: null, basic: null,
+    tiers: [
+      { cost: 1, targets: [ally1] },
+      { cost: 2, targets: [ally1, ally2] },
+    ],
+  };
+
+  it('offers one candidate per affordable tier, bundling its pre-selected targets', () => {
+    const candidates = buildTargetCountSpellCandidates({ readyTargetCountSpells: [rebukeDeath], actionsRemaining: 3 });
+    expect(candidates).toEqual([
+      {
+        id: 'castTargetCount:rebuke-death:1', type: 'castTargetCount',
+        spellId: 'sp1', entryId: 'entry1', cost: 1, save: null, basic: null,
+        targetIds: ['ally1'],
+        summary: 'Rebuke Death (1 action) on Fighter',
+      },
+      {
+        id: 'castTargetCount:rebuke-death:2', type: 'castTargetCount',
+        spellId: 'sp1', entryId: 'entry1', cost: 2, save: null, basic: null,
+        targetIds: ['ally1', 'ally2'],
+        summary: 'Rebuke Death (2 actions) on Fighter, Cleric',
+      },
+    ]);
+  });
+
+  it('omits a tier whose cost exceeds the actions remaining', () => {
+    const candidates = buildTargetCountSpellCandidates({ readyTargetCountSpells: [rebukeDeath], actionsRemaining: 1 });
+    expect(candidates.map((c) => c.cost)).toEqual([1]);
+  });
+
+  it('omits a tier with no pre-selected targets', () => {
+    const emptyTier = { ...rebukeDeath, tiers: [{ cost: 1, targets: [] }] };
+    const candidates = buildTargetCountSpellCandidates({ readyTargetCountSpells: [emptyTier], actionsRemaining: 3 });
     expect(candidates).toEqual([]);
   });
 });

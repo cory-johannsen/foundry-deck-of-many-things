@@ -339,6 +339,61 @@ export function buildDualNatureSpellCandidates({ readyDualNatureSpells, actionsR
 }
 
 /**
+ * The target-count-per-action ratio for a #175-scoped target-count-scaling
+ * spell (Rebuke Death-shaped: same single-target effect resolved
+ * independently against N targets, where N grows with action cost, rather
+ * than #140's shared-area or #174's shape-changing patterns) — parsed
+ * directly from the spell's own *structured* `target.value` field
+ * ("1 living creature per action spent to Cast this Spell", confirmed
+ * live), unlike every other tier parser in this file, which has to dig
+ * into raw description HTML because no structured field carries the
+ * signal at all. Written as a general "N creature(s) per [M actions]
+ * spent" pattern (an explicit "per 2 actions" denominator is supported,
+ * defaulting to 1 when only "per action" appears) rather than hardcoded to
+ * Rebuke Death's exact wording, consistent with every other parser this
+ * session, even though it's confirmed live to be the only spell in the
+ * core SRD pack with this exact shape. `null` when the target text doesn't
+ * match at all (an ordinary fixed single-target phrase).
+ */
+export function parseTargetCountFormula(targetValue) {
+  const match = /^(\d+)\s+[\w-]+(?:\s[\w-]+)*?\s+per\s+(?:(\d+)\s+)?actions?\s+spent/i.exec(
+    targetValue ?? '',
+  );
+  if (!match) return null;
+  const numerator = Number(match[1]);
+  const denominator = match[2] ? Number(match[2]) : 1;
+  return { countPerAction: numerator / denominator };
+}
+
+/**
+ * One candidate per affordable tier of a ready #175-scoped target-count
+ * spell, each bundling the tier's own pre-selected targets — the caller
+ * (dungeon-combat.mjs) has already resolved, per tier, exactly which
+ * allies are in range and how many the tier's own actions-spent afford
+ * (sorted neediest-first, per live discussion), same separation of
+ * concerns as every other builder in this file. A tier with zero selected
+ * targets (nothing in range, or every reachable ally already at full HP)
+ * is omitted entirely rather than offered as a no-op cast.
+ */
+export function buildTargetCountSpellCandidates({ readyTargetCountSpells, actionsRemaining }) {
+  const candidates = [];
+  for (const spell of readyTargetCountSpells) {
+    for (const tier of spell.tiers ?? []) {
+      if (tier.cost > actionsRemaining) continue;
+      if (!tier.targets?.length) continue;
+      candidates.push({
+        id: `castTargetCount:${spell.slug}:${tier.cost}`, type: 'castTargetCount',
+        spellId: spell.id, entryId: spell.entryId, cost: tier.cost,
+        save: spell.save, basic: spell.basic,
+        targetIds: tier.targets.map((t) => t.id),
+        summary: `${spell.label} (${tier.cost} action${tier.cost > 1 ? 's' : ''}) on ${tier.targets.map((t) => t.name).join(', ')}`
+      });
+    }
+  }
+  return candidates;
+}
+
+/**
  * One candidate per ready single-target, attack-roll spell x each opponent
  * within that spell's range — same shape as buildSpellCandidates (#118's
  * save-based spells), minus `save`/`basic` (an attack-roll spell resolves
@@ -627,7 +682,7 @@ export function endTurnCandidate() {
 }
 
 /** Full candidate list for one decision iteration. */
-export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], readyAttackSpells = [], readyDebuffSpells = [], readyBreathWeapons = [], readyChainSpells = [], readyHealSpells = [], readyTierScalingAreaSpells = [], readyDualNatureSpells = [], allies = [], turnState, hazard = null, hasRangedOrReach = false }) {
+export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], readyAttackSpells = [], readyDebuffSpells = [], readyBreathWeapons = [], readyChainSpells = [], readyHealSpells = [], readyTierScalingAreaSpells = [], readyDualNatureSpells = [], readyTargetCountSpells = [], allies = [], turnState, hazard = null, hasRangedOrReach = false }) {
   if (turnState.actionsRemaining <= 0) return [endTurnCandidate()];
   return [
     ...buildMovementCandidates({ opponents, hazard, hasRangedOrReach }),
@@ -641,6 +696,7 @@ export function buildCandidateList({ opponents, readyActions, readySpells = [], 
     ...buildHealSpellCandidates({ readyHealSpells, allies, actionsRemaining: turnState.actionsRemaining }),
     ...buildTierScalingAreaSpellCandidates({ readyTierScalingAreaSpells, actionsRemaining: turnState.actionsRemaining }),
     ...buildDualNatureSpellCandidates({ readyDualNatureSpells, actionsRemaining: turnState.actionsRemaining }),
+    ...buildTargetCountSpellCandidates({ readyTargetCountSpells, actionsRemaining: turnState.actionsRemaining }),
     endTurnCandidate()
   ];
 }
