@@ -139,13 +139,13 @@ Hooks.once("ready", async () => {
     // current decision point for whichever agent-controlled combatant's
     // turn is due, or apply exactly one chosen candidate. Never exposes
     // arbitrary script access.
-    getPendingAgentTurn: (combatId) => {
+    getPendingAgentTurn: async (combatId) => {
       if (!game.user.isGM)
         return ui.notifications.warn(
           game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
         );
       const combat = game.combats.get(combatId ?? game.combat?.id);
-      return combat ? getPendingAgentTurn(combat) : null;
+      return combat ? await getPendingAgentTurn(combat) : null;
     },
     applyAgentDecision: (
       combatId,

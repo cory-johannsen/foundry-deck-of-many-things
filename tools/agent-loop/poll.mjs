@@ -22,7 +22,7 @@ const MODULE_ID = "deck-of-many-more-things";
 
 async function getPendingTurn() {
   return runFoundryScript(
-    `return game.modules.get('${MODULE_ID}').api.getPendingAgentTurn();`,
+    `return await game.modules.get('${MODULE_ID}').api.getPendingAgentTurn();`,
   );
 }
 
