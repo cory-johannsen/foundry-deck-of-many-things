@@ -572,9 +572,17 @@ function isAutoHitAreaSpellInScope(spell) {
  * the minimum) comes from `parseAutoHitAreaTiers` directly, since Force
  * Rain's own action-glyph clauses reliably carry a damage phrase at every
  * tier, even the one with no `@Template` enricher; only `radiusFeet` falls
- * back to the spell's own structured `system.area.value` when a tier's
- * clause has no `@Template` of its own (true for the minimum tier, whose
- * "single 5-foot square" comes from structured data, not prose).
+ * back to the spell's own structured `system.area` when a tier's clause
+ * has no `@Template` of its own (true for the minimum tier). A structured
+ * `area.type` of `"square"` means a single grid cell — a *footprint size*,
+ * not a radius-from-center the way `burst`/`emanation`'s `value` is —
+ * confirmed live Force Rain's own minimum tier is exactly this shape
+ * ("a single 5-foot square"), so treating its `value` as a radius would
+ * wrongly pull in the center's neighbors too; it resolves to radius 0
+ * (the chosen center only) instead. A hypothetical minimum tier with a
+ * genuine `burst`/`emanation` structured area (no real example exists
+ * today) still falls back to that area's own `value` as a true radius,
+ * matching #140's established convention.
  */
 function resolveAutoHitAreaTiers(spell) {
   const system = spell.system ?? {};
@@ -582,9 +590,14 @@ function resolveAutoHitAreaTiers(spell) {
   const tiers = {};
   for (const [costStr, tier] of Object.entries(parsed)) {
     const cost = Number(costStr);
+    const radiusFeet = tier.area
+      ? tier.area.value
+      : system.area?.type === "square"
+        ? 0
+        : (system.area?.value ?? 0);
     tiers[cost] = {
       cost,
-      radiusFeet: tier.area?.value ?? system.area?.value ?? 0,
+      radiusFeet,
       noSave: tier.noSave,
       damage: tier.noSave
         ? []
