@@ -25,6 +25,13 @@
  * black-background convention only ever used as a value that dark-background
  * checker measured cleanly — transparency was never available mid-diffusion,
  * only as this kind of post-process).
+ *
+ * `exact=True` on the save is required, not cosmetic: libwebp's lossless
+ * encoder is otherwise free to discard/repaint the RGB of fully-transparent
+ * pixels for better compression, so a (0,0,0,0) pixel can round-trip as
+ * (247,246,242,0) on disk — invisible in Foundry, but still bright to the
+ * alpha-blind checker above. Confirmed live on giant-flying-squirrel: without
+ * `exact`, ~42% of the pixels this tool cleared came back non-black.
  */
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -53,7 +60,11 @@ for x in range(w):
 for y in range(h):
     border.append(px[0, y]); border.append(px[w - 1, y])
 n = len(border)
-ref = tuple(sum(c[i] for c in border) // n for i in range(3))
+def median(vals):
+    s = sorted(vals)
+    m = len(s) // 2
+    return s[m] if len(s) % 2 else (s[m-1] + s[m]) // 2
+ref = tuple(median([c[i] for c in border]) for i in range(3))
 
 def close(p):
     return (abs(p[0]-ref[0]) + abs(p[1]-ref[1]) + abs(p[2]-ref[2])) <= threshold * 3
@@ -80,7 +91,7 @@ while q:
         if 0 <= nx < w and 0 <= ny < h:
             consider(nx, ny)
 
-im.save(path, 'WEBP', lossless=True, method=6)
+im.save(path, 'WEBP', lossless=True, method=6, exact=True)
 print(f'{{"ref": {list(ref)}, "cleared": {cleared}, "total": {w*h}, "fraction": {cleared/(w*h):.3f}}}')
 `;
 
