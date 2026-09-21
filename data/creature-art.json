@@ -4470,5 +4470,77 @@
     "name": "Sibyl",
     "level": 3,
     "art": "sibyl.webp"
+  },
+  {
+    "id": "tattoo_guardian",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "FjiovYhLSHDX0ODl",
+    "name": "Tattoo Guardian",
+    "level": 3,
+    "art": "tattoo-guardian.webp"
+  },
+  {
+    "id": "dragonblood_occultist",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "ictE3YLeKKJv3JF0",
+    "name": "Dragonblood Occultist",
+    "level": 3,
+    "art": "dragonblood-occultist.webp"
+  },
+  {
+    "id": "fiend_caller",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "DHouUgsIwlktV1Pr",
+    "name": "Fiend Caller",
+    "level": 3,
+    "art": "fiend-caller.webp"
+  },
+  {
+    "id": "ghoran_manipulator",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "F4aCBm1lfPlRQzZ1",
+    "name": "Ghoran Manipulator",
+    "level": 3,
+    "art": "ghoran-manipulator.webp"
+  },
+  {
+    "id": "grioth_cultist",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "2ooIWWoCK1NCJKwT",
+    "name": "Grioth Cultist",
+    "level": 3,
+    "art": "grioth-cultist.webp"
+  },
+  {
+    "id": "living_graffiti_chalk",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "IyxWVWAi9BjKPxop",
+    "name": "Living Graffiti (Chalk)",
+    "level": 3,
+    "art": "living-graffiti-chalk.webp"
+  },
+  {
+    "id": "living_graffiti_ink",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "m0w5VfUTRvRcGfba",
+    "name": "Living Graffiti (Ink)",
+    "level": 3,
+    "art": "living-graffiti-ink.webp"
+  },
+  {
+    "id": "living_graffiti_oil",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "SIE8CcEblKI9VwqO",
+    "name": "Living Graffiti (Oil)",
+    "level": 3,
+    "art": "living-graffiti-oil.webp"
+  },
+  {
+    "id": "vishkanya_infiltrator",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "GMhMNMf5HpTojgLv",
+    "name": "Vishkanya Infiltrator",
+    "level": 3,
+    "art": "vishkanya-infiltrator.webp"
   }
 ]
