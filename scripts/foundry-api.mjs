@@ -44,6 +44,7 @@ import {
 import { splitmix32, seedFromString } from "./prng.mjs";
 import { buildCoverItemActorData, MODULE_ID } from "./cover-items.mjs";
 import { classifyTrap } from "./trap-combat.mjs";
+import { isTreasureEligible, rollNpcTreasure } from "./treasure.mjs";
 
 export const CREATURE_PACK_PATTERN =
   /bestiary|monster-core|npc-core|npc-gallery/i;
@@ -732,6 +733,32 @@ export function makeFoundryApi() {
       const alliance =
         disposition > 0 ? "party" : disposition < 0 ? "opposition" : null;
 
+      // Only a hostile spawn (a monster, never a player's own summon) can
+      // ever end up on the lootable-corpse path resolveCombat drives — see
+      // #172. Fetched once per call, not once per creature, same "index
+      // first, cheap" discipline encounter-roster.mjs already follows for
+      // the bestiary.
+      const equipmentIndex =
+        disposition < 0
+          ? (
+              await game.packs
+                .get("pf2e.equipment-srd")
+                ?.getIndex({ fields: ["type", "system.level.value", "system.price.value"] })
+            )?.map((e) => ({
+              id: e._id,
+              pack: "pf2e.equipment-srd",
+              level: e.system?.level?.value ?? 0,
+              // system.price.value is keyed by denomination ({gp}, {sp}, ...)
+              // rather than always gp — normalized to a single gp-equivalent
+              // number so rollNpcTreasure's price ceiling comparison is
+              // meaningful regardless of which denomination a cheap item uses.
+              priceGp:
+                (e.system?.price?.value?.gp ?? 0) +
+                (e.system?.price?.value?.sp ?? 0) / 10 +
+                (e.system?.price?.value?.cp ?? 0) / 100,
+            })) ?? []
+          : [];
+
       const created = [];
       for (const [i, entry] of entries.entries()) {
         // An entry is either a compendium reference or a world actor to copy.
@@ -765,6 +792,18 @@ export function makeFoundryApi() {
         const [actor] = await Actor.createDocuments([
           foundry.utils.mergeObject(doc.toObject(), overrides),
         ]);
+        if (disposition < 0 && isTreasureEligible(actor.system?.traits?.value)) {
+          const { gp, itemRef } = rollNpcTreasure({
+            level: actor.system?.details?.level?.value ?? 0,
+            index: equipmentIndex,
+            rng: Math.random,
+          });
+          if (gp > 0) await actor.inventory.addCoins({ gp });
+          if (itemRef) {
+            const itemDoc = await game.packs.get(itemRef.pack)?.getDocument(itemRef.id);
+            if (itemDoc) await actor.createEmbeddedDocuments("Item", [itemDoc.toObject()]);
+          }
+        }
         // Most summons stand next to the character. Ooze lands *on* them: the
         // card is explicit that the thing appears in your space, and a cube
         // beside you is a different card. A large token's top-left square is
