@@ -175,21 +175,71 @@ export function dcForAttempt({ partyLevel, skill, specialtySkills }) {
 }
 
 /**
+ * Whether `entry` (a `dungeon-setpieces.json` entry) is a usable
+ * skill-challenge template — `kind === 'skill_challenge'` and exactly 3
+ * real `ALL_SKILLS` slugs in `specialtySkills`. Guards rather than trusts a
+ * hand-authored JSON entry blindly, the same caution `isSimpleAutomatableTrap`
+ * applies to a live compendium document instead.
+ */
+export function isValidSkillChallengeTemplate(entry) {
+  return (
+    entry?.kind === "skill_challenge" &&
+    Array.isArray(entry.specialtySkills) &&
+    entry.specialtySkills.length === 3 &&
+    entry.specialtySkills.every((s) => ALL_SKILLS.includes(s))
+  );
+}
+
+/**
+ * Picks one hand-authored skill-challenge template (#164) from `entries` —
+ * `dungeon-setpieces.json`'s full mixed pool, filtered here to valid
+ * `skill_challenge`-kind ones, same "filter to the kind this function cares
+ * about, don't trust the caller to have pre-filtered" convention
+ * `trap-library.mjs`'s `selectTrap` already uses. Deterministic per
+ * `seed`+`roomId`, same seeding convention as `chooseSpecialtySkills`.
+ * `null` if `entries` has no valid skill_challenge template at all — the
+ * caller falls back to `chooseSpecialtySkills`'s own generic, template-free
+ * selection in that case, per #164's "extends the pool, not a hard
+ * dependency on it" scope.
+ */
+export function selectSkillChallengeTemplate(entries, seed, roomId) {
+  const pool = (entries ?? []).filter(isValidSkillChallengeTemplate);
+  if (!pool.length) return null;
+  const rand = splitmix32(
+    seedFromString(`${seed}-skillchallenge-template-${roomId}`),
+  );
+  return pool[Math.floor(rand() * pool.length)];
+}
+
+/**
  * Fresh Victory Point state for a room, deterministic per `seed`+`roomId`
  * for which 3 skills are specialties — `vpTarget`/`attemptBudget` are
  * *not* re-derived from the seed (no reason for them to vary run to run
  * the way flavor picks do), just this file's own tunable constants.
+ *
+ * `template` (#164, optional) — a `selectSkillChallengeTemplate` result —
+ * supplies its own `specialtySkills` (an archetype-appropriate trio: a
+ * chase's Acrobatics/Athletics/Stealth reads very differently from a
+ * negotiation's Diplomacy/Deception/Intimidation) instead of the generic
+ * `chooseSpecialtySkills` location-tag pick, which stays the fallback for
+ * a room with no valid template available — same "only fall back to the
+ * generic pick when hand-authored content doesn't cover this" shape #135
+ * already uses for traps, adapted for hand-authored rather than
+ * compendium-sourced content per #164's own explicit scope.
  */
 export function initSkillChallengeState({
   seed,
   roomId,
   locationTag,
   partySize,
+  template = null,
 }) {
   return {
     vpTarget: VP_TARGET,
     attemptBudget: attemptBudgetForPartySize(partySize),
-    specialtySkills: chooseSpecialtySkills(seed, roomId, locationTag),
+    specialtySkills: isValidSkillChallengeTemplate(template)
+      ? template.specialtySkills
+      : chooseSpecialtySkills(seed, roomId, locationTag),
     vp: 0,
     attemptsUsed: 0,
     resolved: null, // null while in progress, else 'success' | 'failure'

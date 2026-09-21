@@ -83,6 +83,12 @@
             {{/if}}
           {{else if isSkillChallenge}}
             <div class="dommt-dungeon__skill-challenge">
+              {{#if challenge.templateName}}
+                <p
+                  class="dommt-dungeon__setpiece-name"
+                >{{challenge.templateName}}</p>
+                <p>{{challenge.templateSummary}}</p>
+              {{/if}}
               <p>{{localize
                   "DOMMT.Dungeon.SkillChallenge.Progress"
                   vp=challenge.vp
@@ -92,12 +98,23 @@
                   "DOMMT.Dungeon.SkillChallenge.AttemptsRemaining"
                   n=challenge.attemptsRemaining
                 }}</p>
-              <p class="hint">
-                {{localize "DOMMT.Dungeon.SkillChallenge.SpecialtyHint"}}
-                {{#each challenge.specialtySkills}}{{this.label}}{{#unless
-                    @last
-                  }}, {{/unless}}{{/each}}
-              </p>
+              {{#if challenge.templateName}}
+                <ul class="dommt-dungeon__skill-flavor">
+                  {{#each challenge.specialtySkills}}
+                    <li>
+                      <strong>{{this.label}}</strong>
+                      {{#if this.flavor}}— {{this.flavor}}{{/if}}
+                    </li>
+                  {{/each}}
+                </ul>
+              {{else}}
+                <p class="hint">
+                  {{localize "DOMMT.Dungeon.SkillChallenge.SpecialtyHint"}}
+                  {{#each challenge.specialtySkills}}{{this.label}}{{#unless
+                      @last
+                    }}, {{/unless}}{{/each}}
+                </p>
+              {{/if}}
               <form class="dommt-dungeon__skill-challenge-form">
                 <label>
                   {{localize "DOMMT.Dungeon.SkillChallenge.WhoLabel"}}
