@@ -609,6 +609,24 @@ describe("ensurePuzzleState / recordPuzzleStageAttempt", () => {
     ).toBeUndefined();
   });
 
+  it("scales every stage's dc to the given partyLevel", async () => {
+    const settingsRef = makeSettingsStub();
+    const created = await createRun(
+      { sceneId: "s", roomCount: 5, seed: "fixed" },
+      { settingsRef },
+    );
+    const roomId = created.rooms[1].id;
+    const state = await ensurePuzzleState(
+      "s",
+      roomId,
+      { hintChecks: HINT_CHECKS, partyLevel: 5 },
+      { settingsRef },
+    );
+    const room = state.rooms.find((r) => r.id === roomId);
+    // simpleDcForLevel(5) === 20 (skill-challenge-mechanics.mjs's own table)
+    expect(room.puzzle.stages.every((s) => s.dc === 20)).toBe(true);
+  });
+
   it("is a no-op if the room already has puzzle state (never rerolls it)", async () => {
     const settingsRef = makeSettingsStub();
     const created = await createRun(

@@ -44,6 +44,86 @@
     "source": { "chapter": 4 }
   },
   {
+    "id": "the_sealed_ward",
+    "kind": "puzzle",
+    "archetype": "gauntlet",
+    "name": "The Sealed Ward",
+    "difficulty": "hard",
+    "complete": true,
+    "summary": "A luminous warding glyph bars the way forward, inscribed with three distinct trial-marks — a spoken passphrase in a dead liturgical tongue, a minor ward-glyph that must be carefully unwound rather than broken, and a sigil that only answers to a specific gesture of respect. The ward was built to test three different kinds of worthiness, not just brute force.",
+    "hintChecks": [
+      { "skill": "Religion", "dc": 10, "hint": "The liturgical passphrase isn't gibberish — it's a common invocation from a faith this dungeon's builders clearly practiced, just archaically phrased." },
+      { "skill": "Arcana", "dc": 10, "hint": "The ward-glyph has a single thread that, pulled in the right order, unravels the whole working harmlessly — force instead triggers its ward." },
+      { "skill": "Diplomacy", "dc": 10, "hint": "The sigil isn't a lock at all — it's a courtesy check, testing whether whoever approaches shows deference rather than demand." }
+    ],
+    "solution": "Each trial-mark tests a different kind of worthiness and must be satisfied on its own terms: speak the archaic invocation correctly (Religion), unwind the ward-glyph's single thread in sequence rather than forcing it (Arcana), and approach the sigil with the correct gesture of deference (Diplomacy). The ward drops once enough of the three are satisfied — a party that succeeds at all three finds it drops with no resistance at all, a nice-to-have rather than a requirement.",
+    "source": { "chapter": null, "note": "Hand-authored — no PF2e compendium ships puzzle content; see #138." }
+  },
+  {
+    "id": "bones_of_the_mechanism",
+    "kind": "puzzle",
+    "archetype": "mechanism",
+    "name": "Bones of the Mechanism",
+    "difficulty": "medium",
+    "complete": true,
+    "summary": "A stone door is sealed by an ancient gear-and-lever mechanism set into the wall beside it — three visible components: a stuck iron lever, a bank of interlocking dials etched with unfamiliar glyphs, and a tension crank that needs steady, careful pressure to avoid snapping its own cable. All three need to be understood and worked together before the door will budge.",
+    "hintChecks": [
+      { "skill": "Athletics", "dc": 10, "hint": "The lever isn't broken, just corroded solid — it needs brute, sustained force, not a sharp yank." },
+      { "skill": "Crafting", "dc": 10, "hint": "The dials aren't decorative — turning them in the right sequence is what actually unlocks the mechanism, not the lever alone." },
+      { "skill": "Thievery", "dc": 10, "hint": "The tension crank's cable is frayed; a light, practiced touch keeps it from snapping mid-turn." }
+    ],
+    "solution": "All three components must be worked in concert: force the lever (Athletics) to build initial tension, set the dials to the sequence the room's own decor hints at (Crafting), then ease the crank through its final turn (Thievery) without snapping the cable. Any one skipped stalls the door.",
+    "source": { "chapter": null, "note": "Hand-authored — no PF2e compendium ships puzzle content; see #138." }
+  },
+  {
+    "id": "the_alchemists_cabinet",
+    "kind": "puzzle",
+    "archetype": "item-combination",
+    "name": "The Alchemist's Cabinet",
+    "difficulty": "medium",
+    "complete": true,
+    "summary": "A locked cabinet holds a dozen labeled reagent vials, most inert, a few genuinely useful, one outright dangerous if mishandled. A brass plate beside it reads: \"Combine what answers true need, and the false lock falls away.\" The party must pick the right two or three vials and mix them correctly to dissolve the seal on a hidden compartment.",
+    "hintChecks": [
+      { "skill": "Crafting", "dc": 10, "hint": "Half these labels are deliberately misleading — the vial's actual color and weight tell the true story, not the handwriting on it." },
+      { "skill": "Nature", "dc": 10, "hint": "Two of the vials hold genuine plant extracts; everything else is mineral dust with no reaction at all." },
+      { "skill": "Medicine", "dc": 10, "hint": "One vial is caustic enough to hurt whoever mixes it carelessly — it needs diluting first, not combining directly." }
+    ],
+    "solution": "The two plant-extract vials (Nature) combine directly to dissolve the seal; the caustic vial (Medicine) is a red herring unless diluted first, in which case it speeds the reaction — either path works, but mixing it undiluted damages whoever's handling it. Crafting narrows the field before either path is attempted.",
+    "source": { "chapter": null, "note": "Hand-authored — no PF2e compendium ships puzzle content; see #138." }
+  },
+  {
+    "id": "what_the_bones_remember",
+    "kind": "puzzle",
+    "archetype": "lore",
+    "name": "What the Bones Remember",
+    "difficulty": "hard",
+    "complete": true,
+    "summary": "An ossuary chamber displays a wall of skeletal remains arranged into a deliberate tableau — a funerary procession frozen mid-stride, one skull turned to face the room rather than the wall. Pressing the wrong skull triggers nothing obvious, but pressing the right one — the one the tableau's own composition marks as significant — opens a passage beneath the floor.",
+    "hintChecks": [
+      { "skill": "Religion", "dc": 10, "hint": "The procession's arrangement matches a funerary rite for the dishonored, not the honored — the outward-facing skull was the one being mourned, not the one leading it." },
+      { "skill": "Society", "dc": 10, "hint": "The remains' dress and posture place this burial several centuries before the rest of the dungeon's construction — this chamber predates everything around it." },
+      { "skill": "Occultism", "dc": 10, "hint": "A faint ward-glyph is scratched into the floor beneath the outward-facing skull specifically, not any other." }
+    ],
+    "solution": "The outward-facing skull is the mourned figure the whole tableau centers on, marked further by the ward-glyph beneath it — pressing it (not the procession's apparent leader, the natural first guess) opens the floor passage.",
+    "source": { "chapter": null, "note": "Hand-authored — no PF2e compendium ships puzzle content; see #138." }
+  },
+  {
+    "id": "the_court_of_echoes",
+    "kind": "puzzle",
+    "archetype": "social",
+    "name": "The Court of Echoes",
+    "difficulty": "medium",
+    "complete": true,
+    "summary": "A ballroom of translucent, spectral courtiers replays the same masquerade on an endless loop, utterly indifferent to the living — until addressed correctly. The party must be accepted as guests rather than intruders to be allowed to cross to the far doors without the whole ghostly court turning hostile at once.",
+    "hintChecks": [
+      { "skill": "Diplomacy", "dc": 10, "hint": "The courtiers only ever address each other by invented masquerade names, never real ones — using a real name marks you as an outsider instantly." },
+      { "skill": "Performance", "dc": 10, "hint": "The loop has a rhythm — a recurring dance figure everyone in the room steps through at the same interval. Matching it, even roughly, reads as belonging." },
+      { "skill": "Deception", "dc": 10, "hint": "Claiming a place in the masquerade (an invented name, an invented reason for arriving late) works better than trying to explain the truth." }
+    ],
+    "solution": "Adopt a masquerade name, join the recurring dance figure at the right beat, and claim a plausible (invented) reason for being there — any one alone gets a suspicious glance, but doing enough of it together gets the party waved through as fellow guests rather than challenged as intruders.",
+    "source": { "chapter": null, "note": "Hand-authored — no PF2e compendium ships puzzle content; see #138." }
+  },
+  {
     "id": "balance_and_ruin",
     "kind": "trap",
     "name": "Balance and Ruin",
