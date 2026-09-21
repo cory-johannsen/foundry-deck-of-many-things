@@ -438,10 +438,14 @@ function chebyshevSquares(a, b, gridSize) {
  * object — passing `elevation` as a second argument, the naive reading of
  * the method's own name, silently returns `false` for every point, a real
  * footgun caught live before it shipped). Returns the matching cell's own
- * center too (`x`, `y`), not just the distance, since `applyAgentDecision`
- * needs a concrete point to retreat from — recomputed fresh here rather
- * than threaded through the candidate, matching every other tier-resolving
- * function in this file's "re-resolve at execution time" convention.
+ * top-left corner (`x`, `y`) — the same convention every real token's own
+ * position already uses — not its center, since `applyAgentDecision`
+ * feeds this straight back into `tokenCell` (a plain `pixel / gridSize`
+ * round) to build a synthetic retreat-from target: a center point doesn't
+ * round-trip through that to the intended cell, a real off-by-one caught
+ * live before it shipped. Recomputed fresh at execution time rather than
+ * threaded through the candidate, matching every other tier-resolving
+ * function in this file's convention.
  */
 function nearestHazardousRegionPoint(scene, token, gridSize) {
   const hazardRegions = (scene?.regions ?? []).filter((r) =>
@@ -455,10 +459,16 @@ function nearestHazardousRegionPoint(scene, token, gridSize) {
     for (let dgy = -dist; dgy <= dist; dgy++) {
       for (let dgx = -dist; dgx <= dist; dgx++) {
         if (Math.max(Math.abs(dgx), Math.abs(dgy)) !== dist) continue;
-        const x = (gx0 + dgx) * gridSize + gridSize / 2;
-        const y = (gy0 + dgy) * gridSize + gridSize / 2;
-        if (hazardRegions.some((r) => r.testPoint({ x, y, elevation }))) {
-          return { distanceSquares: dist, x, y };
+        const gx = gx0 + dgx;
+        const gy = gy0 + dgy;
+        const testX = gx * gridSize + gridSize / 2;
+        const testY = gy * gridSize + gridSize / 2;
+        if (
+          hazardRegions.some((r) =>
+            r.testPoint({ x: testX, y: testY, elevation }),
+          )
+        ) {
+          return { distanceSquares: dist, x: gx * gridSize, y: gy * gridSize };
         }
       }
     }
