@@ -842,6 +842,23 @@ export function parseSpellEffectUuid(descriptionHtml) {
 }
 
 /**
+ * The weapon-name restriction on a Reactive Strike/Attack of Opportunity
+ * item's own name (#202), e.g. "Attack of Opportunity (Jaws Only)" ->
+ * "jaws", "Reactive Strike (Tail Only)" -> "tail" — confirmed live across
+ * real bestiary dragons this "(X Only)" suffix is how a multi-weapon
+ * creature's reaction is restricted to a specific Strike. Returns `null`
+ * for a plain, unrestricted name, or a non-weapon qualifier like
+ * "(Special)" (Vrock/Balor-shaped — describes an *additional* trigger,
+ * not a weapon restriction; #202's own v1 scope, the ranged-Strike
+ * trigger only, never needs to parse that shape at all, since the
+ * reactor just uses its normal reaction either way for that trigger).
+ */
+export function parseReactiveStrikeWeaponRestriction(itemName) {
+  const match = /\(([a-z][a-z\s]*?)\s+only\)\s*$/i.exec(itemName ?? '');
+  return match ? match[1].trim().toLowerCase() : null;
+}
+
+/**
  * One candidate per ready single-target buff spell x each ally within
  * range — same shape as `buildHealSpellCandidates`, minus its full-HP
  * exclusion (a buff applies regardless of current HP; there's no
