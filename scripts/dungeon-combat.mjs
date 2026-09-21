@@ -1028,6 +1028,84 @@ async function computeConePlacements(
 }
 
 /**
+ * The real Foundry-computed set of opponents/allies caught by a circular
+ * burst/emanation template centered at each of `centers` in turn — the
+ * same exact-containment approach `computeConePlacements` already uses for
+ * breath-weapon cones, replacing the Chebyshev-square approximation (a
+ * burst/emanation's circle vs. its bounding square, whose far diagonal
+ * corners a real circle wouldn't reach) #119/#140/#176 all used before
+ * (see #150). `centers` carries each candidate placement's own
+ * `centerType`/`centerId` (matching the caller's existing placement
+ * shape) alongside the real `originToken` to center the template on —
+ * `combatant.token` for an emanation's single self-centered placement,
+ * each opponent's own token for a burst's per-opponent placements. Same
+ * viewed-scene requirement and batch-create/compute/read/delete pattern as
+ * `computeConePlacements` — see that function's own comment for why.
+ */
+async function computeAreaPlacements(
+  combat,
+  centers,
+  rawOpponents,
+  rawAllies,
+  radiusFeet,
+) {
+  const scene = combat.scene;
+  if (!scene || game.scenes.viewed?.id !== scene.id || !centers.length)
+    return [];
+  const gridSize = scene.grid?.size ?? 100;
+
+  const templateData = centers.map((center) => {
+    const origin = tokenCenter(center.originToken, gridSize);
+    return {
+      t: "circle",
+      x: origin.x,
+      y: origin.y,
+      distance: radiusFeet,
+      hidden: true,
+    };
+  });
+
+  const created = await scene.createEmbeddedDocuments(
+    "MeasuredTemplate",
+    templateData,
+  );
+  try {
+    return created.map((templateDoc, i) => {
+      const canvasObject = canvas.templates?.get(templateDoc.id);
+      if (
+        canvasObject &&
+        !canvasObject.shape &&
+        typeof canvasObject._computeShape === "function"
+      ) {
+        canvasObject.shape = canvasObject._computeShape();
+      }
+      const shape = canvasObject?.shape ?? null;
+      const origin = tokenCenter(centers[i].originToken, gridSize);
+      const contained = (pool) =>
+        shape
+          ? pool
+              .filter((o) => {
+                const center = tokenCenter(o.token, gridSize);
+                return shape.contains(center.x - origin.x, center.y - origin.y);
+              })
+              .map((o) => ({ id: o.id, name: o.name }))
+          : [];
+      return {
+        centerType: centers[i].centerType,
+        centerId: centers[i].centerId,
+        affected: contained(rawOpponents),
+        affectedAllies: contained(rawAllies),
+      };
+    });
+  } finally {
+    await scene.deleteEmbeddedDocuments(
+      "MeasuredTemplate",
+      created.map((t) => t.id),
+    );
+  }
+}
+
+/**
  * The raw stored `agentTurnState` flag, but only when it actually belongs to
  * this exact turn — same `combatantId` *and* the same `round`/`turn` the
  * Combat is on right now. `combatantId` alone isn't enough: the same
@@ -1588,52 +1666,45 @@ export async function getPendingAgentTurn(combat) {
     )
     .filter(Boolean);
 
-  const readyAreaSpells = (
-    combatant.actor?.spellcasting?.contents ?? []
-  ).flatMap((entry) =>
-    (entry.spells?.contents ?? [])
+  const readyAreaSpells = [];
+  for (const entry of combatant.actor?.spellcasting?.contents ?? []) {
+    for (const spell of (entry.spells?.contents ?? [])
       .filter(isAreaSpellInScope)
-      .filter(hasSpellUsesRemaining)
-      .map((spell) => {
-        const radiusSquares = (spell.system.area.value ?? 0) / gridDistanceFt;
-        const withinRadiusOf = (pool) => (centerToken) =>
-          pool
-            .filter(
-              (o) =>
-                chebyshevSquares(centerToken, o.token, gridSize) <=
-                radiusSquares,
-            )
-            .map((o) => ({ id: o.id, name: o.name }));
-        const withinRadius = withinRadiusOf(rawOpponents);
-        const withinRadiusAllies = withinRadiusOf(rawAllies);
-        const placements =
-          spell.system.area.type === "emanation"
-            ? [
-                {
-                  centerType: "self",
-                  centerId: null,
-                  affected: withinRadius(combatant.token),
-                  affectedAllies: withinRadiusAllies(combatant.token),
-                },
-              ]
-            : rawOpponents.map((center) => ({
-                centerType: "opponent",
-                centerId: center.id,
-                affected: withinRadius(center.token),
-                affectedAllies: withinRadiusAllies(center.token),
-              }));
-        return {
-          id: spell.id,
-          slug: spell.slug,
-          label: spell.name,
-          cost: Number(spell.system.time.value),
-          save: spell.system.defense.save.statistic,
-          basic: spell.system.defense.save.basic,
-          entryId: entry.id,
-          placements,
-        };
-      }),
-  );
+      .filter(hasSpellUsesRemaining)) {
+      const radiusFeet = spell.system.area.value ?? 0;
+      const centers =
+        spell.system.area.type === "emanation"
+          ? [
+              {
+                centerType: "self",
+                centerId: null,
+                originToken: combatant.token,
+              },
+            ]
+          : rawOpponents.map((o) => ({
+              centerType: "opponent",
+              centerId: o.id,
+              originToken: o.token,
+            }));
+      const placements = await computeAreaPlacements(
+        combat,
+        centers,
+        rawOpponents,
+        rawAllies,
+        radiusFeet,
+      );
+      readyAreaSpells.push({
+        id: spell.id,
+        slug: spell.slug,
+        label: spell.name,
+        cost: Number(spell.system.time.value),
+        save: spell.system.defense.save.statistic,
+        basic: spell.system.defense.save.basic,
+        entryId: entry.id,
+        placements,
+      });
+    }
+  }
 
   // One entry per (spell, tier) pair — a #140-scoped tier-scaling area
   // spell offers a separate castAreaTier candidate for each affordable
@@ -1641,55 +1712,47 @@ export async function getPendingAgentTurn(combat) {
   // placements, computed the same way #119's readyAreaSpells does, just
   // parameterized per tier instead of using the spell's single structured
   // radius).
-  const readyTierScalingAreaSpells = (
-    combatant.actor?.spellcasting?.contents ?? []
-  ).flatMap((entry) =>
-    (entry.spells?.contents ?? [])
+  const readyTierScalingAreaSpells = [];
+  for (const entry of combatant.actor?.spellcasting?.contents ?? []) {
+    for (const spell of (entry.spells?.contents ?? [])
       .filter(isTierScalingAreaSpellInScope)
-      .filter(hasSpellUsesRemaining)
-      .flatMap((spell) => {
-        const tiers = resolveAreaSpellTiers(spell);
-        return Object.values(tiers).map((tier) => {
-          const radiusSquares = tier.radiusFeet / gridDistanceFt;
-          const withinRadiusOf = (pool) => (centerToken) =>
-            pool
-              .filter(
-                (o) =>
-                  chebyshevSquares(centerToken, o.token, gridSize) <=
-                  radiusSquares,
-              )
-              .map((o) => ({ id: o.id, name: o.name }));
-          const withinRadius = withinRadiusOf(rawOpponents);
-          const withinRadiusAllies = withinRadiusOf(rawAllies);
-          const placements =
-            spell.system.area.type === "emanation"
-              ? [
-                  {
-                    centerType: "self",
-                    centerId: null,
-                    affected: withinRadius(combatant.token),
-                    affectedAllies: withinRadiusAllies(combatant.token),
-                  },
-                ]
-              : rawOpponents.map((center) => ({
-                  centerType: "opponent",
-                  centerId: center.id,
-                  affected: withinRadius(center.token),
-                  affectedAllies: withinRadiusAllies(center.token),
-                }));
-          return {
-            id: spell.id,
-            slug: `${spell.slug}-${tier.cost}action`,
-            label: `${spell.name} (${tier.cost} action${tier.cost > 1 ? "s" : ""})`,
-            cost: tier.cost,
-            save: spell.system.defense.save.statistic,
-            basic: spell.system.defense.save.basic,
-            entryId: entry.id,
-            placements,
-          };
+      .filter(hasSpellUsesRemaining)) {
+      const tiers = resolveAreaSpellTiers(spell);
+      const centers =
+        spell.system.area.type === "emanation"
+          ? [
+              {
+                centerType: "self",
+                centerId: null,
+                originToken: combatant.token,
+              },
+            ]
+          : rawOpponents.map((o) => ({
+              centerType: "opponent",
+              centerId: o.id,
+              originToken: o.token,
+            }));
+      for (const tier of Object.values(tiers)) {
+        const placements = await computeAreaPlacements(
+          combat,
+          centers,
+          rawOpponents,
+          rawAllies,
+          tier.radiusFeet,
+        );
+        readyTierScalingAreaSpells.push({
+          id: spell.id,
+          slug: `${spell.slug}-${tier.cost}action`,
+          label: `${spell.name} (${tier.cost} action${tier.cost > 1 ? "s" : ""})`,
+          cost: tier.cost,
+          save: spell.system.defense.save.statistic,
+          basic: spell.system.defense.save.basic,
+          entryId: entry.id,
+          placements,
         });
-      }),
-  );
+      }
+    }
+  }
 
   // One entry per (spell, tier) pair for a #176-scoped auto-hit-at-max-
   // tier area spell — same geometry pattern as readyTierScalingAreaSpells
@@ -1697,15 +1760,36 @@ export async function getPendingAgentTurn(combat) {
   // burst/square, never a self-centered emanation), but each tier also
   // carries noSave/flatDamage/damageType so the candidate (and later,
   // execution) knows whether to roll a save at all.
-  const readyAutoHitAreaSpells = (
-    combatant.actor?.spellcasting?.contents ?? []
-  ).flatMap((entry) =>
-    (entry.spells?.contents ?? [])
+  // A `square` area (Force Rain's own shape) isn't a burst/emanation circle
+  // approximated by a bounding square — it genuinely is a square footprint
+  // — so #150's real-geometry fix doesn't apply here; it keeps the
+  // Chebyshev-square check (`resolveAutoHitAreaTiers` already sets its
+  // `radiusFeet` to 0 for that case, matching that pre-existing
+  // approximation exactly).
+  const readyAutoHitAreaSpells = [];
+  for (const entry of combatant.actor?.spellcasting?.contents ?? []) {
+    for (const spell of (entry.spells?.contents ?? [])
       .filter(isAutoHitAreaSpellInScope)
-      .filter(hasSpellUsesRemaining)
-      .flatMap((spell) => {
-        const tiers = resolveAutoHitAreaTiers(spell);
-        return Object.values(tiers).map((tier) => {
+      .filter(hasSpellUsesRemaining)) {
+      const tiers = resolveAutoHitAreaTiers(spell);
+      const isSquare = spell.system.area.type === "square";
+      const centers =
+        spell.system.area.type === "emanation"
+          ? [
+              {
+                centerType: "self",
+                centerId: null,
+                originToken: combatant.token,
+              },
+            ]
+          : rawOpponents.map((o) => ({
+              centerType: "opponent",
+              centerId: o.id,
+              originToken: o.token,
+            }));
+      for (const tier of Object.values(tiers)) {
+        let placements;
+        if (isSquare) {
           const radiusSquares = tier.radiusFeet / gridDistanceFt;
           const withinRadiusOf = (pool) => (centerToken) =>
             pool
@@ -1717,36 +1801,35 @@ export async function getPendingAgentTurn(combat) {
               .map((o) => ({ id: o.id, name: o.name }));
           const withinRadius = withinRadiusOf(rawOpponents);
           const withinRadiusAllies = withinRadiusOf(rawAllies);
-          const placements =
-            spell.system.area.type === "emanation"
-              ? [
-                  {
-                    centerType: "self",
-                    centerId: null,
-                    affected: withinRadius(combatant.token),
-                    affectedAllies: withinRadiusAllies(combatant.token),
-                  },
-                ]
-              : rawOpponents.map((center) => ({
-                  centerType: "opponent",
-                  centerId: center.id,
-                  affected: withinRadius(center.token),
-                  affectedAllies: withinRadiusAllies(center.token),
-                }));
-          return {
-            id: spell.id,
-            slug: `${spell.slug}-${tier.cost}action`,
-            label: `${spell.name} (${tier.cost} action${tier.cost > 1 ? "s" : ""})`,
-            cost: tier.cost,
-            save: tier.noSave ? null : spell.system.defense.save.statistic,
-            basic: tier.noSave ? null : spell.system.defense.save.basic,
-            noSave: tier.noSave,
-            entryId: entry.id,
-            placements,
-          };
+          placements = rawOpponents.map((center) => ({
+            centerType: "opponent",
+            centerId: center.id,
+            affected: withinRadius(center.token),
+            affectedAllies: withinRadiusAllies(center.token),
+          }));
+        } else {
+          placements = await computeAreaPlacements(
+            combat,
+            centers,
+            rawOpponents,
+            rawAllies,
+            tier.radiusFeet,
+          );
+        }
+        readyAutoHitAreaSpells.push({
+          id: spell.id,
+          slug: `${spell.slug}-${tier.cost}action`,
+          label: `${spell.name} (${tier.cost} action${tier.cost > 1 ? "s" : ""})`,
+          cost: tier.cost,
+          save: tier.noSave ? null : spell.system.defense.save.statistic,
+          basic: tier.noSave ? null : spell.system.defense.save.basic,
+          noSave: tier.noSave,
+          entryId: entry.id,
+          placements,
         });
-      }),
-  );
+      }
+    }
+  }
 
   const readyAttackSpells = (combatant.actor?.spellcasting?.contents ?? [])
     .flatMap((entry) =>
