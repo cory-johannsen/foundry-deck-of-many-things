@@ -10,6 +10,7 @@ import {
   parseAreaSpellTierOverrides, buildTierScalingAreaSpellCandidates, endTurnCandidate,
   parseActionGlyphTiers, buildDualNatureSpellCandidates,
   parseTargetCountFormula, buildTargetCountSpellCandidates,
+  parseAutoHitAreaTiers, buildAutoHitAreaSpellCandidates,
   buildCandidateList, applyCandidateToTurnState, buildDecisionContext,
   MAX_ACTIONS_PER_TURN, AGENT_MELEE_REACH_SQUARES
 } from '../scripts/agent-candidates.mjs';
@@ -402,6 +403,73 @@ describe('buildTargetCountSpellCandidates', () => {
   it('omits a tier with no pre-selected targets', () => {
     const emptyTier = { ...rebukeDeath, tiers: [{ cost: 1, targets: [] }] };
     const candidates = buildTargetCountSpellCandidates({ readyTargetCountSpells: [emptyTier], actionsRemaining: 3 });
+    expect(candidates).toEqual([]);
+  });
+});
+
+describe('parseAutoHitAreaTiers', () => {
+  const forceRainDescription = "<p>You conjure a magical cloud that batters creatures with shards of solidified magic. Creatures in the spell's area take force damage with a basic Reflex save. The number of actions you spend when Casting this Spell determines the area and other parameters.</p>\n<p><span class=\"action-glyph\">1</span> This spell affects a single 5-foot square and deals 4d6 force damage.</p>\n<p><span class=\"action-glyph\">2</span> This spell affects all squares in a @Template[type:burst|distance:10] and deals 8d6 force damage.</p>\n<p><span class=\"action-glyph\">3</span> The shards home in on creatures. This spell affects all squares in a @Template[type:burst|distance:10]. Creatures in the area don't attempt a saving throw and instead automatically take 20 force damage.</p><hr /><p><strong>Heightened (+1)</strong> The damage increases by 1d6 for the 1-action version, by 2d6 for the 2-action version, and by 5 for the 3-action version.</p>";
+
+  it('parses Force Rain\'s real tiered description', () => {
+    expect(parseAutoHitAreaTiers(forceRainDescription)).toEqual({
+      1: { cost: 1, noSave: false, damageFormula: '4d6', damageType: 'force' },
+      2: { cost: 2, area: { type: 'burst', value: 10 }, noSave: false, damageFormula: '8d6', damageType: 'force' },
+      3: { cost: 3, area: { type: 'burst', value: 10 }, noSave: true, flatDamage: 20, damageType: 'force' },
+    });
+  });
+
+  it('returns an empty object for a description with no action-glyph tiers', () => {
+    expect(parseAutoHitAreaTiers('<p>A plain spell with no tiers.</p>')).toEqual({});
+  });
+});
+
+describe('buildAutoHitAreaSpellCandidates', () => {
+  const opp1 = { id: 'opp1', name: 'Fighter' };
+  const opp2 = { id: 'opp2', name: 'Cleric' };
+
+  const saveTier = {
+    id: 'sp1', slug: 'force-rain-2action', label: 'Force Rain (2 actions)',
+    cost: 2, save: 'reflex', basic: true, noSave: false, entryId: 'entry1',
+    placements: [{ centerType: 'opponent', centerId: 'opp1', affected: [opp1, opp2] }],
+  };
+  const noSaveTier = {
+    id: 'sp1', slug: 'force-rain-3action', label: 'Force Rain (3 actions)',
+    cost: 3, save: null, basic: null, noSave: true, entryId: 'entry1',
+    placements: [{ centerType: 'opponent', centerId: 'opp1', affected: [opp1, opp2] }],
+  };
+
+  it('offers a save-based candidate carrying noSave:false', () => {
+    const candidates = buildAutoHitAreaSpellCandidates({ readyAutoHitAreaSpells: [saveTier], actionsRemaining: 3 });
+    expect(candidates).toEqual([
+      {
+        id: 'castAutoHitAreaTier:force-rain-2action:opponent:opp1', type: 'castAutoHitAreaTier',
+        spellId: 'sp1', entryId: 'entry1', cost: 2, save: 'reflex', basic: true, noSave: false,
+        centerType: 'opponent', centerId: 'opp1', affectedIds: ['opp1', 'opp2'], affectedAllyIds: [],
+        summary: 'Force Rain (2 actions) (hits Fighter, Cleric)',
+      },
+    ]);
+  });
+
+  it('offers a no-save candidate carrying noSave:true and a null save', () => {
+    const candidates = buildAutoHitAreaSpellCandidates({ readyAutoHitAreaSpells: [noSaveTier], actionsRemaining: 3 });
+    expect(candidates).toEqual([
+      {
+        id: 'castAutoHitAreaTier:force-rain-3action:opponent:opp1', type: 'castAutoHitAreaTier',
+        spellId: 'sp1', entryId: 'entry1', cost: 3, save: null, basic: null, noSave: true,
+        centerType: 'opponent', centerId: 'opp1', affectedIds: ['opp1', 'opp2'], affectedAllyIds: [],
+        summary: 'Force Rain (3 actions) (hits Fighter, Cleric)',
+      },
+    ]);
+  });
+
+  it('omits a tier whose cost exceeds the actions remaining', () => {
+    const candidates = buildAutoHitAreaSpellCandidates({ readyAutoHitAreaSpells: [saveTier, noSaveTier], actionsRemaining: 2 });
+    expect(candidates.map((c) => c.cost)).toEqual([2]);
+  });
+
+  it('omits a tier where every placement catches zero opponents', () => {
+    const emptyTier = { ...noSaveTier, placements: [{ centerType: 'opponent', centerId: 'opp1', affected: [] }] };
+    const candidates = buildAutoHitAreaSpellCandidates({ readyAutoHitAreaSpells: [emptyTier], actionsRemaining: 3 });
     expect(candidates).toEqual([]);
   });
 });

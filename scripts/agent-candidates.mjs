@@ -394,6 +394,90 @@ export function buildTargetCountSpellCandidates({ readyTargetCountSpells, action
 }
 
 /**
+ * The per-action-cost-tier overrides for a #176-scoped auto-hit-at-max-
+ * tier area spell (Force Rain-shaped: a burst/square area whose lower
+ * tiers are ordinary save-scaled damage but whose *top* tier bypasses the
+ * save entirely — "Creatures in the area don't attempt a saving throw and
+ * instead automatically take 20 force damage", confirmed live) — a
+ * genuinely different shape from #140's Wronged Monk's Wrath (every tier
+ * save-scaled) and #174's Harm/Heal (shape changes, but every tier still
+ * either saves or is a flat unconditional heal). Uses the same
+ * `<span class="action-glyph">N</span>` tier notation #174's parser
+ * already established, but the area enricher here uses a *different*
+ * `@Template[type:X|distance:N]` key-value syntax (confirmed live) than
+ * #174's positional `@Template[X|distance:N]` — a real second variant of
+ * PF2e's own enricher grammar, not a typo, so this gets its own regex
+ * rather than trying to force one pattern to cover both. Each tier gets
+ * either `damageFormula`/`damageType` (an ordinary dice-based, save-scaled
+ * tier) or `flatDamage`/`damageType` with `noSave: true` (the auto-hit
+ * tier), never both — `noSave` is always present so the caller never has
+ * to infer which shape a tier is from field presence alone. The 1-action
+ * tier carries no `area` at all (Force Rain's own minimum tier is a
+ * single structured "square", not a Template enricher — dungeon-combat.mjs
+ * fills that in from the spell's structured `system.area` instead,
+ * matching #140's established "structured minimum tier" convention).
+ */
+export function parseAutoHitAreaTiers(descriptionHtml) {
+  const tiers = {};
+  const glyphRegex = /<span class="action-glyph">(\d)<\/span>([^]*?)(?=<span class="action-glyph">|<hr|$)/g;
+  let match;
+  while ((match = glyphRegex.exec(descriptionHtml))) {
+    const cost = Number(match[1]);
+    const clause = match[2];
+    const tier = { cost };
+    const areaMatch = /@Template\[type:(\w+)\|distance:(\d+)\]/.exec(clause);
+    if (areaMatch) tier.area = { type: areaMatch[1], value: Number(areaMatch[2]) };
+    const flatMatch = /automatically take (\d+)\s+(\w+)\s+damage/i.exec(clause);
+    if (flatMatch) {
+      tier.noSave = true;
+      tier.flatDamage = Number(flatMatch[1]);
+      tier.damageType = flatMatch[2].toLowerCase();
+    } else {
+      const diceMatch = /deals (\d+d\d+)\s+(\w+)\s+damage/i.exec(clause);
+      tier.noSave = false;
+      if (diceMatch) {
+        tier.damageFormula = diceMatch[1];
+        tier.damageType = diceMatch[2].toLowerCase();
+      }
+    }
+    tiers[cost] = tier;
+  }
+  return tiers;
+}
+
+/**
+ * Candidates for a #176-scoped auto-hit-at-max-tier area spell — one
+ * candidate per affordable tier, reusing `bestAreaPlacement` (#126/#140's
+ * shared lexicographic enemies-then-allies scoring) exactly like #140's
+ * `buildTierScalingAreaSpellCandidates`, since Force Rain's placements are
+ * opponent-centered bursts at every tier (never a self-centered emanation)
+ * — the same "choose the best center point" logic #119's original area
+ * spells already use. The only real difference from #140's candidate
+ * shape is the `noSave` flag carried straight through from the tier data,
+ * so dungeon-combat.mjs's execution knows whether to roll a save at all
+ * without re-deriving it from the spell.
+ */
+export function buildAutoHitAreaSpellCandidates({ readyAutoHitAreaSpells, actionsRemaining }) {
+  const candidates = [];
+  for (const tier of readyAutoHitAreaSpells) {
+    if (tier.cost > actionsRemaining) continue;
+    const best = bestAreaPlacement(tier.placements);
+    if (!best) continue;
+    const idSuffix = best.centerId ? `:${best.centerId}` : '';
+    candidates.push({
+      id: `castAutoHitAreaTier:${tier.slug}:${best.centerType}${idSuffix}`, type: 'castAutoHitAreaTier',
+      spellId: tier.id, entryId: tier.entryId, cost: tier.cost,
+      save: tier.save, basic: tier.basic, noSave: tier.noSave,
+      centerType: best.centerType, centerId: best.centerId,
+      affectedIds: best.affected.map((o) => o.id),
+      affectedAllyIds: (best.affectedAllies ?? []).map((o) => o.id),
+      summary: `${tier.label} (hits ${best.affected.map((o) => o.name).join(', ')})`
+    });
+  }
+  return candidates;
+}
+
+/**
  * One candidate per ready single-target, attack-roll spell x each opponent
  * within that spell's range — same shape as buildSpellCandidates (#118's
  * save-based spells), minus `save`/`basic` (an attack-roll spell resolves
@@ -682,7 +766,7 @@ export function endTurnCandidate() {
 }
 
 /** Full candidate list for one decision iteration. */
-export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], readyAttackSpells = [], readyDebuffSpells = [], readyBreathWeapons = [], readyChainSpells = [], readyHealSpells = [], readyTierScalingAreaSpells = [], readyDualNatureSpells = [], readyTargetCountSpells = [], allies = [], turnState, hazard = null, hasRangedOrReach = false }) {
+export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], readyAttackSpells = [], readyDebuffSpells = [], readyBreathWeapons = [], readyChainSpells = [], readyHealSpells = [], readyTierScalingAreaSpells = [], readyDualNatureSpells = [], readyTargetCountSpells = [], readyAutoHitAreaSpells = [], allies = [], turnState, hazard = null, hasRangedOrReach = false }) {
   if (turnState.actionsRemaining <= 0) return [endTurnCandidate()];
   return [
     ...buildMovementCandidates({ opponents, hazard, hasRangedOrReach }),
@@ -697,6 +781,7 @@ export function buildCandidateList({ opponents, readyActions, readySpells = [], 
     ...buildTierScalingAreaSpellCandidates({ readyTierScalingAreaSpells, actionsRemaining: turnState.actionsRemaining }),
     ...buildDualNatureSpellCandidates({ readyDualNatureSpells, actionsRemaining: turnState.actionsRemaining }),
     ...buildTargetCountSpellCandidates({ readyTargetCountSpells, actionsRemaining: turnState.actionsRemaining }),
+    ...buildAutoHitAreaSpellCandidates({ readyAutoHitAreaSpells, actionsRemaining: turnState.actionsRemaining }),
     endTurnCandidate()
   ];
 }
