@@ -18,6 +18,7 @@ import {
 } from "./trait-picker.mjs";
 import { startCombatForEncounterId } from "./dungeon-combat.mjs";
 import { chooseCoverItemTypes } from "./cover-items.mjs";
+import { getRunState } from "./dungeon-runner.mjs";
 
 const MODULE_ID = "deck-of-many-more-things";
 
@@ -177,17 +178,29 @@ export async function generateEncounter({
   levelOffsetBias = 0,
   locationTag = null,
   skipThemeDialog = false,
+  scene: sceneOverride = null,
 } = {}) {
+  const scene = sceneOverride ?? canvas?.scene;
+  if (!scene) {
+    ui.notifications.warn(game.i18n.localize("DOMMT.Encounter.NoSceneWarning"));
+    return;
+  }
   if (!game.user.isGM) {
     ui.notifications.warn(game.i18n.localize("DOMMT.Encounter.GmOnlyWarning"));
     return;
   }
-  if (!canvas?.scene) {
-    ui.notifications.warn(game.i18n.localize("DOMMT.Encounter.NoSceneWarning"));
-    return;
-  }
+  // #109: `scene` is already the dungeon scene by the time a room
+  // population calls this (populateSlotEncounter passes its own `scene`
+  // through) — the standalone "DOMMT: Generate Encounter" macro passes no
+  // override, so `scene` falls back to canvas?.scene there and `run` is
+  // null. A GM-less run's host isn't the one executing this (it always runs
+  // on whichever client is genuinely GM — see dungeon-remote.mjs), so
+  // nobody's watching this client's screen to click Accept/Reroll: the
+  // first dealt roster is used directly instead.
+  const run = getRunState(scene.id);
+  const skipPreview = Boolean(run?.hostUserId);
 
-  const api = makeFoundryApi();
+  const api = makeFoundryApi(scene);
   const creatureArt = await loadCreatureArt();
   const partyLevel = await api.partyLevel();
   const partyMembers = (game.actors?.party?.members ?? []).filter(
@@ -224,7 +237,7 @@ export async function generateEncounter({
       requireTrait: locationTag,
       partySize,
     });
-    const action = await showEncounterPreview(roster);
+    const action = skipPreview ? "accept" : await showEncounterPreview(roster);
     if (action === "accept") break;
     if (action !== "reroll") return;
     seed = freshSeed();
@@ -268,6 +281,6 @@ export async function generateEncounter({
   // the moment it's merely built. The standalone macro has no such reveal
   // step, so it starts Combat immediately for whatever just spawned.
   if (!originArea) {
-    await startCombatForEncounterId(canvas.scene, encounterId);
+    await startCombatForEncounterId(scene, encounterId);
   }
 }

@@ -59,6 +59,7 @@ export async function createRun(
     excludeTraits = [],
     seed = null,
     previousSceneId = null,
+    hostUserId = null,
   },
   { settingsRef = defaultSettingsRef(), setpieceIds = [] } = {},
 ) {
@@ -99,6 +100,12 @@ export async function createRun(
     // shape what happens next without being tied to any one room's own
     // display. Null until a narrative room sets one.
     objective: null,
+    // #109: the non-GM player who started this run when no GM was active —
+    // null for a normal GM-run game. The sole authorization signal for a
+    // non-GM to act on this run (dungeon-permissions.mjs's
+    // canActOnDungeon) and the sole trigger for broadcasting it read-only
+    // to every other client (module.mjs's syncGmLessDungeonBroadcast).
+    hostUserId,
   };
   return persist(sceneId, state, settingsRef);
 }
@@ -316,6 +323,43 @@ export async function abandonRun(
   const rest = { ...all };
   delete rest[sceneId];
   await settingsRef.set(MODULE_ID, "dungeonRuns", rest);
+}
+
+/**
+ * The scene id and host of whichever GM-less run is currently active
+ * (not completed, hostUserId set) anywhere in the world, or null if none.
+ * Used to keep a second non-GM player from starting a competing run
+ * (module.mjs's openDungeon) and to drive the read-only broadcast to every
+ * other client (#109). At most one should ever exist in practice, since
+ * openDungeon() itself refuses to start a second one.
+ */
+export function findActiveHostedRun({ settingsRef = defaultSettingsRef() } = {}) {
+  const all = settingsRef.get(MODULE_ID, "dungeonRuns") ?? {};
+  for (const [sceneId, state] of Object.entries(all)) {
+    if (state && !state.completed && state.hostUserId) {
+      return { sceneId, hostUserId: state.hostUserId };
+    }
+  }
+  return null;
+}
+
+/**
+ * Like findActiveHostedRun, but also matches a run that just completed —
+ * used by the broadcast hook (module.mjs's syncGmLessDungeonBroadcast) so
+ * a run's completion is actually shown to everyone instead of silently
+ * closing their tracker the instant the goal room resolves. Only an
+ * abandoned/reset run (its entry deleted entirely from dungeonRuns) should
+ * ever stop showing up here — findActiveHostedRun's own `!completed`
+ * exclusion stays correct for its own purpose (openDungeon()'s "is a
+ * different host already running something" collision check, where a
+ * finished run shouldn't block a fresh start).
+ */
+export function findHostedRunForBroadcast({ settingsRef = defaultSettingsRef() } = {}) {
+  const all = settingsRef.get(MODULE_ID, "dungeonRuns") ?? {};
+  for (const [sceneId, state] of Object.entries(all)) {
+    if (state?.hostUserId) return { sceneId, hostUserId: state.hostUserId };
+  }
+  return null;
 }
 
 /**

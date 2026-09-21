@@ -10,6 +10,8 @@ import {
   ensureSkillChallenge,
   recordSkillChallengeAttempt,
   setObjective,
+  findActiveHostedRun,
+  findHostedRunForBroadcast,
   getPendingSkillChallengeCustomization,
   applySkillChallengeCustomization,
   ensurePuzzleState,
@@ -93,6 +95,105 @@ describe("createRun / getRunState", () => {
     expect(b.rooms).toHaveLength(7); // 6 + entry
     expect(a.seed).toBe("a");
     expect(b.seed).toBe("b");
+  });
+});
+
+describe("createRun hostUserId", () => {
+  it("defaults hostUserId to null for a normal GM-run game", async () => {
+    const settingsRef = makeSettingsStub();
+    const state = await createRun(
+      { sceneId: "scene-1", roomCount: 5 },
+      { settingsRef },
+    );
+    expect(state.hostUserId).toBeNull();
+  });
+
+  it("stores an explicit hostUserId for a GM-less run", async () => {
+    const settingsRef = makeSettingsStub();
+    const state = await createRun(
+      { sceneId: "scene-1", roomCount: 5, hostUserId: "player-1" },
+      { settingsRef },
+    );
+    expect(state.hostUserId).toBe("player-1");
+    expect(getRunState("scene-1", { settingsRef }).hostUserId).toBe("player-1");
+  });
+});
+
+describe("findActiveHostedRun", () => {
+  it("returns null when nothing is hosted", async () => {
+    const settingsRef = makeSettingsStub();
+    await createRun({ sceneId: "scene-1", roomCount: 5 }, { settingsRef });
+    expect(findActiveHostedRun({ settingsRef })).toBeNull();
+  });
+
+  it("finds the one active hosted run", async () => {
+    const settingsRef = makeSettingsStub();
+    await createRun({ sceneId: "scene-1", roomCount: 5 }, { settingsRef });
+    await createRun(
+      { sceneId: "scene-2", roomCount: 5, hostUserId: "player-1" },
+      { settingsRef },
+    );
+    expect(findActiveHostedRun({ settingsRef })).toEqual({
+      sceneId: "scene-2",
+      hostUserId: "player-1",
+    });
+  });
+
+  it("ignores a completed run even if it was hosted", async () => {
+    const settingsRef = makeSettingsStub();
+    await createRun(
+      { sceneId: "scene-1", roomCount: 2, hostUserId: "player-1" },
+      { settingsRef },
+    );
+    // Resolve straight to the goal room to mark it completed.
+    const state = getRunState("scene-1", { settingsRef });
+    const completed = { ...state, completed: true };
+    await settingsRef.set("deck-of-many-more-things", "dungeonRuns", {
+      ...settingsRef.get("deck-of-many-more-things", "dungeonRuns"),
+      "scene-1": completed,
+    });
+    expect(findActiveHostedRun({ settingsRef })).toBeNull();
+  });
+});
+
+describe("findHostedRunForBroadcast", () => {
+  it("returns the one active (not completed) hosted run — same as findActiveHostedRun would", async () => {
+    const settingsRef = makeSettingsStub();
+    await createRun({ sceneId: "scene-1", roomCount: 5 }, { settingsRef });
+    await createRun(
+      { sceneId: "scene-2", roomCount: 5, hostUserId: "player-1" },
+      { settingsRef },
+    );
+    expect(findHostedRunForBroadcast({ settingsRef })).toEqual({
+      sceneId: "scene-2",
+      hostUserId: "player-1",
+    });
+  });
+
+  it("still returns a completed hosted run — the behavioral difference from findActiveHostedRun, which excludes it", async () => {
+    const settingsRef = makeSettingsStub();
+    await createRun(
+      { sceneId: "scene-1", roomCount: 2, hostUserId: "player-1" },
+      { settingsRef },
+    );
+    // Resolve straight to the goal room to mark it completed.
+    const state = getRunState("scene-1", { settingsRef });
+    const completed = { ...state, completed: true };
+    await settingsRef.set("deck-of-many-more-things", "dungeonRuns", {
+      ...settingsRef.get("deck-of-many-more-things", "dungeonRuns"),
+      "scene-1": completed,
+    });
+    expect(findActiveHostedRun({ settingsRef })).toBeNull();
+    expect(findHostedRunForBroadcast({ settingsRef })).toEqual({
+      sceneId: "scene-1",
+      hostUserId: "player-1",
+    });
+  });
+
+  it("returns null when there's no run with a hostUserId at all", async () => {
+    const settingsRef = makeSettingsStub();
+    await createRun({ sceneId: "scene-1", roomCount: 5 }, { settingsRef });
+    expect(findHostedRunForBroadcast({ settingsRef })).toBeNull();
   });
 });
 
@@ -582,9 +683,17 @@ describe("ensureSkillChallenge / recordSkillChallengeAttempt", () => {
 });
 
 const HINT_CHECKS = [
-  { skill: "perception", dc: 20, hint: "Grooves fit a fanned hand of five cards." },
+  {
+    skill: "perception",
+    dc: 20,
+    hint: "Grooves fit a fanned hand of five cards.",
+  },
   { skill: "society", dc: 20, hint: "The suits mirror noble houses." },
-  { skill: "occultism", dc: 20, hint: "The arrangement echoes a divination spread." },
+  {
+    skill: "occultism",
+    dc: 20,
+    hint: "The arrangement echoes a divination spread.",
+  },
 ];
 
 describe("ensurePuzzleState / recordPuzzleStageAttempt", () => {
@@ -730,9 +839,15 @@ describe("ensurePuzzleState / recordPuzzleStageAttempt", () => {
 
   it("is a no-op with no run at all", async () => {
     const settingsRef = makeSettingsStub();
-    const result = await recordPuzzleStageAttempt("nope", "room-x", 0, "success", {
-      settingsRef,
-    });
+    const result = await recordPuzzleStageAttempt(
+      "nope",
+      "room-x",
+      0,
+      "success",
+      {
+        settingsRef,
+      },
+    );
     expect(result).toBeNull();
   });
 });
@@ -959,7 +1074,10 @@ describe("getPendingPuzzleCustomization / applyPuzzleCustomization", () => {
     expect(pending.roomId).toBe(roomId);
     expect(pending.sceneId).toBe("s");
     expect(pending.stages).toHaveLength(3);
-    expect(pending.stages[0]).toMatchObject({ skill: "perception", hint: HINT_CHECKS[0].hint });
+    expect(pending.stages[0]).toMatchObject({
+      skill: "perception",
+      hint: HINT_CHECKS[0].hint,
+    });
   });
 
   it("returns null when nothing is pending", () => {
@@ -973,7 +1091,10 @@ describe("getPendingPuzzleCustomization / applyPuzzleCustomization", () => {
     const state = await applyPuzzleCustomization(
       "s",
       roomId,
-      { name: "The Whispering Vault", summary: "A locked vault hums with old magic." },
+      {
+        name: "The Whispering Vault",
+        summary: "A locked vault hums with old magic.",
+      },
       { settingsRef },
     );
     const room = state.rooms.find((r) => r.id === roomId);
