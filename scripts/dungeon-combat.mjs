@@ -31,6 +31,7 @@ import {
   parseChainHopDistance,
   parseAreaSpellTierOverrides,
   parseActionGlyphTiers,
+  parseTargetCountFormula,
 } from "./agent-candidates.mjs";
 import { findPath, blockedEdgesFromWalls } from "./pathfinding.mjs";
 import { coverBlocksLineOfFire, COVER_EFFECT_DATA } from "./cover-items.mjs";
@@ -515,6 +516,25 @@ function dualNatureHarmfulTrait(spell) {
   return spell.system?.traits?.value?.includes("healing")
     ? "undead"
     : "living";
+}
+
+/**
+ * True for a spell squarely inside #175's scope: a target-count-scaling
+ * spell whose number of independent targets grows with action cost
+ * (Rebuke Death-shaped — "1 living creature per action spent to Cast this
+ * Spell", confirmed live), rather than #140's shared area or #174's
+ * shape-changing pattern. Detected via `parseTargetCountFormula` directly
+ * against the spell's own structured `target.value` field — unlike #140/
+ * #174, no description-HTML parsing is needed at all, since PF2e already
+ * structures this signal. A genuinely variable cost and at least one
+ * damage/healing instance round out the check, mirroring every other
+ * variable-cost scope filter in this file.
+ */
+function isTargetCountSpellInScope(spell) {
+  const system = spell.system ?? {};
+  if (!/^[123]\s+to\s+[123]$/.test(system.time?.value ?? "")) return false;
+  if (!Object.keys(system.damage ?? {}).length) return false;
+  return parseTargetCountFormula(system.target?.value ?? "") != null;
 }
 
 /**
@@ -1813,6 +1833,76 @@ export async function getPendingAgentTurn(combat) {
     )
     .filter(Boolean);
 
+  // One entry per #175-scoped target-count-scaling spell (Rebuke Death-
+  // shaped) - each tier's own targets are pre-selected here (in range, not
+  // already at full HP, neediest-first by current HP - per live
+  // discussion) so the pure candidate builder only ever packages what it's
+  // given, matching every other tier-scaling spell in this file. A
+  // healing-trait spell only ever draws from allies (never heal an
+  // opponent, matching #132/#174's established restriction); a
+  // hypothetical non-healing target-count spell (no real example exists
+  // today, but the scope filter doesn't assume healing) would draw from
+  // opponents instead, matching #118's damage-spell convention.
+  const readyTargetCountSpells = (
+    combatant.actor?.spellcasting?.contents ?? []
+  )
+    .flatMap((entry) =>
+      (entry.spells?.contents ?? [])
+        .filter(isTargetCountSpellInScope)
+        .filter(hasSpellUsesRemaining)
+        .map((spell) => {
+          const formula = parseTargetCountFormula(
+            spell.system.target?.value ?? "",
+          );
+          const timeMatch = /^([123])\s+to\s+([123])$/.exec(
+            spell.system.time?.value ?? "",
+          );
+          const minCost = Number(timeMatch[1]);
+          const maxCost = Number(timeMatch[2]);
+          const rangeSquares = (spell.system.area?.value ?? 0) / gridDistanceFt;
+          const isHealing =
+            spell.system.traits?.value?.includes("healing") ?? false;
+          const pool = isHealing ? rawAllies : rawOpponents;
+          const inRange = pool
+            .filter(
+              (c) =>
+                chebyshevSquares(combatant.token, c.token, gridSize) <=
+                rangeSquares,
+            )
+            .filter(
+              (c) =>
+                !isHealing ||
+                (c.actor?.system?.attributes?.hp?.value ?? 0) <
+                  (c.actor?.system?.attributes?.hp?.max ?? 0),
+            )
+            .sort(
+              (a, b) =>
+                (a.actor?.system?.attributes?.hp?.value ?? 0) -
+                (b.actor?.system?.attributes?.hp?.value ?? 0),
+            );
+          const tiers = [];
+          for (let cost = minCost; cost <= maxCost; cost++) {
+            const maxTargets = Math.floor(formula.countPerAction * cost);
+            tiers.push({
+              cost,
+              targets: inRange
+                .slice(0, maxTargets)
+                .map((c) => ({ id: c.id, name: c.name })),
+            });
+          }
+          return {
+            id: spell.id,
+            slug: spell.slug,
+            label: spell.name,
+            entryId: entry.id,
+            save: spell.system.defense?.save?.statistic ?? null,
+            basic: spell.system.defense?.save?.basic ?? null,
+            tiers,
+          };
+        }),
+    )
+    .filter(Boolean);
+
   const readyBreathWeapons = [];
   for (const item of combatant.actor?.items ?? []) {
     if (!isBreathWeaponInScope(item)) continue;
@@ -1861,6 +1951,7 @@ export async function getPendingAgentTurn(combat) {
     readyHealSpells,
     readyTierScalingAreaSpells,
     readyDualNatureSpells,
+    readyTargetCountSpells,
     allies,
     turnState,
     hazard: null,
@@ -2572,6 +2663,101 @@ async function castDualAreaAndApply(
 }
 
 /**
+ * Executes a #175-scoped target-count-scaling spell (`castTargetCount`,
+ * Rebuke Death-shaped) against `targets` (already pre-selected — up to N
+ * neediest-first, per live discussion) — one cast announcement (matching
+ * #127's chain-spell convention: `entry.cast()` once, referencing the
+ * first target, since this is mechanically ONE casting action reaching
+ * multiple creatures, not N separate casts), then each target's own
+ * effect resolved independently (a fresh roll per target, not one shared
+ * roll reused across all of them, avoiding both the IWR-breaking bug
+ * #127's own doc comment already flags for a shared-roll approach *and* a
+ * more basic correctness bug: each target should get its own random
+ * result, not everyone taking an identical amount). Branches on whether
+ * `save` is present: Rebuke Death itself has no save at all (confirmed
+ * live — pure healing, `defense: null`) and always takes the heal branch,
+ * using the manual negate-and-pass-a-number technique (confirmed live
+ * essential here too — `applyDamage(rollObject)` damaged the target
+ * instead of healing it, despite the roll's own `kinds` being an
+ * *unambiguous* `["healing"]`, refining #132's original theory: the
+ * roll-object path is never correct for healing, regardless of what its
+ * `kinds` say). The save branch exists for a hypothetical non-healing
+ * target-count spell (no real example exists today, but the scope filter
+ * doesn't assume healing), mirroring #118/#127's standard save-and-apply
+ * pattern, already IWR-correct via the real `DamageRoll` object.
+ */
+async function castTargetCountSpellAndApply(
+  combatant,
+  targets,
+  spellId,
+  entryId,
+  save,
+) {
+  const entry = combatant.actor?.spellcasting?.contents?.find(
+    (e) => e.id === entryId,
+  );
+  const spell = entry?.spells?.contents?.find((s) => s.id === spellId);
+  if (!entry || !spell || !targets.length) return null;
+
+  const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
+  const prevShowDamage = game.user.flags?.pf2e?.settings?.showDamageDialogs;
+  await game.user.update({
+    "flags.pf2e.settings.showCheckDialogs": false,
+    "flags.pf2e.settings.showDamageDialogs": false,
+  });
+  try {
+    const primaryRef = { document: targets[0].token };
+    await entry.cast(spell, { target: primaryRef, createMessage: true });
+    const dc = entry.statistic?.dc?.value ?? 10;
+    const outcomes = [];
+    for (const target of targets) {
+      const targetRef = { document: target.token };
+      if (save) {
+        const saveStat = target.actor?.saves?.[save];
+        if (!saveStat) continue;
+        await saveStat.roll({ dc: { value: dc }, createMessage: true });
+        const outcome =
+          game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ??
+          null;
+        playSpellSaveSound(outcome);
+        const damageRoll = await spell.rollDamage?.({
+          target: targetRef,
+          outcome,
+          createMessage: true,
+        });
+        if (damageRoll) {
+          await target.actor.applyDamage({
+            damage: damageRoll,
+            token: target.token,
+            outcome,
+          });
+          await applyDefeatIfReducedToZero(target);
+        }
+        outcomes.push({ targetId: target.id, outcome });
+      } else {
+        const healRoll = await spell.rollDamage?.({
+          target: targetRef,
+          createMessage: true,
+        });
+        if (healRoll?.total != null) {
+          await target.actor.applyDamage({
+            damage: -healRoll.total,
+            token: target.token,
+          });
+        }
+        outcomes.push({ targetId: target.id, healed: healRoll?.total ?? null });
+      }
+    }
+    return outcomes;
+  } finally {
+    await game.user.update({
+      "flags.pf2e.settings.showCheckDialogs": prevShowCheck,
+      "flags.pf2e.settings.showDamageDialogs": prevShowDamage,
+    });
+  }
+}
+
+/**
  * Rolls each of `targets`' own saves against `dc` and applies
  * basic-save-scaled damage on any outcome but a critical success, then
  * records the ability's recharge timer. Unlike every spell execution
@@ -2866,6 +3052,26 @@ export async function applyAgentDecision(
         combatant,
         harmTargets,
         healTargets,
+        candidate.spellId,
+        candidate.entryId,
+        candidate.save,
+      );
+  } else if (candidate.type === "castTargetCount") {
+    // Pre-selected targets are drawn from a single pool at candidate-build
+    // time (allies for a healing-trait spell, opponents otherwise), but
+    // dispatch doesn't need to know which - searching both is cheap and
+    // correct regardless.
+    const allNearby = [
+      ...combatantOpponents(combat, combatant),
+      ...combatantAllies(combat, combatant),
+    ];
+    const targets = allNearby.filter((c) =>
+      candidate.targetIds.includes(c.id),
+    );
+    if (targets.length)
+      await castTargetCountSpellAndApply(
+        combatant,
+        targets,
         candidate.spellId,
         candidate.entryId,
         candidate.save,
