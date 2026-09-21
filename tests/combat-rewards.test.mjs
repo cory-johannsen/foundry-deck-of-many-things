@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { totalCombatXp, xpPerSurvivor, lootGpForXp, LOOT_GP_PER_XP } from '../scripts/combat-rewards.mjs';
+import { totalCombatXp, xpPerSurvivor } from '../scripts/combat-rewards.mjs';
 import { xpFor } from '../scripts/encounter-roster.mjs';
 
 describe('totalCombatXp', () => {
@@ -30,15 +30,5 @@ describe('xpPerSurvivor', () => {
 
   it('is exact when it divides evenly', () => {
     expect(xpPerSurvivor(120, 4)).toBe(30);
-  });
-});
-
-describe('lootGpForXp', () => {
-  it('follows the documented placeholder multiplier', () => {
-    expect(lootGpForXp(100)).toBe(100 * LOOT_GP_PER_XP);
-  });
-
-  it('is 0 for 0 XP', () => {
-    expect(lootGpForXp(0)).toBe(0);
   });
 });

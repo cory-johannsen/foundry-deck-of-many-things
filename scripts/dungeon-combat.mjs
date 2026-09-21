@@ -18,7 +18,6 @@ import { makeFoundryApi } from "./foundry-api.mjs";
 import {
   totalCombatXp,
   xpPerSurvivor,
-  lootGpForXp,
 } from "./combat-rewards.mjs";
 import {
   initAgentTurnState,
@@ -36,6 +35,7 @@ import {
   parseAutoHitAreaTiers,
 } from "./agent-candidates.mjs";
 import { findPath, blockedEdgesFromWalls } from "./pathfinding.mjs";
+import { LOOTABLE_ITEM_TYPES } from "./treasure.mjs";
 import { coverBlocksLineOfFire, COVER_EFFECT_DATA } from "./cover-items.mjs";
 import {
   playStrikeSound,
@@ -183,20 +183,40 @@ function coverItemTokensForCombat(combat) {
 }
 
 /**
- * Grants XP/loot on victory, then deletes the Combat either way — and, since
- * this fight is now genuinely over regardless of outcome, deletes every
- * non-party combatant's token and its underlying Actor too. `spawnCreatures`/
- * `spawnBuiltCreature` (foundry-api.mjs) always create a real, permanent
- * world Actor for an encounter's monsters; before this, the only place that
- * ever got cleaned up was `teardownDungeonRun` at Abandon time, so a
- * normally-*won* dungeon (never abandoned) left every defeated monster's
- * Actor sitting in the world forever — confirmed live: 8 had piled up in the
- * real world from ordinary completed play before this existed.
+ * Grants XP on victory, then deletes the Combat either way — and, since this
+ * fight is now genuinely over regardless of outcome, cleans up every
+ * non-party combatant. What "cleans up" means now depends on what the
+ * combatant is (#172):
  *
- * Cover items (#96) get the exact same treatment for the exact same reason
- * — spawnCoverItems also creates real, permanent Actors, and tactical cover
- * for one specific fight has no reason to still be standing in the world
- * (or the room) once that fight is over.
+ * - A defeated hostile becomes a lootable corpse: its own gear (granted at
+ *   spawn time by `spawnCreatures`) is copied onto a freshly created
+ *   PF2e `loot`-type actor, the encounter's token is repointed and linked to
+ *   it, and the original npc-type actor is deleted — so the corpse persists
+ *   on the scene for players to loot via PF2e's native loot sheet instead of
+ *   vanishing. A defeated hostile with nothing actually worth looting (no
+ *   coins, no item matching `LOOTABLE_ITEM_TYPES`) skips the loot actor
+ *   entirely and falls back to the plain delete below, to avoid littering
+ *   the world with empty loot piles nobody needs to open.
+ * - Everything else non-party (a surviving player-summoned ally, an
+ *   undefeated hostile the party fled from) keeps the original, pre-#172
+ *   behavior: its token and underlying Actor are deleted outright.
+ *   `spawnCreatures`/`spawnBuiltCreature` (foundry-api.mjs) always create a
+ *   real, permanent world Actor for an encounter's monsters, and before any
+ *   of this existed the only place that ever cleaned one up was
+ *   `teardownDungeonRun` at Abandon time — confirmed live: 8 had piled up in
+ *   the real world from ordinary completed play before that cleanup was
+ *   added.
+ *
+ * Cover items (#96) are unaffected by any of this — they're scenery, not
+ * creatures, and never carried treasure, so `spawnCoverItems`'s tokens/
+ * Actors still get the exact same immediate delete they always did.
+ *
+ * Known gap (tracked as a follow-up, not fixed here): an un-looted corpse
+ * from a normally-*completed* run (the dungeon simply finishes, rather than
+ * being abandoned) has no cleanup trigger at all — `teardownDungeonRun`'s
+ * sweep only fires on Abandon/reset, so a completed run's loot actors can
+ * still accumulate in the world indefinitely.
+ * https://github.com/cory-johannsen/foundry-deck-of-many-things/issues/204
  */
 async function resolveCombat(combat, outcome, api) {
   const scene = combat.scene;
@@ -204,8 +224,18 @@ async function resolveCombat(combat, outcome, api) {
   const npcCombatants = combat.combatants.filter(
     (c) => c.actor?.id && !partyIds.has(c.actor.id),
   );
-  const npcTokenIds = npcCombatants.map((c) => c.tokenId).filter(Boolean);
-  const npcActorIds = [...new Set(npcCombatants.map((c) => c.actor.id))];
+  // A defeated hostile becomes a lootable corpse (see the conversion step
+  // below) instead of being deleted outright — everything else non-party
+  // (a surviving player-summoned ally, an undefeated hostile the party
+  // fled from) keeps the pre-#172 immediate-delete behavior unchanged.
+  const defeatedHostileCombatants = npcCombatants.filter(
+    (c) => c.isDefeated && c.token?.disposition === -1,
+  );
+  const otherNpcCombatants = npcCombatants.filter(
+    (c) => !defeatedHostileCombatants.includes(c),
+  );
+  const npcTokenIds = otherNpcCombatants.map((c) => c.tokenId).filter(Boolean);
+  const npcActorIds = [...new Set(otherNpcCombatants.map((c) => c.actor.id))];
   const coverTokens = coverItemTokensForCombat(combat);
   const coverTokenIds = coverTokens.map((t) => t.id);
   const coverActorIds = [
@@ -213,9 +243,13 @@ async function resolveCombat(combat, outcome, api) {
   ];
 
   if (outcome === "victory") {
-    const hostileLevels = combat.combatants
-      .filter((c) => c.token?.disposition === -1)
-      .map((c) => c.actor?.system?.details?.level?.value ?? 0);
+    // #172 review: XP is for hostiles actually defeated, not every hostile
+    // in the fight — a monster the party fled from without killing
+    // shouldn't pay full XP. Reuses defeatedHostileCombatants (built above
+    // for the loot-conversion work) rather than a bare disposition filter.
+    const hostileLevels = defeatedHostileCombatants.map(
+      (c) => c.actor?.system?.details?.level?.value ?? 0,
+    );
     const partyLevel = await api.partyLevel();
     const totalXp = totalCombatXp(hostileLevels, partyLevel);
     const party = (game.actors?.party?.members ?? []).filter(
@@ -228,13 +262,85 @@ async function resolveCombat(combat, outcome, api) {
           (member.system.details.xp.value ?? 0) + share,
       });
     }
-    if (game.actors.party)
-      await api.addCoins(game.actors.party.id, { gp: lootGpForXp(totalXp) });
   }
+  // #172: a defeated hostile's own gear (granted at spawn time — see
+  // spawnCreatures) becomes real, player-lootable treasure instead of
+  // vanishing with its actor. Foundry document types are immutable after
+  // creation (confirmed live: actor.update({type: "loot"}) silently no-ops)
+  // — so this creates a fresh loot-type actor from the defeated actor's own
+  // data and repoints the existing token at it, rather than updating in
+  // place. Ownership defaults to full Owner so any player can loot it
+  // immediately with no further GM permission step. A defeated hostile with
+  // nothing actually worth looting (ineligible creature type, or an
+  // eligible one whose roll came up empty) falls back to the pre-#172
+  // immediate delete instead — an empty loot actor is needless permanent
+  // world clutter nobody needs to open, and only worsens the un-looted-
+  // corpse accumulation tracked in #204.
+  //
+  // Original actor ids are captured before the loop below repoints any
+  // token: `Combatant#actor` resolves through its token, so reading
+  // `.actor.id` *after* a repoint would return the new loot actor's own id
+  // instead of the original hostile's — live-reproduced by Task 5's
+  // verifier as a real bug where the just-created loot actor got deleted
+  // instead of the orphaned original, leaving the corpse token pointed at
+  // nothing.
+  const originalActorIdByCombatantId = new Map(
+    defeatedHostileCombatants.map((c) => [c.id, c.actor?.id]),
+  );
+  const lootedOriginalActorIds = [];
+  const emptyDefeatedTokenIds = [];
+  const emptyDefeatedActorIds = [];
+  for (const combatant of defeatedHostileCombatants) {
+    const originalActorId = originalActorIdByCombatantId.get(combatant.id);
+    const source = combatant.actor.toObject();
+    const lootItems = source.items.filter((i) =>
+      LOOTABLE_ITEM_TYPES.includes(i.type),
+    );
+    const coinsObj =
+      combatant.actor.inventory?.coins?.toObject?.() ??
+      { ...(combatant.actor.inventory?.coins ?? {}) };
+    const hasLoot =
+      lootItems.length > 0 ||
+      Object.values(coinsObj).some((v) => Number(v) > 0);
+    if (!hasLoot) {
+      if (combatant.tokenId) emptyDefeatedTokenIds.push(combatant.tokenId);
+      if (originalActorId) emptyDefeatedActorIds.push(originalActorId);
+      continue;
+    }
+    if (originalActorId) lootedOriginalActorIds.push(originalActorId);
+    const [lootActor] = await Actor.createDocuments([
+      {
+        ...source,
+        _id: undefined,
+        type: "loot",
+        name: `${combatant.actor.name} (corpse)`,
+        items: lootItems,
+        ownership: { default: 3 },
+      },
+    ]);
+    // actorLink: true in the same update — the loot actor is now 1:1
+    // dedicated to this one token/corpse, so there's no reason for the
+    // token to stay unlinked. Left unlinked, `token.actor` (what a player
+    // actually opens) stays a synthetic ActorDelta merge of this freshly
+    // created loot actor plus the token's own per-token delta — which, for
+    // a combat-defeated creature, still carries its hp-at-death and
+    // dying/unconscious/off-guard condition items from PF2e's own combat
+    // resolution, so a player could still see stale hp/conditions layered
+    // on top of an otherwise-clean loot actor. Linking makes `token.actor`
+    // resolve directly to the world actor with no delta merge at all.
+    await combatant.token.update({ actorId: lootActor.id, actorLink: true });
+  }
+  const dedupedLootedOriginalActorIds = [...new Set(lootedOriginalActorIds)];
+  if (dedupedLootedOriginalActorIds.length)
+    await Actor.deleteDocuments(dedupedLootedOriginalActorIds);
   await combat.delete();
-  if (npcTokenIds.length && scene)
-    await scene.deleteEmbeddedDocuments("Token", npcTokenIds);
-  if (npcActorIds.length) await Actor.deleteDocuments(npcActorIds);
+  const allNpcTokenIds = [...npcTokenIds, ...emptyDefeatedTokenIds];
+  const allNpcActorIds = [
+    ...new Set([...npcActorIds, ...emptyDefeatedActorIds]),
+  ];
+  if (allNpcTokenIds.length && scene)
+    await scene.deleteEmbeddedDocuments("Token", allNpcTokenIds);
+  if (allNpcActorIds.length) await Actor.deleteDocuments(allNpcActorIds);
   if (coverTokenIds.length && scene)
     await scene.deleteEmbeddedDocuments("Token", coverTokenIds);
   if (coverActorIds.length) await Actor.deleteDocuments(coverActorIds);

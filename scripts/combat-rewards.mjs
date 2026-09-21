@@ -1,7 +1,9 @@
 /**
- * Pure XP/loot math for a resolved combat room — no Foundry deps, kept
- * separate from dungeon-combat.mjs the same way dungeon-deck.mjs stays
- * separate from dungeon-scene.mjs.
+ * Pure XP math for a resolved combat room — no Foundry deps, kept separate
+ * from dungeon-combat.mjs the same way dungeon-deck.mjs stays separate from
+ * dungeon-scene.mjs. Loot math now lives entirely in treasure.mjs (#172) —
+ * this file's own flat, party-wide gp grant (`lootGpForXp`) was removed once
+ * that replaced it.
  */
 import { xpFor } from './encounter-roster.mjs';
 
@@ -11,13 +13,4 @@ export function totalCombatXp(defeatedHostileLevels, partyLevel) {
 
 export function xpPerSurvivor(totalXp, partySize) {
   return partySize > 0 ? Math.floor(totalXp / partySize) : 0;
-}
-
-// Placeholder heuristic, not a real treasure table — see ITEM-6's Spec
-// non-goals in docs/backlog.md. Loot roughly scales with the XP just earned;
-// nothing fancier than that until a real treasure-table pass exists.
-export const LOOT_GP_PER_XP = 1;
-
-export function lootGpForXp(totalXp) {
-  return totalXp * LOOT_GP_PER_XP;
 }
