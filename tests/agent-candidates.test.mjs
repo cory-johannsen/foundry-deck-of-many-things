@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   initAgentTurnState, buildMovementCandidates, buildStrikeCandidates, buildSpellCandidates,
   buildAreaSpellCandidates, buildAttackSpellCandidates, buildDebuffSpellCandidates,
-  parseConditionsByOutcome, endTurnCandidate,
+  parseConditionsByOutcome, hasSpellUsesRemaining, endTurnCandidate,
   buildCandidateList, applyCandidateToTurnState, buildDecisionContext,
   MAX_ACTIONS_PER_TURN, AGENT_MELEE_REACH_SQUARES
 } from '../scripts/agent-candidates.mjs';
@@ -224,6 +224,28 @@ describe('parseConditionsByOutcome', () => {
     expect(parseConditionsByOutcome(description)).toEqual({
       failure: [{ slug: 'frightened', value: 2 }]
     });
+  });
+});
+
+describe('hasSpellUsesRemaining', () => {
+  it('is true for a spell with no location.uses at all', () => {
+    expect(hasSpellUsesRemaining({ name: 'Spirit Blast', system: { location: {} } })).toBe(true);
+  });
+
+  it('is true for a limited spell that still has uses left', () => {
+    expect(hasSpellUsesRemaining({ name: 'Spirit Blast', system: { location: { uses: { value: 1, max: 1 } } } })).toBe(true);
+  });
+
+  it('is false for a limited spell with zero uses left', () => {
+    expect(hasSpellUsesRemaining({ name: 'Spirit Blast', system: { location: { uses: { value: 0, max: 1 } } } })).toBe(false);
+  });
+
+  it('is always true for a spell named "(At will)", even with zero uses left', () => {
+    expect(hasSpellUsesRemaining({ name: 'Mind Probe (At will)', system: { location: { uses: { value: 0, max: 1 } } } })).toBe(true);
+  });
+
+  it('is always true for a spell named "(Constant)", even with zero uses left', () => {
+    expect(hasSpellUsesRemaining({ name: 'Truesight (Constant)', system: { location: { uses: { value: 0, max: 1 } } } })).toBe(true);
   });
 });
 
