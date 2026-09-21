@@ -38,6 +38,7 @@ import {
   advanceToRoom,
   undoLastRoomEntry,
   canUndoRoomEntry,
+  ensureSkillChallenge,
   markRoomOutcome,
 } from "./dungeon-runner.mjs";
 import { depthBiasFor } from "./dungeon-deck.mjs";
@@ -720,6 +721,25 @@ export async function buildPopulateAndUnlockRoom(
     if (isSlotPopulated(scene, physicalSlot))
       await unlockDoorToSlot(scene, physicalSlot);
   } else {
+    // #109: a skill_challenge room's Victory Point state used to be
+    // lazily attached the first time DungeonApp rendered it — but a
+    // client logged in only to relay a GM-less host's requests never
+    // renders DungeonApp at all, so that write would never happen for
+    // such a run. Attaching it here instead means it's always done by
+    // whichever client is actually building the room (a GM directly, or
+    // the GM-side relay handler executing a routed request) — the same
+    // place trap/encounter population already happens for the room
+    // that's about to become current.
+    if (room.kind === "skill_challenge") {
+      const partyMembers = (game.actors?.party?.members ?? []).filter(
+        (m) => m.type === "character",
+      );
+      await ensureSkillChallenge(scene.id, room.id, {
+        seed: state.seed,
+        locationTag: room.locationTag,
+        partySize: partyMembers.length,
+      });
+    }
     // #135: a puzzle_or_trap room's *specific* content (puzzle vs. trap) is
     // still decided the existing way — dungeon-deck.mjs's setpieceAt shuffle
     // over every dungeon-setpieces.json id, room.kind itself staying the
