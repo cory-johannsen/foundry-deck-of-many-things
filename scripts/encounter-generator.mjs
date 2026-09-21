@@ -18,6 +18,8 @@ import {
 } from "./trait-picker.mjs";
 import { startCombatForEncounterId } from "./dungeon-combat.mjs";
 import { chooseCoverItemTypes } from "./cover-items.mjs";
+import { getRunState } from "./dungeon-runner.mjs";
+import { canActOnDungeon } from "./dungeon-permissions.mjs";
 
 const MODULE_ID = "deck-of-many-more-things";
 
@@ -178,14 +180,23 @@ export async function generateEncounter({
   locationTag = null,
   skipThemeDialog = false,
 } = {}) {
-  if (!game.user.isGM) {
-    ui.notifications.warn(game.i18n.localize("DOMMT.Encounter.GmOnlyWarning"));
-    return;
-  }
   if (!canvas?.scene) {
     ui.notifications.warn(game.i18n.localize("DOMMT.Encounter.NoSceneWarning"));
     return;
   }
+  // #109: canvas.scene is already the dungeon scene by the time a room
+  // population calls this (populateSlotEncounter never overrides it) — the
+  // standalone "DOMMT: Generate Encounter" macro's scene never has a run at
+  // all, so `run` is null there and canActOnDungeon reduces to plain isGM.
+  const run = getRunState(canvas.scene.id);
+  if (!canActOnDungeon(run)) {
+    ui.notifications.warn(game.i18n.localize("DOMMT.Encounter.GmOnlyWarning"));
+    return;
+  }
+  // A GM-less run has no GM present to click Accept/Reroll — the first
+  // dealt roster is used directly (see the spec's "Combat encounter
+  // preview" section).
+  const skipPreview = Boolean(run?.hostUserId);
 
   const api = makeFoundryApi();
   const creatureArt = await loadCreatureArt();
@@ -224,7 +235,7 @@ export async function generateEncounter({
       requireTrait: locationTag,
       partySize,
     });
-    const action = await showEncounterPreview(roster);
+    const action = skipPreview ? "accept" : await showEncounterPreview(roster);
     if (action === "accept") break;
     if (action !== "reroll") return;
     seed = freshSeed();
