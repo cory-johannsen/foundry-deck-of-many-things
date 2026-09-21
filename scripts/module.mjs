@@ -30,6 +30,7 @@ import {
   getPendingAgentTurn,
   applyAgentDecision,
   toggleAgentControlled,
+  agentLoopStatus,
 } from "./dungeon-combat.mjs";
 
 const MODULE_ID = "deck-of-many-more-things";
@@ -77,6 +78,17 @@ Hooks.once("init", () => {
     config: false,
     type: Object,
     default: {},
+  });
+  // #113: {timestamp, provider, pollIntervalMs} — written by
+  // tools/agent-loop/poll.mjs's recordAgentLoopHeartbeat call once per loop
+  // iteration, read by dungeon-combat.mjs's agentLoopStatus() to tell a GM
+  // "the poller is running but slow" apart from "the poller isn't running
+  // at all," which used to look identical.
+  game.settings.register(MODULE_ID, "agentLoopHeartbeat", {
+    scope: "world",
+    config: false,
+    type: Object,
+    default: null,
   });
 });
 
@@ -161,6 +173,52 @@ Hooks.once("ready", async () => {
       return combat
         ? applyAgentDecision(combat, combatantId, candidateId, rationale)
         : null;
+    },
+    // #113: pinged once per loop iteration by tools/agent-loop/poll.mjs,
+    // independent of whether there's a pending turn — this is the only
+    // signal Foundry has that the external poller process is actually
+    // alive and reaching it.
+    recordAgentLoopHeartbeat: ({
+      provider = null,
+      pollIntervalMs = null,
+    } = {}) => {
+      if (!game.user.isGM)
+        return ui.notifications.warn(
+          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+        );
+      return game.settings.set(MODULE_ID, "agentLoopHeartbeat", {
+        timestamp: Date.now(),
+        provider,
+        pollIntervalMs,
+      });
+    },
+    getAgentLoopStatus: () => {
+      if (!game.user.isGM)
+        return ui.notifications.warn(
+          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+        );
+      return agentLoopStatus();
+    },
+    // GM-facing "is it actually running?" check (#113), wired to the scene
+    // control button below and callable anytime, not just when a timeout
+    // has already fired.
+    postAgentLoopStatus: async () => {
+      if (!game.user.isGM)
+        return ui.notifications.warn(
+          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+        );
+      const status = agentLoopStatus();
+      const key = status.connected
+        ? "DOMMT.Dungeon.Combat.AgentLoopStatusConnected"
+        : status.lastSeenMs
+          ? "DOMMT.Dungeon.Combat.AgentLoopStatusStale"
+          : "DOMMT.Dungeon.Combat.AgentLoopStatusNeverSeen";
+      const content = game.i18n.format(key, {
+        provider: status.provider ?? "?",
+        seconds: status.secondsAgo ?? 0,
+      });
+      const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
+      return ChatMessage.create({ content, whisper: gmIds });
     },
   };
   if (game.user.isGM) {
@@ -359,10 +417,22 @@ Hooks.on("getSceneControlButtons", (controls) => {
     button: true,
     onClick: () => new DeckApp().render(true),
   };
+  // #113: a GM-only, check-anytime version of the same "is the agent loop
+  // actually running?" question armAgentTimeout otherwise only surfaces
+  // reactively, once a turn has already timed out.
+  const agentLoopButton = {
+    name: "dommt-agent-loop-status",
+    title: game.i18n.localize("DOMMT.SceneControl.AgentLoopStatusLabel"),
+    icon: "fa-solid fa-robot",
+    visible: game.user.isGM,
+    button: true,
+    onClick: () => game.modules.get(MODULE_ID).api.postAgentLoopStatus(),
+  };
   if (Array.isArray(tokenControl.tools)) {
-    tokenControl.tools.push(button);
+    tokenControl.tools.push(button, agentLoopButton);
   } else if (tokenControl.tools && typeof tokenControl.tools === "object") {
     tokenControl.tools["dommt-deck"] = button;
+    tokenControl.tools["dommt-agent-loop-status"] = agentLoopButton;
   }
 });
 

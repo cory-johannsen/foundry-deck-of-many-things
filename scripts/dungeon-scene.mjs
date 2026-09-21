@@ -175,20 +175,34 @@ export async function buildRoomAtSlot(
     (side) => wallDoc(side),
   );
   const tiles = [];
+  let placeholderIds = [];
 
   if (slot > 0) {
     // Supersede slot - 1's own temporary frontier placeholder (ITEM-20,
     // below) with the real, precisely-cut door/opening geometry this room's
-    // build now provides for that connection — delete first so a stray solid
-    // segment doesn't sit exactly under the new door.
-    const placeholder = scene.walls.filter(
-      (w) => w.getFlag(MODULE_ID, "dungeonFrontierWallForSlot") === slot - 1,
-    );
-    if (placeholder.length)
-      await scene.deleteEmbeddedDocuments(
-        "Wall",
-        placeholder.map((w) => w.id),
-      );
+    // build now provides for that connection. Looked up now, but actually
+    // *deleted only after* the new walls are created below (#110) — doing
+    // it the other way around (delete, then a separate awaited create call
+    // afterward) left a real window, the round-trip time between those two
+    // calls, where slot - 1's whole face had zero walls at all. Foundry
+    // recomputes vision on every wall change, and fogExploration bakes
+    // whatever was visible into the explored fog permanently; a token near
+    // that boundary during the gap would get a real, if brief, unwalled
+    // sightline clear across the rest of the scene, staying revealed in
+    // the fog forever after even though the correct walls land moments
+    // later — the "grey," already-explored-looking leak #110 reported,
+    // rather than a live/current-vision leak (buildConnectionGeometry's
+    // own geometry was checked by hand for this exact connection and
+    // fully encloses the corridor with no gap, so the leak has to be a
+    // timing issue like this one rather than wrong geometry). Creating
+    // the real walls first means the placeholder and the real geometry
+    // briefly overlap (redundant, but both still sight-blocking) instead
+    // of a moment with neither.
+    placeholderIds = scene.walls
+      .filter(
+        (w) => w.getFlag(MODULE_ID, "dungeonFrontierWallForSlot") === slot - 1,
+      )
+      .map((w) => w.id);
 
     const { doorWall, revealDoorWall, plainWalls, corridorRect } =
       buildConnectionGeometry(slot - 1, seed);
@@ -257,6 +271,8 @@ export async function buildRoomAtSlot(
   }
 
   if (walls.length) await scene.createEmbeddedDocuments("Wall", walls);
+  if (placeholderIds.length)
+    await scene.deleteEmbeddedDocuments("Wall", placeholderIds);
 
   const rect = slotRect(seed, slot);
   tiles.push({
