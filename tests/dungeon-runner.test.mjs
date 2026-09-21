@@ -10,6 +10,7 @@ import {
   ensureSkillChallenge,
   recordSkillChallengeAttempt,
   setObjective,
+  findActiveHostedRun,
 } from "../scripts/dungeon-runner.mjs";
 
 function makeSettingsStub(initial = {}) {
@@ -87,6 +88,61 @@ describe("createRun / getRunState", () => {
     expect(b.rooms).toHaveLength(7); // 6 + entry
     expect(a.seed).toBe("a");
     expect(b.seed).toBe("b");
+  });
+});
+
+describe("createRun hostUserId", () => {
+  it("defaults hostUserId to null for a normal GM-run game", async () => {
+    const settingsRef = makeSettingsStub();
+    const state = await createRun({ sceneId: "scene-1", roomCount: 5 }, { settingsRef });
+    expect(state.hostUserId).toBeNull();
+  });
+
+  it("stores an explicit hostUserId for a GM-less run", async () => {
+    const settingsRef = makeSettingsStub();
+    const state = await createRun(
+      { sceneId: "scene-1", roomCount: 5, hostUserId: "player-1" },
+      { settingsRef },
+    );
+    expect(state.hostUserId).toBe("player-1");
+    expect(getRunState("scene-1", { settingsRef }).hostUserId).toBe("player-1");
+  });
+});
+
+describe("findActiveHostedRun", () => {
+  it("returns null when nothing is hosted", async () => {
+    const settingsRef = makeSettingsStub();
+    await createRun({ sceneId: "scene-1", roomCount: 5 }, { settingsRef });
+    expect(findActiveHostedRun({ settingsRef })).toBeNull();
+  });
+
+  it("finds the one active hosted run", async () => {
+    const settingsRef = makeSettingsStub();
+    await createRun({ sceneId: "scene-1", roomCount: 5 }, { settingsRef });
+    await createRun(
+      { sceneId: "scene-2", roomCount: 5, hostUserId: "player-1" },
+      { settingsRef },
+    );
+    expect(findActiveHostedRun({ settingsRef })).toEqual({
+      sceneId: "scene-2",
+      hostUserId: "player-1",
+    });
+  });
+
+  it("ignores a completed run even if it was hosted", async () => {
+    const settingsRef = makeSettingsStub();
+    await createRun(
+      { sceneId: "scene-1", roomCount: 2, hostUserId: "player-1" },
+      { settingsRef },
+    );
+    // Resolve straight to the goal room to mark it completed.
+    const state = getRunState("scene-1", { settingsRef });
+    const completed = { ...state, completed: true };
+    await settingsRef.set("deck-of-many-more-things", "dungeonRuns", {
+      ...settingsRef.get("deck-of-many-more-things", "dungeonRuns"),
+      "scene-1": completed,
+    });
+    expect(findActiveHostedRun({ settingsRef })).toBeNull();
   });
 });
 
