@@ -360,22 +360,55 @@ export async function resolveSlotCombat(
 }
 
 /**
+ * Guards against `autoResolveIfDecided` running more than once concurrently
+ * for the same combat. Foundry does not await the async hook callbacks this
+ * module registers (`updateActor`/`updateCombatant`) — when several
+ * combatants are defeated close together (routine under fully-automated
+ * play: agent-controlled turns and cascading kills happen far faster than a
+ * human GM ever clicks through them), each defeat's hook firing can reach
+ * `autoResolveIfDecided` before an earlier firing's own `resolveCombat` call
+ * has finished, and the `game.combats.has(combat.id)` check alone doesn't
+ * close that window — the combat document isn't deleted until near the end
+ * of `resolveCombat`, well after several concurrent callers may have
+ * already read it. The result, confirmed live: several overlapping
+ * `resolveCombat` calls each doing their own read-increment-write on the
+ * same party members' XP, racing each other and losing updates — see
+ * BUG-4 in docs/bugs.md.
+ *
+ * The check-and-claim below is safe with no lock needed beyond a plain
+ * `Set`: JS has no true parallelism, so nothing can run between the
+ * `.has()` check and the `.add()` claim on the same line — whichever
+ * invocation's hook callback is scheduled first always wins the claim
+ * before any other can observe it unclaimed, even though the two
+ * invocations themselves originate from independent, unawaited hook
+ * dispatches.
+ */
+const resolvingCombatIds = new Set();
+
+/**
  * If `combat` has just been decided (one side wholly defeated), grants
  * rewards and deletes it, returning `{ outcome, dungeonSlot, scene }` for the
  * caller to advance the room with (`dungeonSlot` is null for a standalone
  * `encounterId`-flagged combat, which has no room to advance). Returns null
- * while the fight's still undecided, or if another update already resolved
- * it first (`game.combats` no longer has it).
+ * while the fight's still undecided, if another update already resolved it
+ * first (`game.combats` no longer has it), or if another concurrent call is
+ * already resolving it right now (see `resolvingCombatIds` above).
  */
 async function autoResolveIfDecided(combat) {
   if (!game.user.isGM || !game.combats.has(combat.id)) return null;
+  if (resolvingCombatIds.has(combat.id)) return null;
   const { hostilesDefeated, partyDefeated } = combatSideStatus(combat);
   if (!hostilesDefeated && !partyDefeated) return null;
-  const outcome = hostilesDefeated ? "victory" : "defeat";
-  const dungeonSlot = combat.getFlag(MODULE_ID, "dungeonSlot") ?? null;
-  const scene = combat.scene;
-  await resolveCombat(combat, outcome, makeFoundryApi());
-  return { outcome, dungeonSlot, scene };
+  resolvingCombatIds.add(combat.id);
+  try {
+    const outcome = hostilesDefeated ? "victory" : "defeat";
+    const dungeonSlot = combat.getFlag(MODULE_ID, "dungeonSlot") ?? null;
+    const scene = combat.scene;
+    await resolveCombat(combat, outcome, makeFoundryApi());
+    return { outcome, dungeonSlot, scene };
+  } finally {
+    resolvingCombatIds.delete(combat.id);
+  }
 }
 
 /** Hook target for `updateActor` — module.mjs registers this. */
@@ -676,9 +709,7 @@ function isDualNatureTieredSpellInScope(spell) {
  * heals the undead.
  */
 function dualNatureHarmfulTrait(spell) {
-  return spell.system?.traits?.value?.includes("healing")
-    ? "undead"
-    : "living";
+  return spell.system?.traits?.value?.includes("healing") ? "undead" : "living";
 }
 
 /**
@@ -875,9 +906,8 @@ function isTierScalingAreaSpellInScope(spell) {
   if (!Object.keys(system.damage ?? {}).length) return false;
   if (!/^[123]\s+to\s+[123]$/.test(system.time?.value ?? "")) return false;
   return (
-    Object.keys(
-      parseAreaSpellTierOverrides(system.description?.value ?? ""),
-    ).length > 0
+    Object.keys(parseAreaSpellTierOverrides(system.description?.value ?? ""))
+      .length > 0
   );
 }
 
@@ -893,7 +923,9 @@ function isTierScalingAreaSpellInScope(spell) {
  */
 function resolveAreaSpellTiers(spell) {
   const system = spell.system ?? {};
-  const tiers = { ...parseAreaSpellTierOverrides(system.description?.value ?? "") };
+  const tiers = {
+    ...parseAreaSpellTierOverrides(system.description?.value ?? ""),
+  };
   const minCost = minimumVariableCost(spell);
   if (minCost != null) {
     tiers[minCost] = {
@@ -2232,8 +2264,7 @@ export async function getPendingAgentTurn(combat) {
           const singleTargetTiers = [];
           for (const cost of [1, 2]) {
             const tier = tiers[cost];
-            if (!tier || tier.area != null || tier.rangeFeet == null)
-              continue;
+            if (!tier || tier.area != null || tier.rangeFeet == null) continue;
             const rangeSquares =
               tier.rangeFeet === "touch"
                 ? MELEE_REACH_SQUARES
@@ -2306,9 +2337,7 @@ export async function getPendingAgentTurn(combat) {
   // hypothetical non-healing target-count spell (no real example exists
   // today, but the scope filter doesn't assume healing) would draw from
   // opponents instead, matching #118's damage-spell convention.
-  const readyTargetCountSpells = (
-    combatant.actor?.spellcasting?.contents ?? []
-  )
+  const readyTargetCountSpells = (combatant.actor?.spellcasting?.contents ?? [])
     .flatMap((entry) =>
       (entry.spells?.contents ?? [])
         .filter(isTargetCountSpellInScope)
@@ -2447,7 +2476,11 @@ export async function getPendingAgentTurn(combat) {
     readyAutoHitAreaSpells,
     allies,
     turnState,
-    hazard: nearestHazardousRegionPoint(combat.scene, combatant.token, gridSize),
+    hazard: nearestHazardousRegionPoint(
+      combat.scene,
+      combatant.token,
+      gridSize,
+    ),
     hasRangedOrReach,
   });
   return {
@@ -3109,7 +3142,13 @@ async function castBuffSpellAndApply(combatant, target, spellId, entryId) {
  * confirmed live only ever attached to a single-target healing tier, never
  * the area tier) before negating.
  */
-async function castDualHealAndApply(combatant, target, spellId, entryId, bonus) {
+async function castDualHealAndApply(
+  combatant,
+  target,
+  spellId,
+  entryId,
+  bonus,
+) {
   const entry = combatant.actor?.spellcasting?.contents?.find(
     (e) => e.id === entryId,
   );
@@ -3289,8 +3328,7 @@ async function castTargetCountSpellAndApply(
         if (!saveStat) continue;
         await saveStat.roll({ dc: { value: dc }, createMessage: true });
         const outcome =
-          game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ??
-          null;
+          game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
         playSpellSaveSound(outcome);
         const damageRoll = await spell.rollDamage?.({
           target: targetRef,
@@ -3390,8 +3428,7 @@ async function castAutoHitAreaSpellAndApplyDamage(
         const targetRef = { document: target.token };
         await saveStat.roll({ dc: { value: dc }, createMessage: true });
         const outcome =
-          game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ??
-          null;
+          game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
         playSpellSaveSound(outcome);
         if (outcome !== "criticalSuccess") {
           const roll = new DamageRollClass(formula);
@@ -3774,9 +3811,7 @@ export async function applyAgentDecision(
       ...combatantOpponents(combat, combatant),
       ...combatantAllies(combat, combatant),
     ];
-    const targets = allNearby.filter((c) =>
-      candidate.targetIds.includes(c.id),
-    );
+    const targets = allNearby.filter((c) => candidate.targetIds.includes(c.id));
     if (targets.length)
       await castTargetCountSpellAndApply(
         combatant,
