@@ -27,6 +27,7 @@ import {
   buildDecisionContext,
   parseConditionsByOutcome,
   hasSpellUsesRemaining,
+  parseBreathWeaponEffect,
 } from "./agent-candidates.mjs";
 import { findPath, blockedEdgesFromWalls } from "./pathfinding.mjs";
 import { coverBlocksLineOfFire, COVER_EFFECT_DATA } from "./cover-items.mjs";
@@ -508,6 +509,126 @@ function isDebuffSpellInScope(spell) {
 }
 
 /**
+ * True for a non-spell NPC action item squarely inside #123's scope: an
+ * offensive action with a fixed action cost whose description parses as a
+ * breath weapon via `parseBreathWeaponEffect` (cone, basic-save damage).
+ * Confirmed live this correctly identifies a real dragon's breath weapon
+ * among its other action items (reactions, passive traits, multi-strike
+ * bundles) without needing to special-case any of those other shapes —
+ * they simply never match `parseBreathWeaponEffect`'s enricher pattern.
+ */
+function isBreathWeaponInScope(item) {
+  if (item.type !== "action") return false;
+  if (item.system.category !== "offensive") return false;
+  if (typeof item.system.actions?.value !== "number") return false;
+  return parseBreathWeaponEffect(item.system.description?.value ?? "") != null;
+}
+
+/**
+ * The stored recharge state for `itemSlug` on `combatantId`, or `null` if
+ * it's never been used this combat (and so is always available). Recharge
+ * state persists across rounds/turns (unlike `agentTurnState`, which is
+ * per-turn) since a breath weapon's cooldown is measured in rounds — stored
+ * under its own flag key, keyed by combatant then ability slug, so
+ * multiple combatants' recharging abilities never collide.
+ */
+function getAbilityRecharge(combat, combatantId, itemSlug) {
+  const stored = combat.getFlag(MODULE_ID, "abilityRecharge") ?? {};
+  return stored[combatantId]?.[itemSlug] ?? null;
+}
+
+/** Rolls `rechargeFormula` and records that `itemSlug` becomes available
+ * again once `combat.round` reaches `combat.round + <rolled value>` —
+ * called right after a breath weapon is used. An ability with no
+ * `rechargeFormula` at all (parsed as `null`) is never recorded and stays
+ * always-available. */
+async function setAbilityRecharge(combat, combatantId, itemSlug, rechargeFormula) {
+  if (!rechargeFormula) return;
+  const roll = await new Roll(rechargeFormula).evaluate();
+  const stored = combat.getFlag(MODULE_ID, "abilityRecharge") ?? {};
+  const forCombatant = stored[combatantId] ?? {};
+  await combat.setFlag(MODULE_ID, "abilityRecharge", {
+    ...stored,
+    [combatantId]: {
+      ...forCombatant,
+      [itemSlug]: { availableAtRound: combat.round + roll.total },
+    },
+  });
+}
+
+/** False only while `itemSlug` is still on cooldown for `combatantId`. */
+function isAbilityRecharged(combat, combatantId, itemSlug) {
+  const recharge = getAbilityRecharge(combat, combatantId, itemSlug);
+  if (!recharge) return true;
+  return combat.round >= recharge.availableAtRound;
+}
+
+/**
+ * The real Foundry-computed set of opponents caught by a cone template
+ * aimed at each of `rawOpponents` in turn (one placement option per
+ * opponent, matching #119's per-opponent burst placements) — confirmed
+ * live this is exact containment, not the Chebyshev-square approximation
+ * #119 itself uses (see #150, filed to bring #119 in line with this).
+ * Creates every candidate template in one batch, computes each one's
+ * shape, reads containment, then deletes all of them — the scene must be
+ * the currently *viewed* one for `_computeShape()` to populate `.shape`,
+ * the same constraint #120's `rollAttack` has for its own reason. Caller
+ * is responsible for the scene already being viewed (or accepting that
+ * this returns empty placements if it isn't).
+ */
+async function computeConePlacements(combat, casterToken, rawOpponents, distanceFeet) {
+  const scene = combat.scene;
+  if (!scene || game.scenes.viewed?.id !== scene.id) return [];
+  const gridSize = scene.grid?.size ?? 100;
+  const originX = casterToken.x + gridSize / 2;
+  const originY = casterToken.y + gridSize / 2;
+
+  const templateData = rawOpponents.map((aim) => {
+    const aimX = aim.token.x + gridSize / 2;
+    const aimY = aim.token.y + gridSize / 2;
+    const direction =
+      (Math.atan2(aimY - originY, aimX - originX) * 180) / Math.PI;
+    return {
+      t: "cone",
+      x: originX,
+      y: originY,
+      direction,
+      angle: 90,
+      distance: distanceFeet,
+      hidden: true,
+    };
+  });
+  if (!templateData.length) return [];
+
+  const created = await scene.createEmbeddedDocuments(
+    "MeasuredTemplate",
+    templateData,
+  );
+  try {
+    return created.map((templateDoc, i) => {
+      const canvasObject = canvas.templates?.get(templateDoc.id);
+      if (canvasObject && !canvasObject.shape && typeof canvasObject._computeShape === "function") {
+        canvasObject.shape = canvasObject._computeShape();
+      }
+      const shape = canvasObject?.shape ?? null;
+      const affected = shape
+        ? rawOpponents.filter((o) => {
+            const centerX = o.token.x + gridSize / 2;
+            const centerY = o.token.y + gridSize / 2;
+            return shape.contains(centerX - originX, centerY - originY);
+          }).map((o) => ({ id: o.id, name: o.name }))
+        : [];
+      return { centerType: "opponent", centerId: rawOpponents[i].id, affected };
+    });
+  } finally {
+    await scene.deleteEmbeddedDocuments(
+      "MeasuredTemplate",
+      created.map((t) => t.id),
+    );
+  }
+}
+
+/**
  * The raw stored `agentTurnState` flag, but only when it actually belongs to
  * this exact turn — same `combatantId` *and* the same `round`/`turn` the
  * Combat is on right now. `combatantId` alone isn't enough: the same
@@ -979,7 +1100,7 @@ export async function playHeuristicTurn(combat, combatant) {
  * *only* read surface `tools/agent-loop`'s poller uses — see module.mjs's
  * api.getPendingAgentTurn.
  */
-export function getPendingAgentTurn(combat) {
+export async function getPendingAgentTurn(combat) {
   if (!isModuleCombat(combat)) return null;
   const combatant = combat.combatant;
   if (
@@ -1149,6 +1270,32 @@ export function getPendingAgentTurn(combat) {
     )
     .filter(Boolean);
 
+  const readyBreathWeapons = [];
+  for (const item of combatant.actor?.items ?? []) {
+    if (!isBreathWeaponInScope(item)) continue;
+    const slug = item.slug ?? item.id;
+    if (!isAbilityRecharged(combat, combatant.id, slug)) continue;
+    const effect = parseBreathWeaponEffect(item.system.description?.value ?? "");
+    const placements = await computeConePlacements(
+      combat,
+      combatant.token,
+      rawOpponents,
+      effect.distanceFeet,
+    );
+    readyBreathWeapons.push({
+      itemId: item.id,
+      slug,
+      label: item.name,
+      cost: item.system.actions.value,
+      damageFormula: effect.damageFormula,
+      damageType: effect.damageType,
+      save: effect.save,
+      dc: effect.dc,
+      rechargeFormula: effect.rechargeFormula,
+      placements,
+    });
+  }
+
   const self = {
     name: combatant.name,
     hp: combatant.actor?.system?.attributes?.hp?.value ?? null,
@@ -1164,6 +1311,7 @@ export function getPendingAgentTurn(combat) {
     readyAreaSpells,
     readyAttackSpells,
     readyDebuffSpells,
+    readyBreathWeapons,
     turnState,
     hazard: null,
     hasRangedOrReach,
@@ -1532,6 +1680,83 @@ async function castDebuffSpellAndApplyCondition(
 }
 
 /**
+ * Rolls each of `targets`' own saves against `dc` and applies
+ * basic-save-scaled damage on any outcome but a critical success, then
+ * records the ability's recharge timer. Unlike every spell execution
+ * function so far, there's no `entry.cast()` announcement step (a plain
+ * action item has no spellcasting entry) and no `spell.rollDamage()` to
+ * lean on for outcome-scaled damage (confirmed live a plain action item
+ * has neither method) — so this constructs a real `DamageRoll` directly
+ * (`CONFIG.Dice.rolls`'s registered class, formula `"(NdM)[type]"`, so the
+ * target's resistances/weaknesses to `damageType` are still respected via
+ * `applyDamage`'s IWR pipeline — confirmed live a plain number bypasses
+ * that pipeline entirely) and scales it with the roll's own `.alter(mult,
+ * 0)` method (confirmed live this correctly preserves per-type instance
+ * data, not just the top-level total, and rounds a half down exactly like
+ * PF2e's own "half damage" rule).
+ */
+async function castBreathWeaponAndApplyDamage(
+  combat,
+  combatant,
+  targets,
+  itemId,
+  damageFormula,
+  damageType,
+  save,
+  dc,
+  rechargeFormula,
+) {
+  const item = combatant.actor?.items?.get(itemId);
+  if (!item) return null;
+
+  const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
+  await game.user.update({
+    "flags.pf2e.settings.showCheckDialogs": false,
+  });
+  try {
+    const DamageRollClass = CONFIG.Dice.rolls.find(
+      (c) => c.name === "DamageRoll",
+    );
+    const outcomes = [];
+    for (const target of targets) {
+      const saveStat = target.actor?.saves?.[save];
+      if (!saveStat) continue;
+      await saveStat.roll({ dc: { value: dc }, createMessage: true });
+      const outcome =
+        game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
+      if (outcome !== "criticalSuccess") {
+        const roll = new DamageRollClass(`(${damageFormula})[${damageType}]`);
+        await roll.evaluate();
+        const scaled =
+          outcome === "success"
+            ? await roll.alter(0.5, 0)
+            : outcome === "criticalFailure"
+              ? await roll.alter(2, 0)
+              : roll;
+        await target.actor.applyDamage({
+          damage: scaled,
+          token: target.token,
+          outcome,
+        });
+        await applyDefeatIfReducedToZero(target);
+      }
+      outcomes.push({ targetId: target.id, outcome });
+    }
+    await setAbilityRecharge(
+      combat,
+      combatant.id,
+      item.slug ?? item.id,
+      rechargeFormula,
+    );
+    return outcomes;
+  } finally {
+    await game.user.update({
+      "flags.pf2e.settings.showCheckDialogs": prevShowCheck,
+    });
+  }
+}
+
+/**
  * Whispers the GM a chat card naming which combatant the external agent
  * loop just chose an action for, and what it chose — the only place a GM
  * watching the table sees an agent's decision at all otherwise (#147:
@@ -1570,7 +1795,7 @@ export async function applyAgentDecision(
   candidateId,
   rationale = null,
 ) {
-  const pending = getPendingAgentTurn(combat);
+  const pending = await getPendingAgentTurn(combat);
   if (!pending || pending.combatantId !== combatantId) return null;
   const candidate = pending.candidates.find((c) => c.id === candidateId);
   if (!candidate) return null;
@@ -1643,6 +1868,22 @@ export async function applyAgentDecision(
         candidate.entryId,
         candidate.save,
         candidate.conditionsByOutcome,
+      );
+  } else if (candidate.type === "breathWeapon") {
+    const targets = combatantOpponents(combat, combatant).filter((c) =>
+      candidate.affectedIds.includes(c.id),
+    );
+    if (targets.length)
+      await castBreathWeaponAndApplyDamage(
+        combat,
+        combatant,
+        targets,
+        candidate.itemId,
+        candidate.damageFormula,
+        candidate.damageType,
+        candidate.save,
+        candidate.dc,
+        candidate.rechargeFormula,
       );
   }
 
