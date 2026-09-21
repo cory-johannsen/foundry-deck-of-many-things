@@ -530,12 +530,16 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
         hostUserId: null,
       });
     } else {
-      await requestDungeonAction("startRun", {
-        roomCount,
-        traits,
-        excludeTraits,
-        previousSceneId,
-      });
+      await requestDungeonAction(
+        "startRun",
+        {
+          roomCount,
+          traits,
+          excludeTraits,
+          previousSceneId,
+        },
+        { timeoutMs: 60_000 },
+      );
     }
     this.render();
   }
@@ -725,7 +729,7 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (game.user.isGM) {
       await abandonDungeonRun(sceneId);
     } else {
-      await requestDungeonAction("abandonRun", { sceneId });
+      await requestDungeonAction("abandonRun", { sceneId }, { timeoutMs: 60_000 });
     }
     this.close();
   }
