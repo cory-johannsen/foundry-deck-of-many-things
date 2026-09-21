@@ -3838,5 +3838,325 @@
     "name": "Giant Vulture",
     "level": 3,
     "art": "giant-vulture.webp"
+  },
+  {
+    "id": "giant_wasp",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "6aaBmiOgqZ5h2IhW",
+    "name": "Giant Wasp",
+    "level": 3,
+    "art": "giant-wasp.webp"
+  },
+  {
+    "id": "giant_whiptail_centipede",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "UTnrcGoCIXR95zKi",
+    "name": "Giant Whiptail Centipede",
+    "level": 3,
+    "art": "giant-whiptail-centipede.webp"
+  },
+  {
+    "id": "gorilla",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "PlkRv9NMKq9TShYf",
+    "name": "Gorilla",
+    "level": 3,
+    "art": "gorilla.webp"
+  },
+  {
+    "id": "grizzly_bear",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "6K4RWus85o8iqy0t",
+    "name": "Grizzly Bear",
+    "level": 3,
+    "art": "grizzly-bear.webp"
+  },
+  {
+    "id": "grothlut",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "VCYF0NAfPKwTHkK1",
+    "name": "Grothlut",
+    "level": 3,
+    "art": "grothlut.webp"
+  },
+  {
+    "id": "harbormaster",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "vGcspyaP2VOwurMk",
+    "name": "Harbormaster",
+    "level": 3,
+    "art": "harbormaster.webp"
+  },
+  {
+    "id": "hell_hound",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "RTviEfjYnsXa0wkT",
+    "name": "Hell Hound",
+    "level": 3,
+    "art": "hell-hound.webp"
+  },
+  {
+    "id": "hobgoblin_spellbreaker",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "O0n4NLOuY3ZkEKbF",
+    "name": "Hobgoblin Spellbreaker",
+    "level": 3,
+    "art": "hobgoblin-spellbreaker.webp"
+  },
+  {
+    "id": "hound_topiary",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "if9KbKLH7DtjVugJ",
+    "name": "Hound Topiary",
+    "level": 3,
+    "art": "hound-topiary.webp"
+  },
+  {
+    "id": "hyaenodon",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "1Qqu3b4J4aJYEQOX",
+    "name": "Hyaenodon",
+    "level": 3,
+    "art": "hyaenodon.webp"
+  },
+  {
+    "id": "inspector",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "lqg82WmGcps3BEcd",
+    "name": "Inspector",
+    "level": 3,
+    "art": "inspector.webp"
+  },
+  {
+    "id": "jailer",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "4okKASZDvBWTSu1U",
+    "name": "Jailer",
+    "level": 3,
+    "art": "jailer.webp"
+  },
+  {
+    "id": "kholo_bonekeeper",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "yogotW0edcHEPeuR",
+    "name": "Kholo Bonekeeper",
+    "level": 3,
+    "art": "kholo-bonekeeper.webp"
+  },
+  {
+    "id": "kobold_egg_guardian",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "m7UKHHTw1WpDCfsL",
+    "name": "Kobold Egg Guardian",
+    "level": 3,
+    "art": "kobold-egg-guardian.webp"
+  },
+  {
+    "id": "kovintus_geomancer",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "NoAyIhPpqJ1WE1pF",
+    "name": "Kovintus Geomancer",
+    "level": 3,
+    "art": "kovintus-geomancer.webp"
+  },
+  {
+    "id": "kuribu",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "tbdfg5ayaoHcBYCV",
+    "name": "Kuribu",
+    "level": 3,
+    "art": "kuribu.webp"
+  },
+  {
+    "id": "lacridaemon",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "dGKDg0Wp5jSrZx8r",
+    "name": "Lacridaemon",
+    "level": 3,
+    "art": "lacridaemon.webp"
+  },
+  {
+    "id": "leaping_thief",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "BfuYoV5mQVc0DrzO",
+    "name": "Leaping Thief",
+    "level": 3,
+    "art": "leaping-thief.webp"
+  },
+  {
+    "id": "lion",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "6KF6TQvLHHpE0uAM",
+    "name": "Lion",
+    "level": 3,
+    "art": "lion.webp"
+  },
+  {
+    "id": "mage_for_hire",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "x7Mnb3F4r6JvXD9C",
+    "name": "Mage for Hire",
+    "level": 3,
+    "art": "mage-for-hire.webp"
+  },
+  {
+    "id": "martial_student",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "13mJkhzJX1jt5aPF",
+    "name": "Martial Student",
+    "level": 3,
+    "art": "martial-student.webp"
+  },
+  {
+    "id": "megalictis",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "CjAaXJDY4xpKqQEz",
+    "name": "Megalictis",
+    "level": 3,
+    "art": "megalictis.webp"
+  },
+  {
+    "id": "mime",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "sAurhtXSqv3kPAlJ",
+    "name": "Mime",
+    "level": 3,
+    "art": "mime.webp"
+  },
+  {
+    "id": "moose",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "1wVVI0Jj7MdZ3uHg",
+    "name": "Moose",
+    "level": 3,
+    "art": "moose.webp"
+  },
+  {
+    "id": "musketeer",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "tGndoQjOV5Mj5Foh",
+    "name": "Musketeer",
+    "level": 3,
+    "art": "musketeer.webp"
+  },
+  {
+    "id": "narwhal",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "AmkhY7NErzNgbsN0",
+    "name": "Narwhal",
+    "level": 3,
+    "art": "narwhal.webp"
+  },
+  {
+    "id": "necrophidius",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "y2LqIPBHv2dA0pjI",
+    "name": "Necrophidius",
+    "level": 3,
+    "art": "necrophidius.webp"
+  },
+  {
+    "id": "noble",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "lSRNLWRwi9Vhfy25",
+    "name": "Noble",
+    "level": 3,
+    "art": "noble.webp"
+  },
+  {
+    "id": "ogre_warrior",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "Twvzy1yRo6m6dM8D",
+    "name": "Ogre Warrior",
+    "level": 3,
+    "art": "ogre-warrior.webp"
+  },
+  {
+    "id": "pachycephalosaurus",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "dUI8N2AXDGcf3qRD",
+    "name": "Pachycephalosaurus",
+    "level": 3,
+    "art": "pachycephalosaurus.webp"
+  },
+  {
+    "id": "pegasus",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "HMfH0CI1CQCXB9Xr",
+    "name": "Pegasus",
+    "level": 3,
+    "art": "pegasus.webp"
+  },
+  {
+    "id": "platecarpus",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "BiIAxNkNqSlDf8Mp",
+    "name": "Platecarpus",
+    "level": 3,
+    "art": "platecarpus.webp"
+  },
+  {
+    "id": "propagandist",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "uCZmZ9wCwvLA57cp",
+    "name": "Propagandist",
+    "level": 3,
+    "art": "propagandist.webp"
+  },
+  {
+    "id": "river_drake",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "nMC9d7ORMz3cdaHa",
+    "name": "River Drake",
+    "level": 3,
+    "art": "river-drake.webp"
+  },
+  {
+    "id": "rust_monster",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "mEmWRqTRxLUZQYSh",
+    "name": "Rust Monster",
+    "level": 3,
+    "art": "rust-monster.webp"
+  },
+  {
+    "id": "scalescribe",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "VUYg62jFjYB5Mxh0",
+    "name": "Scalescribe",
+    "level": 3,
+    "art": "scalescribe.webp"
+  },
+  {
+    "id": "sea_hag",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "EYiIQh526d0HLiDu",
+    "name": "Sea Hag",
+    "level": 3,
+    "art": "sea-hag.webp"
+  },
+  {
+    "id": "seaweed_leshy",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "tQBUoh5wLJXiFdX6",
+    "name": "Seaweed Leshy",
+    "level": 3,
+    "art": "seaweed-leshy.webp"
+  },
+  {
+    "id": "skeletal_giant",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "sEgjgitJmwYYa4mV",
+    "name": "Skeletal Giant",
+    "level": 3,
+    "art": "skeletal-giant.webp"
+  },
+  {
+    "id": "smith",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "0So6avVuyVG7YOfs",
+    "name": "Smith",
+    "level": 3,
+    "art": "smith.webp"
   }
 ]
