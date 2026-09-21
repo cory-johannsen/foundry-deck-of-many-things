@@ -23,6 +23,8 @@ import {
   getRunState,
   getPendingSkillChallengeCustomization,
   applySkillChallengeCustomization,
+  getPendingPuzzleCustomization,
+  applyPuzzleCustomization,
 } from "./dungeon-runner.mjs";
 import {
   handleDungeonDoorOpened,
@@ -264,6 +266,27 @@ Hooks.once("ready", async () => {
           game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
         );
       return applySkillChallengeCustomization(
+        sceneId ?? canvas?.scene?.id,
+        roomId,
+        customization,
+      );
+    },
+    // #139: the same narrow read/apply pair as #166's skill_challenge
+    // customization surface above, for a puzzle room's own pending
+    // narrative customization instead.
+    getPendingPuzzleCustomization: (sceneId) => {
+      if (!game.user.isGM)
+        return ui.notifications.warn(
+          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+        );
+      return getPendingPuzzleCustomization(sceneId ?? canvas?.scene?.id);
+    },
+    applyPuzzleCustomization: (sceneId, roomId, customization) => {
+      if (!game.user.isGM)
+        return ui.notifications.warn(
+          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+        );
+      return applyPuzzleCustomization(
         sceneId ?? canvas?.scene?.id,
         roomId,
         customization,
