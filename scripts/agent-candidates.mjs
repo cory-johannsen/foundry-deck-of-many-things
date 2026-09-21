@@ -98,14 +98,17 @@ export function buildSpellCandidates({ readySpells, opponents, actionsRemaining 
 /**
  * One candidate per ready area spell (burst/emanation, save-based damage —
  * see dungeon-combat.mjs's isAreaSpellInScope), centered at whichever of the
- * caller's precomputed `placements` catches the most opponents. A spell with
- * no placement catching at least one opponent is never offered at all — the
- * simplest form of friendly-fire avoidance (an ally-only or empty blast
- * simply isn't a candidate); a fuller ally-aware placement search that also
- * tries to minimize allies caught alongside enemies is deferred to a
- * follow-up issue. Real token geometry (which opponents actually fall
- * within a given radius of a given point) is computed by the caller —
- * this function only ever picks among already-computed options.
+ * caller's precomputed `placements` scores best. A spell with no placement
+ * catching at least one opponent is never offered at all — an ally-only or
+ * empty blast simply isn't a candidate. Among placements that do catch at
+ * least one opponent, scoring is lexicographic (#126, decided live):
+ * maximize opponents hit first, then — only to break a tie on that count —
+ * prefer whichever placement hits fewer allies. A placement is never passed
+ * over for a strictly worse one just because it grazes one fewer ally; this
+ * is not a net "enemies minus allies" score. Real token geometry (which
+ * opponents/allies actually fall within a given radius of a given point,
+ * `affected`/`affectedAllies` on each placement) is computed by the caller
+ * — this function only ever picks among already-computed options.
  */
 export function buildAreaSpellCandidates({ readyAreaSpells, actionsRemaining }) {
   const candidates = [];
@@ -113,7 +116,15 @@ export function buildAreaSpellCandidates({ readyAreaSpells, actionsRemaining }) 
     if (spell.cost > actionsRemaining) continue;
     const best = spell.placements
       .filter((p) => p.affected.length > 0)
-      .reduce((a, b) => (!a || b.affected.length > a.affected.length ? b : a), null);
+      .reduce((a, b) => {
+        if (!a) return b;
+        if (b.affected.length !== a.affected.length) {
+          return b.affected.length > a.affected.length ? b : a;
+        }
+        const aAllies = a.affectedAllies?.length ?? 0;
+        const bAllies = b.affectedAllies?.length ?? 0;
+        return bAllies < aAllies ? b : a;
+      }, null);
     if (!best) continue;
     const idSuffix = best.centerId ? `:${best.centerId}` : '';
     candidates.push({
@@ -122,6 +133,7 @@ export function buildAreaSpellCandidates({ readyAreaSpells, actionsRemaining }) 
       save: spell.save, basic: spell.basic,
       centerType: best.centerType, centerId: best.centerId,
       affectedIds: best.affected.map((o) => o.id),
+      affectedAllyIds: (best.affectedAllies ?? []).map((o) => o.id),
       summary: `${spell.label} (hits ${best.affected.map((o) => o.name).join(', ')})`
     });
   }

@@ -130,7 +130,7 @@ describe('buildAreaSpellCandidates', () => {
       {
         id: 'castArea:quench:opponent:opp1', type: 'castArea',
         spellId: 'sp1', entryId: 'entry1', cost: 2, save: 'fortitude', basic: true,
-        centerType: 'opponent', centerId: 'opp1', affectedIds: ['opp1', 'opp2'],
+        centerType: 'opponent', centerId: 'opp1', affectedIds: ['opp1', 'opp2'], affectedAllyIds: [],
         summary: 'Quench (hits Fighter, Cleric)'
       }
     ]);
@@ -157,10 +157,45 @@ describe('buildAreaSpellCandidates', () => {
       {
         id: 'castArea:wails-of-the-damned:self', type: 'castArea',
         spellId: 'sp2', entryId: 'entry1', cost: 2, save: 'fortitude', basic: false,
-        centerType: 'self', centerId: null, affectedIds: ['opp1'],
+        centerType: 'self', centerId: null, affectedIds: ['opp1'], affectedAllyIds: [],
         summary: 'Wails of the Damned (hits Fighter)'
       }
     ]);
+  });
+
+  it('prefers the placement hitting fewer allies when enemy counts are tied (#126)', () => {
+    const ally1 = { id: 'ally1', name: 'Cleric-Ally' };
+    const tiedOnEnemies = {
+      ...quench,
+      placements: [
+        { centerType: 'opponent', centerId: 'opp1', affected: [opp1, opp2], affectedAllies: [ally1] },
+        { centerType: 'opponent', centerId: 'opp3', affected: [opp1, opp3], affectedAllies: [] }
+      ]
+    };
+    const candidates = buildAreaSpellCandidates({ readyAreaSpells: [tiedOnEnemies], actionsRemaining: 3 });
+    expect(candidates).toEqual([
+      {
+        id: 'castArea:quench:opponent:opp3', type: 'castArea',
+        spellId: 'sp1', entryId: 'entry1', cost: 2, save: 'fortitude', basic: true,
+        centerType: 'opponent', centerId: 'opp3', affectedIds: ['opp1', 'opp3'], affectedAllyIds: [],
+        summary: 'Quench (hits Fighter, Rogue)'
+      }
+    ]);
+  });
+
+  it('still prefers more enemies hit even if that placement also hits more allies (#126, lexicographic not net score)', () => {
+    const ally1 = { id: 'ally1', name: 'Cleric-Ally' };
+    const ally2 = { id: 'ally2', name: 'Wizard-Ally' };
+    const moreEnemiesMoreAllies = {
+      ...quench,
+      placements: [
+        { centerType: 'opponent', centerId: 'opp1', affected: [opp1, opp2], affectedAllies: [ally1, ally2] },
+        { centerType: 'opponent', centerId: 'opp3', affected: [opp3], affectedAllies: [] }
+      ]
+    };
+    const candidates = buildAreaSpellCandidates({ readyAreaSpells: [moreEnemiesMoreAllies], actionsRemaining: 3 });
+    expect(candidates[0].centerId).toBe('opp1');
+    expect(candidates[0].affectedAllyIds).toEqual(['ally1', 'ally2']);
   });
 });
 
