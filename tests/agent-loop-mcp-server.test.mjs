@@ -7,6 +7,8 @@ import {
   applyTrapCustomization,
   getPendingSkillChallengeCustomization,
   applySkillChallengeCustomization,
+  getPendingPuzzleCustomization,
+  applyPuzzleCustomization,
   listPendingCustomizations,
 } from "../tools/agent-loop/mcp-server.mjs";
 
@@ -102,6 +104,40 @@ describe("mcp-server relay wrappers", () => {
     expect(script).toContain("The Iron Concord");
   });
 
+  it("getPendingPuzzleCustomization sends the module.api call with the given sceneId", async () => {
+    const fetchImpl = fakeFetch({ roomId: "room-1", name: "The Perfect Hand" });
+    const result = await getPendingPuzzleCustomization("scene-1", {
+      baseUrl: "http://localhost:9999",
+      apiKey: "k",
+      clientId: "abc",
+      fetchImpl,
+    });
+    expect(result).toEqual({ roomId: "room-1", name: "The Perfect Hand" });
+    const [, options] = fetchImpl.mock.calls[0];
+    const script = JSON.parse(options.body).script;
+    expect(script).toContain('getPendingPuzzleCustomization("scene-1")');
+  });
+
+  it("applyPuzzleCustomization sends sceneId, roomId, and the customization payload", async () => {
+    const fetchImpl = fakeFetch({ sceneId: "scene-1", roomId: "room-1" });
+    const result = await applyPuzzleCustomization(
+      "scene-1",
+      "room-1",
+      { name: "The Whispering Vault", summary: "A vault hums.", stageFlavor: {} },
+      {
+        baseUrl: "http://localhost:9999",
+        apiKey: "k",
+        clientId: "abc",
+        fetchImpl,
+      },
+    );
+    expect(result).toEqual({ sceneId: "scene-1", roomId: "room-1" });
+    const [, options] = fetchImpl.mock.calls[0];
+    const script = JSON.parse(options.body).script;
+    expect(script).toContain('applyPuzzleCustomization("scene-1", "room-1"');
+    expect(script).toContain("The Whispering Vault");
+  });
+
   it("listPendingCustomizations tags each present result with its kind and omits nulls", async () => {
     // Both lookups fire in parallel (Promise.all) — a shared counter
     // incremented per fetchImpl call would be read by both .json() calls
@@ -172,11 +208,12 @@ describe("mcp-server tool registration (full round-trip over an in-memory transp
     return client;
   }
 
-  it("lists all three tools", async () => {
+  it("lists all four tools", async () => {
     const client = await connectedClient();
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
       "list_pending_customizations",
+      "submit_puzzle_customization",
       "submit_skill_challenge_customization",
       "submit_trap_customization",
     ]);
@@ -248,5 +285,30 @@ describe("mcp-server tool registration (full round-trip over an in-memory transp
     const script = JSON.parse(options.body).script;
     expect(script).toContain("The Iron Concord");
     expect(script).toContain("Appeal to reason.");
+  });
+
+  it("submit_puzzle_customization applies the customization via the relay", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      json: async () => ({ result: { sceneId: "scene-1", roomId: "room-1" } }),
+    });
+    const client = await connectedClient();
+    const result = await client.callTool({
+      name: "submit_puzzle_customization",
+      arguments: {
+        sceneId: "scene-1",
+        roomId: "room-1",
+        name: "The Whispering Vault",
+        summary: "A locked vault hums with old magic.",
+        stageFlavor: { 0: "A far more vivid clue." },
+      },
+    });
+    expect(JSON.parse(result.content[0].text)).toEqual({
+      sceneId: "scene-1",
+      roomId: "room-1",
+    });
+    const [, options] = globalThis.fetch.mock.calls[0];
+    const script = JSON.parse(options.body).script;
+    expect(script).toContain("The Whispering Vault");
+    expect(script).toContain("A far more vivid clue.");
   });
 });

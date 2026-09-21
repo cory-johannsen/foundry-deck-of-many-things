@@ -21,9 +21,18 @@ import { DungeonApp, resolveCurrentRoom } from "./ui/dungeon-app.mjs";
 import {
   abandonRun,
   getRunState,
+  findActiveHostedRun,
+  findHostedRunForBroadcast,
   getPendingSkillChallengeCustomization,
   applySkillChallengeCustomization,
+  getPendingPuzzleCustomization,
+  applyPuzzleCustomization,
 } from "./dungeon-runner.mjs";
+import {
+  decideOpenDungeon,
+  decideGmLessBroadcast,
+} from "./dungeon-permissions.mjs";
+import { registerDungeonActionSocket } from "./dungeon-remote.mjs";
 import {
   handleDungeonDoorOpened,
   teardownDungeonRun,
@@ -131,11 +140,20 @@ Hooks.once("ready", async () => {
     installMacros: () => ensureWorldMacros({ force: true }),
     installDivinationScene: () => ensureDivinationScene(),
     generateEncounter: (options) => generateEncounter(options),
+    // #109: any user may open the tracker now — a GM always renders; a
+    // non-GM renders too (the setup form for a fresh run, or their own
+    // already-hosted run's current state) unless a *different* player
+    // already hosts the one active run.
     openDungeon: () => {
-      if (!game.user.isGM)
+      const decision = decideOpenDungeon(findActiveHostedRun());
+      if (decision.action === "warnAlreadyHosted") {
+        const hostUser = game.users.get(decision.hostUserId);
         return ui.notifications.warn(
-          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+          game.i18n.format("DOMMT.Dungeon.AlreadyHostedWarning", {
+            host: hostUser?.name ?? "?",
+          }),
         );
+      }
       return new DungeonApp().render(true);
     },
     // Same cancellation teardown the tracker's Abandon button runs (ITEM-18)
@@ -264,6 +282,27 @@ Hooks.once("ready", async () => {
           game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
         );
       return applySkillChallengeCustomization(
+        sceneId ?? canvas?.scene?.id,
+        roomId,
+        customization,
+      );
+    },
+    // #139: the same narrow read/apply pair as #166's skill_challenge
+    // customization surface above, for a puzzle room's own pending
+    // narrative customization instead.
+    getPendingPuzzleCustomization: (sceneId) => {
+      if (!game.user.isGM)
+        return ui.notifications.warn(
+          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+        );
+      return getPendingPuzzleCustomization(sceneId ?? canvas?.scene?.id);
+    },
+    applyPuzzleCustomization: (sceneId, roomId, customization) => {
+      if (!game.user.isGM)
+        return ui.notifications.warn(
+          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+        );
+      return applyPuzzleCustomization(
         sceneId ?? canvas?.scene?.id,
         roomId,
         customization,
@@ -403,6 +442,7 @@ function bindPendingDrawButton(message, html) {
 }
 
 Hooks.once("ready", registerChoiceSocket);
+Hooks.once("ready", registerDungeonActionSocket);
 Hooks.once("ready", registerChargeSound);
 
 Hooks.on("renderChatMessageHTML", bindPendingDrawButton);
@@ -434,6 +474,36 @@ Hooks.on("updateWall", async (wall, changes) => {
   );
   if (autoOpenTracker) openDungeonTrackerIfNotOpen();
 });
+
+/**
+ * #109: keeps every non-host, non-GM client's DungeonApp in sync with a
+ * GM-less run — opens a read-only copy when one starts, re-renders it on
+ * every change, and closes it once the run ends. The host's own window is
+ * already open from calling the macro and manages itself via its own
+ * action handlers' render() calls; a GM is never auto-opened.
+ */
+function syncGmLessDungeonBroadcast() {
+  const existing = foundry.applications.instances.get("dommt-dungeon-app");
+  const decision = decideGmLessBroadcast(
+    findHostedRunForBroadcast(),
+    !!existing,
+  );
+  if (decision.action === "open") new DungeonApp().render(true);
+  else if (decision.action === "render") existing.render();
+  else if (decision.action === "close") existing.close();
+}
+
+function onDungeonRunsSettingChanged(setting) {
+  if (setting.key !== `${MODULE_ID}.dungeonRuns`) return;
+  syncGmLessDungeonBroadcast();
+}
+Hooks.on("updateSetting", onDungeonRunsSettingChanged);
+Hooks.on("createSetting", onDungeonRunsSettingChanged);
+// A client's canvas may still be mid-transition to the dungeon scene when
+// the setting update above first fires (see ui/dungeon-app.mjs's own
+// _onRender comment on the same scene.activate() timing) — canvasReady
+// re-syncs once it's settled.
+Hooks.on("canvasReady", syncGmLessDungeonBroadcast);
 
 /**
  * Advances a dungeon room the instant its Combat auto-resolves (every

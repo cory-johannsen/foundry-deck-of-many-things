@@ -112,29 +112,86 @@ export const STYLE = 'dark fantasy illustration, full color illustration, intric
 //     white smoke haze filling the frame instead of a plain black field —
 //     dark enough at the very corners to slip past `backgroundScore` but
 //     clearly not "nothing else in it" on review.
+//
+// ITEM-18 level 2/3 review pass (2026-09-21): rather than keep re-adding the
+// same clusters per creature as they recurred across levels 2 and 3, this
+// pass went back through everything reviewed so far and promoted every
+// still-recurring failure into the shared list at once, so the ~1,000
+// not-yet-generated prompts (levels 4-25) inherit the fixes before their
+// first generation attempt instead of after.
+//   - ground/floor under a full-body (non-`shapeless`) subject: `pegasus`
+//     came back with grass wisps at its hooves even though it isn't marked
+//     `shapeless` — "ground, floor, terrain, horizon" had only ever been
+//     added to `SHAPELESS_NEGATIVE`, on the assumption a bust portrait crops
+//     before showing the ground. Full-body animal/creature prompts (not
+//     busts) proved that assumption wrong, so the same terms are added here
+//     too rather than only to the shapeless variant.
+//   - diptych / multiple views of the same subject: `soulbound-doll-cruel`,
+//     `soulbound-doll-true-neutral`, and `zyss-serpentfolk` each
+//     independently came back as two side-by-side renders of the subject (or,
+//     for the serpentfolk, two heads) instead of one — never named in the
+//     negative list before now.
+//   - nudity: `rokurokubi`'s prompt (a "cursed woman") produced explicit
+//     nudity twice across redo rounds before the prompt itself was reworded
+//     with modest-clothing framing. Adding it to the shared list is a
+//     content-safety floor, not a per-creature patch — it costs nothing on a
+//     prompt that was never going to drift that way, and catches the next
+//     one that does before a human has to notice.
+//   - ornate frame corners / oval medallion: `giant-eagle` (gold corner
+//     flourishes), `musketeer` (oval medallion), and `soulbound-doll-sassy`
+//     (jeweled frame corners) each slipped past the existing "frame, border,
+//     ornate border" terms — those read as generic enough that the model
+//     wasn't reliably avoiding a *decorative* frame specifically.
+//   - water/ocean scenery: `triton`, `river-drake`, and `giant-seahorse` each
+//     came back half-submerged in a full ocean scene — the existing
+//     "splashing water, ocean spray, water splash effect" terms named the
+//     splash-effect failure ITEM-2 originally caught but not a full body of
+//     water as the backdrop itself.
+//   - photorealistic/CGI rendering: `pachycephalosaurus` drifted to a
+//     photorealistic 3D-render style on top of its other failures —
+//     "photograph, 3d render" didn't hold against a photoreal *painted*
+//     render that isn't literally a photograph.
+//   - additional colored-background hues: `musketeer` (maroon/gold),
+//     `web-lurker` (red/orange), and `soulbound-doll-chaotic-good`
+//     (purple/lavender) all landed on a colored backdrop outside the
+//     green/teal/mint set already named — the existing entries were added
+//     explicitly because the generic "colored background" term alone wasn't
+//     reliable, so the same treatment extends to these hues.
 export const NEGATIVE = 'text, letters, words, watermark, signature, logo, frame, border, ornate border, '
   + 'parchment, paper texture, scroll, background scenery, landscape, architecture, interior, '
   + 'multiple figures, crowd, full body, tiny figure, blurry, deformed hands, extra limbs, '
-  + 'modern clothing, firearms, photograph, 3d render, '
+  + 'modern clothing, firearms, photograph, 3d render, photorealistic, realistic render, '
+  + 'CGI render, video game render, '
   + 'circular frame, circular border, circular halo, glowing ring, decorative ring, ring border, '
   + 'concentric circles, roundel, medallion, coin, wreath border, coiled into a circle, ouroboros, '
   + 'mandala, moon, full moon, arch, archway, gothic arch, doorway, window, stained glass, portal, '
+  + 'aura ring, nimbus, radial halo glow, glowing halo behind head, '
   + 'black and white, monochrome, grayscale, greyscale, line art, woodcut print, engraving, sepia tone, '
   + 'colored background, tinted background, solid color backdrop, colored backdrop, studio backdrop, '
-  + 'green screen, teal background, mint background, '
+  + 'green screen, teal background, mint background, purple background, lavender background, '
+  + 'maroon background, orange background, red background, '
   + 'room interior, indoor room, shop interior, workshop, office, library interior, shelf, shelving, '
   + 'bookshelf, shelf of bottles, shelf of coins, wall decoration, framed picture, painting on wall, '
   + 'chalkboard, city skyline, cityscape, alleyway, mountain vista, forest silhouette, night sky vista, '
   + 'vignette, oval backdrop, framed panel behind subject, '
+  + 'oval medallion, picture frame corners, ornate corner decoration, filigree border, jeweled frame, '
+  + 'gold ornate frame, '
   + 'glowing aura around subject, radiating glow ring, colored aura outline, '
   + 'grey background, gray background, neutral grey backdrop, studio grey background, '
   + 'grey gradient, radial grey vignette, grey studio backdrop, white background, '
   + 'pale grey backdrop, plain field, open landscape, sky, clouds, horizon line, splashing water, '
-  + 'ocean spray, water splash effect, '
+  + 'ocean spray, water splash effect, water, ocean, river, waves, ripples, underwater scene, '
+  + 'submerged, bubbles underwater, '
   + 'ornamental pillar, decorative panel, flanking pillars, symmetrical urns, candelabra, '
   + 'symmetrical mirrored composition, ornamental object flanking subject, matching objects '
-  + 'either side of subject, smoke backdrop, fog backdrop, mist backdrop, cloud backdrop, '
-  + 'hazy cloud vignette, ground fog';
+  + 'either side of subject, flanking foliage, symmetrical plants, twin objects either side, '
+  + 'mirrored decorative elements, '
+  + 'smoke backdrop, fog backdrop, mist backdrop, cloud backdrop, '
+  + 'hazy cloud vignette, ground fog, ground, floor, terrain beneath subject, shadow beneath subject, '
+  + 'standing on visible ground, '
+  + 'diptych, two images, side by side, multiple views of the same subject, split image, '
+  + 'before and after comparison, duplicate subject, two figures, multiple copies of the subject, '
+  + 'nudity, sexualized, exposed intimate anatomy';
 
 /**
  * A style for creatures that have no head to make a bust of.
@@ -2029,19 +2086,20 @@ export const MONSTER_ART = [
   { id: 'sibyl', file: 'sibyl', dir: 'assets/creature-art',
     prompt: "A human sibyl oracle in flowing ceremonial robes, eyes rolled back in a deep divine trance, arms outstretched, an aura of disquieting prophetic frenzy." },
   { id: 'tattoo-guardian', file: 'tattoo-guardian', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A small tattoo guardian construct come to life, a flat inked figure lifted from skin into three dimensions, dark linework and shading rendered as if still drawn, hovering alone in empty black space with nothing else in the frame.",
-    avoid: "white background, pale backdrop, grey backdrop, circular halo, full moon, moon, circular frame, vertical bar, white pillar, geometric shape background, ground, floor, diagonal panel, shadow beneath subject, crouching on surface" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame, full color illustration: a small humanoid guardian construct made of solid black ink given form, a compact muscular body covered edge to edge in sharp tattoo-style linework and geometric patterns, glowing red eyes, fists raised in a fighting stance",
+    avoid: "white background, pale backdrop, grey backdrop, circular halo, full moon, moon, circular frame, vertical bar, white pillar, geometric shape background, ground, floor, diagonal panel, shadow beneath subject, crouching on surface, night sky, stars, starfield, mountains, landscape, wings, flying creature, dragon, demon" },
   { id: 'dragonblood-occultist', file: 'dragonblood-occultist', dir: 'assets/creature-art',
     prompt: "A dragonblood occultist human with faint draconic features, small curling horns, patches of fine scales along the jaw, elongated clawed fingernails, clad in occult robes, eyes glinting with a flicker of future-sight." },
   { id: 'fiend-caller', file: 'fiend-caller', dir: 'assets/creature-art',
     prompt: "A human fiend caller in dark ornate robes lined with unholy sigils, a ritual dagger and chain in hand, a cold calculating smile, an aura of quiet menace." },
   { id: 'ghoran-manipulator', file: 'ghoran-manipulator', dir: 'assets/creature-art',
-    prompt: "A ghoran manipulator, a sentient plant humanoid with a body of dense green rind, a bouquet of vividly colored flower petals arranged where a face would be, subtly shifting to express calculated charm." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a ghoran manipulator, a sentient plant humanoid with a body of dense green rind, a bouquet of vividly colored flower petals arranged where a face would be, subtly shifting to express calculated charm",
+    avoid: "circular halo, circular frame, moon, ring border, white background" },
   { id: 'grioth-cultist', file: 'grioth-cultist', dir: 'assets/creature-art',
     prompt: "A grioth cultist with a four-eyed bat-like face, thin membranous wings, a wriggling tail, dark robes marked with cosmic symbols, an unsettling alien calm." },
   { id: 'living-graffiti-blood', file: 'living-graffiti-blood', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A two-dimensional living graffiti construct rendered in dripping dark red blood-like pigment, a crude mischievous humanoid figure flattened against an unseen surface, jagged animated brushstroke edges.",
-    avoid: "realistic skin, three-dimensional depth, human flesh tone" },
+    prompt: "A two-dimensional living graffiti construct rendered in dripping dark red blood-like pigment, a crude mischievous humanoid figure flattened against an unseen surface, jagged animated brushstroke edges, floating alone in empty black space with nothing else in the frame.",
+    avoid: "realistic skin, three-dimensional depth, human flesh tone, white wall, white background, wall texture, stone wall, grey gradient, grey background, studio backdrop, vignette" },
   { id: 'living-graffiti-chalk', file: 'living-graffiti-chalk', dir: 'assets/creature-art', shapeless: true,
     prompt: "A two-dimensional living graffiti construct rendered in rough white chalk lines, a crude mischievous humanoid figure flattened against an unseen surface, dusty smudged edges crackling with restless motion.",
     avoid: "realistic skin, three-dimensional depth, human flesh tone" },

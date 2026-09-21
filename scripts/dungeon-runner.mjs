@@ -25,6 +25,7 @@ import {
   initSkillChallengeState,
   applySkillChallengeAttempt,
 } from "./skill-challenge-mechanics.mjs";
+import { initPuzzleState, applyPuzzleStageAttempt } from "./puzzle-mechanics.mjs";
 
 const MODULE_ID = "deck-of-many-more-things";
 
@@ -58,6 +59,7 @@ export async function createRun(
     excludeTraits = [],
     seed = null,
     previousSceneId = null,
+    hostUserId = null,
   },
   { settingsRef = defaultSettingsRef(), setpieceIds = [] } = {},
 ) {
@@ -98,6 +100,12 @@ export async function createRun(
     // shape what happens next without being tied to any one room's own
     // display. Null until a narrative room sets one.
     objective: null,
+    // #109: the non-GM player who started this run when no GM was active —
+    // null for a normal GM-run game. The sole authorization signal for a
+    // non-GM to act on this run (dungeon-permissions.mjs's
+    // canActOnDungeon) and the sole trigger for broadcasting it read-only
+    // to every other client (module.mjs's syncGmLessDungeonBroadcast).
+    hostUserId,
   };
   return persist(sceneId, state, settingsRef);
 }
@@ -318,6 +326,43 @@ export async function abandonRun(
 }
 
 /**
+ * The scene id and host of whichever GM-less run is currently active
+ * (not completed, hostUserId set) anywhere in the world, or null if none.
+ * Used to keep a second non-GM player from starting a competing run
+ * (module.mjs's openDungeon) and to drive the read-only broadcast to every
+ * other client (#109). At most one should ever exist in practice, since
+ * openDungeon() itself refuses to start a second one.
+ */
+export function findActiveHostedRun({ settingsRef = defaultSettingsRef() } = {}) {
+  const all = settingsRef.get(MODULE_ID, "dungeonRuns") ?? {};
+  for (const [sceneId, state] of Object.entries(all)) {
+    if (state && !state.completed && state.hostUserId) {
+      return { sceneId, hostUserId: state.hostUserId };
+    }
+  }
+  return null;
+}
+
+/**
+ * Like findActiveHostedRun, but also matches a run that just completed —
+ * used by the broadcast hook (module.mjs's syncGmLessDungeonBroadcast) so
+ * a run's completion is actually shown to everyone instead of silently
+ * closing their tracker the instant the goal room resolves. Only an
+ * abandoned/reset run (its entry deleted entirely from dungeonRuns) should
+ * ever stop showing up here — findActiveHostedRun's own `!completed`
+ * exclusion stays correct for its own purpose (openDungeon()'s "is a
+ * different host already running something" collision check, where a
+ * finished run shouldn't block a fresh start).
+ */
+export function findHostedRunForBroadcast({ settingsRef = defaultSettingsRef() } = {}) {
+  const all = settingsRef.get(MODULE_ID, "dungeonRuns") ?? {};
+  for (const [sceneId, state] of Object.entries(all)) {
+    if (state?.hostUserId) return { sceneId, hostUserId: state.hostUserId };
+  }
+  return null;
+}
+
+/**
  * Lazily attaches a fresh Victory Point challenge (#162) to `roomId`'s own
  * room object the first time it's needed — a no-op if that room already
  * has one, so a re-render (or a recovery retry) never rerolls its
@@ -486,6 +531,159 @@ export async function recordSkillChallengeAttempt(
   const rooms = state.rooms.map((r) =>
     r.id === roomId ? { ...r, challenge } : r,
   );
+  const newState = { ...state, rooms };
+  await persist(sceneId, newState, settingsRef);
+  return newState;
+}
+
+/**
+ * Lazily attaches fresh puzzle state (#137) to `roomId`'s own room object
+ * the first time it's needed — a no-op if that room already has one, the
+ * same read-mutate-persist wrapper `ensureSkillChallenge` already uses
+ * around `initSkillChallengeState`, here around `initPuzzleState`
+ * instead. `hintChecks`/`requiredSuccesses`/`name`/`summary` come from the
+ * room's own resolved `puzzle`-kind setpiece (the caller's job to have
+ * looked that up — `dungeon-setpieces.json` entries aren't loaded from
+ * here). `partyLevel` (#138, optional) scales every stage's own flat DC
+ * to the actual party's level — locked in at this first attach, the same
+ * way specialtySkills/vpTarget are locked in for a skill challenge,
+ * rather than drifting if the party's level changes mid-room. `name`/
+ * `summary` (#139) are persisted onto the puzzle state itself (not just
+ * read fresh off the setpiece on every render) so
+ * `applyPuzzleCustomization` has a stable place to overwrite that
+ * actually sticks — the same reason `initSkillChallengeState` persists
+ * its own template name/summary instead of re-deriving them each render.
+ *
+ * Also flags the new puzzle `customization: {status: 'pending'}`, read
+ * back by `getPendingPuzzleCustomization`/`applyPuzzleCustomization`
+ * (#139) below.
+ */
+export async function ensurePuzzleState(
+  sceneId,
+  roomId,
+  {
+    hintChecks,
+    requiredSuccesses = null,
+    partyLevel = null,
+    name = null,
+    summary = null,
+  },
+  { settingsRef = defaultSettingsRef() } = {},
+) {
+  const state = getRunState(sceneId, { settingsRef });
+  if (!state) return null;
+  const room = state.rooms.find((r) => r.id === roomId);
+  if (!room || room.puzzle) return state;
+  const puzzle = {
+    ...initPuzzleState({
+      hintChecks,
+      requiredSuccesses,
+      partyLevel,
+      name,
+      summary,
+    }),
+    customization: { status: "pending" },
+  };
+  const rooms = state.rooms.map((r) => (r.id === roomId ? { ...r, puzzle } : r));
+  const newState = { ...state, rooms };
+  await persist(sceneId, newState, settingsRef);
+  return newState;
+}
+
+/**
+ * Records one resolved puzzle-stage attempt (#137) against `roomId`'s own
+ * puzzle state — a no-op if that room has no puzzle attached yet
+ * (`ensurePuzzleState` never ran) or it's already resolved
+ * (`applyPuzzleStageAttempt` itself is already a no-op past that point
+ * too, and also a no-op for an already-attempted stage; this wrapper just
+ * avoids the pointless persist for the "no puzzle/already resolved" case).
+ */
+export async function recordPuzzleStageAttempt(
+  sceneId,
+  roomId,
+  stageIndex,
+  outcome,
+  { settingsRef = defaultSettingsRef() } = {},
+) {
+  const state = getRunState(sceneId, { settingsRef });
+  if (!state) return null;
+  const room = state.rooms.find((r) => r.id === roomId);
+  if (!room?.puzzle || room.puzzle.resolved) return state;
+  const puzzle = applyPuzzleStageAttempt(room.puzzle, stageIndex, outcome);
+  const rooms = state.rooms.map((r) => (r.id === roomId ? { ...r, puzzle } : r));
+  const newState = { ...state, rooms };
+  await persist(sceneId, newState, settingsRef);
+  return newState;
+}
+
+/**
+ * The puzzle room whose `puzzle.customization.status === 'pending'` (#139),
+ * still unresolved — mirrors `getPendingSkillChallengeCustomization`
+ * exactly, adapted for a puzzle's own persisted state. `stages` (each
+ * stage's `skill`/`dc`/`hint`) is exposed as context an external agent can
+ * write flavor around — the same "context only, never rewrite gameplay
+ * values" boundary `getPendingSkillChallengeCustomization`'s own
+ * `specialtySkills` already draws. The *only* read surface
+ * `tools/agent-loop`'s MCP server uses for this.
+ */
+export function getPendingPuzzleCustomization(
+  sceneId,
+  { settingsRef = defaultSettingsRef() } = {},
+) {
+  const state = getRunState(sceneId, { settingsRef });
+  if (!state) return null;
+  const room = state.rooms.find(
+    (r) => r.puzzle?.customization?.status === "pending" && !r.puzzle.resolved,
+  );
+  if (!room) return null;
+  const p = room.puzzle;
+  return {
+    sceneId,
+    roomId: room.id,
+    name: p.name ?? null,
+    summary: p.summary ?? null,
+    stages: p.stages.map((s) => ({ skill: s.skill, dc: s.dc, hint: s.hint })),
+    stageFlavor: p.stageFlavor ?? {},
+    locationTag: room.locationTag,
+  };
+}
+
+/**
+ * Applies an external agent's customized name/summary/stageFlavor to
+ * `roomId`'s own pending puzzle (#139) — a no-op if that room has no
+ * puzzle at all. Only ever touches these three display fields, never
+ * `stages[].skill`/`stages[].dc`/`requiredSuccesses` — this cannot change
+ * which skills are mechanically eligible, how hard a stage's check is, or
+ * how many successes are needed, by construction, the same boundary
+ * `applySkillChallengeCustomization` already draws for a challenge's own
+ * name/summary/skillFlavor. `stageFlavor` (keyed by stage index, a string
+ * per JSON's own key convention) merges onto the existing map rather than
+ * replacing it wholesale, so a partial customization (flavor for only
+ * some stages) doesn't blank out the rest — it overrides a stage's
+ * *displayed* hint text (read by whatever renders `stages[i].hint` once
+ * that stage succeeds); the stage's own mechanically-real `hint` field
+ * itself is never touched. See module.mjs's api.applyPuzzleCustomization.
+ */
+export async function applyPuzzleCustomization(
+  sceneId,
+  roomId,
+  { name = null, summary = null, stageFlavor = null } = {},
+  { settingsRef = defaultSettingsRef() } = {},
+) {
+  const state = getRunState(sceneId, { settingsRef });
+  if (!state) return null;
+  const room = state.rooms.find((r) => r.id === roomId);
+  if (!room?.puzzle) return state;
+  const puzzle = {
+    ...room.puzzle,
+    name: name ?? room.puzzle.name,
+    summary: summary ?? room.puzzle.summary,
+    stageFlavor: stageFlavor
+      ? { ...room.puzzle.stageFlavor, ...stageFlavor }
+      : room.puzzle.stageFlavor,
+    customization: { status: "customized" },
+  };
+  const rooms = state.rooms.map((r) => (r.id === roomId ? { ...r, puzzle } : r));
   const newState = { ...state, rooms };
   await persist(sceneId, newState, settingsRef);
   return newState;

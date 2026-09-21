@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * MCP server exposing pending flavor-customization requests — trap (#136)
- * and skill-challenge (#166) — to whatever interactive agent session
+ * MCP server exposing pending flavor-customization requests — trap (#136),
+ * skill-challenge (#166), and puzzle (#139) — to whatever interactive agent session
  * connects to it. Deliberately has no Anthropic (or any LLM) dependency at
  * all: content generation happens on the connected session's own side,
  * using whatever model it runs on, not a hardcoded API call from this
@@ -65,19 +65,40 @@ export async function applySkillChallengeCustomization(
   );
 }
 
-/** Both kinds share one scene-scoped query so a session can check "is
- * there anything to do" in a single call rather than two. Tags each
+export async function getPendingPuzzleCustomization(sceneId, opts = {}) {
+  return runFoundryScript(
+    `return game.modules.get('${MODULE_ID}').api.getPendingPuzzleCustomization(${JSON.stringify(sceneId ?? null)});`,
+    opts,
+  );
+}
+
+export async function applyPuzzleCustomization(
+  sceneId,
+  roomId,
+  customization,
+  opts = {},
+) {
+  return runFoundryScript(
+    `return game.modules.get('${MODULE_ID}').api.applyPuzzleCustomization(${JSON.stringify(sceneId)}, ${JSON.stringify(roomId)}, ${JSON.stringify(customization)});`,
+    opts,
+  );
+}
+
+/** All three kinds share one scene-scoped query so a session can check "is
+ * there anything to do" in a single call rather than three. Tags each
  * result with `kind` so the response is self-describing without the
  * caller having to remember which shape belongs to which submit tool. */
 export async function listPendingCustomizations(sceneId, opts = {}) {
-  const [trap, skillChallenge] = await Promise.all([
+  const [trap, skillChallenge, puzzle] = await Promise.all([
     getPendingTrapCustomization(sceneId, opts),
     getPendingSkillChallengeCustomization(sceneId, opts),
+    getPendingPuzzleCustomization(sceneId, opts),
   ]);
   const pending = [];
   if (trap) pending.push({ kind: "trap", ...trap });
   if (skillChallenge)
     pending.push({ kind: "skill_challenge", ...skillChallenge });
+  if (puzzle) pending.push({ kind: "puzzle", ...puzzle });
   return pending;
 }
 
@@ -91,7 +112,7 @@ export function buildServer() {
     "list_pending_customizations",
     {
       description:
-        "List pending trap and/or skill-challenge flavor-customization requests for the current (or given) Foundry scene. Each entry's mechanical fields (trapLevel/partyLevel, or specialtySkills/locationTag) are context only, for flavor to match — never rewrite gameplay values, only name/description/summary/flavor text.",
+        "List pending trap, skill-challenge, and/or puzzle flavor-customization requests for the current (or given) Foundry scene. Each entry's mechanical fields (trapLevel/partyLevel, specialtySkills/locationTag, or a puzzle's stages skill/dc) are context only, for flavor to match — never rewrite gameplay values, only name/description/summary/flavor text.",
       inputSchema: {
         sceneId: z
           .string()
@@ -147,6 +168,29 @@ export function buildServer() {
         name,
         summary,
         skillFlavor,
+      });
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    },
+  );
+
+  server.registerTool(
+    "submit_puzzle_customization",
+    {
+      description:
+        'Apply a new name, summary, and per-stage hint flavor to a pending puzzle (an entry from list_pending_customizations with kind "puzzle", using its sceneId/roomId). stageFlavor keys are stage indices (0-based, as strings) from that entry\'s own stages array. Never changes the puzzle\'s mechanics — each stage\'s own skill/dc, and how many stages must succeed, are fixed; only name/summary/hint flavor text can be rewritten.',
+      inputSchema: {
+        sceneId: z.string(),
+        roomId: z.string(),
+        name: z.string(),
+        summary: z.string(),
+        stageFlavor: z.record(z.string(), z.string()),
+      },
+    },
+    async ({ sceneId, roomId, name, summary, stageFlavor }) => {
+      const result = await applyPuzzleCustomization(sceneId, roomId, {
+        name,
+        summary,
+        stageFlavor,
       });
       return { content: [{ type: "text", text: JSON.stringify(result) }] };
     },

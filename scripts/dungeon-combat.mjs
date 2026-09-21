@@ -27,6 +27,7 @@ import {
   parseConditionsByOutcome,
   hasSpellUsesRemaining,
   parseBreathWeaponEffect,
+  parseMultiStrikeBundle,
   parseChainHopDistance,
   parseAreaSpellTierOverrides,
   parseActionGlyphTiers,
@@ -1052,6 +1053,42 @@ function actionItemSlug(item) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
   return item.slug || fromName || item.id;
+}
+
+/**
+ * True for a non-spell NPC action item squarely inside #154's scope: a
+ * fixed-action-cost item whose description parses as a multi-strike bundle
+ * via `parseMultiStrikeBundle` (Draconic Frenzy-shaped: "N <name> Strike(s)
+ * ... in any order"). Naturally mutually exclusive with
+ * `isBreathWeaponInScope` — a breath weapon's description carries
+ * `@Damage`/`@Template`/`@Check` enrichers and no "Strike(s)" prose at all,
+ * confirmed live across the same real dragon bestiary actors used to
+ * research this feature.
+ */
+function isMultiStrikeBundleInScope(item) {
+  if (item.type !== "action") return false;
+  if (typeof item.system.actions?.value !== "number") return false;
+  return parseMultiStrikeBundle(item.system.description?.value ?? "") != null;
+}
+
+/**
+ * Fuzzy-matches a multi-strike bundle's parsed strike name (e.g. "claw",
+ * "horns") against `readyActions`' own slugs/labels, stripping a trailing
+ * "s" from both sides before comparing — confirmed live real content uses a
+ * plural noun as the strike name ("one horns Strike") even when the actual
+ * Strike's own slug/label is singular, and the reverse could just as
+ * plausibly occur, so both sides are normalized the same way. Returns the
+ * matched ready action, or `null` if none matches.
+ */
+function matchMultiStrikeActionSlug(name, readyActions) {
+  const normalized = name.toLowerCase().replace(/s$/, "");
+  return (
+    readyActions.find((a) => {
+      const slugNormalized = (a.slug ?? "").toLowerCase().replace(/s$/, "");
+      const labelNormalized = (a.label ?? "").toLowerCase().replace(/s$/, "");
+      return slugNormalized === normalized || labelNormalized === normalized;
+    }) ?? null
+  );
 }
 
 /**
@@ -2308,6 +2345,33 @@ export async function getPendingAgentTurn(combat) {
     });
   }
 
+  const readyMultiStrikeBundles = [];
+  for (const item of combatant.actor?.items ?? []) {
+    if (!isMultiStrikeBundleInScope(item)) continue;
+    const parsed = parseMultiStrikeBundle(item.system.description?.value ?? "");
+    const strikes = [];
+    let reachSquares = Infinity;
+    let allMatched = true;
+    for (const { count, name } of parsed) {
+      const matched = matchMultiStrikeActionSlug(name, readyActions);
+      if (!matched) {
+        allMatched = false;
+        break;
+      }
+      strikes.push({ actionSlug: matched.slug, count });
+      reachSquares = Math.min(reachSquares, matched.reachSquares);
+    }
+    if (!allMatched) continue;
+    readyMultiStrikeBundles.push({
+      itemId: item.id,
+      slug: actionItemSlug(item),
+      label: item.name,
+      cost: item.system.actions.value,
+      strikes,
+      reachSquares,
+    });
+  }
+
   const self = {
     name: combatant.name,
     hp: combatant.actor?.system?.attributes?.hp?.value ?? null,
@@ -2324,6 +2388,7 @@ export async function getPendingAgentTurn(combat) {
     readyAttackSpells,
     readyDebuffSpells,
     readyBreathWeapons,
+    readyMultiStrikeBundles,
     readyChainSpells,
     readyHealSpells,
     readyTierScalingAreaSpells,
@@ -2442,6 +2507,43 @@ async function rollAndApplyStrikeAtVariant(
       "flags.pf2e.settings.showDamageDialogs": prevShowDamage,
     });
   }
+}
+
+/**
+ * Executes a multi-strike bundle (Draconic Frenzy-shaped) as a sequence of
+ * individual Strikes against `target`, all reusing
+ * `rollAndApplyStrikeAtVariant` — the same per-strike execution primitive a
+ * plain strike candidate uses. `variantIndex` increments once per strike
+ * ACROSS THE WHOLE BUNDLE (not reset between the bundle's own named
+ * strikes), starting from `baseVariantIndex` (the turn's current
+ * `mapIncrement`) — matching PF2E's own MAP rule that the penalty escalates
+ * per attack this turn regardless of whether those attacks come from
+ * separate actions or a single multi-strike ability. Returns the ordered
+ * list of `{actionSlug, outcome}` results.
+ */
+async function castMultiStrikeBundleAndApply(
+  combat,
+  combatant,
+  target,
+  strikes,
+  baseVariantIndex,
+) {
+  const results = [];
+  let variantIndex = baseVariantIndex;
+  for (const { actionSlug, count } of strikes) {
+    for (let i = 0; i < count; i++) {
+      const outcome = await rollAndApplyStrikeAtVariant(
+        combat,
+        combatant,
+        target,
+        actionSlug,
+        variantIndex,
+      );
+      results.push({ actionSlug, outcome });
+      variantIndex += 1;
+    }
+  }
+  return results;
 }
 
 /**
@@ -3449,6 +3551,24 @@ export async function applyAgentDecision(
         candidate.dc,
         candidate.rechargeFormula,
       );
+  } else if (candidate.type === "multiStrike") {
+    const target = combatantOpponents(combat, combatant).find(
+      (c) => c.id === candidate.targetId,
+    );
+    if (target) {
+      // Re-resolved fresh here (not trusted from candidate-build time)
+      // since the turn's mapIncrement is this decision's own starting MAP
+      // variant for the whole bundle — same "re-resolve at execution time"
+      // convention every other tier-resolving branch in this function uses.
+      const turnState = getAgentTurnState(combat, combatant.id);
+      await castMultiStrikeBundleAndApply(
+        combat,
+        combatant,
+        target,
+        candidate.strikes,
+        turnState.mapIncrement,
+      );
+    }
   } else if (candidate.type === "castChain") {
     const opponentsById = new Map(
       combatantOpponents(combat, combatant).map((c) => [c.id, c]),
