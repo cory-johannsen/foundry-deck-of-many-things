@@ -1,64 +1,86 @@
-import { DeckApp } from './ui/deck-app.mjs';
-import { DivinationApp } from './ui/divination-app.mjs';
-import { loadCards } from './data-loader.mjs';
-import { drawFromPlay, freshPlayDeckState, makeCardsById } from './deck.mjs';
-import { applyCardEffect } from './card-effects.mjs';
-import { playCardSound } from './card-sound.mjs';
-import { registerChoiceSocket } from './player-choice.mjs';
-import { registerChargeSound } from './charge-sound.mjs';
-import { runDraws } from './draw-run.mjs';
-import { makeFoundryApi } from './foundry-api.mjs';
-import { resolveDrawActor } from './draw-target.mjs';
-import { resolvePendingDraw, markMessageResolved } from './gm-resolution.mjs';
-import { postDrawCard } from './ui/card-message.mjs';
+import { DeckApp } from "./ui/deck-app.mjs";
+import { DivinationApp } from "./ui/divination-app.mjs";
+import { loadCards } from "./data-loader.mjs";
+import { drawFromPlay, freshPlayDeckState, makeCardsById } from "./deck.mjs";
+import { applyCardEffect } from "./card-effects.mjs";
+import { playCardSound } from "./card-sound.mjs";
+import { registerChoiceSocket } from "./player-choice.mjs";
+import { registerChargeSound } from "./charge-sound.mjs";
+import { runDraws } from "./draw-run.mjs";
+import { makeFoundryApi } from "./foundry-api.mjs";
+import { resolveDrawActor } from "./draw-target.mjs";
+import { resolvePendingDraw, markMessageResolved } from "./gm-resolution.mjs";
+import { postDrawCard } from "./ui/card-message.mjs";
 import {
   ensureDivinationScene,
   performDivinationOnTable,
-  clearDivinationTable
-} from './scene-divination.mjs';
-import { generateEncounter } from './encounter-generator.mjs';
-import { DungeonApp, resolveCurrentRoom } from './ui/dungeon-app.mjs';
-import { abandonRun, getRunState } from './dungeon-runner.mjs';
-import { handleDungeonDoorOpened, teardownDungeonRun } from './dungeon-scene.mjs';
+  clearDivinationTable,
+} from "./scene-divination.mjs";
+import { generateEncounter } from "./encounter-generator.mjs";
+import { DungeonApp, resolveCurrentRoom } from "./ui/dungeon-app.mjs";
+import { abandonRun, getRunState } from "./dungeon-runner.mjs";
 import {
-  maybeResolveCombatForActor, maybeResolveCombatForCombatant, autoPlayCombatantTurnIfDue,
-  getPendingAgentTurn, applyAgentDecision, toggleAgentControlled
-} from './dungeon-combat.mjs';
+  handleDungeonDoorOpened,
+  teardownDungeonRun,
+} from "./dungeon-scene.mjs";
+import {
+  maybeResolveCombatForActor,
+  maybeResolveCombatForCombatant,
+  autoPlayCombatantTurnIfDue,
+  getPendingAgentTurn,
+  applyAgentDecision,
+  toggleAgentControlled,
+} from "./dungeon-combat.mjs";
 
-const MODULE_ID = 'deck-of-many-more-things';
+const MODULE_ID = "deck-of-many-more-things";
 
-Hooks.once('init', () => {
-  game.settings.register(MODULE_ID, 'autoApplyEffects', {
-    name: 'DOMMT.Settings.AutoApplyEffects.Name',
-    hint: 'DOMMT.Settings.AutoApplyEffects.Hint',
-    scope: 'world', config: true, type: Boolean, default: true
+Hooks.once("init", () => {
+  game.settings.register(MODULE_ID, "autoApplyEffects", {
+    name: "DOMMT.Settings.AutoApplyEffects.Name",
+    hint: "DOMMT.Settings.AutoApplyEffects.Hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true,
   });
-  game.settings.register(MODULE_ID, 'divinationVisibility', {
-    name: 'DOMMT.Settings.DivinationVisibility.Name',
-    hint: 'DOMMT.Settings.DivinationVisibility.Hint',
-    scope: 'world', config: true, type: String,
+  game.settings.register(MODULE_ID, "divinationVisibility", {
+    name: "DOMMT.Settings.DivinationVisibility.Name",
+    hint: "DOMMT.Settings.DivinationVisibility.Hint",
+    scope: "world",
+    config: true,
+    type: String,
     choices: {
-      gm_only: 'DOMMT.Settings.DivinationVisibility.gm_only',
-      whisper_player: 'DOMMT.Settings.DivinationVisibility.whisper_player',
-      public: 'DOMMT.Settings.DivinationVisibility.public'
+      gm_only: "DOMMT.Settings.DivinationVisibility.gm_only",
+      whisper_player: "DOMMT.Settings.DivinationVisibility.whisper_player",
+      public: "DOMMT.Settings.DivinationVisibility.public",
     },
-    default: 'gm_only'
+    default: "gm_only",
   });
-  game.settings.register(MODULE_ID, 'worldSeed', { scope: 'world', config: false, type: String, default: '' });
-  game.settings.register(MODULE_ID, 'playDeck', {
-    scope: 'world', config: false, type: Object,
-    default: { remaining: [], drawn: [], seed: '' }
+  game.settings.register(MODULE_ID, "worldSeed", {
+    scope: "world",
+    config: false,
+    type: String,
+    default: "",
+  });
+  game.settings.register(MODULE_ID, "playDeck", {
+    scope: "world",
+    config: false,
+    type: Object,
+    default: { remaining: [], drawn: [], seed: "" },
   });
   // Keyed by scene id: { [sceneId]: DungeonRunState }. See dungeon-runner.mjs —
   // there is no precedent in this module for structured data on a Scene flag,
   // so a dungeon run reuses playDeck's proven "read whole, mutate, write
   // whole" shape instead, scoped by scene id rather than by flag.
-  game.settings.register(MODULE_ID, 'dungeonRuns', {
-    scope: 'world', config: false, type: Object, default: {}
+  game.settings.register(MODULE_ID, "dungeonRuns", {
+    scope: "world",
+    config: false,
+    type: Object,
+    default: {},
   });
 });
 
-Hooks.once('ready', async () => {
+Hooks.once("ready", async () => {
   const module = game.modules.get(MODULE_ID);
   module.api = {
     openDeck: () => new DeckApp().render(true),
@@ -74,53 +96,88 @@ Hooks.once('ready', async () => {
      * deck-flow cards untestable and, for a while, unimplemented.
      */
     draw: (count = 1, { actorId = null } = {}) =>
-      runDraws({ count, actor: actorId ? game.actors.get(actorId) : resolveDrawActor().actor }),
+      runDraws({
+        count,
+        actor: actorId ? game.actors.get(actorId) : resolveDrawActor().actor,
+      }),
     resetDeck: async () => {
       const cards = await loadCards();
       const seed = String(Date.now());
       const state = freshPlayDeckState(cards, seed);
-      await game.settings.set(MODULE_ID, 'worldSeed', seed);
-      await game.settings.set(MODULE_ID, 'playDeck', state);
+      await game.settings.set(MODULE_ID, "worldSeed", seed);
+      await game.settings.set(MODULE_ID, "playDeck", state);
     },
     installMacros: () => ensureWorldMacros({ force: true }),
     installDivinationScene: () => ensureDivinationScene(),
     generateEncounter: (options) => generateEncounter(options),
     openDungeon: () => {
-      if (!game.user.isGM) return ui.notifications.warn(game.i18n.localize('DOMMT.Dungeon.GmOnlyWarning'));
+      if (!game.user.isGM)
+        return ui.notifications.warn(
+          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+        );
       return new DungeonApp().render(true);
     },
     // Same cancellation teardown the tracker's Abandon button runs (ITEM-18)
     // — party moved out, every NPC actor the run spawned deleted, scene
     // deleted — for GMs who'd rather script it than click through the app.
     resetDungeon: async (sceneId) => {
-      if (!game.user.isGM) return ui.notifications.warn(game.i18n.localize('DOMMT.Dungeon.GmOnlyWarning'));
+      if (!game.user.isGM)
+        return ui.notifications.warn(
+          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+        );
       const targetSceneId = sceneId ?? canvas?.scene?.id;
       if (!targetSceneId) return;
       const scene = game.scenes.get(targetSceneId);
       const state = getRunState(targetSceneId);
       await abandonRun({ sceneId: targetSceneId });
-      if (scene) await teardownDungeonRun(scene, { previousSceneId: state?.previousSceneId ?? null });
+      if (scene)
+        await teardownDungeonRun(scene, {
+          previousSceneId: state?.previousSceneId ?? null,
+        });
     },
     // The only surface tools/agent-loop's poller ever calls — read the
     // current decision point for whichever agent-controlled combatant's
     // turn is due, or apply exactly one chosen candidate. Never exposes
     // arbitrary script access.
     getPendingAgentTurn: (combatId) => {
-      if (!game.user.isGM) return ui.notifications.warn(game.i18n.localize('DOMMT.Dungeon.GmOnlyWarning'));
+      if (!game.user.isGM)
+        return ui.notifications.warn(
+          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+        );
       const combat = game.combats.get(combatId ?? game.combat?.id);
       return combat ? getPendingAgentTurn(combat) : null;
     },
-    applyAgentDecision: (combatId, combatantId, candidateId) => {
-      if (!game.user.isGM) return ui.notifications.warn(game.i18n.localize('DOMMT.Dungeon.GmOnlyWarning'));
+    applyAgentDecision: (
+      combatId,
+      combatantId,
+      candidateId,
+      rationale = null,
+    ) => {
+      if (!game.user.isGM)
+        return ui.notifications.warn(
+          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+        );
       const combat = game.combats.get(combatId);
-      return combat ? applyAgentDecision(combat, combatantId, candidateId) : null;
-    }
+      return combat
+        ? applyAgentDecision(combat, combatantId, candidateId, rationale)
+        : null;
+    },
   };
   if (game.user.isGM) {
-    try { await ensureWorldMacros(); } catch (e) { console.error(`${MODULE_ID} | ensureWorldMacros failed`, e); }
-    try { await ensureDivinationScene(); } catch (e) { console.error(`${MODULE_ID} | ensureDivinationScene failed`, e); }
+    try {
+      await ensureWorldMacros();
+    } catch (e) {
+      console.error(`${MODULE_ID} | ensureWorldMacros failed`, e);
+    }
+    try {
+      await ensureDivinationScene();
+    } catch (e) {
+      console.error(`${MODULE_ID} | ensureDivinationScene failed`, e);
+    }
   }
-  console.log(`${MODULE_ID} | ready — api attached to game.modules.get('${MODULE_ID}').api`);
+  console.log(
+    `${MODULE_ID} | ready — api attached to game.modules.get('${MODULE_ID}').api`,
+  );
 });
 
 /**
@@ -134,30 +191,30 @@ Hooks.once('ready', async () => {
  */
 const MACRO_DEFS = [
   {
-    name: 'DOMMT: Play the Deck',
+    name: "DOMMT: Play the Deck",
     img: `modules/${MODULE_ID}/assets/icons/macro-deck.webp`,
-    command: `game.modules.get('${MODULE_ID}').api.openDeck();`
+    command: `game.modules.get('${MODULE_ID}').api.openDeck();`,
   },
   {
-    name: 'DOMMT: Divine',
+    name: "DOMMT: Divine",
     img: `modules/${MODULE_ID}/assets/icons/macro-divine.webp`,
-    command: `game.modules.get('${MODULE_ID}').api.openDivination();`
+    command: `game.modules.get('${MODULE_ID}').api.openDivination();`,
   },
   {
-    name: 'DOMMT: Reset Play Deck (GM)',
+    name: "DOMMT: Reset Play Deck (GM)",
     img: `modules/${MODULE_ID}/assets/icons/macro-reset.webp`,
-    command: `if (!game.user.isGM) return ui.notifications.warn('GM only');\nawait game.modules.get('${MODULE_ID}').api.resetDeck();\nui.notifications.info('Deck reset');`
+    command: `if (!game.user.isGM) return ui.notifications.warn('GM only');\nawait game.modules.get('${MODULE_ID}').api.resetDeck();\nui.notifications.info('Deck reset');`,
   },
   {
-    name: 'DOMMT: Generate Encounter',
+    name: "DOMMT: Generate Encounter",
     img: `modules/${MODULE_ID}/assets/icons/macro-encounter.webp`,
-    command: `game.modules.get('${MODULE_ID}').api.generateEncounter();`
+    command: `game.modules.get('${MODULE_ID}').api.generateEncounter();`,
   },
   {
-    name: 'DOMMT: Dungeon Crawl',
+    name: "DOMMT: Dungeon Crawl",
     img: `modules/${MODULE_ID}/assets/icons/macro-dungeon.webp`,
-    command: `game.modules.get('${MODULE_ID}').api.openDungeon();`
-  }
+    command: `game.modules.get('${MODULE_ID}').api.openDungeon();`,
+  },
 ];
 
 async function ensureWorldMacros({ force = false } = {}) {
@@ -169,17 +226,21 @@ async function ensureWorldMacros({ force = false } = {}) {
       // The picture counts as a change. This compared commands only, so a
       // macro already on someone's hotbar kept its old icon for ever unless
       // the code behind it happened to change too.
-      if (force || existing.command !== def.command || existing.img !== def.img) {
+      if (
+        force ||
+        existing.command !== def.command ||
+        existing.img !== def.img
+      ) {
         toUpdate.push({ _id: existing.id, command: def.command, img: def.img });
       }
     } else {
       toCreate.push({
         name: def.name,
-        type: 'script',
+        type: "script",
         img: def.img,
         command: def.command,
-        scope: 'global',
-        flags: { [MODULE_ID]: { generated: true } }
+        scope: "global",
+        flags: { [MODULE_ID]: { generated: true } },
       });
     }
   }
@@ -205,14 +266,14 @@ function bindPendingDrawButton(message, html) {
   const root = html?.[0] ?? html;
   const button = root?.querySelector?.('[data-action="dommt-resolve"]');
   if (!button || button.dataset.dommtBound) return;
-  button.dataset.dommtBound = '1';
+  button.dataset.dommtBound = "1";
   // The button ships in every client's copy of the message; only a GM may use
   // it, and nobody else should even see it.
   if (!game.user.isGM) {
-    button.closest('.dommt-chat__gm-actions')?.remove();
+    button.closest(".dommt-chat__gm-actions")?.remove();
     return;
   }
-  button.addEventListener('click', async () => {
+  button.addEventListener("click", async () => {
     button.disabled = true;
     try {
       const outcome = await resolvePendingDraw(message);
@@ -220,22 +281,24 @@ function bindPendingDrawButton(message, html) {
         await markMessageResolved(message, outcome);
         // A card whose resolution grants draws takes them now.
         if (outcome.extraDraws > 0) {
-          await runDraws({ count: outcome.extraDraws, actor: game.actors.get(outcome.actorId) });
+          await runDraws({
+            count: outcome.extraDraws,
+            actor: game.actors.get(outcome.actorId),
+          });
         }
-      }
-      else button.disabled = false;   // dismissed — leave it actionable
+      } else button.disabled = false; // dismissed — leave it actionable
     } catch (e) {
       console.error(`${MODULE_ID} | resolving pending draw failed`, e);
-      ui.notifications.error(game.i18n.localize('DOMMT.GM.ResolveFailed'));
+      ui.notifications.error(game.i18n.localize("DOMMT.GM.ResolveFailed"));
       button.disabled = false;
     }
   });
 }
 
-Hooks.once('ready', registerChoiceSocket);
-Hooks.once('ready', registerChargeSound);
+Hooks.once("ready", registerChoiceSocket);
+Hooks.once("ready", registerChargeSound);
 
-Hooks.on('renderChatMessageHTML', bindPendingDrawButton);
+Hooks.on("renderChatMessageHTML", bindPendingDrawButton);
 
 /**
  * A dungeon room's discovery trigger — opening its own reveal door (see
@@ -244,7 +307,7 @@ Hooks.on('renderChatMessageHTML', bindPendingDrawButton);
  * `handleDungeonDoorOpened` itself both filters for a real dungeon reveal
  * door and only acts on the GM's own client.
  */
-Hooks.on('updateWall', (wall, changes) => {
+Hooks.on("updateWall", (wall, changes) => {
   if (changes.ds !== CONST.WALL_DOOR_STATES.OPEN) return;
   handleDungeonDoorOpened(wall.parent?.id, wall.id);
 });
@@ -257,12 +320,20 @@ Hooks.on('updateWall', (wall, changes) => {
  * See ITEM-6 in docs/backlog.md.
  */
 async function onCombatAutoResolved(result) {
-  if (result?.dungeonSlot != null) await resolveCurrentRoom(result.outcome === 'victory', { scene: result.scene });
+  if (result?.dungeonSlot != null)
+    await resolveCurrentRoom(result.outcome === "victory", {
+      scene: result.scene,
+    });
 }
 
-Hooks.on('updateActor', async (actor) => onCombatAutoResolved(await maybeResolveCombatForActor(actor)));
-Hooks.on('updateCombatant', async (combatant, changes) =>
-  onCombatAutoResolved(await maybeResolveCombatForCombatant(combatant, changes)));
+Hooks.on("updateActor", async (actor) =>
+  onCombatAutoResolved(await maybeResolveCombatForActor(actor)),
+);
+Hooks.on("updateCombatant", async (combatant, changes) =>
+  onCombatAutoResolved(
+    await maybeResolveCombatForCombatant(combatant, changes),
+  ),
+);
 
 /**
  * Plays a non-player combatant's turn automatically the instant the turn
@@ -271,26 +342,27 @@ Hooks.on('updateCombatant', async (combatant, changes) =>
  * fire-and-forget style; autoPlayCombatantTurnIfDue's own nextTurn() call, if
  * it acts, re-triggers this same hook naturally for whatever comes next.
  */
-Hooks.on('updateCombat', (combat, changes) => {
+Hooks.on("updateCombat", (combat, changes) => {
   if (changes.turn === undefined && changes.round === undefined) return;
   autoPlayCombatantTurnIfDue(combat);
 });
 
-Hooks.on('getSceneControlButtons', (controls) => {
-  const tokenControl = controls.find?.((c) => c.name === 'token') ?? controls.token;
+Hooks.on("getSceneControlButtons", (controls) => {
+  const tokenControl =
+    controls.find?.((c) => c.name === "token") ?? controls.token;
   if (!tokenControl) return;
   const button = {
-    name: 'dommt-deck',
-    title: game.i18n.localize('DOMMT.SceneControl.Label'),
-    icon: 'fa-solid fa-cards',
+    name: "dommt-deck",
+    title: game.i18n.localize("DOMMT.SceneControl.Label"),
+    icon: "fa-solid fa-cards",
     visible: true,
     button: true,
-    onClick: () => new DeckApp().render(true)
+    onClick: () => new DeckApp().render(true),
   };
   if (Array.isArray(tokenControl.tools)) {
     tokenControl.tools.push(button);
-  } else if (tokenControl.tools && typeof tokenControl.tools === 'object') {
-    tokenControl.tools['dommt-deck'] = button;
+  } else if (tokenControl.tools && typeof tokenControl.tools === "object") {
+    tokenControl.tools["dommt-deck"] = button;
   }
 });
 
@@ -301,18 +373,21 @@ Hooks.on('getSceneControlButtons', (controls) => {
  * cover the standalone "DOMMT: Generate Encounter" macro's combats too
  * (ITEM-6's original scope), not just dungeon rooms.
  */
-Hooks.on('getCombatTrackerEntryContext', (html, menuItems) => {
+Hooks.on("getCombatTrackerEntryContext", (html, menuItems) => {
   menuItems.push({
-    name: 'DOMMT.Dungeon.Combat.ToggleAgentControlLabel',
+    name: "DOMMT.Dungeon.Combat.ToggleAgentControlLabel",
     icon: '<i class="fa-solid fa-robot"></i>',
     condition: (li) => {
       const combatant = game.combat?.combatants.get(li.dataset.combatantId);
-      return !!combatant && !game.actors?.party?.members?.some((m) => m.id === combatant.actor?.id);
+      return (
+        !!combatant &&
+        !game.actors?.party?.members?.some((m) => m.id === combatant.actor?.id)
+      );
     },
     callback: (li) => {
       const combatant = game.combat?.combatants.get(li.dataset.combatantId);
       if (combatant) toggleAgentControlled(combatant);
-    }
+    },
   });
 });
 
@@ -321,18 +396,27 @@ async function drawForced(cardId, { actorId = null } = {}) {
   const byId = makeCardsById(cards);
   const card = byId.get(cardId);
   if (!card) throw new Error(`Unknown card: ${cardId}`);
-  let state = game.settings.get(MODULE_ID, 'playDeck');
+  let state = game.settings.get(MODULE_ID, "playDeck");
   if (!state.remaining?.length) {
     state = freshPlayDeckState(cards, String(Date.now()));
   }
   const remaining = state.remaining.filter((id) => id !== cardId);
   const drawn = state.drawn.concat([{ cardId, actorId, at: Date.now() }]);
-  await game.settings.set(MODULE_ID, 'playDeck', { ...state, remaining, drawn });
+  await game.settings.set(MODULE_ID, "playDeck", {
+    ...state,
+    remaining,
+    drawn,
+  });
   const { actor } = resolveDrawActor({ actorId });
   const api = makeFoundryApi();
-  const autoApply = game.settings.get(MODULE_ID, 'autoApplyEffects');
-  const result = await applyCardEffect({ card, actor, api, autoApplyEnabled: autoApply });
-  if (result.mode === 'auto') playCardSound(card, actor);
+  const autoApply = game.settings.get(MODULE_ID, "autoApplyEffects");
+  const result = await applyCardEffect({
+    card,
+    actor,
+    api,
+    autoApplyEnabled: autoApply,
+  });
+  if (result.mode === "auto") playCardSound(card, actor);
   await postDrawCard({ card, actor, result });
   return result;
 }

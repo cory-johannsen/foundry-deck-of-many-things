@@ -104,6 +104,7 @@
   "DOMMT.Dungeon.Combat.ToggleAgentControlLabel": "Toggle Agent Control",
   "DOMMT.Dungeon.Combat.AgentTimeoutWarning": "{name}'s agent-controlled turn timed out — falling back to the default AI.",
   "DOMMT.Dungeon.Combat.AgentTimeoutChat": "<p><strong>{name}</strong>'s turn was agent-controlled, but nothing responded in time. Falling back to the default combat AI for this turn.</p>",
+  "DOMMT.Dungeon.Combat.AgentDecisionChat": "<p><strong>{name}</strong> (agent-controlled) chose: {summary}</p>",
   "DOMMT.Dungeon.PopulateNextButton": "Populate Next Room",
   "DOMMT.Dungeon.UndoButton": "Undo Last Entry",
   "DOMMT.Dungeon.AbandonButton": "Abandon Dungeon",

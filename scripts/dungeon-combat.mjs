@@ -405,7 +405,11 @@ function isVariableCostSpellInScope(spell) {
   const system = spell.system ?? {};
   if (system.area != null) return false;
   const targetValue = system.target?.value ?? "";
-  if (!/^1(\s\w+)*\screature(\sor\s1(\s\w+)*\s(creature|undead))?$/i.test(targetValue))
+  if (
+    !/^1(\s\w+)*\screature(\sor\s1(\s\w+)*\s(creature|undead))?$/i.test(
+      targetValue,
+    )
+  )
     return false;
   if (!system.defense?.save?.statistic) return false;
   if (!Object.keys(system.damage ?? {}).length) return false;
@@ -1031,7 +1035,9 @@ export function getPendingAgentTurn(combat) {
     )
     .filter(Boolean);
 
-  const readyVariableCostSpells = (combatant.actor?.spellcasting?.contents ?? [])
+  const readyVariableCostSpells = (
+    combatant.actor?.spellcasting?.contents ?? []
+  )
     .flatMap((entry) =>
       (entry.spells?.contents ?? [])
         .filter(isVariableCostSpellInScope)
@@ -1066,7 +1072,8 @@ export function getPendingAgentTurn(combat) {
           rawOpponents
             .filter(
               (o) =>
-                chebyshevSquares(centerToken, o.token, gridSize) <= radiusSquares,
+                chebyshevSquares(centerToken, o.token, gridSize) <=
+                radiusSquares,
             )
             .map((o) => ({ id: o.id, name: o.name }));
         const placements =
@@ -1525,6 +1532,31 @@ async function castDebuffSpellAndApplyCondition(
 }
 
 /**
+ * Whispers the GM a chat card naming which combatant the external agent
+ * loop just chose an action for, and what it chose — the only place a GM
+ * watching the table sees an agent's decision at all otherwise (#147:
+ * before this, it only ever reached `tools/agent-loop/poll.mjs`'s own
+ * terminal, which most tables don't have visible during play). `rationale`
+ * is optional and provider-dependent (Claude supplies one, Laya never does
+ * — see `tools/agent-loop/README.md`), so it's an extra line only when
+ * present rather than a placeholder implying every provider explains itself.
+ * Escaped the same way every other LLM/user-supplied string reaching a chat
+ * card in this module is (`choice-prompts.mjs`, `gm-resolution.mjs`), since
+ * `rationale` is free text from an external model response, not authored
+ * content this module controls.
+ */
+async function postAgentDecisionChat(combatant, candidate, rationale) {
+  const esc = (s) => foundry.utils.escapeHTML?.(String(s)) ?? String(s);
+  let content = game.i18n.format("DOMMT.Dungeon.Combat.AgentDecisionChat", {
+    name: esc(combatant.name),
+    summary: esc(candidate.summary ?? candidate.type),
+  });
+  if (rationale) content += `<p><em>${esc(rationale)}</em></p>`;
+  const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
+  await ChatMessage.create({ content, whisper: gmIds });
+}
+
+/**
  * Executes exactly one chosen candidate for `combatantId`'s current turn in
  * `combat`, updates the per-turn state, and advances the turn once actions
  * run out or `endTurn` was chosen. Returns the pending-turn shape for the
@@ -1532,13 +1564,19 @@ async function castDebuffSpellAndApplyCondition(
  * the turn has actually ended. The only mutation path an external process
  * ever reaches — see module.mjs's api.applyAgentDecision.
  */
-export async function applyAgentDecision(combat, combatantId, candidateId) {
+export async function applyAgentDecision(
+  combat,
+  combatantId,
+  candidateId,
+  rationale = null,
+) {
   const pending = getPendingAgentTurn(combat);
   if (!pending || pending.combatantId !== combatantId) return null;
   const candidate = pending.candidates.find((c) => c.id === candidateId);
   if (!candidate) return null;
 
   const combatant = combat.combatant;
+  await postAgentDecisionChat(combatant, candidate, rationale);
   if (candidate.type === "stride") {
     const target = candidate.targetId
       ? combatantOpponents(combat, combatant).find(

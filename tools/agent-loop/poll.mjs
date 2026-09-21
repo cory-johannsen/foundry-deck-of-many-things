@@ -11,22 +11,24 @@
  * Requires: FOUNDRY_REST_API_KEY, FOUNDRY_BASE_URL (your self-hosted relay),
  * ANTHROPIC_API_KEY — see README.md.
  */
-import { runFoundryScript, readEnvOrDotenv } from './foundry-client.mjs';
-import { resolveProvider } from './providers/index.mjs';
+import { runFoundryScript, readEnvOrDotenv } from "./foundry-client.mjs";
+import { resolveProvider } from "./providers/index.mjs";
 
-const POLL_INTERVAL_MS = Number(readEnvOrDotenv('DOMMT_POLL_INTERVAL_MS') ?? 3000);
-const AGENT_PROVIDER_NAME = readEnvOrDotenv('DOMMT_AGENT_PROVIDER') ?? 'claude';
-const MODULE_ID = 'deck-of-many-more-things';
+const POLL_INTERVAL_MS = Number(
+  readEnvOrDotenv("DOMMT_POLL_INTERVAL_MS") ?? 3000,
+);
+const AGENT_PROVIDER_NAME = readEnvOrDotenv("DOMMT_AGENT_PROVIDER") ?? "claude";
+const MODULE_ID = "deck-of-many-more-things";
 
 async function getPendingTurn() {
   return runFoundryScript(
-    `return game.modules.get('${MODULE_ID}').api.getPendingAgentTurn();`
+    `return game.modules.get('${MODULE_ID}').api.getPendingAgentTurn();`,
   );
 }
 
-async function applyDecision(combatId, combatantId, candidateId) {
+async function applyDecision(combatId, combatantId, candidateId, rationale) {
   return runFoundryScript(
-    `return game.modules.get('${MODULE_ID}').api.applyAgentDecision(${JSON.stringify(combatId)}, ${JSON.stringify(combatantId)}, ${JSON.stringify(candidateId)});`
+    `return game.modules.get('${MODULE_ID}').api.applyAgentDecision(${JSON.stringify(combatId)}, ${JSON.stringify(combatantId)}, ${JSON.stringify(candidateId)}, ${JSON.stringify(rationale ?? null)});`,
   );
 }
 
@@ -37,14 +39,27 @@ async function playOnePendingTurnToCompletion(decide) {
     try {
       decision = await decide(pending.context, { fetchImpl: fetch });
     } catch (err) {
-      console.error('agent-loop: provider error, skipping this cycle:', err.message);
+      console.error(
+        "agent-loop: provider error, skipping this cycle:",
+        err.message,
+      );
       return; // let Foundry's own per-action timeout fallback handle it
     }
-    console.log(`agent-loop: chose ${decision.candidateId} (${decision.rationale ?? 'no rationale'})`);
+    console.log(
+      `agent-loop: chose ${decision.candidateId} (${decision.rationale ?? "no rationale"})`,
+    );
     try {
-      pending = await applyDecision(pending.combatId, pending.combatantId, decision.candidateId);
+      pending = await applyDecision(
+        pending.combatId,
+        pending.combatantId,
+        decision.candidateId,
+        decision.rationale,
+      );
     } catch (err) {
-      console.error('agent-loop: applyAgentDecision failed, skipping this cycle:', err.message);
+      console.error(
+        "agent-loop: applyAgentDecision failed, skipping this cycle:",
+        err.message,
+      );
       return;
     }
   }
@@ -52,12 +67,14 @@ async function playOnePendingTurnToCompletion(decide) {
 
 async function main() {
   const decide = resolveProvider();
-  console.log(`agent-loop: polling every ${POLL_INTERVAL_MS}ms with provider "${AGENT_PROVIDER_NAME}"`);
+  console.log(
+    `agent-loop: polling every ${POLL_INTERVAL_MS}ms with provider "${AGENT_PROVIDER_NAME}"`,
+  );
   for (;;) {
     try {
       await playOnePendingTurnToCompletion(decide);
     } catch (err) {
-      console.error('agent-loop: poll cycle failed, will retry:', err.message);
+      console.error("agent-loop: poll cycle failed, will retry:", err.message);
     }
     await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
   }
