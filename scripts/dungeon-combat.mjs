@@ -35,6 +35,7 @@ import {
   parseAutoHitAreaTiers,
 } from "./agent-candidates.mjs";
 import { findPath, blockedEdgesFromWalls } from "./pathfinding.mjs";
+import { LOOTABLE_ITEM_TYPES } from "./treasure.mjs";
 import { coverBlocksLineOfFire, COVER_EFFECT_DATA } from "./cover-items.mjs";
 import {
   playStrikeSound,
@@ -203,8 +204,18 @@ async function resolveCombat(combat, outcome, api) {
   const npcCombatants = combat.combatants.filter(
     (c) => c.actor?.id && !partyIds.has(c.actor.id),
   );
-  const npcTokenIds = npcCombatants.map((c) => c.tokenId).filter(Boolean);
-  const npcActorIds = [...new Set(npcCombatants.map((c) => c.actor.id))];
+  // A defeated hostile becomes a lootable corpse (see the conversion step
+  // below) instead of being deleted outright — everything else non-party
+  // (a surviving player-summoned ally, an undefeated hostile the party
+  // fled from) keeps the pre-#172 immediate-delete behavior unchanged.
+  const defeatedHostileCombatants = npcCombatants.filter(
+    (c) => c.isDefeated && c.token?.disposition === -1,
+  );
+  const otherNpcCombatants = npcCombatants.filter(
+    (c) => !defeatedHostileCombatants.includes(c),
+  );
+  const npcTokenIds = otherNpcCombatants.map((c) => c.tokenId).filter(Boolean);
+  const npcActorIds = [...new Set(otherNpcCombatants.map((c) => c.actor.id))];
   const coverTokens = coverItemTokensForCombat(combat);
   const coverTokenIds = coverTokens.map((t) => t.id);
   const coverActorIds = [
@@ -227,9 +238,37 @@ async function resolveCombat(combat, outcome, api) {
           (member.system.details.xp.value ?? 0) + share,
       });
     }
-    if (game.actors.party)
-      await api.addCoins(game.actors.party.id, { gp: lootGpForXp(totalXp) });
   }
+  // #172: a defeated hostile's own gear (granted at spawn time — see
+  // spawnCreatures) becomes real, player-lootable treasure instead of
+  // vanishing with its actor. Foundry document types are immutable after
+  // creation (confirmed live: actor.update({type: "loot"}) silently no-ops)
+  // — so this creates a fresh loot-type actor from the defeated actor's own
+  // data and repoints the existing token at it, rather than updating in
+  // place. Ownership defaults to full Owner so any player can loot it
+  // immediately with no further GM permission step.
+  for (const combatant of defeatedHostileCombatants) {
+    const source = combatant.actor.toObject();
+    const lootItems = source.items.filter((i) =>
+      LOOTABLE_ITEM_TYPES.includes(i.type),
+    );
+    const [lootActor] = await Actor.createDocuments([
+      {
+        ...source,
+        _id: undefined,
+        type: "loot",
+        name: `${combatant.actor.name} (corpse)`,
+        items: lootItems,
+        ownership: { default: 3 },
+      },
+    ]);
+    await combatant.token.update({ actorId: lootActor.id });
+  }
+  const lootedOriginalActorIds = defeatedHostileCombatants
+    .map((c) => c.actor.id)
+    .filter(Boolean);
+  if (lootedOriginalActorIds.length)
+    await Actor.deleteDocuments(lootedOriginalActorIds);
   await combat.delete();
   if (npcTokenIds.length && scene)
     await scene.deleteEmbeddedDocuments("Token", npcTokenIds);
