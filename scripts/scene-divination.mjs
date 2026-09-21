@@ -1,5 +1,5 @@
 import { loadCards, loadCelticCross } from './data-loader.mjs';
-import { playSound } from './audio.mjs';
+import { playSound } from '../../foundry-pf2e-dungeon-crawl/scripts/audio.mjs';
 import {
   dealCelticCross,
   readingFromSpread,

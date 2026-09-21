@@ -1,6 +1,6 @@
 import { drawFromPlay } from './deck.mjs';
-import { promptKeepOne } from './choice-prompts.mjs';
-import { askPlayer } from './player-choice.mjs';
+import { promptKeepOne } from '../../foundry-pf2e-dungeon-crawl/scripts/choice-prompts.mjs';
+import { askPlayer } from '../../foundry-pf2e-dungeon-crawl/scripts/player-choice.mjs';
 import { whoDecides } from './choice-routing.mjs';
 import { planCardEffect, replayPlan } from './effect-plan.mjs';
 

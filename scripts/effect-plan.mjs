@@ -1,5 +1,5 @@
 import { applyCardEffect } from './card-effects.mjs';
-import { WRITE_METHODS, READ_METHODS } from './foundry-api.mjs';
+import { WRITE_METHODS, READ_METHODS } from '../../foundry-pf2e-dungeon-crawl/scripts/foundry-api.mjs';
 
 /**
  * Planning a card effect instead of applying it outright.

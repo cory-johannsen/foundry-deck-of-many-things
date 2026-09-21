@@ -1,4 +1,4 @@
-import { splitmix32, seedFromString, shuffle } from './prng.mjs';
+import { splitmix32, seedFromString, shuffle } from '../../foundry-pf2e-dungeon-crawl/scripts/prng.mjs';
 
 export const DRAW_WINDOW_MS = 3600 * 1000;
 

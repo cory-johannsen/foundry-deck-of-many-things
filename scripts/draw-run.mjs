@@ -1,7 +1,7 @@
 import { loadCards } from './data-loader.mjs';
 import { freshPlayDeckState, drawFromPlay, makeCardsById } from './deck.mjs';
 import { applyCardEffect } from './card-effects.mjs';
-import { makeFoundryApi } from './foundry-api.mjs';
+import { makeFoundryApi } from '../../foundry-pf2e-dungeon-crawl/scripts/foundry-api.mjs';
 import { playCardSound } from './card-sound.mjs';
 import { postDrawCard } from './ui/card-message.mjs';
 import { drawTwoKeepOne } from './keep-one.mjs';

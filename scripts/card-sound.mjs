@@ -1,4 +1,4 @@
-import { playSound } from './audio.mjs';
+import { playSound } from '../../foundry-pf2e-dungeon-crawl/scripts/audio.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
 const SOUND_DIR = `modules/${MODULE_ID}/assets/sounds`;
