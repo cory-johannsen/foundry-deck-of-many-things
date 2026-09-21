@@ -117,6 +117,7 @@
   "DOMMT.Dungeon.AbandonButton": "Abandon Dungeon",
   "DOMMT.Dungeon.AbandonConfirm": "This ends the run for good: the party is moved back out, every monster this run spawned is deleted, and the dungeon scene itself is deleted. This can't be undone.",
   "DOMMT.Dungeon.RerunEncounterHint": "The ruin drawn here means an extra fight — click Run Encounter again once the party is through.",
+  "DOMMT.Dungeon.Trap.NoneFoundWarning": "No level-appropriate trap found in the compendium for this room — it will just show its own flavor text, with no mechanical trap spawned.",
   "DOMMT.Dungeon.DoorLockedHint": "The way forward is locked until the next room is populated.",
   "DOMMT.Dungeon.AlreadyResolvedUndoWarning": "That room has already been judged — its door and any further rooms can't be undone from here.",
   "DOMMT.Dungeon.ThemeReminder": "Dungeon theme — traits: {traits}; excluded: {excludeTraits}",

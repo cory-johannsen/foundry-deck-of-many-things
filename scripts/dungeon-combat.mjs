@@ -54,20 +54,27 @@ function partyActorIds() {
 }
 
 /** Every token on `scene` carrying `flagKey === flagValue`, plus every
- * current party token — excluding cover items (#96/#146). Cover-item
- * tokens carry the exact same `dungeonSlot`/`encounterId` flag monster
- * tokens do (so `resolveCombat`'s own cleanup can find and delete them
- * alongside an encounter's monsters), which without this exclusion made
- * them match here too: an inert, action-less hazard Actor got a real
- * Combatant, defaulting to `agentControlled: true` and showing up in
- * initiative — see `coverItemTokensForCombat`'s docblock below, which
- * already documented "cover items are never Combatants" as the intended
- * behavior this flag collision was silently violating. */
+ * current party token — excluding cover items (#96/#146) and trap hazards
+ * (#135), neither of which ever takes a turn. Cover-item tokens carry the
+ * exact same `dungeonSlot`/`encounterId` flag monster tokens do (so
+ * `resolveCombat`'s own cleanup can find and delete them alongside an
+ * encounter's monsters), which without this exclusion made them match here
+ * too: an inert, action-less hazard Actor got a real Combatant, defaulting
+ * to `agentControlled: true` and showing up in initiative — see
+ * `coverItemTokensForCombat`'s docblock below, which already documented
+ * "cover items are never Combatants" as the intended behavior this flag
+ * collision was silently violating. A trap hazard's own `dungeonSlot` flag
+ * (`dungeon-scene.mjs`'s `populateSlotTrap`) is never actually reached by
+ * this filter in practice — a `puzzle_or_trap` room never starts a Combat
+ * at all — but excluding it here anyway costs nothing and closes off the
+ * exact same class of bug before it can ever recur for a hazard actor that,
+ * like a cover item, should never take a turn either. */
 function combatantTokens(scene, flagKey, flagValue) {
   const monsterTokens = scene.tokens.filter(
     (t) =>
       t.getFlag(MODULE_ID, flagKey) === flagValue &&
-      !t.getFlag(MODULE_ID, "coverItem"),
+      !t.getFlag(MODULE_ID, "coverItem") &&
+      !t.getFlag(MODULE_ID, "trapHazard"),
   );
   const partyIds = partyActorIds();
   const partyTokens = scene.tokens.filter((t) => partyIds.has(t.actor?.id));
@@ -596,7 +603,8 @@ function isChainSpellInScope(spell) {
   if (system.area != null) return false;
   const targetValue = system.target?.value ?? "";
   if (!/^1\s+creature/i.test(targetValue)) return false;
-  if (!/plus/i.test(targetValue) || !/additional/i.test(targetValue)) return false;
+  if (!/plus/i.test(targetValue) || !/additional/i.test(targetValue))
+    return false;
   if (!system.defense?.save?.statistic) return false;
   if (!Object.keys(system.damage ?? {}).length) return false;
   if (!/^[123]$/.test(system.time?.value ?? "")) return false;
@@ -650,7 +658,12 @@ function getAbilityRecharge(combat, combatantId, itemSlug) {
  * called right after a breath weapon is used. An ability with no
  * `rechargeFormula` at all (parsed as `null`) is never recorded and stays
  * always-available. */
-async function setAbilityRecharge(combat, combatantId, itemSlug, rechargeFormula) {
+async function setAbilityRecharge(
+  combat,
+  combatantId,
+  itemSlug,
+  rechargeFormula,
+) {
   if (!rechargeFormula) return;
   const roll = await new Roll(rechargeFormula).evaluate();
   const stored = combat.getFlag(MODULE_ID, "abilityRecharge") ?? {};
@@ -699,7 +712,12 @@ function tokenCenter(token, gridSize) {
   };
 }
 
-async function computeConePlacements(combat, casterToken, rawOpponents, distanceFeet) {
+async function computeConePlacements(
+  combat,
+  casterToken,
+  rawOpponents,
+  distanceFeet,
+) {
   const scene = combat.scene;
   if (!scene || game.scenes.viewed?.id !== scene.id) return [];
   const gridSize = scene.grid?.size ?? 100;
@@ -729,15 +747,21 @@ async function computeConePlacements(combat, casterToken, rawOpponents, distance
   try {
     return created.map((templateDoc, i) => {
       const canvasObject = canvas.templates?.get(templateDoc.id);
-      if (canvasObject && !canvasObject.shape && typeof canvasObject._computeShape === "function") {
+      if (
+        canvasObject &&
+        !canvasObject.shape &&
+        typeof canvasObject._computeShape === "function"
+      ) {
         canvasObject.shape = canvasObject._computeShape();
       }
       const shape = canvasObject?.shape ?? null;
       const affected = shape
-        ? rawOpponents.filter((o) => {
-            const center = tokenCenter(o.token, gridSize);
-            return shape.contains(center.x - origin.x, center.y - origin.y);
-          }).map((o) => ({ id: o.id, name: o.name }))
+        ? rawOpponents
+            .filter((o) => {
+              const center = tokenCenter(o.token, gridSize);
+              return shape.contains(center.x - origin.x, center.y - origin.y);
+            })
+            .map((o) => ({ id: o.id, name: o.name }))
         : [];
       return { centerType: "opponent", centerId: rawOpponents[i].id, affected };
     });
@@ -1418,7 +1442,11 @@ export async function getPendingAgentTurn(combat) {
               .map((to) => ({
                 id: to.id,
                 name: to.name,
-                distanceSquares: chebyshevSquares(from.token, to.token, gridSize),
+                distanceSquares: chebyshevSquares(
+                  from.token,
+                  to.token,
+                  gridSize,
+                ),
               }))
               .filter((o) => o.distanceSquares <= hopDistanceSquares);
           }
@@ -1442,7 +1470,9 @@ export async function getPendingAgentTurn(combat) {
     if (!isBreathWeaponInScope(item)) continue;
     const slug = actionItemSlug(item);
     if (!isAbilityRecharged(combat, combatant.id, slug)) continue;
-    const effect = parseBreathWeaponEffect(item.system.description?.value ?? "");
+    const effect = parseBreathWeaponEffect(
+      item.system.description?.value ?? "",
+    );
     const placements = await computeConePlacements(
       combat,
       combatant.token,
@@ -1862,7 +1892,13 @@ async function castDebuffSpellAndApplyCondition(
  * `castAreaSpellAndApplySaves` uses. A small, disclosed deviation from
  * strict rules text in favor of correctness.
  */
-async function castChainSpellAndApplySaves(combatant, orderedTargets, spellId, entryId, save) {
+async function castChainSpellAndApplySaves(
+  combatant,
+  orderedTargets,
+  spellId,
+  entryId,
+  save,
+) {
   const entry = combatant.actor?.spellcasting?.contents?.find(
     (e) => e.id === entryId,
   );
