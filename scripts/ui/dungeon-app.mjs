@@ -150,7 +150,12 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // physicalSlotByRoomId at all — it predates the shape this app now
     // assumes, and there's no real geometry behind it to resume. Rather than
     // crash on every render, clear it and let the GM start fresh.
-    if (state && !state.physicalSlotByRoomId) {
+    // #109: gated on game.user.isGM, not just "some state exists" — a
+    // read-only broadcast viewer's render must never delete the run entry
+    // for everyone. This legacy-migration path only ever needs to run once,
+    // for a GM, since every run createRun produces today always carries
+    // physicalSlotByRoomId already.
+    if (state && !state.physicalSlotByRoomId && game.user.isGM) {
       await abandonRun({ sceneId });
       ui.notifications.info(
         game.i18n.localize("DOMMT.Dungeon.StaleRunCleared"),
@@ -222,17 +227,28 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       currentRoom?.kind === "skill_challenge" && !currentRoomResolved;
     let challenge = null;
     if (isSkillChallenge) {
-      const partyMembers = (game.actors?.party?.members ?? []).filter(
-        (m) => m.type === "character",
-      );
-      const ensured = await ensureSkillChallenge(sceneId, currentRoom.id, {
-        seed: state.seed,
-        locationTag: currentRoom.locationTag,
-        partySize: partyMembers.length,
-      });
-      const raw = ensured?.rooms.find(
-        (r) => r.id === currentRoom.id,
-      )?.challenge;
+      // #109: ensureSkillChallenge is a dungeon-runner.mjs WRITE (it
+      // persists) — only the acting (interactive) client may lazily attach
+      // a fresh challenge. Every other render (a read-only broadcast
+      // viewer, or a host who's lost control because a GM connected) must
+      // just read whatever's already persisted on the room, without
+      // writing anything: `raw` stays whatever the last interactive
+      // render already saved, or undefined until that happens, in which
+      // case `challenge` below stays null and the template's existing
+      // null-handling applies until the next re-render picks up the
+      // host's own write.
+      let raw = currentRoom.challenge;
+      if (interactive) {
+        const partyMembers = (game.actors?.party?.members ?? []).filter(
+          (m) => m.type === "character",
+        );
+        const ensured = await ensureSkillChallenge(sceneId, currentRoom.id, {
+          seed: state.seed,
+          locationTag: currentRoom.locationTag,
+          partySize: partyMembers.length,
+        });
+        raw = ensured?.rooms.find((r) => r.id === currentRoom.id)?.challenge;
+      }
       if (raw) {
         challenge = {
           vp: raw.vp,
@@ -355,13 +371,26 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // not the real enforcement — each mutating action handler below
     // re-checks canActOnDungeon itself.
     if (context.hasRun && !context.interactive) {
-      this.element.querySelectorAll("footer button[data-action]").forEach((btn) => {
+      // Not just `footer button[data-action]` — the skill-challenge
+      // (#onAttemptSkillChallenge) and narrative (#onContinueNarrative)
+      // action buttons live inside their own <form>, not the footer.
+      this.element.querySelectorAll("button[data-action]").forEach((btn) => {
         if (btn.dataset.action !== "hide") btn.disabled = true;
       });
     }
   }
 
   static async #onStart() {
+    // #109: openDungeon()/decideOpenDungeon only checked this at the moment
+    // the setup dialog was opened — a GM could connect in the window
+    // between that and this click. Re-check right here so a GM regaining
+    // exclusive control takes effect immediately, not just for the next
+    // open attempt.
+    if (!game.user.isGM && game.users.some((u) => u.isGM && u.active)) {
+      ui.notifications.warn(game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"));
+      return;
+    }
+
     const form = this.element.querySelector("form");
     const roomCount = Math.max(
       2,
