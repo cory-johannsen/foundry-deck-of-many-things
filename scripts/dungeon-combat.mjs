@@ -422,6 +422,60 @@ function chebyshevSquares(a, b, gridSize) {
   return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) / gridSize;
 }
 
+/**
+ * The nearest hazardous Region to `token`, within 1 square (the only
+ * distance `buildMovementCandidates`'s own `hazard.distanceSquares <= 1`
+ * check ever cares about — #103), or `null` if none is that close. A
+ * hazard is any Region on the scene carrying this module's own
+ * `hazardous` flag (per live discussion — GM-placed, deliberate, no
+ * attempt to infer danger from PF2e's built-in terrain-flavor or
+ * movement-cost region behaviors, which don't reliably signal "worth
+ * repositioning away from" on their own: mirrors this module's existing
+ * `coverItem`/`trapHazard` token-flag convention, just on a Region
+ * instead of a Token). Tests the combatant's own cell first, then its 8
+ * Chebyshev-adjacent cells, each at cell *center* (confirmed live
+ * `Region#testPoint` needs `{x, y, elevation}` bundled into one point
+ * object — passing `elevation` as a second argument, the naive reading of
+ * the method's own name, silently returns `false` for every point, a real
+ * footgun caught live before it shipped). Returns the matching cell's own
+ * top-left corner (`x`, `y`) — the same convention every real token's own
+ * position already uses — not its center, since `applyAgentDecision`
+ * feeds this straight back into `tokenCell` (a plain `pixel / gridSize`
+ * round) to build a synthetic retreat-from target: a center point doesn't
+ * round-trip through that to the intended cell, a real off-by-one caught
+ * live before it shipped. Recomputed fresh at execution time rather than
+ * threaded through the candidate, matching every other tier-resolving
+ * function in this file's convention.
+ */
+function nearestHazardousRegionPoint(scene, token, gridSize) {
+  const hazardRegions = (scene?.regions ?? []).filter((r) =>
+    r.getFlag(MODULE_ID, "hazardous"),
+  );
+  if (!hazardRegions.length) return null;
+  const elevation = token.elevation ?? 0;
+  const gx0 = Math.round(token.x / gridSize);
+  const gy0 = Math.round(token.y / gridSize);
+  for (let dist = 0; dist <= 1; dist++) {
+    for (let dgy = -dist; dgy <= dist; dgy++) {
+      for (let dgx = -dist; dgx <= dist; dgx++) {
+        if (Math.max(Math.abs(dgx), Math.abs(dgy)) !== dist) continue;
+        const gx = gx0 + dgx;
+        const gy = gy0 + dgy;
+        const testX = gx * gridSize + gridSize / 2;
+        const testY = gy * gridSize + gridSize / 2;
+        if (
+          hazardRegions.some((r) =>
+            r.testPoint({ x: testX, y: testY, elevation }),
+          )
+        ) {
+          return { distanceSquares: dist, x: gx * gridSize, y: gy * gridSize };
+        }
+      }
+    }
+  }
+  return null;
+}
+
 /** Reach for one ready action, in squares — a `reach-N` trait (N in feet)
  * takes priority; otherwise a ranged action's own range increment (feet);
  * otherwise plain melee reach. Confirmed live during planning: a PF2e
@@ -1241,7 +1295,12 @@ function movementBlockedEdges(combat) {
  * shouldn't cancel the retreat outright, just shorten it). `speedSquares`
  * bounds how far a retreat goal is projected; how much of the returned path
  * is actually walked is still the caller's own speed clamp. Returns `null`
- * if no path exists at all.
+ * if no path exists at all. `reposition` (#103, hazard avoidance) shares
+ * this exact "project directly away" branch with `retreat` — mechanically
+ * identical (move away from a point), just away from a hazard's own
+ * position instead of an opponent's, kept as its own `posture` value
+ * upstream in `buildMovementCandidates`'s candidate data purely for a
+ * distinct summary/intent, not a different movement algorithm.
  */
 function posturePath(
   start,
@@ -1251,7 +1310,7 @@ function posturePath(
   isBlocked,
   bounds,
 ) {
-  if (posture !== "retreat")
+  if (posture !== "retreat" && posture !== "reposition")
     return findPath(start, targetCell, isBlocked, bounds);
 
   const dx = Math.sign(start.gx - targetCell.gx) || 1;
@@ -2167,7 +2226,7 @@ export async function getPendingAgentTurn(combat) {
     readyAutoHitAreaSpells,
     allies,
     turnState,
-    hazard: null,
+    hazard: nearestHazardousRegionPoint(combat.scene, combatant.token, gridSize),
     hasRangedOrReach,
   });
   return {
@@ -3186,11 +3245,27 @@ export async function applyAgentDecision(
   const combatant = combat.combatant;
   await postAgentDecisionChat(combatant, candidate, rationale);
   if (candidate.type === "stride") {
-    const target = candidate.targetId
+    let target = candidate.targetId
       ? combatantOpponents(combat, combatant).find(
           (c) => c.id === candidate.targetId,
         )
       : null;
+    if (candidate.posture === "reposition") {
+      // No real combatant to look up (#103) - a synthetic target whose
+      // only job is to give strideByPosture/posturePath an {x, y} to
+      // project away from. Re-resolved fresh here rather than trusting
+      // stale position data off the candidate, matching every other
+      // tier-resolving function in this file's "re-resolve at execution
+      // time" convention - the hazard (or the combatant) may have moved
+      // between candidate generation and this decision being applied.
+      const gridSize = combat.scene?.grid?.size ?? 100;
+      const hazard = nearestHazardousRegionPoint(
+        combat.scene,
+        combatant.token,
+        gridSize,
+      );
+      target = hazard ? { token: { x: hazard.x, y: hazard.y } } : null;
+    }
     await strideByPosture(combat, combatant, candidate.posture, target);
   } else if (candidate.type === "strike") {
     const target = combatantOpponents(combat, combatant).find(
