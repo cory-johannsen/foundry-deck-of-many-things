@@ -15,34 +15,50 @@
  * see dungeon-layout.mjs for why that needs no reindexing even when a Ruin
  * or Reward inserts or removes a room from the sequence.
  */
-import { buildRoomSequence, findOutcomeTemplate, resolveRoomOutcome, applySequenceMutation } from './dungeon-deck.mjs';
+import {
+  buildRoomSequence,
+  findOutcomeTemplate,
+  resolveRoomOutcome,
+  applySequenceMutation,
+} from "./dungeon-deck.mjs";
 
-const MODULE_ID = 'deck-of-many-more-things';
+const MODULE_ID = "deck-of-many-more-things";
 
 function defaultSettingsRef() {
   return {
     get: (...args) => game.settings.get(...args),
-    set: (...args) => game.settings.set(...args)
+    set: (...args) => game.settings.set(...args),
   };
 }
 
 async function persist(sceneId, state, settingsRef) {
-  const all = settingsRef.get(MODULE_ID, 'dungeonRuns') ?? {};
-  await settingsRef.set(MODULE_ID, 'dungeonRuns', { ...all, [sceneId]: state });
+  const all = settingsRef.get(MODULE_ID, "dungeonRuns") ?? {};
+  await settingsRef.set(MODULE_ID, "dungeonRuns", { ...all, [sceneId]: state });
   return state;
 }
 
 /** The dungeon run for this scene, or null if none has been started. */
-export function getRunState(sceneId, { settingsRef = defaultSettingsRef() } = {}) {
-  const all = settingsRef.get(MODULE_ID, 'dungeonRuns') ?? {};
+export function getRunState(
+  sceneId,
+  { settingsRef = defaultSettingsRef() } = {},
+) {
+  const all = settingsRef.get(MODULE_ID, "dungeonRuns") ?? {};
   return all[sceneId] ?? null;
 }
 
 export async function createRun(
-  { sceneId, roomCount, traits = [], excludeTraits = [], seed = null, previousSceneId = null },
-  { settingsRef = defaultSettingsRef(), setpieceIds = [] } = {}
+  {
+    sceneId,
+    roomCount,
+    traits = [],
+    excludeTraits = [],
+    seed = null,
+    previousSceneId = null,
+  },
+  { settingsRef = defaultSettingsRef(), setpieceIds = [] } = {},
 ) {
-  const runSeed = seed ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const runSeed =
+    seed ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const rooms = buildRoomSequence({ seed: runSeed, roomCount, setpieceIds });
   // Room 0 is where the party starts — built and occupied at Start, before
   // any resolution happens, so it's the only slot normally assigned up
@@ -52,7 +68,7 @@ export async function createRun(
   // here rather than waiting on a markRoomOutcome call that will never come.
   const physicalSlotByRoomId = { [rooms[0].id]: 0 };
   let nextPhysicalSlot = 1;
-  if (rooms[0].kind === 'safe_entry' && rooms[1]) {
+  if (rooms[0].kind === "safe_entry" && rooms[1]) {
     physicalSlotByRoomId[rooms[1].id] = 1;
     nextPhysicalSlot = 2;
   }
@@ -71,7 +87,7 @@ export async function createRun(
     // The scene the party was viewing right before this run started (ITEM-18)
     // — where to send them back to if the run is later cancelled. Null if
     // they started with no scene active at all.
-    previousSceneId
+    previousSceneId,
   };
   return persist(sceneId, state, settingsRef);
 }
@@ -92,14 +108,42 @@ export async function createRun(
  */
 export async function markRoomOutcome(
   { sceneId, succeeded },
-  { settingsRef = defaultSettingsRef(), setpieceIds = [] } = {}
+  { settingsRef = defaultSettingsRef(), setpieceIds = [] } = {},
 ) {
   const state = getRunState(sceneId, { settingsRef });
   if (!state || state.completed) {
-    return { state, effectKey: null, mutation: null, nextRoomId: null, nextPhysicalSlot: null };
+    return {
+      state,
+      effectKey: null,
+      mutation: null,
+      nextRoomId: null,
+      nextPhysicalSlot: null,
+    };
   }
 
   const room = state.rooms[state.currentIndex];
+  // #152 investigation: resolving a room never moves currentIndex (see this
+  // file's own docblock) — only actually walking into the next one does, via
+  // advanceToRoom. That means the Succeed/Fail/Declare Victory/Declare Defeat
+  // button stays live and pointed at the same "current" room for the entire
+  // window between resolving it and the party physically opening the next
+  // room's reveal door, with no disabling/debounce on those buttons
+  // (ui/dungeon-app.mjs's #onSucceed etc.). A double-click (or a slow click
+  // registering twice before the first await resolves and re-renders) would
+  // resolve the same room's outcome a second time — reapplying its reward/
+  // ruin mutation and re-running buildPopulateAndUnlockRoom for whatever
+  // comes next a second time (duplicate walls, a second set of monsters).
+  // Guarded here, once, at the single place every resolution path funnels
+  // through, rather than patching each caller's button individually.
+  if (state.history.some((h) => h.roomId === room.id)) {
+    return {
+      state,
+      effectKey: null,
+      mutation: null,
+      nextRoomId: null,
+      nextPhysicalSlot: null,
+    };
+  }
   // The entry (see buildRoomSequence) has no outcome slot and nothing to
   // resolve; its own transition happens automatically (createRun/
   // dungeon-app.mjs's Start flow), never through here. Guard rather than
@@ -108,34 +152,55 @@ export async function markRoomOutcome(
   // unlike the entry it IS reached through the normal door-reveal flow, so
   // it falls through below instead of returning here — see the `safe_rest`
   // branch just past this guard.
-  if (!room.isGoal && room.outcomeSlotId == null && room.kind !== 'safe_rest') {
-    return { state, effectKey: null, mutation: null, nextRoomId: null, nextPhysicalSlot: null };
+  if (!room.isGoal && room.outcomeSlotId == null && room.kind !== "safe_rest") {
+    return {
+      state,
+      effectKey: null,
+      mutation: null,
+      nextRoomId: null,
+      nextPhysicalSlot: null,
+    };
   }
 
   const base = {
     roomId: room.id,
     kind: room.kind,
-    outcome: succeeded ? 'succeeded' : 'failed',
-    resolvedAt: Date.now()
+    outcome: succeeded ? "succeeded" : "failed",
+    resolvedAt: Date.now(),
   };
 
   if (room.isGoal) {
-    const effectKey = succeeded ? 'goal_cleared' : 'goal_failed';
-    const newState = { ...state, completed: true, history: [...state.history, { ...base, effectKey }] };
+    const effectKey = succeeded ? "goal_cleared" : "goal_failed";
+    const newState = {
+      ...state,
+      completed: true,
+      history: [...state.history, { ...base, effectKey }],
+    };
     await persist(sceneId, newState, settingsRef);
-    return { state: newState, effectKey, mutation: null, nextRoomId: null, nextPhysicalSlot: null };
+    return {
+      state: newState,
+      effectKey,
+      mutation: null,
+      nextRoomId: null,
+      nextPhysicalSlot: null,
+    };
   }
 
   // A rest room has nothing to reward or ruin — just move the sequence along
   // to whatever comes after it, same slot-assignment bookkeeping as any
   // other room (ITEM-5), rather than running findOutcomeTemplate/
   // resolveRoomOutcome against its null outcomeSlotId.
-  const { effectKey, mutation } = room.kind === 'safe_rest'
-    ? { effectKey: 'rest_room_passed', mutation: null }
-    : resolveRoomOutcome(findOutcomeTemplate(room.outcomeSlotId), succeeded);
-  const rooms = (mutation === 'remove_next' || mutation === 'insert_after')
-    ? applySequenceMutation(state.rooms, state.currentIndex, mutation, { seed: state.seed, setpieceIds })
-    : state.rooms;
+  const { effectKey, mutation } =
+    room.kind === "safe_rest"
+      ? { effectKey: "rest_room_passed", mutation: null }
+      : resolveRoomOutcome(findOutcomeTemplate(room.outcomeSlotId), succeeded);
+  const rooms =
+    mutation === "remove_next" || mutation === "insert_after"
+      ? applySequenceMutation(state.rooms, state.currentIndex, mutation, {
+          seed: state.seed,
+          setpieceIds,
+        })
+      : state.rooms;
 
   const nextRoomId = rooms[state.currentIndex + 1]?.id ?? null;
   let physicalSlotByRoomId = state.physicalSlotByRoomId;
@@ -146,7 +211,10 @@ export async function markRoomOutcome(
       assignedSlot = physicalSlotByRoomId[nextRoomId];
     } else {
       assignedSlot = nextPhysicalSlot;
-      physicalSlotByRoomId = { ...physicalSlotByRoomId, [nextRoomId]: assignedSlot };
+      physicalSlotByRoomId = {
+        ...physicalSlotByRoomId,
+        [nextRoomId]: assignedSlot,
+      };
       nextPhysicalSlot += 1;
     }
   }
@@ -156,10 +224,16 @@ export async function markRoomOutcome(
     rooms,
     physicalSlotByRoomId,
     nextPhysicalSlot,
-    history: [...state.history, { ...base, effectKey }]
+    history: [...state.history, { ...base, effectKey }],
   };
   await persist(sceneId, newState, settingsRef);
-  return { state: newState, effectKey, mutation, nextRoomId, nextPhysicalSlot: assignedSlot };
+  return {
+    state: newState,
+    effectKey,
+    mutation,
+    nextRoomId,
+    nextPhysicalSlot: assignedSlot,
+  };
 }
 
 /**
@@ -172,7 +246,7 @@ export async function markRoomOutcome(
  */
 export async function advanceToRoom(
   { sceneId, roomId, revealedTokenIds = [] },
-  { settingsRef = defaultSettingsRef() } = {}
+  { settingsRef = defaultSettingsRef() } = {},
 ) {
   const state = getRunState(sceneId, { settingsRef });
   if (!state) return { ok: false, state: null };
@@ -182,7 +256,12 @@ export async function advanceToRoom(
   const newState = {
     ...state,
     currentIndex: state.currentIndex + 1,
-    lastAutoEntry: { roomId, fromIndex: state.currentIndex, toIndex: state.currentIndex + 1, revealedTokenIds }
+    lastAutoEntry: {
+      roomId,
+      fromIndex: state.currentIndex,
+      toIndex: state.currentIndex + 1,
+      revealedTokenIds,
+    },
   };
   await persist(sceneId, newState, settingsRef);
   return { ok: true, state: newState };
@@ -199,20 +278,31 @@ export function canUndoRoomEntry(state) {
   return !state.history.some((h) => h.roomId === state.lastAutoEntry.roomId);
 }
 
-export async function undoLastRoomEntry({ sceneId }, { settingsRef = defaultSettingsRef() } = {}) {
+export async function undoLastRoomEntry(
+  { sceneId },
+  { settingsRef = defaultSettingsRef() } = {},
+) {
   const state = getRunState(sceneId, { settingsRef });
-  if (!state || !canUndoRoomEntry(state)) return { ok: false, state: state ?? null, undone: null };
+  if (!state || !canUndoRoomEntry(state))
+    return { ok: false, state: state ?? null, undone: null };
 
   const undone = state.lastAutoEntry;
-  const newState = { ...state, currentIndex: undone.fromIndex, lastAutoEntry: null };
+  const newState = {
+    ...state,
+    currentIndex: undone.fromIndex,
+    lastAutoEntry: null,
+  };
   await persist(sceneId, newState, settingsRef);
   return { ok: true, state: newState, undone };
 }
 
-export async function abandonRun({ sceneId }, { settingsRef = defaultSettingsRef() } = {}) {
-  const all = settingsRef.get(MODULE_ID, 'dungeonRuns') ?? {};
+export async function abandonRun(
+  { sceneId },
+  { settingsRef = defaultSettingsRef() } = {},
+) {
+  const all = settingsRef.get(MODULE_ID, "dungeonRuns") ?? {};
   if (!(sceneId in all)) return;
   const rest = { ...all };
   delete rest[sceneId];
-  await settingsRef.set(MODULE_ID, 'dungeonRuns', rest);
+  await settingsRef.set(MODULE_ID, "dungeonRuns", rest);
 }
