@@ -4158,5 +4158,317 @@
     "name": "Smith",
     "level": 3,
     "art": "smith.webp"
+  },
+  {
+    "id": "snapping_flytrap",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "vRAdYovWcy2euwuL",
+    "name": "Snapping Flytrap",
+    "level": 3,
+    "art": "snapping-flytrap.webp"
+  },
+  {
+    "id": "sod_hound",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "VQPzDz3xnCQGFOGL",
+    "name": "Sod Hound",
+    "level": 3,
+    "art": "sod-hound.webp"
+  },
+  {
+    "id": "spriggan_bully",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "qdlP3qTZtjzZXpmQ",
+    "name": "Spriggan Bully",
+    "level": 3,
+    "art": "spriggan-bully.webp"
+  },
+  {
+    "id": "street_skelm",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "rBHAfYDWpEuzbzqV",
+    "name": "Street Skelm",
+    "level": 3,
+    "art": "street-skelm.webp"
+  },
+  {
+    "id": "string_slime",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "r3EXyntNIazKf2gP",
+    "name": "String Slime",
+    "level": 3,
+    "art": "string-slime.webp"
+  },
+  {
+    "id": "swarm_voice",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "lpDE9fesv4uLKUQK",
+    "name": "Swarm Voice",
+    "level": 3,
+    "art": "swarm-voice.webp"
+  },
+  {
+    "id": "tonic_merchant",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "7qpH6PeW97Bjrxox",
+    "name": "Tonic Merchant",
+    "level": 3,
+    "art": "tonic-merchant.webp"
+  },
+  {
+    "id": "toymaker",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "BqRb7ESpqPEQ4rVr",
+    "name": "Toymaker",
+    "level": 3,
+    "art": "toymaker.webp"
+  },
+  {
+    "id": "tracker",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "CFBDZzfWCANLJcpF",
+    "name": "Tracker",
+    "level": 3,
+    "art": "tracker.webp"
+  },
+  {
+    "id": "trailgaunt",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "n1GmLT7b5Q579Tcf",
+    "name": "Trailgaunt",
+    "level": 3,
+    "art": "trailgaunt.webp"
+  },
+  {
+    "id": "traveling_actor",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "A8jeXP2XNUSsdXhs",
+    "name": "Traveling Actor",
+    "level": 3,
+    "art": "traveling-actor.webp"
+  },
+  {
+    "id": "trollhound",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "gTkvu3RRiDHNONzf",
+    "name": "Trollhound",
+    "level": 3,
+    "art": "trollhound.webp"
+  },
+  {
+    "id": "troubadour",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "55t4OPNXDx6fAeZd",
+    "name": "Troubadour",
+    "level": 3,
+    "art": "troubadour.webp"
+  },
+  {
+    "id": "tumbleweed_leshy_courier",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "YSAw2CrLp8WnC1M2",
+    "name": "Tumbleweed Leshy Courier",
+    "level": 3,
+    "art": "tumbleweed-leshy-courier.webp"
+  },
+  {
+    "id": "twigjack",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "9sGgANyNFCKnu06t",
+    "name": "Twigjack",
+    "level": 3,
+    "art": "twigjack.webp"
+  },
+  {
+    "id": "unicorn",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "lYoAwofYGbhWL75Q",
+    "name": "Unicorn",
+    "level": 3,
+    "art": "unicorn.webp"
+  },
+  {
+    "id": "urdefhan_warrior",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "Pmgt9aAtUiLEagD6",
+    "name": "Urdefhan Warrior",
+    "level": 3,
+    "art": "urdefhan-warrior.webp"
+  },
+  {
+    "id": "vampiric_mist",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "NQ6qRvpD9DIwVxt3",
+    "name": "Vampiric Mist",
+    "level": 3,
+    "art": "vampiric-mist.webp"
+  },
+  {
+    "id": "vermlek",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "i2fRfiIWOJeZedcx",
+    "name": "Vermlek",
+    "level": 3,
+    "art": "vermlek.webp"
+  },
+  {
+    "id": "violet_fungus",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "GsrqCDf0Dc9PisEt",
+    "name": "Violet Fungus",
+    "level": 3,
+    "art": "violet-fungus.webp"
+  },
+  {
+    "id": "watch_officer",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "thDJ5N0wUvI1JOa6",
+    "name": "Watch Officer",
+    "level": 3,
+    "art": "watch-officer.webp"
+  },
+  {
+    "id": "web_lurker",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "ZMr28tFTA5NUcBTi",
+    "name": "Web Lurker",
+    "level": 3,
+    "art": "web-lurker.webp"
+  },
+  {
+    "id": "werewolf",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "Hg7nCvltRBQOiijQ",
+    "name": "Werewolf",
+    "level": 3,
+    "art": "werewolf.webp"
+  },
+  {
+    "id": "wight",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "DBTbqI9QQRtlJwWh",
+    "name": "Wight",
+    "level": 3,
+    "art": "wight.webp"
+  },
+  {
+    "id": "winged_chupacabra",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "K0mtYv1v0J1utap1",
+    "name": "Winged Chupacabra",
+    "level": 3,
+    "art": "winged-chupacabra.webp"
+  },
+  {
+    "id": "wolliped",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "yCyZlDAaJ6cDYtB7",
+    "name": "Wolliped",
+    "level": 3,
+    "art": "wolliped.webp"
+  },
+  {
+    "id": "xulgath_leader",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "7w1w7VTnIWMBdFux",
+    "name": "Xulgath Leader",
+    "level": 3,
+    "art": "xulgath-leader.webp"
+  },
+  {
+    "id": "yeth_hound",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "6jqnHzjmJ190G8Zj",
+    "name": "Yeth Hound",
+    "level": 3,
+    "art": "yeth-hound.webp"
+  },
+  {
+    "id": "zebub",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "IE0EM4KDUbI5ZJz0",
+    "name": "Zebub",
+    "level": 3,
+    "art": "zebub.webp"
+  },
+  {
+    "id": "zephyr_hawk",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "sAfjpjAS56jtrUbi",
+    "name": "Zephyr Hawk",
+    "level": 3,
+    "art": "zephyr-hawk.webp"
+  },
+  {
+    "id": "aapoph_serpentfolk",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "X3QcYLr2rBcIsJrC",
+    "name": "Aapoph Serpentfolk",
+    "level": 3,
+    "art": "aapoph-serpentfolk.webp"
+  },
+  {
+    "id": "caligni_slayer",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "cijMuXBk8YUw2RoB",
+    "name": "Caligni Slayer",
+    "level": 3,
+    "art": "caligni-slayer.webp"
+  },
+  {
+    "id": "divoynik",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "O9CiNSi930iKgIDK",
+    "name": "Divoynik",
+    "level": 3,
+    "art": "divoynik.webp"
+  },
+  {
+    "id": "doppelganger",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "AdQVjlOWB6rmBRVp",
+    "name": "Doppelganger",
+    "level": 3,
+    "art": "doppelganger.webp"
+  },
+  {
+    "id": "pitborn_adept",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "BCPpwj9uCiS7bF9C",
+    "name": "Pitborn Adept",
+    "level": 3,
+    "art": "pitborn-adept.webp"
+  },
+  {
+    "id": "quickling",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "uQBfbNaIHdt0l2QB",
+    "name": "Quickling",
+    "level": 3,
+    "art": "quickling.webp"
+  },
+  {
+    "id": "runaway_blueblood",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "CxsBGAxeNqzp2568",
+    "name": "Runaway Blueblood",
+    "level": 3,
+    "art": "runaway-blueblood.webp"
+  },
+  {
+    "id": "shulsaga",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "O9TQjp3scKfW8SZK",
+    "name": "Shulsaga",
+    "level": 3,
+    "art": "shulsaga.webp"
+  },
+  {
+    "id": "sibyl",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "gJDjwGcTryITVTTo",
+    "name": "Sibyl",
+    "level": 3,
+    "art": "sibyl.webp"
   }
 ]
