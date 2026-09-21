@@ -7,13 +7,19 @@
  * mutation happens anywhere in this file except through
  * module.api.applyAgentDecision.
  *
+ * Trap (#136) and skill-challenge (#166) flavor customization used to live
+ * here too, calling the Anthropic API directly. #185 moved that to
+ * `mcp-server.mjs` instead, so an interactive agent session (any model, not
+ * a hardcoded API call from this background process) fulfills those —
+ * combat-turn decisions stay here because they're bounded by a mid-combat
+ * timeout an interactive session can't reliably beat.
+ *
  * Run: node tools/agent-loop/poll.mjs
  * Requires: FOUNDRY_REST_API_KEY, FOUNDRY_BASE_URL (your self-hosted relay),
- * ANTHROPIC_API_KEY — see README.md.
+ * ANTHROPIC_API_KEY (only if DOMMT_AGENT_PROVIDER=claude) — see README.md.
  */
 import { runFoundryScript, readEnvOrDotenv } from "./foundry-client.mjs";
 import { resolveProvider } from "./providers/index.mjs";
-import { customizeTrap, customizeSkillChallenge } from "./providers/claude.mjs";
 
 const POLL_INTERVAL_MS = Number(
   readEnvOrDotenv("DOMMT_POLL_INTERVAL_MS") ?? 3000,
@@ -30,79 +36,6 @@ async function getPendingTurn() {
 async function applyDecision(combatId, combatantId, candidateId, rationale) {
   return runFoundryScript(
     `return game.modules.get('${MODULE_ID}').api.applyAgentDecision(${JSON.stringify(combatId)}, ${JSON.stringify(combatantId)}, ${JSON.stringify(candidateId)}, ${JSON.stringify(rationale ?? null)});`,
-  );
-}
-
-async function getPendingTrapCustomization() {
-  return runFoundryScript(
-    `return game.modules.get('${MODULE_ID}').api.getPendingTrapCustomization();`,
-  );
-}
-
-async function applyTrapCustomizationResult(actorId, customization) {
-  return runFoundryScript(
-    `return game.modules.get('${MODULE_ID}').api.applyTrapCustomization(${JSON.stringify(actorId)}, ${JSON.stringify(customization)});`,
-  );
-}
-
-// #136: trap flavor customization is Claude-only, always — see
-// providers/claude.mjs's own docblock for why Laya structurally can't do
-// this. Independent of DOMMT_AGENT_PROVIDER's combat-decision selection: a
-// GM running the poller with Laya for combat still gets trap customization
-// if ANTHROPIC_API_KEY happens to also be configured, and simply gets none
-// (silently, no error spam) if it isn't — the same graceful "just doesn't
-// happen" fallback the whole feature already relies on for an
-// unreachable/timed-out agent (see getPendingTrapCustomization's own
-// docblock for why room reveal is never blocked on this either way).
-async function tryCustomizeTrap() {
-  if (!readEnvOrDotenv("ANTHROPIC_API_KEY")) return;
-  const pending = await getPendingTrapCustomization();
-  if (!pending) return;
-  const customization = await customizeTrap(pending, { fetchImpl: fetch });
-  await applyTrapCustomizationResult(pending.actorId, customization);
-  console.log(
-    `agent-loop: customized trap "${pending.name}" -> "${customization.name}"`,
-  );
-}
-
-async function getPendingSkillChallengeCustomization() {
-  return runFoundryScript(
-    `return game.modules.get('${MODULE_ID}').api.getPendingSkillChallengeCustomization();`,
-  );
-}
-
-async function applySkillChallengeCustomizationResult(
-  sceneId,
-  roomId,
-  customization,
-) {
-  return runFoundryScript(
-    `return game.modules.get('${MODULE_ID}').api.applySkillChallengeCustomization(${JSON.stringify(sceneId)}, ${JSON.stringify(roomId)}, ${JSON.stringify(customization)});`,
-  );
-}
-
-// #166: same Claude-only, DOMMT_AGENT_PROVIDER-independent, silently-skip-
-// without-a-key contract tryCustomizeTrap's own docblock already explains —
-// see there for why. Unlike a trap (spawned hidden, with a real window
-// before the party ever sees it), a skill-challenge room's content is
-// shown the instant the room becomes current — this can't land before the
-// party's first look at it, only update it in place on a later re-render
-// if it's still there (see dungeon-runner.mjs's ensureSkillChallenge for
-// that trade-off's own reasoning).
-async function tryCustomizeSkillChallenge() {
-  if (!readEnvOrDotenv("ANTHROPIC_API_KEY")) return;
-  const pending = await getPendingSkillChallengeCustomization();
-  if (!pending) return;
-  const customization = await customizeSkillChallenge(pending, {
-    fetchImpl: fetch,
-  });
-  await applySkillChallengeCustomizationResult(
-    pending.sceneId,
-    pending.roomId,
-    customization,
-  );
-  console.log(
-    `agent-loop: customized skill challenge "${pending.name}" -> "${customization.name}"`,
   );
 }
 
@@ -200,26 +133,6 @@ async function main() {
     } catch (err) {
       cycleOk = false;
       console.error("agent-loop: poll cycle failed, will retry:", err.message);
-    }
-    // Best-effort and independent of combat-turn polling above — a failure
-    // here (a bad ANTHROPIC_API_KEY, say) doesn't count toward #115's
-    // consecutive-relay-failure tracking, since it says nothing about
-    // whether the relay connection itself is healthy.
-    try {
-      await tryCustomizeTrap();
-    } catch (err) {
-      console.error(
-        "agent-loop: trap customization failed, will retry next cycle:",
-        err.message,
-      );
-    }
-    try {
-      await tryCustomizeSkillChallenge();
-    } catch (err) {
-      console.error(
-        "agent-loop: skill challenge customization failed, will retry next cycle:",
-        err.message,
-      );
     }
     noteCycleOutcome(cycleOk);
     await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
