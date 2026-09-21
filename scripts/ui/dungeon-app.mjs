@@ -8,10 +8,13 @@ import {
   ensureSkillChallenge,
   recordSkillChallengeAttempt,
   setObjective,
+  ensurePuzzleState,
+  recordPuzzleStageAttempt,
 } from "../dungeon-runner.mjs";
 import { depthBiasFor, lootGpForTreasureRoom } from "../dungeon-deck.mjs";
 import { makeFoundryApi } from "../foundry-api.mjs";
 import { rollSkillChallengeAttempt } from "../skill-challenge.mjs";
+import { rollPuzzleStageAttempt } from "../puzzle.mjs";
 import {
   ALL_SKILLS,
   dcForAttempt,
@@ -79,8 +82,14 @@ const UNCOUNTED_ROOM_KINDS = new Set(["safe_entry", "safe_rest"]);
  * text), not the label itself, so this always needs the extra localize
  * step. Falls back to the bare slug for a key PF2e's own config doesn't
  * carry (shouldn't happen for anything out of `ALL_SKILLS`, which was
- * itself confirmed live to match `CONFIG.PF2E.skills`'s own keys exactly). */
+ * itself confirmed live to match `CONFIG.PF2E.skills`'s own keys exactly)
+ * — except `"perception"` (#137's own puzzle stages can use it, unlike
+ * `ALL_SKILLS`, which excludes it): confirmed live it has no entry in
+ * `CONFIG.PF2E.skills` at all (it's not a "skill" in PF2e's own model),
+ * resolved instead via the same `"PF2E.PerceptionLabel"` key the system's
+ * own UI uses for it. */
 function skillLabel(slug) {
+  if (slug === "perception") return game.i18n.localize("PF2E.PerceptionLabel");
   const key = CONFIG.PF2E?.skills?.[slug]?.label;
   return key ? game.i18n.localize(key) : slug;
 }
@@ -136,6 +145,7 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       openCombatTracker: DungeonApp.#onOpenCombatTracker,
       hide: DungeonApp.#onHide,
       attemptSkillChallenge: DungeonApp.#onAttemptSkillChallenge,
+      attemptPuzzleStage: DungeonApp.#onAttemptPuzzleStage,
       continueNarrative: DungeonApp.#onContinueNarrative,
       claimTreasure: DungeonApp.#onClaimTreasure,
     },
@@ -264,6 +274,50 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       }
     }
 
+    // #137: a puzzle_or_trap room whose resolved setpiece is puzzle-kind
+    // uses its own hint-check UI instead of the plain Succeed/Fail
+    // buttons — fully auto-resolving (per live discussion), so there's no
+    // GM judgment step the way the plain buttons need; resolveCurrentRoom
+    // is still what actually advances the room, called automatically once
+    // ensurePuzzleState/recordPuzzleStageAttempt's own reducer sets
+    // `resolved`, the same "only once resolved" gating #onAttemptSkillChallenge
+    // already uses.
+    const isPuzzleRoom =
+      currentRoom?.kind === "puzzle_or_trap" &&
+      setpiece?.kind === "puzzle" &&
+      !currentRoomResolved;
+    let puzzle = null;
+    if (isPuzzleRoom) {
+      const ensured = await ensurePuzzleState(sceneId, currentRoom.id, {
+        hintChecks: setpiece.hintChecks,
+        requiredSuccesses: setpiece.requiredSuccesses ?? null,
+      });
+      const raw = ensured?.rooms.find((r) => r.id === currentRoom.id)?.puzzle;
+      if (raw) {
+        puzzle = {
+          summary: setpiece.summary ?? null,
+          requiredSuccesses: raw.requiredSuccesses,
+          successes: raw.successes,
+          resolved: raw.resolved,
+          // Narrative payoff shown once solved, never during play — #137's
+          // own live-discussed model has no GM judgment step reading this
+          // as "the correct answer" the way the source book's puzzle text
+          // implies; it's flavor color for the reveal, not a check.
+          solution:
+            raw.resolved === "success" ? (setpiece.solution ?? null) : null,
+          stages: raw.stages.map((s, i) => ({
+            index: i,
+            skill: s.skill,
+            skillLabel: skillLabel(s.skill),
+            dc: s.dc,
+            attempted: s.attempted,
+            succeeded: s.succeeded,
+            hint: s.succeeded ? s.hint : null,
+          })),
+        };
+      }
+    }
+
     // #163: a narrative room is never succeeded/failed the way every other
     // resolvable room kind is — it's not a check or a fight, so it always
     // resolves as succeeded (still running the room's own Reward-side
@@ -319,6 +373,10 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       // still uses.
       isSkillChallenge,
       challenge,
+      // #137: a puzzle room uses its own hint-check UI instead of the
+      // plain Succeed/Fail buttons.
+      isPuzzleRoom,
+      puzzle,
       // #163: a narrative room's own "direction for the rest of the run" —
       // run-wide, not per-room, so it's shown here regardless of which
       // room kind is actually current, the same way it persists in
@@ -477,6 +535,51 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     );
     const resolved = newState?.rooms.find((r) => r.id === currentRoom.id)
       ?.challenge?.resolved;
+    if (resolved) await resolveCurrentRoom(resolved === "success");
+    this.render();
+  }
+
+  /**
+   * Rolls the selected actor against one puzzle stage's own fixed
+   * skill/DC (#137 — unlike a skill challenge, a stage's skill isn't the
+   * player's choice), records the attempt, and — only once the puzzle
+   * actually resolves (auto-resolving, no GM judgment step) — hands off
+   * to `resolveCurrentRoom`, the same "only once resolved" gating
+   * `#onAttemptSkillChallenge` already uses. `target` is the clicked
+   * button (Foundry's own ApplicationV2 action-handler signature); its
+   * own `data-stage-index` says which stage's form to read the chosen
+   * actor from. A no-op if the stage doesn't exist, was already
+   * attempted, or the form has no actor selected.
+   */
+  static async #onAttemptPuzzleStage(event, target) {
+    const scene = canvas?.scene;
+    const sceneId = scene?.id;
+    const state = sceneId ? getRunState(sceneId) : null;
+    const currentRoom = state?.rooms[state.currentIndex];
+    if (!currentRoom?.puzzle) return;
+
+    const stageIndex = Number(target?.dataset?.stageIndex);
+    const stage = currentRoom.puzzle.stages[stageIndex];
+    if (!stage || stage.attempted) return;
+
+    const form = this.element.querySelector(
+      `.dommt-dungeon__puzzle-stage-form[data-stage-index="${stageIndex}"]`,
+    );
+    const actorId = form?.querySelector('[name="actorId"]')?.value;
+    const actor = actorId ? game.actors.get(actorId) : null;
+    if (!actor) return;
+
+    const result = await rollPuzzleStageAttempt(actor, stage.skill, stage.dc);
+    if (!result) return;
+
+    const newState = await recordPuzzleStageAttempt(
+      sceneId,
+      currentRoom.id,
+      stageIndex,
+      result.outcome,
+    );
+    const resolved = newState?.rooms.find((r) => r.id === currentRoom.id)
+      ?.puzzle?.resolved;
     if (resolved) await resolveCurrentRoom(resolved === "success");
     this.render();
   }

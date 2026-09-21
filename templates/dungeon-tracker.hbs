@@ -177,6 +177,59 @@
                   }}</button>
               </footer>
             </div>
+          {{else if isPuzzleRoom}}
+            <div class="dommt-dungeon__puzzle">
+              {{#if puzzle.summary}}
+                <p>{{puzzle.summary}}</p>
+              {{/if}}
+              <p>{{localize
+                  "DOMMT.Dungeon.Puzzle.Progress"
+                  successes=puzzle.successes
+                  target=puzzle.requiredSuccesses
+                }}</p>
+              <ul class="dommt-dungeon__puzzle-stages">
+                {{#each puzzle.stages}}
+                  <li>
+                    {{#if this.attempted}}
+                      {{#if this.succeeded}}
+                        <strong>{{this.skillLabel}}</strong>
+                        — {{this.hint}}
+                      {{else}}
+                        <span class="hint">{{localize
+                            "DOMMT.Dungeon.Puzzle.StageFailed"
+                            skill=this.skillLabel
+                          }}</span>
+                      {{/if}}
+                    {{else}}
+                      <form
+                        class="dommt-dungeon__puzzle-stage-form"
+                        data-stage-index="{{this.index}}"
+                      >
+                        <label>
+                          {{localize
+                            "DOMMT.Dungeon.Puzzle.StageLabel"
+                            skill=this.skillLabel
+                          }}
+                          <select name="actorId">
+                            {{#each ../partyMembers}}
+                              <option value="{{this.id}}">{{this.name}}</option>
+                            {{/each}}
+                          </select>
+                        </label>
+                        <button
+                          type="button"
+                          data-action="attemptPuzzleStage"
+                          data-stage-index="{{this.index}}"
+                        >{{localize "DOMMT.Dungeon.Puzzle.AttemptButton"}}</button>
+                      </form>
+                    {{/if}}
+                  </li>
+                {{/each}}
+              </ul>
+              {{#if puzzle.solution}}
+                <p class="dommt-dungeon__puzzle-solution">{{puzzle.solution}}</p>
+              {{/if}}
+            </div>
           {{else}}
             {{#unless currentRoomResolved}}
               <footer>

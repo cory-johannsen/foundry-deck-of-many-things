@@ -725,10 +725,14 @@ export async function buildPopulateAndUnlockRoom(
     // over every dungeon-setpieces.json id, room.kind itself staying the
     // generic 'puzzle_or_trap' bucket either way — only the resolved
     // setpiece's own `kind` field, looked up here, says which one this
-    // occurrence actually is. A puzzle setpiece's flavor text is still all
-    // the room ever gets (#137-139's own scope, not touched here); a trap
-    // setpiece additionally gets a real, mechanically-functional hazard
-    // spawned from pf2e.hazards for #134's engine to run.
+    // occurrence actually is. Nothing needs to happen at populate time for
+    // a puzzle setpiece, though — unlike a trap's hidden hazard actor
+    // (spawned right here, below), #137's puzzle mechanics lazily attach
+    // themselves (`ensurePuzzleState`) the first time the room actually
+    // renders in dungeon-app.mjs, the same "no populate-time hook needed"
+    // shape skill_challenge rooms already use. A trap setpiece additionally
+    // gets a real, mechanically-functional hazard spawned from pf2e.hazards
+    // for #134's engine to run.
     if (room.kind === "puzzle_or_trap" && room.setpieceId) {
       const setpieces = await loadDungeonSetpieces();
       const setpiece = setpieces.find((s) => s.id === room.setpieceId);
