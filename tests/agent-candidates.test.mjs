@@ -9,6 +9,7 @@ import {
   parseChainHopDistance, buildChainSpellCandidates,
   buildHealSpellCandidates,
   parseSpellEffectUuid, buildBuffSpellCandidates,
+  parseReactiveStrikeWeaponRestriction,
   parseAreaSpellTierOverrides, buildTierScalingAreaSpellCandidates, endTurnCandidate,
   parseActionGlyphTiers, buildDualNatureSpellCandidates,
   parseTargetCountFormula, buildTargetCountSpellCandidates,
@@ -852,6 +853,24 @@ describe('parseSpellEffectUuid', () => {
   it('returns null for a UUID from an unrelated compendium', () => {
     const description = '<p>@UUID[Compendium.pf2e.conditionitems.Item.abc123]{Frightened 1}</p>';
     expect(parseSpellEffectUuid(description)).toBeNull();
+  });
+});
+
+describe('parseReactiveStrikeWeaponRestriction', () => {
+  it('parses a real "(X Only)" weapon restriction (Attack of Opportunity-shaped)', () => {
+    expect(parseReactiveStrikeWeaponRestriction('Attack of Opportunity (Jaws Only)')).toBe('jaws');
+  });
+
+  it('parses a real "(X Only)" weapon restriction (Reactive Strike-shaped)', () => {
+    expect(parseReactiveStrikeWeaponRestriction('Reactive Strike (Tail Only)')).toBe('tail');
+  });
+
+  it('returns null for a plain, unrestricted name', () => {
+    expect(parseReactiveStrikeWeaponRestriction('Reactive Strike')).toBeNull();
+  });
+
+  it('returns null for a non-weapon qualifier (Special-shaped, not a restriction)', () => {
+    expect(parseReactiveStrikeWeaponRestriction('Attack of Opportunity (Special)')).toBeNull();
   });
 });
 

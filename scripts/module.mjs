@@ -47,6 +47,7 @@ import {
   applyAgentDecision,
   toggleAgentControlled,
   agentLoopStatus,
+  handleRangedAttackForReactiveStrike,
 } from "./dungeon-combat.mjs";
 import {
   getPendingTrapCustomization,
@@ -562,6 +563,13 @@ Hooks.on("updateCombat", (combat, changes) => {
   if (changes.turn === undefined && changes.round === undefined) return;
   autoPlayCombatantTurnIfDue(combat);
 });
+
+// #202: reactive/triggered NPC abilities — the ranged-Strike-triggered
+// slice of Reactive Strike/Attack of Opportunity, the one trigger
+// confirmed cleanly detectable via a chat-message hook. Fires on every
+// chat message; the handler itself does the real filtering (attack-roll
+// type, ranged option, GM-only, this module's own managed combats only).
+Hooks.on("createChatMessage", handleRangedAttackForReactiveStrike);
 
 Hooks.on("getSceneControlButtons", (controls) => {
   const tokenControl =

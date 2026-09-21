@@ -34,6 +34,7 @@ import {
   parseTargetCountFormula,
   parseAutoHitAreaTiers,
   parseSpellEffectUuid,
+  parseReactiveStrikeWeaponRestriction,
 } from "./agent-candidates.mjs";
 import { findPath, blockedEdgesFromWalls } from "./pathfinding.mjs";
 import { LOOTABLE_ITEM_TYPES } from "./treasure.mjs";
@@ -1194,6 +1195,143 @@ function isAbilityRecharged(combat, combatantId, itemSlug) {
   const recharge = getAbilityRecharge(combat, combatantId, itemSlug);
   if (!recharge) return true;
   return combat.round >= recharge.availableAtRound;
+}
+
+/**
+ * True for a non-spell NPC action item squarely inside #202's scope: a
+ * reaction (`system.actionType.value === "reaction"`) named "Reactive
+ * Strike" or "Attack of Opportunity" (PF2e Remaster renamed the same core
+ * mechanic; both names appear across real bestiary content depending on
+ * a creature's own publication era) — confirmed live this correctly
+ * identifies the single most common reaction across a broad bestiary
+ * sample, distinct from every other reaction shape (Twisting Tail,
+ * Freezing Blood, Wing Deflection, etc. — #202's own research found these
+ * too varied to parse generally, hence the narrow v1 scope).
+ */
+function isReactiveStrikeInScope(item) {
+  if (item.type !== "action") return false;
+  if (item.system.actionType?.value !== "reaction") return false;
+  return /^(Reactive Strike|Attack of Opportunity)\b/i.test(item.name ?? "");
+}
+
+/**
+ * Whether `combatantId` has already used their one-per-round reaction
+ * this round (#202) — confirmed live PF2e's own system tracks no reaction
+ * economy on the actor at all (only `focus`/`mythicPoints` resources
+ * exist), so this module tracks it itself, the same per-combatant combat
+ * flag shape `abilityRecharge` already uses, keyed by round instead of an
+ * item slug (a reaction is per-*creature*, not per-ability, unlike a
+ * breath weapon's own independent recharge).
+ */
+function getReactionUsed(combat, combatantId, round) {
+  const stored = combat.getFlag(MODULE_ID, "reactionUsed") ?? {};
+  return stored[combatantId] === round;
+}
+
+/** Records that `combatantId` has spent their reaction for `round`. */
+async function markReactionUsed(combat, combatantId, round) {
+  const stored = combat.getFlag(MODULE_ID, "reactionUsed") ?? {};
+  await combat.setFlag(MODULE_ID, "reactionUsed", {
+    ...stored,
+    [combatantId]: round,
+  });
+}
+
+/** Announces a #202 Reactive Strike publicly (a visible battlefield event
+ * every player at the table would want to see, unlike
+ * `postAgentDecisionChat`'s GM-only decision rationale). */
+async function postReactiveStrikeChat(reactor, attacker) {
+  const esc = (s) => foundry.utils.escapeHTML?.(String(s)) ?? String(s);
+  const content = game.i18n.format("DOMMT.Dungeon.Combat.ReactiveStrikeChat", {
+    name: esc(reactor.name),
+    target: esc(attacker.name),
+  });
+  await ChatMessage.create({ content });
+}
+
+/**
+ * #202: reacts to a real ranged-Strike attack-roll chat message by
+ * offering every eligible agent-controlled reactor a Reactive Strike
+ * against the attacker — the one Reactive Strike trigger #202's own
+ * research confirmed cleanly detectable via `createChatMessage`/
+ * `flags.pf2e.context` (the exact mechanism this module already relies on
+ * everywhere else for roll-outcome detection, e.g.
+ * `rollAndApplyStrikeAtVariant`'s own outcome read). The other two real
+ * Reactive Strike triggers (a manipulate action, a move action within
+ * reach) have no reliable hook at all — confirmed live no pf2e-namespaced
+ * "action used" hook exists, only generic `updateToken`/`moveToken` with
+ * no way to tell a real Stride from a GM drag or forced movement —
+ * deliberately out of scope, decided live with the user.
+ *
+ * Fires globally regardless of whose turn it is (the whole point of a
+ * reaction), including a player character's own ranged attack against an
+ * agent-controlled monster within its reach — confirmed this is the
+ * primary real-world case, not just NPC-vs-NPC. GM-gated (only the GM's
+ * own client should ever mutate combat state from a global hook like
+ * this, matching every other GM-only hook handler in this file) and
+ * scoped to this module's own managed combats (`isModuleCombat`) — never
+ * touches a Combat this module doesn't own. Registered against
+ * `createChatMessage` in module.mjs.
+ */
+export async function handleRangedAttackForReactiveStrike(message) {
+  if (!game.user.isGM) return;
+  const context = message.flags?.pf2e?.context;
+  if (context?.type !== "attack-roll") return;
+  if (!context.options?.includes("ranged")) return;
+
+  const sceneId = message.speaker?.scene;
+  const attackerTokenId = message.speaker?.token;
+  if (!sceneId || !attackerTokenId) return;
+  const combat = game.combats.contents.find(
+    (c) => c.scene?.id === sceneId && isModuleCombat(c),
+  );
+  if (!combat) return;
+  const attacker = combat.combatants.find(
+    (c) => c.tokenId === attackerTokenId,
+  );
+  if (!attacker || attacker.isDefeated) return;
+
+  const gridSize = combat.scene?.grid?.size ?? 100;
+  const gridDistanceFt = combat.scene?.grid?.distance ?? 5;
+
+  for (const reactor of combatantOpponents(combat, attacker)) {
+    if (!reactor.getFlag(MODULE_ID, "agentControlled")) continue;
+    if (getReactionUsed(combat, reactor.id, combat.round)) continue;
+    const item = (reactor.actor?.items ?? []).find(isReactiveStrikeInScope);
+    if (!item) continue;
+
+    const readyActions = (reactor.actor?.system?.actions ?? [])
+      .filter((a) => a.type === "strike" && a.ready !== false)
+      .map((a) => ({
+        slug: a.item?.slug ?? a.slug ?? a.label,
+        label: a.label,
+        reachSquares: actionReachSquares(a, gridDistanceFt),
+      }));
+    const distanceSquares = chebyshevSquares(
+      reactor.token,
+      attacker.token,
+      gridSize,
+    );
+    const inReachActions = readyActions.filter(
+      (a) => distanceSquares <= a.reachSquares,
+    );
+    if (!inReachActions.length) continue;
+    const restriction = parseReactiveStrikeWeaponRestriction(item.name);
+    const matched = restriction
+      ? matchMultiStrikeActionSlug(restriction, inReachActions)
+      : inReachActions[0];
+    if (!matched) continue;
+
+    await markReactionUsed(combat, reactor.id, combat.round);
+    await rollAndApplyStrikeAtVariant(
+      combat,
+      reactor,
+      attacker,
+      matched.slug,
+      0,
+    );
+    await postReactiveStrikeChat(reactor, attacker);
+  }
 }
 
 /**
