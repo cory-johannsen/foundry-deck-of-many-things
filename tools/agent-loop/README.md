@@ -85,3 +85,16 @@ this at all. If the key isn't configured, or nothing responds before the
 room's reveal door opens, the trap just keeps its original compendium name
 and description — the same graceful degradation the combat-AI half already
 relies on, and never anything that blocks room reveal or discovery.
+
+## Skill-challenge flavor customization (#166)
+
+Same idea as trap customization, for a `skill_challenge` room's own name,
+summary, and per-skill flavor text — also always Claude, also silently
+skipped without `ANTHROPIC_API_KEY`. The one real difference: a trap is
+spawned hidden, with a genuine window to customize it before the party
+ever sees it; a skill-challenge room's content is shown the instant the
+room becomes current, so there's no such window here — the party may see
+the un-customized name/summary first and see it change in place once (and
+if) the agent's customization lands and something re-renders the Dungeon
+Crawl tracker. Accepted as the honest trade-off rather than blocking room
+display on it, same as every other use of this infrastructure.

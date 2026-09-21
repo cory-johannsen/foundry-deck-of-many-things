@@ -213,10 +213,13 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // room the first time it's rendered — ensureSkillChallenge is itself a
     // no-op if one's already attached, so a plain re-render never rerolls
     // specialty skills mid-challenge. #164: the template (if any) is
-    // selected fresh on every render rather than persisted — harmless,
-    // since ensureSkillChallenge only ever actually *uses* it the one time
-    // it creates the challenge; every later render's own selection is
-    // simply thrown away once a challenge already exists.
+    // selected only the *first* time (`ensureSkillChallenge` is a no-op
+    // past that point) — #166 needs a stable place for an external agent's
+    // own customization to land and stick, so `name`/`summary`/
+    // `skillFlavor` are persisted directly on the challenge at creation
+    // (`initSkillChallengeState`) rather than re-derived from a freshly
+    // reselected template on every render the way an earlier version of
+    // this block worked; this just reads them straight back off it.
     const isSkillChallenge =
       currentRoom?.kind === "skill_challenge" && !currentRoomResolved;
     let challenge = null;
@@ -239,27 +242,16 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
         (r) => r.id === currentRoom.id,
       )?.challenge;
       if (raw) {
-        // The template actually used to build `raw` might not be this
-        // render's own freshly-selected one (a re-render after the
-        // challenge already exists just discards its own pick, per the
-        // comment above) — re-derive the flavor to show from raw's own
-        // specialtySkills matching this render's template instead of
-        // assuming they're the same template.
-        const flavorTemplate =
-          template?.specialtySkills?.length === raw.specialtySkills.length &&
-          template.specialtySkills.every((s) => raw.specialtySkills.includes(s))
-            ? template
-            : null;
         challenge = {
           vp: raw.vp,
           vpTarget: raw.vpTarget,
           attemptsRemaining: raw.attemptBudget - raw.attemptsUsed,
-          templateName: flavorTemplate?.name ?? null,
-          templateSummary: flavorTemplate?.summary ?? null,
+          templateName: raw.name,
+          templateSummary: raw.summary,
           specialtySkills: raw.specialtySkills.map((slug) => ({
             slug,
             label: skillLabel(slug),
-            flavor: flavorTemplate?.skillFlavor?.[slug] ?? null,
+            flavor: raw.skillFlavor?.[slug] ?? null,
           })),
           allSkills: ALL_SKILLS.map((slug) => ({
             slug,

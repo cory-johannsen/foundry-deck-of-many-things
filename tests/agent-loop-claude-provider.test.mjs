@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import {
   decide,
   customizeTrap,
+  customizeSkillChallenge,
 } from "../tools/agent-loop/providers/claude.mjs";
 
 const CONTEXT = {
@@ -169,5 +170,98 @@ describe("claude provider customizeTrap()", () => {
     await expect(
       customizeTrap(TRAP_CONTEXT, { apiKey: "test-key", fetchImpl }),
     ).rejects.toThrow(/no customize_trap tool call/);
+  });
+});
+
+const CHALLENGE_CONTEXT = {
+  roomId: "room-1",
+  name: "A Council Divided",
+  summary: "Quarreling factions need talking down.",
+  specialtySkills: ["diplomacy", "deception", "intimidation"],
+  skillFlavor: { diplomacy: "Generic flavor." },
+  locationTag: "undead",
+};
+
+function fakeChallengeFetch(toolInputJson) {
+  return vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      content: [
+        {
+          type: "tool_use",
+          name: "customize_skill_challenge",
+          input: JSON.parse(toolInputJson),
+        },
+      ],
+    }),
+  });
+}
+
+describe("claude provider customizeSkillChallenge()", () => {
+  it("sends the challenge context and constrains skillFlavor.skill to the offered specialtySkills", async () => {
+    const fetchImpl = fakeChallengeFetch(
+      '{"name": "The Iron Concord", "summary": "A tense truce.", "skillFlavor": [{"skill": "diplomacy", "flavor": "Appeal to reason."}]}',
+    );
+    await customizeSkillChallenge(CHALLENGE_CONTEXT, {
+      apiKey: "test-key",
+      fetchImpl,
+    });
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    const [url, options] = fetchImpl.mock.calls[0];
+    expect(url).toBe("https://api.anthropic.com/v1/messages");
+    const body = JSON.parse(options.body);
+    expect(body.tools[0].name).toBe("customize_skill_challenge");
+    expect(
+      body.tools[0].input_schema.properties.skillFlavor.items.properties.skill
+        .enum,
+    ).toEqual(["diplomacy", "deception", "intimidation"]);
+    expect(JSON.stringify(body.messages)).toContain("A Council Divided");
+  });
+
+  it("returns name/summary and converts the skillFlavor array into a {slug: text} map", async () => {
+    const fetchImpl = fakeChallengeFetch(
+      '{"name": "The Iron Concord", "summary": "A tense truce.", "skillFlavor": [{"skill": "diplomacy", "flavor": "Appeal to reason."}, {"skill": "deception", "flavor": "Bluff your way in."}]}',
+    );
+    const result = await customizeSkillChallenge(CHALLENGE_CONTEXT, {
+      apiKey: "test-key",
+      fetchImpl,
+    });
+    expect(result).toEqual({
+      name: "The Iron Concord",
+      summary: "A tense truce.",
+      skillFlavor: {
+        diplomacy: "Appeal to reason.",
+        deception: "Bluff your way in.",
+      },
+    });
+  });
+
+  it("throws a diagnosable error when the API response is not ok", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({
+        error: { type: "authentication_error", message: "invalid x-api-key" },
+      }),
+    });
+    await expect(
+      customizeSkillChallenge(CHALLENGE_CONTEXT, {
+        apiKey: "bad-key",
+        fetchImpl,
+      }),
+    ).rejects.toThrow(/401.*invalid x-api-key/);
+  });
+
+  it("throws when there is no customize_skill_challenge tool call in the response", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => ({ content: [] }) });
+    await expect(
+      customizeSkillChallenge(CHALLENGE_CONTEXT, {
+        apiKey: "test-key",
+        fetchImpl,
+      }),
+    ).rejects.toThrow(/no customize_skill_challenge tool call/);
   });
 });

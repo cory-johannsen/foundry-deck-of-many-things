@@ -10,6 +10,8 @@ import {
   ensureSkillChallenge,
   recordSkillChallengeAttempt,
   setObjective,
+  getPendingSkillChallengeCustomization,
+  applySkillChallengeCustomization,
 } from "../scripts/dungeon-runner.mjs";
 
 function makeSettingsStub(initial = {}) {
@@ -627,6 +629,141 @@ describe("setObjective", () => {
   it("is a no-op with no run at all", async () => {
     const settingsRef = makeSettingsStub();
     const result = await setObjective("nope", "Anything", { settingsRef });
+    expect(result).toBeNull();
+  });
+});
+
+describe("getPendingSkillChallengeCustomization / applySkillChallengeCustomization", () => {
+  async function makeRoomWithChallenge(settingsRef) {
+    const created = await createRun(
+      { sceneId: "s", roomCount: 5, seed: "fixed" },
+      { settingsRef },
+    );
+    const roomId = created.rooms[1].id;
+    await ensureSkillChallenge(
+      "s",
+      roomId,
+      { seed: "fixed", locationTag: "undead", partySize: 4 },
+      { settingsRef },
+    );
+    return roomId;
+  }
+
+  it("ensureSkillChallenge flags a new challenge pending", async () => {
+    const settingsRef = makeSettingsStub();
+    const roomId = await makeRoomWithChallenge(settingsRef);
+    const state = getRunState("s", { settingsRef });
+    const room = state.rooms.find((r) => r.id === roomId);
+    expect(room.challenge.customization).toEqual({ status: "pending" });
+  });
+
+  it("getPendingSkillChallengeCustomization finds the pending room and hands back its content", async () => {
+    const settingsRef = makeSettingsStub();
+    const roomId = await makeRoomWithChallenge(settingsRef);
+    // locationTag comes from the room's own (seed-derived) field, not the
+    // `locationTag` makeRoomWithChallenge passed to ensureSkillChallenge
+    // (that one only ever feeds the generic specialty-skill fallback pick,
+    // never stored on the room itself) — assert against the real room.
+    const room = getRunState("s", { settingsRef }).rooms.find(
+      (r) => r.id === roomId,
+    );
+    const pending = getPendingSkillChallengeCustomization("s", { settingsRef });
+    expect(pending.roomId).toBe(roomId);
+    expect(pending.sceneId).toBe("s");
+    expect(pending.locationTag).toBe(room.locationTag);
+    expect(pending.specialtySkills).toHaveLength(3);
+  });
+
+  it("returns null when nothing is pending", () => {
+    const settingsRef = makeSettingsStub();
+    expect(
+      getPendingSkillChallengeCustomization("nope", { settingsRef }),
+    ).toBeNull();
+  });
+
+  it("applySkillChallengeCustomization overwrites name/summary and marks it customized", async () => {
+    const settingsRef = makeSettingsStub();
+    const roomId = await makeRoomWithChallenge(settingsRef);
+    const state = await applySkillChallengeCustomization(
+      "s",
+      roomId,
+      { name: "The Iron Concord", summary: "A tense truce negotiation." },
+      { settingsRef },
+    );
+    const room = state.rooms.find((r) => r.id === roomId);
+    expect(room.challenge.name).toBe("The Iron Concord");
+    expect(room.challenge.summary).toBe("A tense truce negotiation.");
+    expect(room.challenge.customization).toEqual({ status: "customized" });
+  });
+
+  it("merges skillFlavor onto the existing map rather than replacing it", async () => {
+    const settingsRef = makeSettingsStub();
+    const roomId = await makeRoomWithChallenge(settingsRef);
+    const before = getRunState("s", { settingsRef }).rooms.find(
+      (r) => r.id === roomId,
+    );
+    const skill = before.challenge.specialtySkills[0];
+    const state = await applySkillChallengeCustomization(
+      "s",
+      roomId,
+      { skillFlavor: { [skill]: "A vivid new detail." } },
+      { settingsRef },
+    );
+    const room = state.rooms.find((r) => r.id === roomId);
+    expect(room.challenge.skillFlavor[skill]).toBe("A vivid new detail.");
+  });
+
+  it("no longer appears as pending once customization is applied", async () => {
+    const settingsRef = makeSettingsStub();
+    const roomId = await makeRoomWithChallenge(settingsRef);
+    await applySkillChallengeCustomization(
+      "s",
+      roomId,
+      { name: "New Name" },
+      { settingsRef },
+    );
+    expect(
+      getPendingSkillChallengeCustomization("s", { settingsRef }),
+    ).toBeNull();
+  });
+
+  it("stops being offered once the challenge is resolved, even if still marked pending", async () => {
+    const settingsRef = makeSettingsStub();
+    const roomId = await makeRoomWithChallenge(settingsRef);
+    for (let i = 0; i < 6; i += 1) {
+      await recordSkillChallengeAttempt("s", roomId, "failure", {
+        settingsRef,
+      });
+    }
+    expect(
+      getPendingSkillChallengeCustomization("s", { settingsRef }),
+    ).toBeNull();
+  });
+
+  it("applySkillChallengeCustomization is a no-op if the room has no challenge at all", async () => {
+    const settingsRef = makeSettingsStub();
+    const created = await createRun(
+      { sceneId: "s", roomCount: 5, seed: "fixed" },
+      { settingsRef },
+    );
+    const roomId = created.rooms[1].id;
+    const state = await applySkillChallengeCustomization(
+      "s",
+      roomId,
+      { name: "Anything" },
+      { settingsRef },
+    );
+    expect(state.rooms.find((r) => r.id === roomId).challenge).toBeUndefined();
+  });
+
+  it("applySkillChallengeCustomization is a no-op with no run at all", async () => {
+    const settingsRef = makeSettingsStub();
+    const result = await applySkillChallengeCustomization(
+      "nope",
+      "room-x",
+      { name: "Anything" },
+      { settingsRef },
+    );
     expect(result).toBeNull();
   });
 });

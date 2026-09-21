@@ -167,6 +167,31 @@ describe("initSkillChallengeState", () => {
     const generic = chooseSpecialtySkills("s", "r1", "undead");
     expect(withNull.specialtySkills).toEqual(generic);
     expect(withInvalid.specialtySkills).toEqual(generic);
+    expect(withNull.name).toBeNull();
+    expect(withNull.summary).toBeNull();
+    expect(withNull.skillFlavor).toEqual({});
+  });
+
+  it("persists a valid template's own name/summary/skillFlavor (#166)", () => {
+    const template = {
+      kind: "skill_challenge",
+      name: "A Council Divided",
+      summary: "Quarreling factions need talking down.",
+      specialtySkills: ["diplomacy", "deception", "intimidation"],
+      skillFlavor: { diplomacy: "Appeal to shared interests." },
+    };
+    const state = initSkillChallengeState({
+      seed: "s",
+      roomId: "r1",
+      locationTag: "undead",
+      partySize: 4,
+      template,
+    });
+    expect(state.name).toBe("A Council Divided");
+    expect(state.summary).toBe("Quarreling factions need talking down.");
+    expect(state.skillFlavor).toEqual({
+      diplomacy: "Appeal to shared interests.",
+    });
   });
 });
 
