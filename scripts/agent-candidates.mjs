@@ -227,6 +227,118 @@ export function buildTierScalingAreaSpellCandidates({ readyTierScalingAreaSpells
 }
 
 /**
+ * The per-action-cost-tier overrides for a #174-scoped dual-nature tiered
+ * spell (Harm/Heal-shaped: a living-vs-undead spell whose SHAPE, not just
+ * its magnitude, changes with action cost — single-target at 1-2 actions,
+ * a self-centered area at 3). PF2e's own bestiary text uses a distinct
+ * notation for this from #140's "If you use N actions..." prose: a
+ * `<span class="action-glyph">N</span>` marker starting each tier's own
+ * clause, confirmed live identical in structure across both Harm and Heal.
+ * Extracts, per tier: `rangeFeet` (a number, or the literal string
+ * `'touch'` for the 1-action tier — left as the raw signal since
+ * interpreting `'touch'` into reach squares is dungeon-combat.mjs's job,
+ * matching #122's existing `minimumTierRangeSquares` convention), `area`
+ * (`{type, value}` parsed from an inline `@Template[type|distance:N]`
+ * enricher, #123's already-established pattern, reused here since Harm/
+ * Heal's own 3-action tier uses the identical enricher), and `bonus` (the
+ * flat "increase the Hit Points restored by N" amount — confirmed live
+ * this only ever attaches to a healing-direction single-target tier, never
+ * the area tier, so it defaults to 0 when absent). All three tiers are
+ * emitted (not just non-minimum ones, unlike #140's parser) since Harm/
+ * Heal's *own* structured `system.range`/`system.area` fields don't carry
+ * a usable minimum-tier value at all (`range.value` is the literal string
+ * `"varies"`, `area` is `null`) — there's no structured fallback to lean
+ * on here the way #140 could lean on `system.area`/`system.damage` for its
+ * own minimum tier.
+ */
+export function parseActionGlyphTiers(descriptionHtml) {
+  const tiers = {};
+  const glyphRegex = /<span class="action-glyph">(\d)<\/span>([^]*?)(?=<span class="action-glyph">|<hr|$)/g;
+  let match;
+  while ((match = glyphRegex.exec(descriptionHtml))) {
+    const cost = Number(match[1]);
+    const clause = match[2];
+    const tier = { cost };
+    if (/range of touch/i.test(clause)) {
+      tier.rangeFeet = 'touch';
+    } else {
+      const feetMatch = /range of (\d+)\s*feet/i.exec(clause);
+      if (feetMatch) tier.rangeFeet = Number(feetMatch[1]);
+    }
+    const areaMatch = /@Template\[(\w+)\|distance:(\d+)\]/.exec(clause);
+    if (areaMatch) tier.area = { type: areaMatch[1], value: Number(areaMatch[2]) };
+    const bonusMatch = /increase the hit points restored by (\d+)/i.exec(clause);
+    tier.bonus = bonusMatch ? Number(bonusMatch[1]) : 0;
+    tiers[cost] = tier;
+  }
+  return tiers;
+}
+
+/**
+ * Candidates for a #174-scoped dual-nature tiered spell (Harm/Heal-shaped)
+ * — three distinct types, since the shape genuinely differs by tier:
+ * `castDualHarm` (single-target, save-based damage, reuses #118's own
+ * `castSpellAndApplySave` at execution time since confirmed live Harm/
+ * Heal's damage-direction roll applies correctly through the standard
+ * IWR-respecting path regardless of tier), `castDualHeal` (single-target,
+ * no save, carries the tier's own flat `bonus` for execution to add before
+ * negating — confirmed live the healing-direction roll always needs #132's
+ * manual negation, never the standard path, for both Harm-heals-undead and
+ * Heal-heals-living), and `castDualArea` (the 3-action shape change: one
+ * candidate bundling every harm-group and heal-group target within the
+ * emanation, split by creature type — reuses neither #118's nor #132's
+ * pattern alone since a single cast must apply both effects to different
+ * targets at once). The caller (dungeon-combat.mjs) has already resolved,
+ * per tier, exactly which opponents/allies are in range *and* match this
+ * spell's harm/heal polarity for that creature type — this function only
+ * ever packages what it's given, same separation of concerns as every
+ * other builder in this file.
+ */
+export function buildDualNatureSpellCandidates({ readyDualNatureSpells, actionsRemaining }) {
+  const candidates = [];
+  for (const spell of readyDualNatureSpells) {
+    for (const tier of spell.singleTargetTiers ?? []) {
+      if (tier.cost > actionsRemaining) continue;
+      const tierLabel = `${spell.label} (${tier.cost} action${tier.cost > 1 ? 's' : ''})`;
+      for (const target of tier.harmTargets ?? []) {
+        candidates.push({
+          id: `castDualHarm:${spell.slug}:${tier.cost}:${target.id}`, type: 'castDualHarm',
+          spellId: spell.id, entryId: spell.entryId, cost: tier.cost, targetId: target.id,
+          save: spell.save, basic: spell.basic,
+          summary: `${tierLabel} vs ${target.name}`
+        });
+      }
+      for (const target of tier.healTargets ?? []) {
+        candidates.push({
+          id: `castDualHeal:${spell.slug}:${tier.cost}:${target.id}`, type: 'castDualHeal',
+          spellId: spell.id, entryId: spell.entryId, cost: tier.cost, targetId: target.id,
+          bonus: tier.bonus ?? 0,
+          summary: `${tierLabel} heals ${target.name}`
+        });
+      }
+    }
+    const area = spell.areaTier;
+    if (area && area.cost <= actionsRemaining) {
+      const harmTargets = area.harmTargets ?? [];
+      const healTargets = area.healTargets ?? [];
+      if (harmTargets.length || healTargets.length) {
+        const parts = [];
+        if (harmTargets.length) parts.push(`harms ${harmTargets.map((t) => t.name).join(', ')}`);
+        if (healTargets.length) parts.push(`heals ${healTargets.map((t) => t.name).join(', ')}`);
+        candidates.push({
+          id: `castDualArea:${spell.slug}:${area.cost}`, type: 'castDualArea',
+          spellId: spell.id, entryId: spell.entryId, cost: area.cost,
+          save: spell.save, basic: spell.basic,
+          harmIds: harmTargets.map((t) => t.id), healIds: healTargets.map((t) => t.id),
+          summary: `${spell.label} (${area.cost} actions) ${parts.join('; ')}`
+        });
+      }
+    }
+  }
+  return candidates;
+}
+
+/**
  * One candidate per ready single-target, attack-roll spell x each opponent
  * within that spell's range — same shape as buildSpellCandidates (#118's
  * save-based spells), minus `save`/`basic` (an attack-roll spell resolves
@@ -515,7 +627,7 @@ export function endTurnCandidate() {
 }
 
 /** Full candidate list for one decision iteration. */
-export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], readyAttackSpells = [], readyDebuffSpells = [], readyBreathWeapons = [], readyChainSpells = [], readyHealSpells = [], readyTierScalingAreaSpells = [], allies = [], turnState, hazard = null, hasRangedOrReach = false }) {
+export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], readyAttackSpells = [], readyDebuffSpells = [], readyBreathWeapons = [], readyChainSpells = [], readyHealSpells = [], readyTierScalingAreaSpells = [], readyDualNatureSpells = [], allies = [], turnState, hazard = null, hasRangedOrReach = false }) {
   if (turnState.actionsRemaining <= 0) return [endTurnCandidate()];
   return [
     ...buildMovementCandidates({ opponents, hazard, hasRangedOrReach }),
@@ -528,6 +640,7 @@ export function buildCandidateList({ opponents, readyActions, readySpells = [], 
     ...buildChainSpellCandidates({ readyChainSpells, opponents, actionsRemaining: turnState.actionsRemaining }),
     ...buildHealSpellCandidates({ readyHealSpells, allies, actionsRemaining: turnState.actionsRemaining }),
     ...buildTierScalingAreaSpellCandidates({ readyTierScalingAreaSpells, actionsRemaining: turnState.actionsRemaining }),
+    ...buildDualNatureSpellCandidates({ readyDualNatureSpells, actionsRemaining: turnState.actionsRemaining }),
     endTurnCandidate()
   ];
 }
