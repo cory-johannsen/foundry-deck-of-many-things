@@ -19,7 +19,6 @@ import {
 import { startCombatForEncounterId } from "./dungeon-combat.mjs";
 import { chooseCoverItemTypes } from "./cover-items.mjs";
 import { getRunState } from "./dungeon-runner.mjs";
-import { canActOnDungeon } from "./dungeon-permissions.mjs";
 
 const MODULE_ID = "deck-of-many-more-things";
 
@@ -184,18 +183,18 @@ export async function generateEncounter({
     ui.notifications.warn(game.i18n.localize("DOMMT.Encounter.NoSceneWarning"));
     return;
   }
-  // #109: canvas.scene is already the dungeon scene by the time a room
-  // population calls this (populateSlotEncounter never overrides it) — the
-  // standalone "DOMMT: Generate Encounter" macro's scene never has a run at
-  // all, so `run` is null there and canActOnDungeon reduces to plain isGM.
-  const run = getRunState(canvas.scene.id);
-  if (!canActOnDungeon(run)) {
+  if (!game.user.isGM) {
     ui.notifications.warn(game.i18n.localize("DOMMT.Encounter.GmOnlyWarning"));
     return;
   }
-  // A GM-less run has no GM present to click Accept/Reroll — the first
-  // dealt roster is used directly (see the spec's "Combat encounter
-  // preview" section).
+  // #109: canvas.scene is already the dungeon scene by the time a room
+  // population calls this (populateSlotEncounter never overrides it) — the
+  // standalone "DOMMT: Generate Encounter" macro's scene never has a run at
+  // all, so `run` is null there. A GM-less run's host isn't the one
+  // executing this (it always runs on whichever client is genuinely GM —
+  // see dungeon-remote.mjs), so nobody's watching this client's screen to
+  // click Accept/Reroll: the first dealt roster is used directly instead.
+  const run = getRunState(canvas.scene.id);
   const skipPreview = Boolean(run?.hostUserId);
 
   const api = makeFoundryApi();
