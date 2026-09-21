@@ -268,7 +268,7 @@ export function buildBreathWeaponCandidates({ readyBreathWeapons, actionsRemaini
       id: `breathWeapon:${ability.slug}:${best.centerType}${idSuffix}`, type: 'breathWeapon',
       itemId: ability.itemId, cost: ability.cost,
       damageFormula: ability.damageFormula, damageType: ability.damageType,
-      save: ability.save, dc: ability.dc,
+      save: ability.save, dc: ability.dc, rechargeFormula: ability.rechargeFormula ?? null,
       centerType: best.centerType, centerId: best.centerId,
       affectedIds: best.affected.map((o) => o.id),
       summary: `${ability.label} (hits ${best.affected.map((o) => o.name).join(', ')})`

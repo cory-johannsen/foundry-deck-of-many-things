@@ -524,6 +524,19 @@ function isBreathWeaponInScope(item) {
   return parseBreathWeaponEffect(item.system.description?.value ?? "") != null;
 }
 
+/** A readable, stable identifier for a non-spell action item — confirmed
+ * live `item.slug` is null for these (unlike a spell, where it reliably
+ * falls back to a slugified name), so this derives one from the item's own
+ * name instead, falling back to its document id only if that's somehow
+ * empty too. */
+function actionItemSlug(item) {
+  const fromName = (item.name ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+  return item.slug || fromName || item.id;
+}
+
 /**
  * The stored recharge state for `itemSlug` on `combatantId`, or `null` if
  * it's never been used this combat (and so is always available). Recharge
@@ -576,22 +589,36 @@ function isAbilityRecharged(combat, combatantId, itemSlug) {
  * is responsible for the scene already being viewed (or accepting that
  * this returns empty placements if it isn't).
  */
+/** A token's true geometric center in pixels — `token.x`/`token.y` is
+ * always its top-left corner, and `token.width`/`token.height` (in grid
+ * squares, not pixels) is 1 for a Medium creature but larger for
+ * Large/Huge/Gargantuan ones (confirmed live: an adult dragon's own token
+ * is 3×3). Assuming a fixed one-square offset silently miscenters the cone
+ * origin — and every candidate aim-direction computed from it — for any
+ * non-Medium creature, exactly the size class most breath-weapon-bearing
+ * creatures fall into. */
+function tokenCenter(token, gridSize) {
+  return {
+    x: token.x + ((token.width ?? 1) * gridSize) / 2,
+    y: token.y + ((token.height ?? 1) * gridSize) / 2,
+  };
+}
+
 async function computeConePlacements(combat, casterToken, rawOpponents, distanceFeet) {
   const scene = combat.scene;
   if (!scene || game.scenes.viewed?.id !== scene.id) return [];
   const gridSize = scene.grid?.size ?? 100;
-  const originX = casterToken.x + gridSize / 2;
-  const originY = casterToken.y + gridSize / 2;
+  const origin = tokenCenter(casterToken, gridSize);
 
   const templateData = rawOpponents.map((aim) => {
-    const aimX = aim.token.x + gridSize / 2;
-    const aimY = aim.token.y + gridSize / 2;
+    const aimCenter = tokenCenter(aim.token, gridSize);
     const direction =
-      (Math.atan2(aimY - originY, aimX - originX) * 180) / Math.PI;
+      (Math.atan2(aimCenter.y - origin.y, aimCenter.x - origin.x) * 180) /
+      Math.PI;
     return {
       t: "cone",
-      x: originX,
-      y: originY,
+      x: origin.x,
+      y: origin.y,
       direction,
       angle: 90,
       distance: distanceFeet,
@@ -613,9 +640,8 @@ async function computeConePlacements(combat, casterToken, rawOpponents, distance
       const shape = canvasObject?.shape ?? null;
       const affected = shape
         ? rawOpponents.filter((o) => {
-            const centerX = o.token.x + gridSize / 2;
-            const centerY = o.token.y + gridSize / 2;
-            return shape.contains(centerX - originX, centerY - originY);
+            const center = tokenCenter(o.token, gridSize);
+            return shape.contains(center.x - origin.x, center.y - origin.y);
           }).map((o) => ({ id: o.id, name: o.name }))
         : [];
       return { centerType: "opponent", centerId: rawOpponents[i].id, affected };
@@ -1273,7 +1299,7 @@ export async function getPendingAgentTurn(combat) {
   const readyBreathWeapons = [];
   for (const item of combatant.actor?.items ?? []) {
     if (!isBreathWeaponInScope(item)) continue;
-    const slug = item.slug ?? item.id;
+    const slug = actionItemSlug(item);
     if (!isAbilityRecharged(combat, combatant.id, slug)) continue;
     const effect = parseBreathWeaponEffect(item.system.description?.value ?? "");
     const placements = await computeConePlacements(
@@ -1745,7 +1771,7 @@ async function castBreathWeaponAndApplyDamage(
     await setAbilityRecharge(
       combat,
       combatant.id,
-      item.slug ?? item.id,
+      actionItemSlug(item),
       rechargeFormula,
     );
     return outcomes;

@@ -290,7 +290,7 @@ describe('buildBreathWeaponCandidates', () => {
 
   const poisonBreath = {
     itemId: 'item1', slug: 'poison-breath', label: 'Poison Breath', cost: 2,
-    damageFormula: '13d6', damageType: 'poison', save: 'fortitude', dc: 31,
+    damageFormula: '13d6', damageType: 'poison', save: 'fortitude', dc: 31, rechargeFormula: '1d4',
     placements: [
       { centerType: 'opponent', centerId: 'opp1', affected: [opp1, opp2] },
       { centerType: 'opponent', centerId: 'opp3', affected: [opp3] }
@@ -302,7 +302,7 @@ describe('buildBreathWeaponCandidates', () => {
     expect(candidates).toEqual([
       {
         id: 'breathWeapon:poison-breath:opponent:opp1', type: 'breathWeapon',
-        itemId: 'item1', cost: 2, damageFormula: '13d6', damageType: 'poison', save: 'fortitude', dc: 31,
+        itemId: 'item1', cost: 2, damageFormula: '13d6', damageType: 'poison', save: 'fortitude', dc: 31, rechargeFormula: '1d4',
         centerType: 'opponent', centerId: 'opp1', affectedIds: ['opp1', 'opp2'],
         summary: 'Poison Breath (hits Fighter, Cleric)'
       }
