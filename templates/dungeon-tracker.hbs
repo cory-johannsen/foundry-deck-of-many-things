@@ -179,9 +179,10 @@
             </div>
           {{else if isPuzzleRoom}}
             <div class="dommt-dungeon__puzzle">
-              {{#if puzzle.summary}}
-                <p>{{puzzle.summary}}</p>
-              {{/if}}
+              {{! puzzle.summary is already shown above via the generic
+                  currentRoom.setpiece block, which reads the same
+                  (possibly agent-customized) persisted summary - not
+                  repeated here. }}
               <p>{{localize
                   "DOMMT.Dungeon.Puzzle.Progress"
                   successes=puzzle.successes

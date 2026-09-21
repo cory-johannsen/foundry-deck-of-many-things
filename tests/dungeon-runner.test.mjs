@@ -14,6 +14,8 @@ import {
   applySkillChallengeCustomization,
   ensurePuzzleState,
   recordPuzzleStageAttempt,
+  getPendingPuzzleCustomization,
+  applyPuzzleCustomization,
 } from "../scripts/dungeon-runner.mjs";
 
 function makeSettingsStub(initial = {}) {
@@ -917,6 +919,123 @@ describe("getPendingSkillChallengeCustomization / applySkillChallengeCustomizati
   it("applySkillChallengeCustomization is a no-op with no run at all", async () => {
     const settingsRef = makeSettingsStub();
     const result = await applySkillChallengeCustomization(
+      "nope",
+      "room-x",
+      { name: "Anything" },
+      { settingsRef },
+    );
+    expect(result).toBeNull();
+  });
+});
+
+describe("getPendingPuzzleCustomization / applyPuzzleCustomization", () => {
+  async function makeRoomWithPuzzle(settingsRef) {
+    const created = await createRun(
+      { sceneId: "s", roomCount: 5, seed: "fixed" },
+      { settingsRef },
+    );
+    const roomId = created.rooms[1].id;
+    await ensurePuzzleState(
+      "s",
+      roomId,
+      { hintChecks: HINT_CHECKS },
+      { settingsRef },
+    );
+    return roomId;
+  }
+
+  it("ensurePuzzleState flags a new puzzle pending", async () => {
+    const settingsRef = makeSettingsStub();
+    const roomId = await makeRoomWithPuzzle(settingsRef);
+    const state = getRunState("s", { settingsRef });
+    const room = state.rooms.find((r) => r.id === roomId);
+    expect(room.puzzle.customization).toEqual({ status: "pending" });
+  });
+
+  it("getPendingPuzzleCustomization finds the pending room and hands back its content", async () => {
+    const settingsRef = makeSettingsStub();
+    const roomId = await makeRoomWithPuzzle(settingsRef);
+    const pending = getPendingPuzzleCustomization("s", { settingsRef });
+    expect(pending.roomId).toBe(roomId);
+    expect(pending.sceneId).toBe("s");
+    expect(pending.stages).toHaveLength(3);
+    expect(pending.stages[0]).toMatchObject({ skill: "perception", hint: HINT_CHECKS[0].hint });
+  });
+
+  it("returns null when nothing is pending", () => {
+    const settingsRef = makeSettingsStub();
+    expect(getPendingPuzzleCustomization("nope", { settingsRef })).toBeNull();
+  });
+
+  it("applyPuzzleCustomization overwrites name/summary and marks it customized", async () => {
+    const settingsRef = makeSettingsStub();
+    const roomId = await makeRoomWithPuzzle(settingsRef);
+    const state = await applyPuzzleCustomization(
+      "s",
+      roomId,
+      { name: "The Whispering Vault", summary: "A locked vault hums with old magic." },
+      { settingsRef },
+    );
+    const room = state.rooms.find((r) => r.id === roomId);
+    expect(room.puzzle.name).toBe("The Whispering Vault");
+    expect(room.puzzle.summary).toBe("A locked vault hums with old magic.");
+    expect(room.puzzle.customization).toEqual({ status: "customized" });
+  });
+
+  it("merges stageFlavor onto the existing map rather than replacing it, never touching skill/dc", async () => {
+    const settingsRef = makeSettingsStub();
+    const roomId = await makeRoomWithPuzzle(settingsRef);
+    const state = await applyPuzzleCustomization(
+      "s",
+      roomId,
+      { stageFlavor: { 0: "A far more vivid clue." } },
+      { settingsRef },
+    );
+    const room = state.rooms.find((r) => r.id === roomId);
+    expect(room.puzzle.stageFlavor[0]).toBe("A far more vivid clue.");
+    expect(room.puzzle.stages[0].skill).toBe("perception");
+    expect(room.puzzle.stages[0].dc).toBe(HINT_CHECKS[0].dc);
+  });
+
+  it("no longer appears as pending once customization is applied", async () => {
+    const settingsRef = makeSettingsStub();
+    const roomId = await makeRoomWithPuzzle(settingsRef);
+    await applyPuzzleCustomization(
+      "s",
+      roomId,
+      { name: "New Name" },
+      { settingsRef },
+    );
+    expect(getPendingPuzzleCustomization("s", { settingsRef })).toBeNull();
+  });
+
+  it("stops being offered once the puzzle is resolved, even if still marked pending", async () => {
+    const settingsRef = makeSettingsStub();
+    const roomId = await makeRoomWithPuzzle(settingsRef);
+    await recordPuzzleStageAttempt("s", roomId, 0, "success", { settingsRef });
+    await recordPuzzleStageAttempt("s", roomId, 1, "success", { settingsRef });
+    expect(getPendingPuzzleCustomization("s", { settingsRef })).toBeNull();
+  });
+
+  it("applyPuzzleCustomization is a no-op if the room has no puzzle at all", async () => {
+    const settingsRef = makeSettingsStub();
+    const created = await createRun(
+      { sceneId: "s", roomCount: 5, seed: "fixed" },
+      { settingsRef },
+    );
+    const roomId = created.rooms[1].id;
+    const state = await applyPuzzleCustomization(
+      "s",
+      roomId,
+      { name: "Anything" },
+      { settingsRef },
+    );
+    expect(state.rooms.find((r) => r.id === roomId).puzzle).toBeUndefined();
+  });
+
+  it("applyPuzzleCustomization is a no-op with no run at all", async () => {
+    const settingsRef = makeSettingsStub();
+    const result = await applyPuzzleCustomization(
       "nope",
       "room-x",
       { name: "Anything" },

@@ -295,11 +295,20 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
         // level, same partyLevel source skill_challenge's dcForAttempt
         // call already uses.
         partyLevel: await makeFoundryApi().partyLevel(),
+        // #139: persisted onto the puzzle itself so applyPuzzleCustomization
+        // has a stable place to overwrite that actually sticks across
+        // renders — read back below via raw.name/raw.summary, never
+        // setpiece.name/setpiece.summary directly, the same "persisted
+        // state wins over the raw template" rule skill_challenge's own
+        // templateName/templateSummary already follow.
+        name: setpiece.name ?? null,
+        summary: setpiece.summary ?? null,
       });
       const raw = ensured?.rooms.find((r) => r.id === currentRoom.id)?.puzzle;
       if (raw) {
         puzzle = {
-          summary: setpiece.summary ?? null,
+          name: raw.name,
+          summary: raw.summary,
           requiredSuccesses: raw.requiredSuccesses,
           successes: raw.successes,
           resolved: raw.resolved,
@@ -316,7 +325,11 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
             dc: s.dc,
             attempted: s.attempted,
             succeeded: s.succeeded,
-            hint: s.succeeded ? s.hint : null,
+            // #139: an agent's customized stageFlavor entry for this stage
+            // overrides the displayed hint text once revealed — never the
+            // stage's own mechanically-real hint field itself (stored
+            // separately, untouched by applyPuzzleCustomization).
+            hint: s.succeeded ? (raw.stageFlavor?.[i] ?? s.hint) : null,
           })),
         };
       }
@@ -397,9 +410,15 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
         kindLabel: game.i18n.localize(
           ROOM_KIND_KEYS[currentRoom.kind] ?? currentRoom.kind,
         ),
+        // #139: prefers the puzzle's own *persisted* name/summary (which
+        // an agent's applyPuzzleCustomization may have overwritten) over
+        // the raw setpiece template's — this is the one generic display
+        // block every room kind's name/summary renders through, so a
+        // puzzle's customization needs to flow through here to be visible
+        // at all, not just in the puzzle-specific block below.
         setpiece: setpiece && {
-          name: setpiece.name,
-          summary: setpiece.summary,
+          name: puzzle?.name ?? setpiece.name,
+          summary: puzzle?.summary ?? setpiece.summary,
           complete: setpiece.complete,
         },
       },

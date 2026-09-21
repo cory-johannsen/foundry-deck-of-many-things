@@ -90,6 +90,8 @@ export function initPuzzleState({
   hintChecks,
   requiredSuccesses = null,
   partyLevel = null,
+  name = null,
+  summary = null,
 }) {
   // #138: hand-authored hintChecks carry the source book's own flat DC
   // (10 for both real entries) with an explicit note to scale it to the
@@ -123,6 +125,15 @@ export function initPuzzleState({
     successes: 0,
     attemptsUsed: 0,
     resolved: null, // null while in progress, else 'success' | 'failure'
+    // #139: persisted at creation (from the setpiece template's own
+    // name/summary, when given) rather than re-derived from the template
+    // on every render, the same shape initSkillChallengeState's own
+    // name/summary/skillFlavor already use — an external agent's
+    // customization (#139, applyPuzzleCustomization) needs a stable place
+    // to land and stick across renders.
+    name,
+    summary,
+    stageFlavor: {},
   };
 }
 

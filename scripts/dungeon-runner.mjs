@@ -497,25 +497,33 @@ export async function recordSkillChallengeAttempt(
  * the first time it's needed — a no-op if that room already has one, the
  * same read-mutate-persist wrapper `ensureSkillChallenge` already uses
  * around `initSkillChallengeState`, here around `initPuzzleState`
- * instead. `hintChecks`/`requiredSuccesses` come from the room's own
- * resolved `puzzle`-kind setpiece (the caller's job to have looked that up
- * — `dungeon-setpieces.json` entries aren't loaded from here). `partyLevel`
- * (#138, optional) scales every stage's own flat DC to the actual party's
- * level — locked in at this first attach, the same way specialtySkills/
- * vpTarget are locked in for a skill challenge, rather than drifting if
- * the party's level changes mid-room.
+ * instead. `hintChecks`/`requiredSuccesses`/`name`/`summary` come from the
+ * room's own resolved `puzzle`-kind setpiece (the caller's job to have
+ * looked that up — `dungeon-setpieces.json` entries aren't loaded from
+ * here). `partyLevel` (#138, optional) scales every stage's own flat DC
+ * to the actual party's level — locked in at this first attach, the same
+ * way specialtySkills/vpTarget are locked in for a skill challenge,
+ * rather than drifting if the party's level changes mid-room. `name`/
+ * `summary` (#139) are persisted onto the puzzle state itself (not just
+ * read fresh off the setpiece on every render) so
+ * `applyPuzzleCustomization` has a stable place to overwrite that
+ * actually sticks — the same reason `initSkillChallengeState` persists
+ * its own template name/summary instead of re-deriving them each render.
  *
- * Also flags the new puzzle `customization: {status: 'pending'}`, the
- * same seam `ensureSkillChallenge` already leaves for #166's agent-bridge
- * hook — #139 (this puzzle line's own agent-customization issue) is what
- * actually builds the read/apply pair for it; this only leaves the flag
- * in place so #139 has a stable spot to land without needing to touch
- * this function again.
+ * Also flags the new puzzle `customization: {status: 'pending'}`, read
+ * back by `getPendingPuzzleCustomization`/`applyPuzzleCustomization`
+ * (#139) below.
  */
 export async function ensurePuzzleState(
   sceneId,
   roomId,
-  { hintChecks, requiredSuccesses = null, partyLevel = null },
+  {
+    hintChecks,
+    requiredSuccesses = null,
+    partyLevel = null,
+    name = null,
+    summary = null,
+  },
   { settingsRef = defaultSettingsRef() } = {},
 ) {
   const state = getRunState(sceneId, { settingsRef });
@@ -523,7 +531,13 @@ export async function ensurePuzzleState(
   const room = state.rooms.find((r) => r.id === roomId);
   if (!room || room.puzzle) return state;
   const puzzle = {
-    ...initPuzzleState({ hintChecks, requiredSuccesses, partyLevel }),
+    ...initPuzzleState({
+      hintChecks,
+      requiredSuccesses,
+      partyLevel,
+      name,
+      summary,
+    }),
     customization: { status: "pending" },
   };
   const rooms = state.rooms.map((r) => (r.id === roomId ? { ...r, puzzle } : r));
@@ -552,6 +566,79 @@ export async function recordPuzzleStageAttempt(
   const room = state.rooms.find((r) => r.id === roomId);
   if (!room?.puzzle || room.puzzle.resolved) return state;
   const puzzle = applyPuzzleStageAttempt(room.puzzle, stageIndex, outcome);
+  const rooms = state.rooms.map((r) => (r.id === roomId ? { ...r, puzzle } : r));
+  const newState = { ...state, rooms };
+  await persist(sceneId, newState, settingsRef);
+  return newState;
+}
+
+/**
+ * The puzzle room whose `puzzle.customization.status === 'pending'` (#139),
+ * still unresolved — mirrors `getPendingSkillChallengeCustomization`
+ * exactly, adapted for a puzzle's own persisted state. `stages` (each
+ * stage's `skill`/`dc`/`hint`) is exposed as context an external agent can
+ * write flavor around — the same "context only, never rewrite gameplay
+ * values" boundary `getPendingSkillChallengeCustomization`'s own
+ * `specialtySkills` already draws. The *only* read surface
+ * `tools/agent-loop`'s MCP server uses for this.
+ */
+export function getPendingPuzzleCustomization(
+  sceneId,
+  { settingsRef = defaultSettingsRef() } = {},
+) {
+  const state = getRunState(sceneId, { settingsRef });
+  if (!state) return null;
+  const room = state.rooms.find(
+    (r) => r.puzzle?.customization?.status === "pending" && !r.puzzle.resolved,
+  );
+  if (!room) return null;
+  const p = room.puzzle;
+  return {
+    sceneId,
+    roomId: room.id,
+    name: p.name ?? null,
+    summary: p.summary ?? null,
+    stages: p.stages.map((s) => ({ skill: s.skill, dc: s.dc, hint: s.hint })),
+    stageFlavor: p.stageFlavor ?? {},
+    locationTag: room.locationTag,
+  };
+}
+
+/**
+ * Applies an external agent's customized name/summary/stageFlavor to
+ * `roomId`'s own pending puzzle (#139) — a no-op if that room has no
+ * puzzle at all. Only ever touches these three display fields, never
+ * `stages[].skill`/`stages[].dc`/`requiredSuccesses` — this cannot change
+ * which skills are mechanically eligible, how hard a stage's check is, or
+ * how many successes are needed, by construction, the same boundary
+ * `applySkillChallengeCustomization` already draws for a challenge's own
+ * name/summary/skillFlavor. `stageFlavor` (keyed by stage index, a string
+ * per JSON's own key convention) merges onto the existing map rather than
+ * replacing it wholesale, so a partial customization (flavor for only
+ * some stages) doesn't blank out the rest — it overrides a stage's
+ * *displayed* hint text (read by whatever renders `stages[i].hint` once
+ * that stage succeeds); the stage's own mechanically-real `hint` field
+ * itself is never touched. See module.mjs's api.applyPuzzleCustomization.
+ */
+export async function applyPuzzleCustomization(
+  sceneId,
+  roomId,
+  { name = null, summary = null, stageFlavor = null } = {},
+  { settingsRef = defaultSettingsRef() } = {},
+) {
+  const state = getRunState(sceneId, { settingsRef });
+  if (!state) return null;
+  const room = state.rooms.find((r) => r.id === roomId);
+  if (!room?.puzzle) return state;
+  const puzzle = {
+    ...room.puzzle,
+    name: name ?? room.puzzle.name,
+    summary: summary ?? room.puzzle.summary,
+    stageFlavor: stageFlavor
+      ? { ...room.puzzle.stageFlavor, ...stageFlavor }
+      : room.puzzle.stageFlavor,
+    customization: { status: "customized" },
+  };
   const rooms = state.rooms.map((r) => (r.id === roomId ? { ...r, puzzle } : r));
   const newState = { ...state, rooms };
   await persist(sceneId, newState, settingsRef);
