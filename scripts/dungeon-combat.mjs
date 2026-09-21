@@ -385,6 +385,59 @@ function spellRangeSquares(spell, gridDistanceFt) {
 }
 
 /**
+ * True for a spell squarely inside #122's *fixed-at-minimum-cost* scope:
+ * otherwise shaped exactly like #118's single-target save-based damage
+ * spells, but with a genuinely variable `time.value` ("1 to 3", not "1 to
+ * 3 rounds"-style duration text) instead of a fixed 1/2/3 — #122 always
+ * casts at the cheapest tier, never the more powerful multi-action
+ * versions (a real, disclosed limitation; full multi-tier support is a
+ * follow-up issue). `target.value` is broadened from #118's exact `"1
+ * creature"` match to also accept Harm/Heal's own phrasing ("1 living
+ * creature or 1 willing undead creature") — confirmed live this still
+ * excludes every count-scaling case in the real spell pool ("1 to 3
+ * willing creatures", "1 or more creatures", "1 creature per action
+ * spent...") because they either end in a plural "creatures" or have
+ * trailing text after the final "creature"/"undead", neither of which
+ * this pattern allows.
+ */
+function isVariableCostSpellInScope(spell) {
+  const system = spell.system ?? {};
+  if (system.area != null) return false;
+  const targetValue = system.target?.value ?? "";
+  if (!/^1(\s\w+)*\screature(\sor\s1(\s\w+)*\s(creature|undead))?$/i.test(targetValue))
+    return false;
+  if (!system.defense?.save?.statistic) return false;
+  if (!Object.keys(system.damage ?? {}).length) return false;
+  return /^[123]\s+to\s+[123]$/.test(system.time?.value ?? "");
+}
+
+/** The cheapest action-cost tier of a #122-scoped variable-cost spell
+ * ("1 to 3" → 1), or `null` if unparseable. */
+function minimumVariableCost(spell) {
+  const match = /^([123])\s+to\s+[123]$/.exec(spell.system?.time?.value ?? "");
+  return match ? Number(match[1]) : null;
+}
+
+/**
+ * Squares a #122-scoped spell reaches *at its minimum cost tier* — reuses
+ * `spellRangeSquares` for an ordinary "N feet" value, but `system.range`
+ * itself doesn't vary by tier (PF2e stores only one range per spell item),
+ * so a spell whose range genuinely changes with cost (Harm/Heal: touch at
+ * 1 action, 30 feet at 2-3) shows `"varies"` here instead of a real value —
+ * confirmed live, across four sampled spells (Harm, Heal, Soul Cutter,
+ * Spirit Ward), that "varies" reliably means touch/adjacent-only at the
+ * cheapest tier, read directly from each spell's own tier-1 description
+ * text. A literal `"touch"` range value (not tied to variable cost at all)
+ * gets the same melee-reach treatment.
+ */
+function minimumTierRangeSquares(spell, gridDistanceFt) {
+  const rangeValue = (spell.system?.range?.value ?? "").trim().toLowerCase();
+  if (rangeValue === "touch" || rangeValue === "varies")
+    return MELEE_REACH_SQUARES;
+  return spellRangeSquares(spell, gridDistanceFt);
+}
+
+/**
  * True for an area spell squarely inside #119's scope: a `burst` or
  * `emanation` (both simple "radius from a point" shapes — confirmed live
  * against the real bestiary that cone/line/cylinder/square/cube exist too,
@@ -974,6 +1027,28 @@ export function getPendingAgentTurn(combat) {
     )
     .filter(Boolean);
 
+  const readyVariableCostSpells = (combatant.actor?.spellcasting?.contents ?? [])
+    .flatMap((entry) =>
+      (entry.spells?.contents ?? [])
+        .filter(isVariableCostSpellInScope)
+        .map((spell) => {
+          const cost = minimumVariableCost(spell);
+          const rangeSquares = minimumTierRangeSquares(spell, gridDistanceFt);
+          if (cost == null || rangeSquares == null) return null;
+          return {
+            id: spell.id,
+            slug: spell.slug,
+            label: spell.name,
+            cost,
+            rangeSquares,
+            save: spell.system.defense.save.statistic,
+            basic: spell.system.defense.save.basic,
+            entryId: entry.id,
+          };
+        }),
+    )
+    .filter(Boolean);
+
   const readyAreaSpells = (
     combatant.actor?.spellcasting?.contents ?? []
   ).flatMap((entry) =>
@@ -1068,7 +1143,7 @@ export function getPendingAgentTurn(combat) {
   const candidates = buildCandidateList({
     opponents,
     readyActions,
-    readySpells,
+    readySpells: [...readySpells, ...readyVariableCostSpells],
     readyAreaSpells,
     readyAttackSpells,
     readyDebuffSpells,
