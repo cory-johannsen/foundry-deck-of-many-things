@@ -2870,5 +2870,325 @@
     "name": "Navigator",
     "level": 2,
     "art": "navigator.webp"
+  },
+  {
+    "id": "nuglub",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "bpwaqRoO1wYo15T5",
+    "name": "Nuglub",
+    "level": 2,
+    "art": "nuglub.webp"
+  },
+  {
+    "id": "orc_commander",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "PLZk6zY5iwccPTPS",
+    "name": "Orc Commander",
+    "level": 2,
+    "art": "orc-commander.webp"
+  },
+  {
+    "id": "pipefox",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "aZNYR8Zn18ljILfO",
+    "name": "Pipefox",
+    "level": 2,
+    "art": "pipefox.webp"
+  },
+  {
+    "id": "pirate",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "55Hb1FTqRGtoGuJt",
+    "name": "Pirate",
+    "level": 2,
+    "art": "pirate.webp"
+  },
+  {
+    "id": "poacher",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "6CRUvM2p9csP735v",
+    "name": "Poacher",
+    "level": 2,
+    "art": "poacher.webp"
+  },
+  {
+    "id": "pridespawn",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "h4cMwW2K34KheWtD",
+    "name": "Pridespawn",
+    "level": 2,
+    "art": "pridespawn.webp"
+  },
+  {
+    "id": "prophet",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "mbuHsZrLEieLEES0",
+    "name": "Prophet",
+    "level": 2,
+    "art": "prophet.webp"
+  },
+  {
+    "id": "pteranodon",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "bGp2t0UteEYu3BGe",
+    "name": "Pteranodon",
+    "level": 2,
+    "art": "pteranodon.webp"
+  },
+  {
+    "id": "pusk",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "OoUrk7aHE5wq9nLs",
+    "name": "Pusk",
+    "level": 2,
+    "art": "pusk.webp"
+  },
+  {
+    "id": "rokurokubi",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "kSk6QjH4wDGPPFrY",
+    "name": "Rokurokubi",
+    "level": 2,
+    "art": "rokurokubi.webp"
+  },
+  {
+    "id": "rosethorn_ram",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "Ir3N6RHfg6vXYkmN",
+    "name": "Rosethorn Ram",
+    "level": 2,
+    "art": "rosethorn-ram.webp"
+  },
+  {
+    "id": "ruffian",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "MNb1Hjd2gKimnfvV",
+    "name": "Ruffian",
+    "level": 2,
+    "art": "ruffian.webp"
+  },
+  {
+    "id": "saboteur",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "qQzry7keeMVUzfpt",
+    "name": "Saboteur",
+    "level": 2,
+    "art": "saboteur.webp"
+  },
+  {
+    "id": "sea_devil_scout",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "PXru127aJljwKhSy",
+    "name": "Sea Devil Scout",
+    "level": 2,
+    "art": "sea-devil-scout.webp"
+  },
+  {
+    "id": "sedacthy_scout",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "qRUezfNovWdrZtdt",
+    "name": "Sedacthy Scout",
+    "level": 2,
+    "art": "sedacthy-scout.webp"
+  },
+  {
+    "id": "shadow_drake",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "WqppjHF2Y8yC6veS",
+    "name": "Shadow Drake",
+    "level": 2,
+    "art": "shadow-drake.webp"
+  },
+  {
+    "id": "shocker_lizard",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "HI7SecILsRTmOtky",
+    "name": "Shocker Lizard",
+    "level": 2,
+    "art": "shocker-lizard.webp"
+  },
+  {
+    "id": "skeletal_champion",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "FH58AcRBZIfrHKvv",
+    "name": "Skeletal Champion",
+    "level": 2,
+    "art": "skeletal-champion.webp"
+  },
+  {
+    "id": "skeletal_horse",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "X2vz6CrMaHIso0ha",
+    "name": "Skeletal Horse",
+    "level": 2,
+    "art": "skeletal-horse.webp"
+  },
+  {
+    "id": "skum",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "ZSQ4M8qeAv4dkLq1",
+    "name": "Skum",
+    "level": 2,
+    "art": "skum.webp"
+  },
+  {
+    "id": "slime_mold",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "PFB61dvUsakciV0N",
+    "name": "Slime Mold",
+    "level": 2,
+    "art": "slime-mold.webp"
+  },
+  {
+    "id": "slothspawn",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "ccAeM0tNgf5aVokj",
+    "name": "Slothspawn",
+    "level": 2,
+    "art": "slothspawn.webp"
+  },
+  {
+    "id": "slurk",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "tashopA1s2fAbSXA",
+    "name": "Slurk",
+    "level": 2,
+    "art": "slurk.webp"
+  },
+  {
+    "id": "soulbound_doll_brave",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "uaKlWSKuyZmt88ol",
+    "name": "Soulbound Doll (Brave)",
+    "level": 2,
+    "art": "soulbound-doll-brave.webp"
+  },
+  {
+    "id": "soulbound_doll_calm",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "0PNjXE892kU89LyV",
+    "name": "Soulbound Doll (Calm)",
+    "level": 2,
+    "art": "soulbound-doll-calm.webp"
+  },
+  {
+    "id": "soulbound_doll_careful",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "meVRbBCY7LwIZq3t",
+    "name": "Soulbound Doll (Careful)",
+    "level": 2,
+    "art": "soulbound-doll-careful.webp"
+  },
+  {
+    "id": "soulbound_doll_chaotic_evil",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "7EpLGBoddL8Vzlha",
+    "name": "Soulbound Doll (Chaotic Evil)",
+    "level": 2,
+    "art": "soulbound-doll-chaotic-evil.webp"
+  },
+  {
+    "id": "soulbound_doll_chaotic_good",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "j0gCguJx3ILB1j9o",
+    "name": "Soulbound Doll (Chaotic Good)",
+    "level": 2,
+    "art": "soulbound-doll-chaotic-good.webp"
+  },
+  {
+    "id": "soulbound_doll_chaotic_neutral",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "X03lxGz9ELv8rG2w",
+    "name": "Soulbound Doll (Chaotic Neutral)",
+    "level": 2,
+    "art": "soulbound-doll-chaotic-neutral.webp"
+  },
+  {
+    "id": "soulbound_doll_cruel",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "bdarrRaLjNmlYvNa",
+    "name": "Soulbound Doll (Cruel)",
+    "level": 2,
+    "art": "soulbound-doll-cruel.webp"
+  },
+  {
+    "id": "soulbound_doll_gentle",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "w2jByvjeZbAclGWf",
+    "name": "Soulbound Doll (Gentle)",
+    "level": 2,
+    "art": "soulbound-doll-gentle.webp"
+  },
+  {
+    "id": "soulbound_doll_impish",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "5NnKgWCNbEzbSEN8",
+    "name": "Soulbound Doll (Impish)",
+    "level": 2,
+    "art": "soulbound-doll-impish.webp"
+  },
+  {
+    "id": "soulbound_doll_jolly",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "cPRdGSSOmIIvAZVy",
+    "name": "Soulbound Doll (Jolly)",
+    "level": 2,
+    "art": "soulbound-doll-jolly.webp"
+  },
+  {
+    "id": "soulbound_doll_kind",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "6WgkWAumJDId0vuJ",
+    "name": "Soulbound Doll (Kind)",
+    "level": 2,
+    "art": "soulbound-doll-kind.webp"
+  },
+  {
+    "id": "soulbound_doll_lawful_evil",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "RizAUQHtPy0YRUyt",
+    "name": "Soulbound Doll (Lawful Evil)",
+    "level": 2,
+    "art": "soulbound-doll-lawful-evil.webp"
+  },
+  {
+    "id": "soulbound_doll_lawful_good",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "RAjbVzWcfrPBbgkK",
+    "name": "Soulbound Doll (Lawful Good)",
+    "level": 2,
+    "art": "soulbound-doll-lawful-good.webp"
+  },
+  {
+    "id": "soulbound_doll_lawful_neutral",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "rJgUpdXBCMBrsJFf",
+    "name": "Soulbound Doll (Lawful Neutral)",
+    "level": 2,
+    "art": "soulbound-doll-lawful-neutral.webp"
+  },
+  {
+    "id": "soulbound_doll_neutral_evil",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "7ptWlh4t6oHvYOcj",
+    "name": "Soulbound Doll (Neutral Evil)",
+    "level": 2,
+    "art": "soulbound-doll-neutral-evil.webp"
+  },
+  {
+    "id": "soulbound_doll_neutral_good",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "iF5NeHC6ReqXLFmY",
+    "name": "Soulbound Doll (Neutral Good)",
+    "level": 2,
+    "art": "soulbound-doll-neutral-good.webp"
+  },
+  {
+    "id": "soulbound_doll_rash",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "rATBpWa62XUPnGZb",
+    "name": "Soulbound Doll (Rash)",
+    "level": 2,
+    "art": "soulbound-doll-rash.webp"
   }
 ]
