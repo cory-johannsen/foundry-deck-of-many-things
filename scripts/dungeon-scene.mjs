@@ -470,11 +470,21 @@ export async function populateSlotEncounter(
  * (`dungeon-setpieces.json`) stays the only thing the GM sees for that
  * rare case, per #135's own "only fall back to a hand-authored stub for a
  * case the compendium genuinely doesn't have."
+ *
+ * Flags the newly spawned actor `trapCustomization: {status: 'pending',
+ * locationTag, partyLevel}` (#136) — the one place that flag gets set,
+ * read back by `trap-combat.mjs`'s `getPendingTrapCustomization` for
+ * `tools/agent-loop`'s poller to offer an external agent a chance to
+ * rewrite its name/description before the room's reveal door ever opens.
+ * `locationTag` is threaded straight through from the room (this
+ * function's own caller already has it; `populateSlotTrap` itself has no
+ * opinion on where it came from), so the agent knows what terrain/theme
+ * to write flavor for.
  */
 export async function populateSlotTrap(
   scene,
   slot,
-  { partyLevel, levelOffsetBias = 0, seed = "" } = {},
+  { partyLevel, levelOffsetBias = 0, locationTag = null, seed = "" } = {},
 ) {
   const rect = slotRect(seed, slot);
   const api = makeFoundryApi();
@@ -486,17 +496,28 @@ export async function populateSlotTrap(
     );
     return;
   }
-  await api.spawnCreatures([{ pack: trap.pack, id: trap.id }], {
-    originArea: {
-      x: toPixels(rect.gx),
-      y: toPixels(rect.gy),
-      width: toPixels(rect.gw),
-      height: toPixels(rect.gh),
+  const [spawned] = await api.spawnCreatures(
+    [{ pack: trap.pack, id: trap.id }],
+    {
+      originArea: {
+        x: toPixels(rect.gx),
+        y: toPixels(rect.gy),
+        width: toPixels(rect.gw),
+        height: toPixels(rect.gh),
+      },
+      disposition: 0,
+      hidden: true,
+      extraFlags: { [MODULE_ID]: { dungeonSlot: slot, trapHazard: true } },
     },
-    disposition: 0,
-    hidden: true,
-    extraFlags: { [MODULE_ID]: { dungeonSlot: slot, trapHazard: true } },
-  });
+  );
+  const actor = spawned && game.actors.get(spawned.actorId);
+  if (actor) {
+    await actor.setFlag(MODULE_ID, "trapCustomization", {
+      status: "pending",
+      locationTag,
+      partyLevel,
+    });
+  }
 }
 
 /** Un-hides slot's tagged tokens (discovery). Returns the ids revealed. */
@@ -719,6 +740,7 @@ export async function buildPopulateAndUnlockRoom(
             roomCount: state.rooms.length,
             isGoal: room.isGoal,
           }),
+          locationTag: room.locationTag,
           seed: state.seed,
         });
       }
