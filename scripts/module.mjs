@@ -16,43 +16,6 @@ import {
   performDivinationOnTable,
   clearDivinationTable,
 } from "./scene-divination.mjs";
-import { generateEncounter } from "./encounter-generator.mjs";
-import { DungeonApp, resolveCurrentRoom } from "./ui/dungeon-app.mjs";
-import {
-  abandonRun,
-  getRunState,
-  findActiveHostedRun,
-  findHostedRunForBroadcast,
-  getPendingSkillChallengeCustomization,
-  applySkillChallengeCustomization,
-  getPendingPuzzleCustomization,
-  applyPuzzleCustomization,
-  getPendingNarrativeCustomization,
-  applyNarrativeCustomization,
-} from "./dungeon-runner.mjs";
-import {
-  decideOpenDungeon,
-  decideGmLessBroadcast,
-} from "./dungeon-permissions.mjs";
-import { registerDungeonActionSocket } from "./dungeon-remote.mjs";
-import {
-  handleDungeonDoorOpened,
-  teardownDungeonRun,
-} from "./dungeon-scene.mjs";
-import {
-  maybeResolveCombatForActor,
-  maybeResolveCombatForCombatant,
-  autoPlayCombatantTurnIfDue,
-  getPendingAgentTurn,
-  applyAgentDecision,
-  toggleAgentControlled,
-  agentLoopStatus,
-  handleRangedAttackForReactiveStrike,
-} from "./dungeon-combat.mjs";
-import {
-  getPendingTrapCustomization,
-  applyTrapCustomization,
-} from "./trap-combat.mjs";
 
 const MODULE_ID = "deck-of-many-more-things";
 
@@ -90,27 +53,6 @@ Hooks.once("init", () => {
     type: Object,
     default: { remaining: [], drawn: [], seed: "" },
   });
-  // Keyed by scene id: { [sceneId]: DungeonRunState }. See dungeon-runner.mjs —
-  // there is no precedent in this module for structured data on a Scene flag,
-  // so a dungeon run reuses playDeck's proven "read whole, mutate, write
-  // whole" shape instead, scoped by scene id rather than by flag.
-  game.settings.register(MODULE_ID, "dungeonRuns", {
-    scope: "world",
-    config: false,
-    type: Object,
-    default: {},
-  });
-  // #113: {timestamp, provider, pollIntervalMs} — written by
-  // tools/agent-loop/poll.mjs's recordAgentLoopHeartbeat call once per loop
-  // iteration, read by dungeon-combat.mjs's agentLoopStatus() to tell a GM
-  // "the poller is running but slow" apart from "the poller isn't running
-  // at all," which used to look identical.
-  game.settings.register(MODULE_ID, "agentLoopHeartbeat", {
-    scope: "world",
-    config: false,
-    type: Object,
-    default: null,
-  });
 });
 
 Hooks.once("ready", async () => {
@@ -142,196 +84,6 @@ Hooks.once("ready", async () => {
     },
     installMacros: () => ensureWorldMacros({ force: true }),
     installDivinationScene: () => ensureDivinationScene(),
-    generateEncounter: (options) => generateEncounter(options),
-    // #109: any user may open the tracker now — a GM always renders; a
-    // non-GM renders too (the setup form for a fresh run, or their own
-    // already-hosted run's current state) unless a *different* player
-    // already hosts the one active run.
-    openDungeon: () => {
-      const decision = decideOpenDungeon(findActiveHostedRun());
-      if (decision.action === "warnAlreadyHosted") {
-        const hostUser = game.users.get(decision.hostUserId);
-        return ui.notifications.warn(
-          game.i18n.format("DOMMT.Dungeon.AlreadyHostedWarning", {
-            host: hostUser?.name ?? "?",
-          }),
-        );
-      }
-      return new DungeonApp().render(true);
-    },
-    // Same cancellation teardown the tracker's Abandon button runs (ITEM-18)
-    // — party moved out, every NPC actor the run spawned deleted, scene
-    // deleted — for GMs who'd rather script it than click through the app.
-    resetDungeon: async (sceneId) => {
-      if (!game.user.isGM)
-        return ui.notifications.warn(
-          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
-        );
-      const targetSceneId = sceneId ?? canvas?.scene?.id;
-      if (!targetSceneId) return;
-      const scene = game.scenes.get(targetSceneId);
-      const state = getRunState(targetSceneId);
-      await abandonRun({ sceneId: targetSceneId });
-      if (scene)
-        await teardownDungeonRun(scene, {
-          previousSceneId: state?.previousSceneId ?? null,
-        });
-    },
-    // The only surface tools/agent-loop's poller ever calls — read the
-    // current decision point for whichever agent-controlled combatant's
-    // turn is due, or apply exactly one chosen candidate. Never exposes
-    // arbitrary script access.
-    getPendingAgentTurn: async (combatId) => {
-      if (!game.user.isGM)
-        return ui.notifications.warn(
-          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
-        );
-      const combat = game.combats.get(combatId ?? game.combat?.id);
-      return combat ? await getPendingAgentTurn(combat) : null;
-    },
-    applyAgentDecision: (
-      combatId,
-      combatantId,
-      candidateId,
-      rationale = null,
-    ) => {
-      if (!game.user.isGM)
-        return ui.notifications.warn(
-          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
-        );
-      const combat = game.combats.get(combatId);
-      return combat
-        ? applyAgentDecision(combat, combatantId, candidateId, rationale)
-        : null;
-    },
-    // #113: pinged once per loop iteration by tools/agent-loop/poll.mjs,
-    // independent of whether there's a pending turn — this is the only
-    // signal Foundry has that the external poller process is actually
-    // alive and reaching it.
-    recordAgentLoopHeartbeat: ({
-      provider = null,
-      pollIntervalMs = null,
-    } = {}) => {
-      if (!game.user.isGM)
-        return ui.notifications.warn(
-          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
-        );
-      return game.settings.set(MODULE_ID, "agentLoopHeartbeat", {
-        timestamp: Date.now(),
-        provider,
-        pollIntervalMs,
-      });
-    },
-    getAgentLoopStatus: () => {
-      if (!game.user.isGM)
-        return ui.notifications.warn(
-          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
-        );
-      return agentLoopStatus();
-    },
-    // GM-facing "is it actually running?" check (#113), wired to the scene
-    // control button below and callable anytime, not just when a timeout
-    // has already fired.
-    postAgentLoopStatus: async () => {
-      if (!game.user.isGM)
-        return ui.notifications.warn(
-          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
-        );
-      const status = agentLoopStatus();
-      const key = status.connected
-        ? "DOMMT.Dungeon.Combat.AgentLoopStatusConnected"
-        : status.lastSeenMs
-          ? "DOMMT.Dungeon.Combat.AgentLoopStatusStale"
-          : "DOMMT.Dungeon.Combat.AgentLoopStatusNeverSeen";
-      const content = game.i18n.format(key, {
-        provider: status.provider ?? "?",
-        seconds: status.secondsAgo ?? 0,
-      });
-      const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
-      return ChatMessage.create({ content, whisper: gmIds });
-    },
-    // #136: the same narrow read/apply pair getPendingAgentTurn/
-    // applyAgentDecision give tools/agent-loop's poller for combat turns,
-    // for a spawned trap's own pending narrative customization instead.
-    getPendingTrapCustomization: (sceneId) => {
-      if (!game.user.isGM)
-        return ui.notifications.warn(
-          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
-        );
-      return getPendingTrapCustomization(sceneId ?? canvas?.scene?.id);
-    },
-    applyTrapCustomization: (actorId, customization) => {
-      if (!game.user.isGM)
-        return ui.notifications.warn(
-          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
-        );
-      return applyTrapCustomization(actorId, customization);
-    },
-    // #166: the same narrow read/apply pair as #136's trap customization
-    // surface above, for a skill_challenge room's own pending narrative
-    // customization instead.
-    getPendingSkillChallengeCustomization: (sceneId) => {
-      if (!game.user.isGM)
-        return ui.notifications.warn(
-          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
-        );
-      return getPendingSkillChallengeCustomization(
-        sceneId ?? canvas?.scene?.id,
-      );
-    },
-    applySkillChallengeCustomization: (sceneId, roomId, customization) => {
-      if (!game.user.isGM)
-        return ui.notifications.warn(
-          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
-        );
-      return applySkillChallengeCustomization(
-        sceneId ?? canvas?.scene?.id,
-        roomId,
-        customization,
-      );
-    },
-    // #139: the same narrow read/apply pair as #166's skill_challenge
-    // customization surface above, for a puzzle room's own pending
-    // narrative customization instead.
-    getPendingPuzzleCustomization: (sceneId) => {
-      if (!game.user.isGM)
-        return ui.notifications.warn(
-          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
-        );
-      return getPendingPuzzleCustomization(sceneId ?? canvas?.scene?.id);
-    },
-    applyPuzzleCustomization: (sceneId, roomId, customization) => {
-      if (!game.user.isGM)
-        return ui.notifications.warn(
-          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
-        );
-      return applyPuzzleCustomization(
-        sceneId ?? canvas?.scene?.id,
-        roomId,
-        customization,
-      );
-    },
-    // #167: the same narrow read/apply pair as the puzzle/skill-challenge
-    // customization surfaces above, for a narrative room's own pending
-    // content instead.
-    getPendingNarrativeCustomization: (sceneId) => {
-      if (!game.user.isGM)
-        return ui.notifications.warn(
-          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
-        );
-      return getPendingNarrativeCustomization(sceneId ?? canvas?.scene?.id);
-    },
-    applyNarrativeCustomization: (sceneId, roomId, customization) => {
-      if (!game.user.isGM)
-        return ui.notifications.warn(
-          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
-        );
-      return applyNarrativeCustomization(
-        sceneId ?? canvas?.scene?.id,
-        roomId,
-        customization,
-      );
-    },
   };
   if (game.user.isGM) {
     try {
@@ -374,16 +126,6 @@ const MACRO_DEFS = [
     name: "DOMMT: Reset Play Deck (GM)",
     img: `modules/${MODULE_ID}/assets/icons/macro-reset.webp`,
     command: `if (!game.user.isGM) return ui.notifications.warn('GM only');\nawait game.modules.get('${MODULE_ID}').api.resetDeck();\nui.notifications.info('Deck reset');`,
-  },
-  {
-    name: "DOMMT: Generate Encounter",
-    img: `modules/${MODULE_ID}/assets/icons/macro-encounter.webp`,
-    command: `game.modules.get('${MODULE_ID}').api.generateEncounter();`,
-  },
-  {
-    name: "DOMMT: Dungeon Crawl",
-    img: `modules/${MODULE_ID}/assets/icons/macro-dungeon.webp`,
-    command: `game.modules.get('${MODULE_ID}').api.openDungeon();`,
   },
 ];
 
@@ -466,110 +208,9 @@ function bindPendingDrawButton(message, html) {
 }
 
 Hooks.once("ready", registerChoiceSocket);
-Hooks.once("ready", registerDungeonActionSocket);
 Hooks.once("ready", registerChargeSound);
 
 Hooks.on("renderChatMessageHTML", bindPendingDrawButton);
-
-/** #158: opens the Dungeon Crawl tracker if it isn't already rendered —
- * `foundry.applications.instances` (confirmed live) is the ApplicationV2
- * equivalent of the old `ui.windows` lookup, keyed by `DEFAULT_OPTIONS.id`.
- * A no-op if the GM already has it open, so this never steals focus from
- * whatever position/scroll state they left it in. */
-function openDungeonTrackerIfNotOpen() {
-  if (!foundry.applications.instances.get("dommt-dungeon-app"))
-    new DungeonApp().render(true);
-}
-
-/**
- * A dungeon room's discovery trigger — opening its own reveal door (see
- * dungeon-scene.mjs's docblock for why this is a plain hook rather than a
- * Region behavior). Fires on every connected client on every wall update;
- * `handleDungeonDoorOpened` itself both filters for a real dungeon reveal
- * door and only acts on the GM's own client. Awaited (unlike this file's
- * other fire-and-forget hooks) because #158's auto-open needs its
- * `autoOpenTracker` result.
- */
-Hooks.on("updateWall", async (wall, changes) => {
-  if (changes.ds !== CONST.WALL_DOOR_STATES.OPEN) return;
-  const { autoOpenTracker } = await handleDungeonDoorOpened(
-    wall.parent?.id,
-    wall.id,
-  );
-  if (autoOpenTracker) openDungeonTrackerIfNotOpen();
-});
-
-/**
- * #109: keeps every non-host, non-GM client's DungeonApp in sync with a
- * GM-less run — opens a read-only copy when one starts, re-renders it on
- * every change, and closes it once the run ends. The host's own window is
- * already open from calling the macro and manages itself via its own
- * action handlers' render() calls; a GM is never auto-opened.
- */
-function syncGmLessDungeonBroadcast() {
-  const existing = foundry.applications.instances.get("dommt-dungeon-app");
-  const decision = decideGmLessBroadcast(
-    findHostedRunForBroadcast(),
-    !!existing,
-  );
-  if (decision.action === "open") new DungeonApp().render(true);
-  else if (decision.action === "render") existing.render();
-  else if (decision.action === "close") existing.close();
-}
-
-function onDungeonRunsSettingChanged(setting) {
-  if (setting.key !== `${MODULE_ID}.dungeonRuns`) return;
-  syncGmLessDungeonBroadcast();
-}
-Hooks.on("updateSetting", onDungeonRunsSettingChanged);
-Hooks.on("createSetting", onDungeonRunsSettingChanged);
-// A client's canvas may still be mid-transition to the dungeon scene when
-// the setting update above first fires (see ui/dungeon-app.mjs's own
-// _onRender comment on the same scene.activate() timing) — canvasReady
-// re-syncs once it's settled.
-Hooks.on("canvasReady", syncGmLessDungeonBroadcast);
-
-/**
- * Advances a dungeon room the instant its Combat auto-resolves (every
- * hostile or every party combatant defeated) — dungeon-combat.mjs only ever
- * hands back plain data here rather than calling resolveCurrentRoom itself,
- * to avoid an import cycle between it and ui/dungeon-app.mjs/dungeon-scene.mjs.
- * See ITEM-6 in docs/backlog.md.
- */
-async function onCombatAutoResolved(result) {
-  if (result?.dungeonSlot != null)
-    await resolveCurrentRoom(result.outcome === "victory", {
-      scene: result.scene,
-    });
-}
-
-Hooks.on("updateActor", async (actor) =>
-  onCombatAutoResolved(await maybeResolveCombatForActor(actor)),
-);
-Hooks.on("updateCombatant", async (combatant, changes) =>
-  onCombatAutoResolved(
-    await maybeResolveCombatForCombatant(combatant, changes),
-  ),
-);
-
-/**
- * Plays a non-player combatant's turn automatically the instant the turn
- * order reaches it (ITEM-8) — fires on `startCombat()` too, since that also
- * updates round/turn. Not awaited here, matching the updateWall hook's own
- * fire-and-forget style; autoPlayCombatantTurnIfDue's own nextTurn() call, if
- * it acts, re-triggers this same hook naturally for whatever comes next.
- */
-Hooks.on("updateCombat", (combat, changes) => {
-  if (changes.turn === undefined && changes.round === undefined) return;
-  autoPlayCombatantTurnIfDue(combat);
-});
-
-// #202: reactive/triggered NPC abilities — the ranged-Strike-triggered
-// slice of Reactive Strike/Attack of Opportunity, the one trigger
-// confirmed cleanly detectable via a chat-message hook. Fires on every
-// chat message; the handler itself does the real filtering (attack-roll
-// type, ranged option, GM-only, this module's own managed combats only).
-Hooks.on("createChatMessage", handleRangedAttackForReactiveStrike);
 
 Hooks.on("getSceneControlButtons", (controls) => {
   const tokenControl =
@@ -583,48 +224,11 @@ Hooks.on("getSceneControlButtons", (controls) => {
     button: true,
     onClick: () => new DeckApp().render(true),
   };
-  // #113: a GM-only, check-anytime version of the same "is the agent loop
-  // actually running?" question armAgentTimeout otherwise only surfaces
-  // reactively, once a turn has already timed out.
-  const agentLoopButton = {
-    name: "dommt-agent-loop-status",
-    title: game.i18n.localize("DOMMT.SceneControl.AgentLoopStatusLabel"),
-    icon: "fa-solid fa-robot",
-    visible: game.user.isGM,
-    button: true,
-    onClick: () => game.modules.get(MODULE_ID).api.postAgentLoopStatus(),
-  };
   if (Array.isArray(tokenControl.tools)) {
-    tokenControl.tools.push(button, agentLoopButton);
+    tokenControl.tools.push(button);
   } else if (tokenControl.tools && typeof tokenControl.tools === "object") {
     tokenControl.tools["dommt-deck"] = button;
-    tokenControl.tools["dommt-agent-loop-status"] = agentLoopButton;
   }
-});
-
-/**
- * GM per-combatant override for the agentControlled default (Task 2) — an
- * extra entry on every NPC row's context menu in Foundry's own Combat
- * Tracker sidebar. Deliberately not dungeon-specific UI, since it needs to
- * cover the standalone "DOMMT: Generate Encounter" macro's combats too
- * (ITEM-6's original scope), not just dungeon rooms.
- */
-Hooks.on("getCombatTrackerEntryContext", (html, menuItems) => {
-  menuItems.push({
-    name: "DOMMT.Dungeon.Combat.ToggleAgentControlLabel",
-    icon: '<i class="fa-solid fa-robot"></i>',
-    condition: (li) => {
-      const combatant = game.combat?.combatants.get(li.dataset.combatantId);
-      return (
-        !!combatant &&
-        !game.actors?.party?.members?.some((m) => m.id === combatant.actor?.id)
-      );
-    },
-    callback: (li) => {
-      const combatant = game.combat?.combatants.get(li.dataset.combatantId);
-      if (combatant) toggleAgentControlled(combatant);
-    },
-  });
 });
 
 async function drawForced(cardId, { actorId = null } = {}) {
