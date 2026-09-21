@@ -43,6 +43,10 @@ import {
 import { depthBiasFor } from "./dungeon-deck.mjs";
 import { startCombatForSlot } from "./dungeon-combat.mjs";
 import { playDoorSound } from "./dungeon-sound.mjs";
+import { loadDungeonSetpieces } from "./data-loader.mjs";
+import { makeFoundryApi } from "./foundry-api.mjs";
+import { selectTrap } from "./trap-library.mjs";
+import { splitmix32, seedFromString } from "./prng.mjs";
 
 const MODULE_ID = "deck-of-many-more-things";
 const GRID_SIZE = 100;
@@ -439,6 +443,62 @@ export async function populateSlotEncounter(
   });
 }
 
+/**
+ * Spawn a real trap-tagged hazard from `pf2e.hazards` inside slot's own
+ * footprint (#135), for a `puzzle_or_trap` room whose picked setpiece
+ * resolved to a trap (`buildPopulateAndUnlockRoom`'s own job to know
+ * that — this function doesn't care where `partyLevel`/`levelOffsetBias`
+ * came from). Hidden, exactly like a combat room's own monsters
+ * (`populateSlotEncounter` above) — `revealSlotTokens` already un-hides
+ * anything flagged `dungeonSlot`, generic to token kind, so no changes
+ * were needed there for this to work; #134's `rollTrapDetection` is what
+ * actually "finds" a trap once revealed, the same way a Perception check
+ * finds anything else hidden on the scene.
+ *
+ * `disposition: 0` (neutral) rather than `-1` (hostile, what
+ * `spawnCreatures` defaults to for monsters) — an unattended hazard isn't
+ * anyone's combatant, same reasoning #96's cover items already use.
+ * `trapHazard: true` alongside the usual `dungeonSlot` flag mirrors
+ * #96/#146's own `coverItem` flag: nothing currently reads it (a
+ * `puzzle_or_trap` room never starts a real Combat, so `dungeon-combat.mjs`'s
+ * `combatantTokens` sweep never runs against this slot at all), but it's
+ * cheap, harmless insurance against ever reintroducing that exact class of
+ * bug for a hazard actor that, like a cover item, should never take a turn.
+ *
+ * A no-op (with a GM-facing warning) if the compendium has nothing
+ * level-appropriate — the room's own setpiece stub text
+ * (`dungeon-setpieces.json`) stays the only thing the GM sees for that
+ * rare case, per #135's own "only fall back to a hand-authored stub for a
+ * case the compendium genuinely doesn't have."
+ */
+export async function populateSlotTrap(
+  scene,
+  slot,
+  { partyLevel, levelOffsetBias = 0, seed = "" } = {},
+) {
+  const rect = slotRect(seed, slot);
+  const api = makeFoundryApi();
+  const rng = splitmix32(seedFromString(`${seed}-trap-${slot}`));
+  const trap = await selectTrap({ api, partyLevel, levelOffsetBias, rng });
+  if (!trap) {
+    ui.notifications.warn(
+      game.i18n.localize("DOMMT.Dungeon.Trap.NoneFoundWarning"),
+    );
+    return;
+  }
+  await api.spawnCreatures([{ pack: trap.pack, id: trap.id }], {
+    originArea: {
+      x: toPixels(rect.gx),
+      y: toPixels(rect.gy),
+      width: toPixels(rect.gw),
+      height: toPixels(rect.gh),
+    },
+    disposition: 0,
+    hidden: true,
+    extraFlags: { [MODULE_ID]: { dungeonSlot: slot, trapHazard: true } },
+  });
+}
+
 /** Un-hides slot's tagged tokens (discovery). Returns the ids revealed. */
 export async function revealSlotTokens(scene, slot) {
   const tokens = scene.tokens.filter(
@@ -639,6 +699,30 @@ export async function buildPopulateAndUnlockRoom(
     if (isSlotPopulated(scene, physicalSlot))
       await unlockDoorToSlot(scene, physicalSlot);
   } else {
+    // #135: a puzzle_or_trap room's *specific* content (puzzle vs. trap) is
+    // still decided the existing way — dungeon-deck.mjs's setpieceAt shuffle
+    // over every dungeon-setpieces.json id, room.kind itself staying the
+    // generic 'puzzle_or_trap' bucket either way — only the resolved
+    // setpiece's own `kind` field, looked up here, says which one this
+    // occurrence actually is. A puzzle setpiece's flavor text is still all
+    // the room ever gets (#137-139's own scope, not touched here); a trap
+    // setpiece additionally gets a real, mechanically-functional hazard
+    // spawned from pf2e.hazards for #134's engine to run.
+    if (room.kind === "puzzle_or_trap" && room.setpieceId) {
+      const setpieces = await loadDungeonSetpieces();
+      const setpiece = setpieces.find((s) => s.id === room.setpieceId);
+      if (setpiece?.kind === "trap") {
+        await populateSlotTrap(scene, physicalSlot, {
+          partyLevel: await makeFoundryApi().partyLevel(),
+          levelOffsetBias: depthBiasFor({
+            physicalSlot,
+            roomCount: state.rooms.length,
+            isGoal: room.isGoal,
+          }),
+          seed: state.seed,
+        });
+      }
+    }
     await unlockDoorToSlot(scene, physicalSlot);
   }
 }
