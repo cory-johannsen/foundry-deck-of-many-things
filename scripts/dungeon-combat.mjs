@@ -26,6 +26,7 @@ import {
   applyCandidateToTurnState,
   buildDecisionContext,
   parseConditionsByOutcome,
+  hasSpellUsesRemaining,
 } from "./agent-candidates.mjs";
 import { findPath, blockedEdgesFromWalls } from "./pathfinding.mjs";
 import { coverBlocksLineOfFire, COVER_EFFECT_DATA } from "./cover-items.mjs";
@@ -1010,20 +1011,23 @@ export function getPendingAgentTurn(combat) {
 
   const readySpells = (combatant.actor?.spellcasting?.contents ?? [])
     .flatMap((entry) =>
-      (entry.spells?.contents ?? []).filter(isSpellInScope).map((spell) => {
-        const rangeSquares = spellRangeSquares(spell, gridDistanceFt);
-        if (rangeSquares == null) return null;
-        return {
-          id: spell.id,
-          slug: spell.slug,
-          label: spell.name,
-          cost: Number(spell.system.time.value),
-          rangeSquares,
-          save: spell.system.defense.save.statistic,
-          basic: spell.system.defense.save.basic,
-          entryId: entry.id,
-        };
-      }),
+      (entry.spells?.contents ?? [])
+        .filter(isSpellInScope)
+        .filter(hasSpellUsesRemaining)
+        .map((spell) => {
+          const rangeSquares = spellRangeSquares(spell, gridDistanceFt);
+          if (rangeSquares == null) return null;
+          return {
+            id: spell.id,
+            slug: spell.slug,
+            label: spell.name,
+            cost: Number(spell.system.time.value),
+            rangeSquares,
+            save: spell.system.defense.save.statistic,
+            basic: spell.system.defense.save.basic,
+            entryId: entry.id,
+          };
+        }),
     )
     .filter(Boolean);
 
@@ -1031,6 +1035,7 @@ export function getPendingAgentTurn(combat) {
     .flatMap((entry) =>
       (entry.spells?.contents ?? [])
         .filter(isVariableCostSpellInScope)
+        .filter(hasSpellUsesRemaining)
         .map((spell) => {
           const cost = minimumVariableCost(spell);
           const rangeSquares = minimumTierRangeSquares(spell, gridDistanceFt);
@@ -1052,46 +1057,50 @@ export function getPendingAgentTurn(combat) {
   const readyAreaSpells = (
     combatant.actor?.spellcasting?.contents ?? []
   ).flatMap((entry) =>
-    (entry.spells?.contents ?? []).filter(isAreaSpellInScope).map((spell) => {
-      const radiusSquares = (spell.system.area.value ?? 0) / gridDistanceFt;
-      const withinRadius = (centerToken) =>
-        rawOpponents
-          .filter(
-            (o) =>
-              chebyshevSquares(centerToken, o.token, gridSize) <= radiusSquares,
-          )
-          .map((o) => ({ id: o.id, name: o.name }));
-      const placements =
-        spell.system.area.type === "emanation"
-          ? [
-              {
-                centerType: "self",
-                centerId: null,
-                affected: withinRadius(combatant.token),
-              },
-            ]
-          : rawOpponents.map((center) => ({
-              centerType: "opponent",
-              centerId: center.id,
-              affected: withinRadius(center.token),
-            }));
-      return {
-        id: spell.id,
-        slug: spell.slug,
-        label: spell.name,
-        cost: Number(spell.system.time.value),
-        save: spell.system.defense.save.statistic,
-        basic: spell.system.defense.save.basic,
-        entryId: entry.id,
-        placements,
-      };
-    }),
+    (entry.spells?.contents ?? [])
+      .filter(isAreaSpellInScope)
+      .filter(hasSpellUsesRemaining)
+      .map((spell) => {
+        const radiusSquares = (spell.system.area.value ?? 0) / gridDistanceFt;
+        const withinRadius = (centerToken) =>
+          rawOpponents
+            .filter(
+              (o) =>
+                chebyshevSquares(centerToken, o.token, gridSize) <= radiusSquares,
+            )
+            .map((o) => ({ id: o.id, name: o.name }));
+        const placements =
+          spell.system.area.type === "emanation"
+            ? [
+                {
+                  centerType: "self",
+                  centerId: null,
+                  affected: withinRadius(combatant.token),
+                },
+              ]
+            : rawOpponents.map((center) => ({
+                centerType: "opponent",
+                centerId: center.id,
+                affected: withinRadius(center.token),
+              }));
+        return {
+          id: spell.id,
+          slug: spell.slug,
+          label: spell.name,
+          cost: Number(spell.system.time.value),
+          save: spell.system.defense.save.statistic,
+          basic: spell.system.defense.save.basic,
+          entryId: entry.id,
+          placements,
+        };
+      }),
   );
 
   const readyAttackSpells = (combatant.actor?.spellcasting?.contents ?? [])
     .flatMap((entry) =>
       (entry.spells?.contents ?? [])
         .filter(isAttackSpellInScope)
+        .filter(hasSpellUsesRemaining)
         .map((spell) => {
           const rangeSquares = spellRangeSquares(spell, gridDistanceFt);
           if (rangeSquares == null) return null;
@@ -1111,6 +1120,7 @@ export function getPendingAgentTurn(combat) {
     .flatMap((entry) =>
       (entry.spells?.contents ?? [])
         .filter(isDebuffSpellInScope)
+        .filter(hasSpellUsesRemaining)
         .map((spell) => {
           const rangeSquares = spellRangeSquares(spell, gridDistanceFt);
           if (rangeSquares == null) return null;
