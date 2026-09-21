@@ -76,7 +76,9 @@ export function isValidPuzzleTemplate(entry) {
 
 /**
  * Fresh puzzle state from a template's own `hintChecks` — one stage per
- * check, in the same order, none attempted yet. `requiredSuccesses`
+ * check, in the same order, none attempted yet (each stage's own `skill`
+ * lowercased to PF2e's slug convention, confirmed live the real data
+ * doesn't already use it — see the inline comment below). `requiredSuccesses`
  * defaults to `defaultRequiredSuccesses` when not given explicitly (a
  * template entry may set its own via a `requiredSuccesses` field, for a
  * puzzle author who wants a stricter or looser threshold than the
@@ -84,7 +86,13 @@ export function isValidPuzzleTemplate(entry) {
  */
 export function initPuzzleState({ hintChecks, requiredSuccesses = null }) {
   const stages = hintChecks.map((c) => ({
-    skill: c.skill,
+    // Lowercased to PF2e's own skill-slug convention — confirmed live the
+    // real hand-authored hintChecks carry Title Case ("Perception",
+    // "Society", ...), copied straight from the source book's own prose,
+    // while every PF2e skill lookup (actor.skills, CONFIG.PF2E.skills)
+    // keys on the lowercase slug. Normalized once here rather than at
+    // every call site that reads stages[].skill.
+    skill: (c.skill ?? "").toLowerCase(),
     dc: c.dc,
     hint: c.hint,
     attempted: false,

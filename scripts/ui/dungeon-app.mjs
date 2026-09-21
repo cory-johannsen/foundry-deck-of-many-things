@@ -14,6 +14,7 @@ import {
 import { depthBiasFor, lootGpForTreasureRoom } from "../dungeon-deck.mjs";
 import { makeFoundryApi } from "../foundry-api.mjs";
 import { rollSkillChallengeAttempt } from "../skill-challenge.mjs";
+import { rollPuzzleStageAttempt } from "../puzzle.mjs";
 import {
   ALL_SKILLS,
   dcForAttempt,
@@ -81,8 +82,14 @@ const UNCOUNTED_ROOM_KINDS = new Set(["safe_entry", "safe_rest"]);
  * text), not the label itself, so this always needs the extra localize
  * step. Falls back to the bare slug for a key PF2e's own config doesn't
  * carry (shouldn't happen for anything out of `ALL_SKILLS`, which was
- * itself confirmed live to match `CONFIG.PF2E.skills`'s own keys exactly). */
+ * itself confirmed live to match `CONFIG.PF2E.skills`'s own keys exactly)
+ * — except `"perception"` (#137's own puzzle stages can use it, unlike
+ * `ALL_SKILLS`, which excludes it): confirmed live it has no entry in
+ * `CONFIG.PF2E.skills` at all (it's not a "skill" in PF2e's own model),
+ * resolved instead via the same `"PF2E.PerceptionLabel"` key the system's
+ * own UI uses for it. */
 function skillLabel(slug) {
+  if (slug === "perception") return game.i18n.localize("PF2E.PerceptionLabel");
   const key = CONFIG.PF2E?.skills?.[slug]?.label;
   return key ? game.i18n.localize(key) : slug;
 }
@@ -562,7 +569,7 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const actor = actorId ? game.actors.get(actorId) : null;
     if (!actor) return;
 
-    const result = await rollSkillChallengeAttempt(actor, stage.skill, stage.dc);
+    const result = await rollPuzzleStageAttempt(actor, stage.skill, stage.dc);
     if (!result) return;
 
     const newState = await recordPuzzleStageAttempt(

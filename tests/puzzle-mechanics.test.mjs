@@ -82,6 +82,17 @@ describe("initPuzzleState", () => {
     });
     expect(state.requiredSuccesses).toBe(3);
   });
+
+  it("lowercases each stage's skill, matching PF2e's own real hand-authored data (Title Case)", () => {
+    const state = initPuzzleState({
+      hintChecks: [
+        { skill: "Perception", dc: 10, hint: "h1" },
+        { skill: "Society", dc: 10, hint: "h2" },
+      ],
+    });
+    expect(state.stages[0].skill).toBe("perception");
+    expect(state.stages[1].skill).toBe("society");
+  });
 });
 
 describe("applyPuzzleStageAttempt", () => {
