@@ -3518,5 +3518,325 @@
     "name": "Poppet Mage",
     "level": 2,
     "art": "poppet-mage.webp"
+  },
+  {
+    "id": "akizendri",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "XyEQrWOQU59qCwRo",
+    "name": "Akizendri",
+    "level": 3,
+    "art": "akizendri.webp"
+  },
+  {
+    "id": "animated_statue",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "yQ2mosomuAPiLMkU",
+    "name": "Animated Statue",
+    "level": 3,
+    "art": "animated-statue.webp"
+  },
+  {
+    "id": "ankhrav",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "V1Kr5aiPaTM0mDFu",
+    "name": "Ankhrav",
+    "level": 3,
+    "art": "ankhrav.webp"
+  },
+  {
+    "id": "artillerist",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "D3SJlR6iZYMgL2s8",
+    "name": "Artillerist",
+    "level": 3,
+    "art": "artillerist.webp"
+  },
+  {
+    "id": "assassin_vine",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "DWQzgPL1WjXfu4rV",
+    "name": "Assassin Vine",
+    "level": 3,
+    "art": "assassin-vine.webp"
+  },
+  {
+    "id": "athamaru_hunter",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "pzQhR0mc8HEhXLOZ",
+    "name": "Athamaru Hunter",
+    "level": 3,
+    "art": "athamaru-hunter.webp"
+  },
+  {
+    "id": "boggard_swampseer",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "F2Xhn4rqPAj55w3O",
+    "name": "Boggard Swampseer",
+    "level": 3,
+    "art": "boggard-swampseer.webp"
+  },
+  {
+    "id": "bosun",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "XrXTfNGxEWLE9Qqb",
+    "name": "Bosun",
+    "level": 3,
+    "art": "bosun.webp"
+  },
+  {
+    "id": "brine_shark",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "H7z7VHzlHlEFev1r",
+    "name": "Brine Shark",
+    "level": 3,
+    "art": "brine-shark.webp"
+  },
+  {
+    "id": "bugbear_tormentor",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "httXfBPGseF9csXa",
+    "name": "Bugbear Tormentor",
+    "level": 3,
+    "art": "bugbear-tormentor.webp"
+  },
+  {
+    "id": "bunyip",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "S8iX8sPaYFFYDoUq",
+    "name": "Bunyip",
+    "level": 3,
+    "art": "bunyip.webp"
+  },
+  {
+    "id": "buso_farmer",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "hNW3X8MbQQ9pUMiR",
+    "name": "Buso Farmer",
+    "level": 3,
+    "art": "buso-farmer.webp"
+  },
+  {
+    "id": "centaur",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "l05LjJTXvFS4tYTE",
+    "name": "Centaur",
+    "level": 3,
+    "art": "centaur.webp"
+  },
+  {
+    "id": "centaur_herbalist",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "Q1qjdG3i8TZuEOq6",
+    "name": "Centaur Herbalist",
+    "level": 3,
+    "art": "centaur-herbalist.webp"
+  },
+  {
+    "id": "changeling_exile",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "RqX0vfUjlycKjGyp",
+    "name": "Changeling Exile",
+    "level": 3,
+    "art": "changeling-exile.webp"
+  },
+  {
+    "id": "charlatan",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "BcJ36KvuUysWW3BD",
+    "name": "Charlatan",
+    "level": 3,
+    "art": "charlatan.webp"
+  },
+  {
+    "id": "chronicler",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "qtD7Xa8Mgl0Y63os",
+    "name": "Chronicler",
+    "level": 3,
+    "art": "chronicler.webp"
+  },
+  {
+    "id": "chupacabra",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "Hl1Nnnda8KSf0Obp",
+    "name": "Chupacabra",
+    "level": 3,
+    "art": "chupacabra.webp"
+  },
+  {
+    "id": "cinder_rat",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "xN5J9S485LxFZMkL",
+    "name": "Cinder Rat",
+    "level": 3,
+    "art": "cinder-rat.webp"
+  },
+  {
+    "id": "cockatrice",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "MrzlaE7k1PEsd3iQ",
+    "name": "Cockatrice",
+    "level": 3,
+    "art": "cockatrice.webp"
+  },
+  {
+    "id": "d_ziriak",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "oykGJJYyxMHGXcRN",
+    "name": "D'ziriak",
+    "level": 3,
+    "art": "dziriak.webp"
+  },
+  {
+    "id": "dero_strangler",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "uUP9MQscB0EFPptr",
+    "name": "Dero Strangler",
+    "level": 3,
+    "art": "dero-strangler.webp"
+  },
+  {
+    "id": "dire_wolf",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "AFWmiIBJ7ypgydQD",
+    "name": "Dire Wolf",
+    "level": 3,
+    "art": "dire-wolf.webp"
+  },
+  {
+    "id": "diver",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "Z5MNKwVxTNilWRT4",
+    "name": "Diver",
+    "level": 3,
+    "art": "diver.webp"
+  },
+  {
+    "id": "draxie",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "UuQHd4v6gG8ONdCt",
+    "name": "Draxie",
+    "level": 3,
+    "art": "draxie.webp"
+  },
+  {
+    "id": "drow_priestess",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "FaBHkmFGuEIqIYM1",
+    "name": "Drow Priestess",
+    "level": 3,
+    "art": "drow-priestess.webp"
+  },
+  {
+    "id": "dryad",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "4MoqBCDQA6FR1sPw",
+    "name": "Dryad",
+    "level": 3,
+    "art": "dryad.webp"
+  },
+  {
+    "id": "dvorovoi",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "bm8t04PxMs5TYFS0",
+    "name": "Dvorovoi",
+    "level": 3,
+    "art": "dvorovoi.webp"
+  },
+  {
+    "id": "esobok",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "n1KQRInuKkFRM7ot",
+    "name": "Esobok",
+    "level": 3,
+    "art": "esobok.webp"
+  },
+  {
+    "id": "gambling_companion",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "HnitCC674ywMuqkS",
+    "name": "Gambling Companion",
+    "level": 3,
+    "art": "gambling-companion.webp"
+  },
+  {
+    "id": "ganzi_martial_artist",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "ko19XnS66DM8Pjr9",
+    "name": "Ganzi Martial Artist",
+    "level": 3,
+    "art": "ganzi-martial-artist.webp"
+  },
+  {
+    "id": "gelatinous_cube",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "TZcDdN5o7s4alZNE",
+    "name": "Gelatinous Cube",
+    "level": 3,
+    "art": "gelatinous-cube.webp"
+  },
+  {
+    "id": "giant_chameleon",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "oZTRZZlGb722xFMf",
+    "name": "Giant Chameleon",
+    "level": 3,
+    "art": "giant-chameleon.webp"
+  },
+  {
+    "id": "giant_dragonfly_nymph",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "OYBkVqJA95V3J1WG",
+    "name": "Giant Dragonfly Nymph",
+    "level": 3,
+    "art": "giant-dragonfly-nymph.webp"
+  },
+  {
+    "id": "giant_eagle",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "XEjkJ8fQqLc02hrU",
+    "name": "Giant Eagle",
+    "level": 3,
+    "art": "giant-eagle.webp"
+  },
+  {
+    "id": "giant_mantis_mc",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "KCVKMVYRuq6huXGz",
+    "name": "Giant Mantis",
+    "level": 3,
+    "art": "giant-mantis-mc.webp"
+  },
+  {
+    "id": "giant_mantis_b1",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "Z7xWkQKCHGyd02B1",
+    "name": "Giant Mantis",
+    "level": 3,
+    "art": "giant-mantis-b1.webp"
+  },
+  {
+    "id": "giant_scorpion",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "BWm17BRQYGMLqtNe",
+    "name": "Giant Scorpion",
+    "level": 3,
+    "art": "giant-scorpion.webp"
+  },
+  {
+    "id": "giant_seahorse",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "qE0iZoeeOp7og5A5",
+    "name": "Giant Seahorse",
+    "level": 3,
+    "art": "giant-seahorse.webp"
+  },
+  {
+    "id": "giant_vulture",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "01alXdlOUvAC6woS",
+    "name": "Giant Vulture",
+    "level": 3,
+    "art": "giant-vulture.webp"
   }
 ]
