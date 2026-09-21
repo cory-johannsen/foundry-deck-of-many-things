@@ -33,6 +33,7 @@ import {
   focusCameraOnSlot,
   teardownDungeonRun,
   buildPopulateAndUnlockRoom,
+  sweepCompletedDungeonScene,
 } from "../dungeon-scene.mjs";
 import {
   startCombatForSlot,
@@ -126,7 +127,14 @@ export async function resolveCurrentRoom(succeeded, { scene } = {}) {
     ui.notifications.warn(
       game.i18n.localize("DOMMT.Dungeon.RerunEncounterHint"),
     );
-  if (!nextRoomId) return; // the goal room was just resolved — nothing more to build
+  if (!nextRoomId) {
+    // #204: the goal room was just resolved — nothing more to build, but
+    // sweep any un-looted #172 corpse (or plain leftover NPC) before
+    // returning, since this was previously the one completion path with no
+    // cleanup trigger at all (teardownDungeonRun only ever fires on Abandon).
+    await sweepCompletedDungeonScene(scene);
+    return;
+  }
 
   const nextRoom = state.rooms.find((r) => r.id === nextRoomId);
   await buildPopulateAndUnlockRoom(scene, state, nextRoom, nextPhysicalSlot);
