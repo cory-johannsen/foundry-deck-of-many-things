@@ -26,7 +26,24 @@ export function isTreasureEligible(npcTraits) {
 
 // The item types worth copying onto a lootable corpse — tangible gear, not
 // a creature's own spells/strikes/lore/feats, which would just clutter a
-// loot sheet with things nobody can actually pick up.
+// loot sheet with things nobody can actually pick up. This is also the set
+// used to filter the spawn-time equipment-srd index (foundry-api.mjs's
+// spawnCreatures), so nothing gets granted to a live NPC that would later
+// silently fall off its corpse at death — the two call sites must agree on
+// exactly the same set of real PF2e physical-item types.
+//
+// Confirmed live against the actual running PF2e system (`Item.TYPES`) —
+// do not trust assumptions about this list without checking it live again,
+// since it's easy to get wrong from the name alone: `ammo` IS a real,
+// distinct PF2e item type (confirmed live: e.g. an "Arrows" item on a real
+// bestiary NPC has `type: "ammo"`, and pf2e.equipment-srd itself carries
+// 216 `ammo`-typed entries) — it is not folded into `consumable` the way it
+// might seem. `book` is also a real, distinct type (a lootable
+// tome/scroll-holder), even though no equipment-srd entry happens to use it
+// today; it's included so a creature carrying one some other way isn't
+// silently stripped of it. Neither is dead — both are real, kept.
+// Deliberately excluded: `kit` (a real physical type, ~2 equipment-srd
+// entries, but not treated as individually lootable gear by this feature).
 export const LOOTABLE_ITEM_TYPES = [
   'weapon',
   'armor',
@@ -36,6 +53,7 @@ export const LOOTABLE_ITEM_TYPES = [
   'backpack',
   'shield',
   'ammo',
+  'book',
 ];
 
 export function rollNpcTreasure({ level, index, rng }) {

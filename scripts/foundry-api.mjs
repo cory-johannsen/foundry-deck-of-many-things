@@ -44,7 +44,11 @@ import {
 import { splitmix32, seedFromString } from "./prng.mjs";
 import { buildCoverItemActorData, MODULE_ID } from "./cover-items.mjs";
 import { classifyTrap } from "./trap-combat.mjs";
-import { isTreasureEligible, rollNpcTreasure } from "./treasure.mjs";
+import {
+  isTreasureEligible,
+  rollNpcTreasure,
+  LOOTABLE_ITEM_TYPES,
+} from "./treasure.mjs";
 
 export const CREATURE_PACK_PATTERN =
   /bestiary|monster-core|npc-core|npc-gallery/i;
@@ -744,19 +748,26 @@ export function makeFoundryApi() {
               await game.packs
                 .get("pf2e.equipment-srd")
                 ?.getIndex({ fields: ["type", "system.level.value", "system.price.value"] })
-            )?.map((e) => ({
-              id: e._id,
-              pack: "pf2e.equipment-srd",
-              level: e.system?.level?.value ?? 0,
-              // system.price.value is keyed by denomination ({gp}, {sp}, ...)
-              // rather than always gp — normalized to a single gp-equivalent
-              // number so rollNpcTreasure's price ceiling comparison is
-              // meaningful regardless of which denomination a cheap item uses.
-              priceGp:
-                (e.system?.price?.value?.gp ?? 0) +
-                (e.system?.price?.value?.sp ?? 0) / 10 +
-                (e.system?.price?.value?.cp ?? 0) / 100,
-            })) ?? []
+            )
+              // pf2e.equipment-srd also carries a couple of `kit`-typed
+              // entries not in LOOTABLE_ITEM_TYPES — filtered here so
+              // nothing gets granted at spawn that dungeon-combat.mjs's
+              // corpse conversion would later silently strip off the corpse
+              // at death for not matching that same allow-list (#172 review).
+              ?.filter((e) => LOOTABLE_ITEM_TYPES.includes(e.type))
+              .map((e) => ({
+                id: e._id,
+                pack: "pf2e.equipment-srd",
+                level: e.system?.level?.value ?? 0,
+                // system.price.value is keyed by denomination ({gp}, {sp}, ...)
+                // rather than always gp — normalized to a single gp-equivalent
+                // number so rollNpcTreasure's price ceiling comparison is
+                // meaningful regardless of which denomination a cheap item uses.
+                priceGp:
+                  (e.system?.price?.value?.gp ?? 0) +
+                  (e.system?.price?.value?.sp ?? 0) / 10 +
+                  (e.system?.price?.value?.cp ?? 0) / 100,
+              })) ?? []
           : [];
 
       const created = [];
