@@ -1,4 +1,6 @@
-# GM-less Dungeon Crawl Implementation Plan
+> **ARCHIVED — the design this plan implements does not work; see the archive notice at the top of `docs/superpowers/specs/2026-09-20-gm-less-dungeon-crawl-design.md`.** A fresh spec/plan pair follows a different architecture (routing a non-GM host's actions to a real GM-role client — e.g. a standing "Agent" login — rather than relaxing permissions). This plan's tasks were fully implemented and reviewed on `worktree-issue-109-gm-less-dungeon-crawl`; that work is not merged and most of it will not carry forward as-is, though `scripts/ui/dungeon-app.mjs`'s read-only broadcast mechanism (Task 6) and `dungeon-runner.mjs`'s `hostUserId` field (Task 2) are expected to be reusable, repurposed pieces.
+
+# GM-less Dungeon Crawl Implementation Plan (ARCHIVED)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

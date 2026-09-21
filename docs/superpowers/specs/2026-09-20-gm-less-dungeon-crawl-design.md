@@ -1,4 +1,8 @@
-# GM-less dungeon crawl start/run — design
+> **ARCHIVED — superseded by [2026-09-20-gm-less-dungeon-crawl-agent-relay-design.md](2026-09-20-gm-less-dungeon-crawl-agent-relay-design.md).**
+>
+> This design's core mechanism (relax `isGM` checks + grant Foundry's `SETTINGS_MODIFY` permission so a non-GM host can act directly) does not work: Foundry requires role ≥ Assistant Gamemaster to create/update/delete `Scene` documents (and to spawn Actors/Tokens for encounters), and `isGM` is *defined* as that same role check — so any client that could pass those document-permission checks already satisfies every `isGM` gate in the codebase. `SETTINGS_MODIFY` alone (which this spec verified live and got right) covers world-*settings* writes only, not documents, and there is no equivalent grantable permission for Scene creation. Caught by the final whole-branch review on the implementation branch (`worktree-issue-109-gm-less-dungeon-crawl`), before merge. Kept here for history — the permission research in this file (the `SETTINGS_MODIFY`/`game.permissions` findings, the `Setting` document schema findings) is still accurate and still useful background, just insufficient on its own.
+
+# GM-less dungeon crawl start/run — design (ARCHIVED)
 
 **Tracks:** [#109](https://github.com/cory-johannsen/foundry-deck-of-many-things/issues/109)
 
