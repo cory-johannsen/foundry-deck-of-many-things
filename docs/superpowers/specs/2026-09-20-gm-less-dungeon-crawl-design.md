@@ -70,14 +70,15 @@ There's no existing run to check permissions against yet, so this gets its own b
 
 - Register `Hooks.on('updateSetting', ...)` filtered to the module's `dungeonRuns` key (Foundry already broadcasts world-setting changes to every client for free).
 - When that fires and the run is active with `hostUserId` set: every client other than the host auto-opens (or re-renders, if already open) its own local `DungeonApp` instance mirroring the shared run state, in **read-only** mode.
-- `DungeonApp` gains an `interactive` flag computed per client: `game.user.isGM || game.user.id === run.hostUserId`. When false, every action control (Succeed/Fail/Populate Next/Declare Victory/Declare Defeat/Abandon/etc.) renders **disabled**, not hidden — read-only viewers see full live state, just can't act. Defense in depth: even if a disabled control were somehow triggered, the underlying `module.api` call would still reject it via `canActOnDungeon`.
+- `DungeonApp` gains an `interactive` flag computed per client via `canActOnDungeon(run)`. When false, every action control (Succeed/Fail/Populate Next/Declare Victory/Declare Defeat/Abandon/etc.) renders **disabled**, not hidden — read-only viewers see full live state, just can't act.
+- The disabled button is only a UI nicety, not the actual enforcement: `DungeonApp`'s action handlers call `dungeon-runner.mjs`/`dungeon-scene.mjs` functions directly, bypassing `module.api` entirely. Each mutating handler (Start excepted, which is already gated by `openDungeon()`'s own entry check) re-checks `canActOnDungeon(getRunState(sceneId))` itself at the moment of the click and no-ops if it fails. This is what actually stops a read-only viewer who bypasses the disabled button, and what actually revokes the host's own access the instant a GM connects (see Edge cases below) — it isn't just cosmetic.
 - The host's own client is unaffected by this hook — it already has its own interactive instance open from calling the macro.
 - When the run ends (`hostUserId` cleared / status leaves `active`), the same hook closes any auto-opened read-only instances on other clients.
 - Host disconnect/reconnect needs no special handling: `hostUserId` is compared by user id, not session, so interactive control returns automatically to that same player when they reconnect. If they never return and no GM logs in, the run stays frozen read-only for everyone — no host-reassignment logic exists or is planned.
 
 ### Edge case: a GM logs in mid-run
 
-Not specially handled. `hostUserId` is left untouched. The GM is not auto-opened (nobody force-opens a GM's UI); if they run the macro themselves, `openDungeon()`'s GM branch renders their own fully-interactive instance alongside the host's, since `canActOnDungeon` always returns true for a GM regardless of `hostUserId`. Both being able to act simultaneously is accepted, not resolved — consistent with the trust model already agreed for this module.
+Not specially handled beyond what `canActOnDungeon` already does. `hostUserId` is left untouched, but per the agreed detection rule ("a GM logging in mid-run immediately regains exclusive control"), `canActOnDungeon` requires *no* active GM for the host branch — so the instant any GM is active, the host's own further actions are rejected too, not just other players'. The host's window doesn't repaint itself just because a GM's connection state changed elsewhere (no `dungeonRuns` update fires for that), so it can briefly look interactive when it no longer is; the action handlers re-check `canActOnDungeon` at the moment of the click (see Room dialogs below) and simply no-op instead of mutating, re-rendering the host's own view into read-only at that point. The GM is not auto-opened; if they want to see or run the crawl themselves they open it via the macro like normal.
 
 ## Room dialogs (narrative / puzzle / trap)
 
@@ -92,7 +93,7 @@ Agent-controlled combat turns (#94) are unaffected beyond the gating change alre
 ## Error handling
 
 - Second non-GM player starting a crawl while a different host's run is active → warning naming the current host (see `openDungeon()` table above), no state change.
-- A read-only viewer's disabled controls never reach the server; `canActOnDungeon` is the backstop if they somehow did.
+- A read-only viewer's disabled controls never reach the server; each action handler's own `canActOnDungeon` re-check (see Broadcast section above) is what actually rejects it if a disabled control were somehow bypassed, not a `module.api` layer.
 - Normal GM-run games are entirely unaffected: `hostUserId` stays `null`, `canActOnDungeon` reduces to today's plain `isGM` check, the `updateSetting` broadcast hook never triggers an auto-open.
 
 ## Testing
