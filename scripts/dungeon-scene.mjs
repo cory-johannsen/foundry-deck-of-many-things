@@ -39,12 +39,14 @@ import {
   undoLastRoomEntry,
   canUndoRoomEntry,
   ensureSkillChallenge,
+  ensurePuzzleState,
   markRoomOutcome,
 } from "./dungeon-runner.mjs";
 import { depthBiasFor } from "./dungeon-deck.mjs";
 import { startCombatForSlot } from "./dungeon-combat.mjs";
 import { playDoorSound } from "./dungeon-sound.mjs";
 import { loadDungeonSetpieces } from "./data-loader.mjs";
+import { selectSkillChallengeTemplate } from "./skill-challenge-mechanics.mjs";
 import { makeFoundryApi } from "./foundry-api.mjs";
 import { selectTrap } from "./trap-library.mjs";
 import { splitmix32, seedFromString } from "./prng.mjs";
@@ -735,10 +737,22 @@ export async function buildPopulateAndUnlockRoom(
       const partyMembers = (game.actors?.party?.members ?? []).filter(
         (m) => m.type === "character",
       );
+      // #164: the template (if any) is selected once, here, at the same
+      // build-time this room's Victory Point state is first attached —
+      // ensureSkillChallenge itself is a no-op past that point, so this
+      // never re-rolls a template a later re-render/re-build might
+      // otherwise see rendered differently.
+      const setpieces = await loadDungeonSetpieces();
+      const template = selectSkillChallengeTemplate(
+        setpieces,
+        state.seed,
+        room.id,
+      );
       await ensureSkillChallenge(scene.id, room.id, {
         seed: state.seed,
         locationTag: room.locationTag,
         partySize: partyMembers.length,
+        template,
       });
     }
     // #135: a puzzle_or_trap room's *specific* content (puzzle vs. trap) is
@@ -746,10 +760,14 @@ export async function buildPopulateAndUnlockRoom(
     // over every dungeon-setpieces.json id, room.kind itself staying the
     // generic 'puzzle_or_trap' bucket either way — only the resolved
     // setpiece's own `kind` field, looked up here, says which one this
-    // occurrence actually is. A puzzle setpiece's flavor text is still all
-    // the room ever gets (#137-139's own scope, not touched here); a trap
-    // setpiece additionally gets a real, mechanically-functional hazard
-    // spawned from pf2e.hazards for #134's engine to run.
+    // occurrence actually is. A puzzle setpiece's own state is attached
+    // right here too (#109/#137) — it used to lazily attach itself the
+    // first time the room rendered in dungeon-app.mjs, the same pattern
+    // skill_challenge's own state used to use above before #109 moved it
+    // to this same build-time spot, for the same reason: a client only
+    // relaying a GM-less host's requests never renders DungeonApp at all.
+    // A trap setpiece additionally gets a real, mechanically-functional
+    // hazard spawned from pf2e.hazards for #134's engine to run.
     if (room.kind === "puzzle_or_trap" && room.setpieceId) {
       const setpieces = await loadDungeonSetpieces();
       const setpiece = setpieces.find((s) => s.id === room.setpieceId);
@@ -763,6 +781,14 @@ export async function buildPopulateAndUnlockRoom(
           }),
           locationTag: room.locationTag,
           seed: state.seed,
+        });
+      } else if (setpiece?.kind === "puzzle") {
+        await ensurePuzzleState(scene.id, room.id, {
+          hintChecks: setpiece.hintChecks,
+          requiredSuccesses: setpiece.requiredSuccesses ?? null,
+          partyLevel: await makeFoundryApi().partyLevel(),
+          name: setpiece.name ?? null,
+          summary: setpiece.summary ?? null,
         });
       }
     }

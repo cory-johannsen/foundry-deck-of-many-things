@@ -25,7 +25,7 @@ for the full design.
    ```
    FOUNDRY_BASE_URL=http://localhost:<your relay port>
    FOUNDRY_REST_API_KEY=<your relay's key>
-   ANTHROPIC_API_KEY=<your Claude API key>
+   ANTHROPIC_API_KEY=<your Claude API key, only needed for combat-turn decisions>
    ```
 
    `FOUNDRY_CLIENT_ID` and `DOMMT_AGENT_PROVIDER` (default `claude`) and
@@ -73,15 +73,47 @@ relay blip, the terminal logs a louder warning once 10 poll cycles in a row
 have failed; at that point, restarting the process (`Ctrl-C`, then
 `node tools/agent-loop/poll.mjs` again) is the known-working fix.
 
-## Trap flavor customization (#136)
+## Flavor customization: trap (#136) and skill-challenge (#166) content, via MCP (#185)
 
-Once per loop iteration, the poller also checks for a newly spawned,
-still-hidden trap (#135) waiting to be customized, and — if
-`ANTHROPIC_API_KEY` is configured — asks Claude to rewrite its name and
-flavor text to fit the room, before the party ever reaches its door. This
-is **always Claude, regardless of `DOMMT_AGENT_PROVIDER`**: Laya is a
-classifier over a fixed candidate set, not a text generator, so it can't do
-this at all. If the key isn't configured, or nothing responds before the
-room's reveal door opens, the trap just keeps its original compendium name
-and description — the same graceful degradation the combat-AI half already
-relies on, and never anything that blocks room reveal or discovery.
+Unlike combat-turn decisions, flavor customization (a trap's name and
+description; a skill-challenge room's name, summary, and per-skill flavor
+text) doesn't come from a hardcoded API call in `poll.mjs`. It comes from
+whatever _interactive agent session_ connects to `tools/agent-loop/mcp-server.mjs`
+— any model, your choice, not locked to Claude/Anthropic. This is the
+actual point of the "agent bridge" name: the poller automates the
+time-critical stuff (combat, bounded by `AGENT_TIMEOUT_MS`), and everything
+that isn't time-critical is left for an agent session to pick up and
+fulfill on its own schedule.
+
+**Run the MCP server** (separately from `poll.mjs` — it needs no
+`ANTHROPIC_API_KEY` at all, only the same `FOUNDRY_BASE_URL`/
+`FOUNDRY_REST_API_KEY` the poller uses):
+
+```bash
+node tools/agent-loop/mcp-server.mjs
+```
+
+It's already registered in this repo's `.mcp.json`, so a Claude Code
+session opened here connects to it automatically. It exposes three tools:
+
+- `list_pending_customizations` — any pending trap and/or skill-challenge
+  customization request for the current (or a given) scene.
+- `submit_trap_customization(actorId, name, description)`
+- `submit_skill_challenge_customization(sceneId, roomId, name, summary, skillFlavor)`
+
+A GM (or anyone with an MCP-connected session) just asks their agent to
+"check for and fulfill any pending dungeon customizations" — the agent
+calls `list_pending_customizations`, writes fitting content for whatever
+comes back, and submits it. If nothing does, the room/trap keeps its
+original template content — the same graceful degradation the combat-AI
+half already relies on, and never anything that blocks room reveal or
+discovery.
+
+One real timing difference between the two kinds: a trap spawns hidden
+(#135), with a genuine window to customize it before the party ever
+reaches its door. A skill-challenge room's content is shown the instant
+the room becomes current, so there's no such window — the party may see
+the un-customized name/summary first and see it change in place only if
+and when a customization lands before the Dungeon Crawl tracker
+next re-renders. Accepted as the honest trade-off rather than blocking
+room display on it.

@@ -23,8 +23,15 @@ import {
   getRunState,
   findActiveHostedRun,
   findHostedRunForBroadcast,
+  getPendingSkillChallengeCustomization,
+  applySkillChallengeCustomization,
+  getPendingPuzzleCustomization,
+  applyPuzzleCustomization,
 } from "./dungeon-runner.mjs";
-import { decideOpenDungeon, decideGmLessBroadcast } from "./dungeon-permissions.mjs";
+import {
+  decideOpenDungeon,
+  decideGmLessBroadcast,
+} from "./dungeon-permissions.mjs";
 import { registerDungeonActionSocket } from "./dungeon-remote.mjs";
 import {
   handleDungeonDoorOpened,
@@ -257,6 +264,50 @@ Hooks.once("ready", async () => {
         );
       return applyTrapCustomization(actorId, customization);
     },
+    // #166: the same narrow read/apply pair as #136's trap customization
+    // surface above, for a skill_challenge room's own pending narrative
+    // customization instead.
+    getPendingSkillChallengeCustomization: (sceneId) => {
+      if (!game.user.isGM)
+        return ui.notifications.warn(
+          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+        );
+      return getPendingSkillChallengeCustomization(
+        sceneId ?? canvas?.scene?.id,
+      );
+    },
+    applySkillChallengeCustomization: (sceneId, roomId, customization) => {
+      if (!game.user.isGM)
+        return ui.notifications.warn(
+          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+        );
+      return applySkillChallengeCustomization(
+        sceneId ?? canvas?.scene?.id,
+        roomId,
+        customization,
+      );
+    },
+    // #139: the same narrow read/apply pair as #166's skill_challenge
+    // customization surface above, for a puzzle room's own pending
+    // narrative customization instead.
+    getPendingPuzzleCustomization: (sceneId) => {
+      if (!game.user.isGM)
+        return ui.notifications.warn(
+          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+        );
+      return getPendingPuzzleCustomization(sceneId ?? canvas?.scene?.id);
+    },
+    applyPuzzleCustomization: (sceneId, roomId, customization) => {
+      if (!game.user.isGM)
+        return ui.notifications.warn(
+          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+        );
+      return applyPuzzleCustomization(
+        sceneId ?? canvas?.scene?.id,
+        roomId,
+        customization,
+      );
+    },
   };
   if (game.user.isGM) {
     try {
@@ -433,7 +484,10 @@ Hooks.on("updateWall", async (wall, changes) => {
  */
 function syncGmLessDungeonBroadcast() {
   const existing = foundry.applications.instances.get("dommt-dungeon-app");
-  const decision = decideGmLessBroadcast(findHostedRunForBroadcast(), !!existing);
+  const decision = decideGmLessBroadcast(
+    findHostedRunForBroadcast(),
+    !!existing,
+  );
   if (decision.action === "open") new DungeonApp().render(true);
   else if (decision.action === "render") existing.render();
   else if (decision.action === "close") existing.close();

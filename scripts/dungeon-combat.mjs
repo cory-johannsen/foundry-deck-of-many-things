@@ -30,6 +30,9 @@ import {
   parseBreathWeaponEffect,
   parseChainHopDistance,
   parseAreaSpellTierOverrides,
+  parseActionGlyphTiers,
+  parseTargetCountFormula,
+  parseAutoHitAreaTiers,
 } from "./agent-candidates.mjs";
 import { findPath, blockedEdgesFromWalls } from "./pathfinding.mjs";
 import { coverBlocksLineOfFire, COVER_EFFECT_DATA } from "./cover-items.mjs";
@@ -419,6 +422,60 @@ function chebyshevSquares(a, b, gridSize) {
   return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) / gridSize;
 }
 
+/**
+ * The nearest hazardous Region to `token`, within 1 square (the only
+ * distance `buildMovementCandidates`'s own `hazard.distanceSquares <= 1`
+ * check ever cares about — #103), or `null` if none is that close. A
+ * hazard is any Region on the scene carrying this module's own
+ * `hazardous` flag (per live discussion — GM-placed, deliberate, no
+ * attempt to infer danger from PF2e's built-in terrain-flavor or
+ * movement-cost region behaviors, which don't reliably signal "worth
+ * repositioning away from" on their own: mirrors this module's existing
+ * `coverItem`/`trapHazard` token-flag convention, just on a Region
+ * instead of a Token). Tests the combatant's own cell first, then its 8
+ * Chebyshev-adjacent cells, each at cell *center* (confirmed live
+ * `Region#testPoint` needs `{x, y, elevation}` bundled into one point
+ * object — passing `elevation` as a second argument, the naive reading of
+ * the method's own name, silently returns `false` for every point, a real
+ * footgun caught live before it shipped). Returns the matching cell's own
+ * top-left corner (`x`, `y`) — the same convention every real token's own
+ * position already uses — not its center, since `applyAgentDecision`
+ * feeds this straight back into `tokenCell` (a plain `pixel / gridSize`
+ * round) to build a synthetic retreat-from target: a center point doesn't
+ * round-trip through that to the intended cell, a real off-by-one caught
+ * live before it shipped. Recomputed fresh at execution time rather than
+ * threaded through the candidate, matching every other tier-resolving
+ * function in this file's convention.
+ */
+function nearestHazardousRegionPoint(scene, token, gridSize) {
+  const hazardRegions = (scene?.regions ?? []).filter((r) =>
+    r.getFlag(MODULE_ID, "hazardous"),
+  );
+  if (!hazardRegions.length) return null;
+  const elevation = token.elevation ?? 0;
+  const gx0 = Math.round(token.x / gridSize);
+  const gy0 = Math.round(token.y / gridSize);
+  for (let dist = 0; dist <= 1; dist++) {
+    for (let dgy = -dist; dgy <= dist; dgy++) {
+      for (let dgx = -dist; dgx <= dist; dgx++) {
+        if (Math.max(Math.abs(dgx), Math.abs(dgy)) !== dist) continue;
+        const gx = gx0 + dgx;
+        const gy = gy0 + dgy;
+        const testX = gx * gridSize + gridSize / 2;
+        const testY = gy * gridSize + gridSize / 2;
+        if (
+          hazardRegions.some((r) =>
+            r.testPoint({ x: testX, y: testY, elevation }),
+          )
+        ) {
+          return { distanceSquares: dist, x: gx * gridSize, y: gy * gridSize };
+        }
+      }
+    }
+  }
+  return null;
+}
+
 /** Reach for one ready action, in squares — a `reach-N` trait (N in feet)
  * takes priority; otherwise a ranged action's own range increment (feet);
  * otherwise plain melee reach. Confirmed live during planning: a PF2e
@@ -477,6 +534,136 @@ function spellRangeSquares(spell, gridDistanceFt) {
 }
 
 /**
+ * True for a spell squarely inside #174's scope: a dual-nature spell whose
+ * SHAPE changes with action cost, not just its magnitude — Harm/Heal-
+ * shaped, confirmed live as the only real examples: single-target at 1-2
+ * actions, a self-centered area at 3, living creatures take one effect and
+ * undead take the opposite. Detected structurally, not by spell name: a
+ * genuinely variable cost ("1 to 3"), a `defense.save` statistic, a single
+ * damage instance, `target.value` mentioning both "living" and "undead"
+ * (the dual-nature signal — #122's own broadened single-target regex also
+ * matches Harm/Heal's target text, but doesn't distinguish a dual-nature
+ * spell from an ordinary one), and at least one action-glyph tier
+ * (`parseActionGlyphTiers`) carrying an `area` — the actual shape-change
+ * signal, mirroring #140's `isTierScalingAreaSpellInScope`'s own "at least
+ * one parseable override" gate.
+ */
+function isDualNatureTieredSpellInScope(spell) {
+  const system = spell.system ?? {};
+  if (!/^[123]\s+to\s+[123]$/.test(system.time?.value ?? "")) return false;
+  if (!system.defense?.save?.statistic) return false;
+  if (Object.keys(system.damage ?? {}).length !== 1) return false;
+  const targetValue = system.target?.value ?? "";
+  if (!/living/i.test(targetValue) || !/undead/i.test(targetValue))
+    return false;
+  const tiers = parseActionGlyphTiers(system.description?.value ?? "");
+  return Object.values(tiers).some((t) => t.area != null);
+}
+
+/**
+ * Which creature type a #174-scoped dual-nature spell's damage side
+ * targets — derived from the `healing` trait, the same signal #132 already
+ * uses to tell Harm and Heal apart: Heal (has `healing`) heals the living
+ * and damages the undead; Harm (no `healing` trait) damages the living and
+ * heals the undead.
+ */
+function dualNatureHarmfulTrait(spell) {
+  return spell.system?.traits?.value?.includes("healing")
+    ? "undead"
+    : "living";
+}
+
+/**
+ * True for a spell squarely inside #175's scope: a target-count-scaling
+ * spell whose number of independent targets grows with action cost
+ * (Rebuke Death-shaped — "1 living creature per action spent to Cast this
+ * Spell", confirmed live), rather than #140's shared area or #174's
+ * shape-changing pattern. Detected via `parseTargetCountFormula` directly
+ * against the spell's own structured `target.value` field — unlike #140/
+ * #174, no description-HTML parsing is needed at all, since PF2e already
+ * structures this signal. A genuinely variable cost and at least one
+ * damage/healing instance round out the check, mirroring every other
+ * variable-cost scope filter in this file.
+ */
+function isTargetCountSpellInScope(spell) {
+  const system = spell.system ?? {};
+  if (!/^[123]\s+to\s+[123]$/.test(system.time?.value ?? "")) return false;
+  if (!Object.keys(system.damage ?? {}).length) return false;
+  return parseTargetCountFormula(system.target?.value ?? "") != null;
+}
+
+/**
+ * True for a spell squarely inside #176's scope: an area spell whose lower
+ * tiers are ordinary save-scaled damage but whose top tier bypasses the
+ * save entirely (Force Rain-shaped — confirmed live: "Creatures in the
+ * area don't attempt a saving throw and instead automatically take 20
+ * force damage"). Broadens #140's own `burst`/`emanation`-only area-type
+ * check to also accept `square` — confirmed live Force Rain's own
+ * structured minimum tier is a single 5-foot square, not a burst/
+ * emanation, so #140's existing filter never sees it at all regardless of
+ * this ticket's own scope (no risk of double-matching). A genuinely
+ * variable cost, a save statistic (present for the lower, save-scaled
+ * tiers even though the top tier ends up bypassing it), a damage instance,
+ * and at least one parsed tier actually flagged `noSave` (the real
+ * shape-defining signal, mirroring #140's own "at least one parseable
+ * override" gate) round out the check.
+ */
+function isAutoHitAreaSpellInScope(spell) {
+  const system = spell.system ?? {};
+  const areaType = system.area?.type;
+  if (areaType !== "burst" && areaType !== "emanation" && areaType !== "square")
+    return false;
+  if (!system.defense?.save?.statistic) return false;
+  if (!Object.keys(system.damage ?? {}).length) return false;
+  if (!/^[123]\s+to\s+[123]$/.test(system.time?.value ?? "")) return false;
+  const tiers = parseAutoHitAreaTiers(system.description?.value ?? "");
+  return Object.values(tiers).some((t) => t.noSave);
+}
+
+/**
+ * Every cost tier of a #176-scoped auto-hit-at-max-tier area spell, keyed
+ * by cost — unlike #140's `resolveAreaSpellTiers`, every tier (including
+ * the minimum) comes from `parseAutoHitAreaTiers` directly, since Force
+ * Rain's own action-glyph clauses reliably carry a damage phrase at every
+ * tier, even the one with no `@Template` enricher; only `radiusFeet` falls
+ * back to the spell's own structured `system.area` when a tier's clause
+ * has no `@Template` of its own (true for the minimum tier). A structured
+ * `area.type` of `"square"` means a single grid cell — a *footprint size*,
+ * not a radius-from-center the way `burst`/`emanation`'s `value` is —
+ * confirmed live Force Rain's own minimum tier is exactly this shape
+ * ("a single 5-foot square"), so treating its `value` as a radius would
+ * wrongly pull in the center's neighbors too; it resolves to radius 0
+ * (the chosen center only) instead. A hypothetical minimum tier with a
+ * genuine `burst`/`emanation` structured area (no real example exists
+ * today) still falls back to that area's own `value` as a true radius,
+ * matching #140's established convention.
+ */
+function resolveAutoHitAreaTiers(spell) {
+  const system = spell.system ?? {};
+  const parsed = parseAutoHitAreaTiers(system.description?.value ?? "");
+  const tiers = {};
+  for (const [costStr, tier] of Object.entries(parsed)) {
+    const cost = Number(costStr);
+    const radiusFeet = tier.area
+      ? tier.area.value
+      : system.area?.type === "square"
+        ? 0
+        : (system.area?.value ?? 0);
+    tiers[cost] = {
+      cost,
+      radiusFeet,
+      noSave: tier.noSave,
+      damage: tier.noSave
+        ? []
+        : [{ formula: tier.damageFormula, type: tier.damageType }],
+      flatDamage: tier.noSave ? tier.flatDamage : null,
+      damageType: tier.damageType,
+    };
+  }
+  return tiers;
+}
+
+/**
  * True for a spell squarely inside #122's *fixed-at-minimum-cost* scope:
  * otherwise shaped exactly like #118's single-target save-based damage
  * spells, but with a genuinely variable `time.value` ("1 to 3", not "1 to
@@ -496,11 +683,15 @@ function spellRangeSquares(spell, gridDistanceFt) {
  * live that casting it at a living enemy this way produces zero effect
  * rather than damage, since its damage roll carries ambiguous
  * `kinds: ["damage", "healing"]` — Harm has no `healing` trait and stays
- * in scope.
+ * in scope. Also excludes any #174-scoped dual-nature tiered spell (Harm
+ * itself, once #174 shipped) — superseded by its own dedicated multi-tier
+ * pathway, which this fixed-at-minimum-cost filter would otherwise offer
+ * as a redundant, strictly-worse 1-action-only duplicate candidate.
  */
 function isVariableCostSpellInScope(spell) {
   const system = spell.system ?? {};
   if (system.traits?.value?.includes("healing")) return false;
+  if (isDualNatureTieredSpellInScope(spell)) return false;
   if (system.area != null) return false;
   const targetValue = system.target?.value ?? "";
   if (
@@ -668,10 +859,14 @@ function isDebuffSpellInScope(spell) {
  * Soothing Ballad's shape) — single-ally healing only for v1, matching
  * every other slice's narrow-first pattern; ally buffs (a different
  * mechanic — typically unconditional, no save) are a separate follow-up.
+ * Also excludes any #174-scoped dual-nature tiered spell (Heal, once #174
+ * shipped) for the same reason #122's filter does — superseded by its own
+ * dedicated multi-tier pathway.
  */
 function isHealSpellInScope(spell) {
   const system = spell.system ?? {};
   if (!system.traits?.value?.includes("healing")) return false;
+  if (isDualNatureTieredSpellInScope(spell)) return false;
   if (system.area != null) return false;
   const targetValue = system.target?.value ?? "";
   if (!/^1\b/.test(targetValue)) return false;
@@ -887,6 +1082,84 @@ async function computeConePlacements(
 }
 
 /**
+ * The real Foundry-computed set of opponents/allies caught by a circular
+ * burst/emanation template centered at each of `centers` in turn — the
+ * same exact-containment approach `computeConePlacements` already uses for
+ * breath-weapon cones, replacing the Chebyshev-square approximation (a
+ * burst/emanation's circle vs. its bounding square, whose far diagonal
+ * corners a real circle wouldn't reach) #119/#140/#176 all used before
+ * (see #150). `centers` carries each candidate placement's own
+ * `centerType`/`centerId` (matching the caller's existing placement
+ * shape) alongside the real `originToken` to center the template on —
+ * `combatant.token` for an emanation's single self-centered placement,
+ * each opponent's own token for a burst's per-opponent placements. Same
+ * viewed-scene requirement and batch-create/compute/read/delete pattern as
+ * `computeConePlacements` — see that function's own comment for why.
+ */
+async function computeAreaPlacements(
+  combat,
+  centers,
+  rawOpponents,
+  rawAllies,
+  radiusFeet,
+) {
+  const scene = combat.scene;
+  if (!scene || game.scenes.viewed?.id !== scene.id || !centers.length)
+    return [];
+  const gridSize = scene.grid?.size ?? 100;
+
+  const templateData = centers.map((center) => {
+    const origin = tokenCenter(center.originToken, gridSize);
+    return {
+      t: "circle",
+      x: origin.x,
+      y: origin.y,
+      distance: radiusFeet,
+      hidden: true,
+    };
+  });
+
+  const created = await scene.createEmbeddedDocuments(
+    "MeasuredTemplate",
+    templateData,
+  );
+  try {
+    return created.map((templateDoc, i) => {
+      const canvasObject = canvas.templates?.get(templateDoc.id);
+      if (
+        canvasObject &&
+        !canvasObject.shape &&
+        typeof canvasObject._computeShape === "function"
+      ) {
+        canvasObject.shape = canvasObject._computeShape();
+      }
+      const shape = canvasObject?.shape ?? null;
+      const origin = tokenCenter(centers[i].originToken, gridSize);
+      const contained = (pool) =>
+        shape
+          ? pool
+              .filter((o) => {
+                const center = tokenCenter(o.token, gridSize);
+                return shape.contains(center.x - origin.x, center.y - origin.y);
+              })
+              .map((o) => ({ id: o.id, name: o.name }))
+          : [];
+      return {
+        centerType: centers[i].centerType,
+        centerId: centers[i].centerId,
+        affected: contained(rawOpponents),
+        affectedAllies: contained(rawAllies),
+      };
+    });
+  } finally {
+    await scene.deleteEmbeddedDocuments(
+      "MeasuredTemplate",
+      created.map((t) => t.id),
+    );
+  }
+}
+
+/**
  * The raw stored `agentTurnState` flag, but only when it actually belongs to
  * this exact turn — same `combatantId` *and* the same `round`/`turn` the
  * Combat is on right now. `combatantId` alone isn't enough: the same
@@ -1022,7 +1295,12 @@ function movementBlockedEdges(combat) {
  * shouldn't cancel the retreat outright, just shorten it). `speedSquares`
  * bounds how far a retreat goal is projected; how much of the returned path
  * is actually walked is still the caller's own speed clamp. Returns `null`
- * if no path exists at all.
+ * if no path exists at all. `reposition` (#103, hazard avoidance) shares
+ * this exact "project directly away" branch with `retreat` — mechanically
+ * identical (move away from a point), just away from a hazard's own
+ * position instead of an opponent's, kept as its own `posture` value
+ * upstream in `buildMovementCandidates`'s candidate data purely for a
+ * distinct summary/intent, not a different movement algorithm.
  */
 function posturePath(
   start,
@@ -1032,7 +1310,7 @@ function posturePath(
   isBlocked,
   bounds,
 ) {
-  if (posture !== "retreat")
+  if (posture !== "retreat" && posture !== "reposition")
     return findPath(start, targetCell, isBlocked, bounds);
 
   const dx = Math.sign(start.gx - targetCell.gx) || 1;
@@ -1447,52 +1725,45 @@ export async function getPendingAgentTurn(combat) {
     )
     .filter(Boolean);
 
-  const readyAreaSpells = (
-    combatant.actor?.spellcasting?.contents ?? []
-  ).flatMap((entry) =>
-    (entry.spells?.contents ?? [])
+  const readyAreaSpells = [];
+  for (const entry of combatant.actor?.spellcasting?.contents ?? []) {
+    for (const spell of (entry.spells?.contents ?? [])
       .filter(isAreaSpellInScope)
-      .filter(hasSpellUsesRemaining)
-      .map((spell) => {
-        const radiusSquares = (spell.system.area.value ?? 0) / gridDistanceFt;
-        const withinRadiusOf = (pool) => (centerToken) =>
-          pool
-            .filter(
-              (o) =>
-                chebyshevSquares(centerToken, o.token, gridSize) <=
-                radiusSquares,
-            )
-            .map((o) => ({ id: o.id, name: o.name }));
-        const withinRadius = withinRadiusOf(rawOpponents);
-        const withinRadiusAllies = withinRadiusOf(rawAllies);
-        const placements =
-          spell.system.area.type === "emanation"
-            ? [
-                {
-                  centerType: "self",
-                  centerId: null,
-                  affected: withinRadius(combatant.token),
-                  affectedAllies: withinRadiusAllies(combatant.token),
-                },
-              ]
-            : rawOpponents.map((center) => ({
-                centerType: "opponent",
-                centerId: center.id,
-                affected: withinRadius(center.token),
-                affectedAllies: withinRadiusAllies(center.token),
-              }));
-        return {
-          id: spell.id,
-          slug: spell.slug,
-          label: spell.name,
-          cost: Number(spell.system.time.value),
-          save: spell.system.defense.save.statistic,
-          basic: spell.system.defense.save.basic,
-          entryId: entry.id,
-          placements,
-        };
-      }),
-  );
+      .filter(hasSpellUsesRemaining)) {
+      const radiusFeet = spell.system.area.value ?? 0;
+      const centers =
+        spell.system.area.type === "emanation"
+          ? [
+              {
+                centerType: "self",
+                centerId: null,
+                originToken: combatant.token,
+              },
+            ]
+          : rawOpponents.map((o) => ({
+              centerType: "opponent",
+              centerId: o.id,
+              originToken: o.token,
+            }));
+      const placements = await computeAreaPlacements(
+        combat,
+        centers,
+        rawOpponents,
+        rawAllies,
+        radiusFeet,
+      );
+      readyAreaSpells.push({
+        id: spell.id,
+        slug: spell.slug,
+        label: spell.name,
+        cost: Number(spell.system.time.value),
+        save: spell.system.defense.save.statistic,
+        basic: spell.system.defense.save.basic,
+        entryId: entry.id,
+        placements,
+      });
+    }
+  }
 
   // One entry per (spell, tier) pair — a #140-scoped tier-scaling area
   // spell offers a separate castAreaTier candidate for each affordable
@@ -1500,15 +1771,84 @@ export async function getPendingAgentTurn(combat) {
   // placements, computed the same way #119's readyAreaSpells does, just
   // parameterized per tier instead of using the spell's single structured
   // radius).
-  const readyTierScalingAreaSpells = (
-    combatant.actor?.spellcasting?.contents ?? []
-  ).flatMap((entry) =>
-    (entry.spells?.contents ?? [])
+  const readyTierScalingAreaSpells = [];
+  for (const entry of combatant.actor?.spellcasting?.contents ?? []) {
+    for (const spell of (entry.spells?.contents ?? [])
       .filter(isTierScalingAreaSpellInScope)
-      .filter(hasSpellUsesRemaining)
-      .flatMap((spell) => {
-        const tiers = resolveAreaSpellTiers(spell);
-        return Object.values(tiers).map((tier) => {
+      .filter(hasSpellUsesRemaining)) {
+      const tiers = resolveAreaSpellTiers(spell);
+      const centers =
+        spell.system.area.type === "emanation"
+          ? [
+              {
+                centerType: "self",
+                centerId: null,
+                originToken: combatant.token,
+              },
+            ]
+          : rawOpponents.map((o) => ({
+              centerType: "opponent",
+              centerId: o.id,
+              originToken: o.token,
+            }));
+      for (const tier of Object.values(tiers)) {
+        const placements = await computeAreaPlacements(
+          combat,
+          centers,
+          rawOpponents,
+          rawAllies,
+          tier.radiusFeet,
+        );
+        readyTierScalingAreaSpells.push({
+          id: spell.id,
+          slug: `${spell.slug}-${tier.cost}action`,
+          label: `${spell.name} (${tier.cost} action${tier.cost > 1 ? "s" : ""})`,
+          cost: tier.cost,
+          save: spell.system.defense.save.statistic,
+          basic: spell.system.defense.save.basic,
+          entryId: entry.id,
+          placements,
+        });
+      }
+    }
+  }
+
+  // One entry per (spell, tier) pair for a #176-scoped auto-hit-at-max-
+  // tier area spell — same geometry pattern as readyTierScalingAreaSpells
+  // above (opponent-centered placements, since Force Rain's tiers are all
+  // burst/square, never a self-centered emanation), but each tier also
+  // carries noSave/flatDamage/damageType so the candidate (and later,
+  // execution) knows whether to roll a save at all.
+  // A `square` area (Force Rain's own shape) isn't a burst/emanation circle
+  // approximated by a bounding square — it genuinely is a square footprint
+  // — so #150's real-geometry fix doesn't apply here; it keeps the
+  // Chebyshev-square check (`resolveAutoHitAreaTiers` already sets its
+  // `radiusFeet` to 0 for that case, matching that pre-existing
+  // approximation exactly).
+  const readyAutoHitAreaSpells = [];
+  for (const entry of combatant.actor?.spellcasting?.contents ?? []) {
+    for (const spell of (entry.spells?.contents ?? [])
+      .filter(isAutoHitAreaSpellInScope)
+      .filter(hasSpellUsesRemaining)) {
+      const tiers = resolveAutoHitAreaTiers(spell);
+      const isSquare = spell.system.area.type === "square";
+      const centers =
+        spell.system.area.type === "emanation"
+          ? [
+              {
+                centerType: "self",
+                centerId: null,
+                originToken: combatant.token,
+              },
+            ]
+          : rawOpponents.map((o) => ({
+              centerType: "opponent",
+              centerId: o.id,
+              originToken: o.token,
+            }));
+      for (const tier of Object.values(tiers)) {
+        let placements;
+        if (isSquare) {
           const radiusSquares = tier.radiusFeet / gridDistanceFt;
           const withinRadiusOf = (pool) => (centerToken) =>
             pool
@@ -1520,35 +1860,35 @@ export async function getPendingAgentTurn(combat) {
               .map((o) => ({ id: o.id, name: o.name }));
           const withinRadius = withinRadiusOf(rawOpponents);
           const withinRadiusAllies = withinRadiusOf(rawAllies);
-          const placements =
-            spell.system.area.type === "emanation"
-              ? [
-                  {
-                    centerType: "self",
-                    centerId: null,
-                    affected: withinRadius(combatant.token),
-                    affectedAllies: withinRadiusAllies(combatant.token),
-                  },
-                ]
-              : rawOpponents.map((center) => ({
-                  centerType: "opponent",
-                  centerId: center.id,
-                  affected: withinRadius(center.token),
-                  affectedAllies: withinRadiusAllies(center.token),
-                }));
-          return {
-            id: spell.id,
-            slug: `${spell.slug}-${tier.cost}action`,
-            label: `${spell.name} (${tier.cost} action${tier.cost > 1 ? "s" : ""})`,
-            cost: tier.cost,
-            save: spell.system.defense.save.statistic,
-            basic: spell.system.defense.save.basic,
-            entryId: entry.id,
-            placements,
-          };
+          placements = rawOpponents.map((center) => ({
+            centerType: "opponent",
+            centerId: center.id,
+            affected: withinRadius(center.token),
+            affectedAllies: withinRadiusAllies(center.token),
+          }));
+        } else {
+          placements = await computeAreaPlacements(
+            combat,
+            centers,
+            rawOpponents,
+            rawAllies,
+            tier.radiusFeet,
+          );
+        }
+        readyAutoHitAreaSpells.push({
+          id: spell.id,
+          slug: `${spell.slug}-${tier.cost}action`,
+          label: `${spell.name} (${tier.cost} action${tier.cost > 1 ? "s" : ""})`,
+          cost: tier.cost,
+          save: tier.noSave ? null : spell.system.defense.save.statistic,
+          basic: tier.noSave ? null : spell.system.defense.save.basic,
+          noSave: tier.noSave,
+          entryId: entry.id,
+          placements,
         });
-      }),
-  );
+      }
+    }
+  }
 
   const readyAttackSpells = (combatant.actor?.spellcasting?.contents ?? [])
     .flatMap((entry) =>
@@ -1661,6 +2001,179 @@ export async function getPendingAgentTurn(combat) {
     )
     .filter(Boolean);
 
+  // One entry per #174-scoped dual-nature tiered spell (Harm/Heal-shaped).
+  // Unlike every other ready-spell block, this one draws from BOTH
+  // rawOpponents and rawAllies for every tier, since which pool a target
+  // is valid FROM depends on the effect it would receive, not on the
+  // spell's usual "opponents only" or "allies only" convention: the
+  // harm-direction effect only ever targets opponents (never harm an
+  // ally), the heal-direction effect only ever targets allies at the
+  // single-target tiers (never heal an opponent) - confirmed live via
+  // isUndeadCombatant/dualNatureHarmfulTrait's polarity split - but the
+  // 3-action area tier hits BOTH pools without discrimination by
+  // allegiance at all, per the spell's own text ("targets all living and
+  // undead creatures in the area", no willingness/allegiance
+  // qualifier there unlike the single-target tiers' "willing undead
+  // creature" phrasing) - a real, deliberate risk/reward tradeoff RAW
+  // itself describes, not a gap in this module's own targeting logic.
+  const isUndeadCombatant = (c) =>
+    c.actor?.system?.traits?.value?.includes("undead") ?? false;
+  const isBelowMaxHp = (c) =>
+    (c.actor?.system?.attributes?.hp?.value ?? 0) <
+    (c.actor?.system?.attributes?.hp?.max ?? 0);
+
+  const readyDualNatureSpells = (combatant.actor?.spellcasting?.contents ?? [])
+    .flatMap((entry) =>
+      (entry.spells?.contents ?? [])
+        .filter(isDualNatureTieredSpellInScope)
+        .filter(hasSpellUsesRemaining)
+        .map((spell) => {
+          const tiers = parseActionGlyphTiers(
+            spell.system.description?.value ?? "",
+          );
+          const harmfulTrait = dualNatureHarmfulTrait(spell);
+          const polarity = (c) =>
+            isUndeadCombatant(c) === (harmfulTrait === "undead")
+              ? "harm"
+              : "heal";
+
+          const singleTargetTiers = [];
+          for (const cost of [1, 2]) {
+            const tier = tiers[cost];
+            if (!tier || tier.area != null || tier.rangeFeet == null)
+              continue;
+            const rangeSquares =
+              tier.rangeFeet === "touch"
+                ? MELEE_REACH_SQUARES
+                : tier.rangeFeet / gridDistanceFt;
+            const harmTargets = rawOpponents
+              .filter(
+                (o) =>
+                  polarity(o) === "harm" &&
+                  chebyshevSquares(combatant.token, o.token, gridSize) <=
+                    rangeSquares,
+              )
+              .map((o) => ({ id: o.id, name: o.name }));
+            const healTargets = rawAllies
+              .filter(
+                (a) =>
+                  polarity(a) === "heal" &&
+                  isBelowMaxHp(a) &&
+                  chebyshevSquares(combatant.token, a.token, gridSize) <=
+                    rangeSquares,
+              )
+              .map((a) => ({ id: a.id, name: a.name }));
+            singleTargetTiers.push({
+              cost,
+              bonus: tier.bonus ?? 0,
+              harmTargets,
+              healTargets,
+            });
+          }
+
+          let areaTier = null;
+          const areaTierRaw = tiers[3];
+          if (areaTierRaw?.area) {
+            const radiusSquares = areaTierRaw.area.value / gridDistanceFt;
+            const allNearby = [...rawOpponents, ...rawAllies].filter(
+              (c) =>
+                chebyshevSquares(combatant.token, c.token, gridSize) <=
+                radiusSquares,
+            );
+            const harmTargets = allNearby
+              .filter((c) => polarity(c) === "harm")
+              .map((c) => ({ id: c.id, name: c.name }));
+            const healTargets = allNearby
+              .filter((c) => polarity(c) === "heal" && isBelowMaxHp(c))
+              .map((c) => ({ id: c.id, name: c.name }));
+            areaTier = { cost: areaTierRaw.cost, harmTargets, healTargets };
+          }
+
+          if (!singleTargetTiers.length && !areaTier) return null;
+          return {
+            id: spell.id,
+            slug: spell.slug,
+            label: spell.name,
+            entryId: entry.id,
+            save: spell.system.defense.save.statistic,
+            basic: spell.system.defense.save.basic,
+            singleTargetTiers,
+            areaTier,
+          };
+        }),
+    )
+    .filter(Boolean);
+
+  // One entry per #175-scoped target-count-scaling spell (Rebuke Death-
+  // shaped) - each tier's own targets are pre-selected here (in range, not
+  // already at full HP, neediest-first by current HP - per live
+  // discussion) so the pure candidate builder only ever packages what it's
+  // given, matching every other tier-scaling spell in this file. A
+  // healing-trait spell only ever draws from allies (never heal an
+  // opponent, matching #132/#174's established restriction); a
+  // hypothetical non-healing target-count spell (no real example exists
+  // today, but the scope filter doesn't assume healing) would draw from
+  // opponents instead, matching #118's damage-spell convention.
+  const readyTargetCountSpells = (
+    combatant.actor?.spellcasting?.contents ?? []
+  )
+    .flatMap((entry) =>
+      (entry.spells?.contents ?? [])
+        .filter(isTargetCountSpellInScope)
+        .filter(hasSpellUsesRemaining)
+        .map((spell) => {
+          const formula = parseTargetCountFormula(
+            spell.system.target?.value ?? "",
+          );
+          const timeMatch = /^([123])\s+to\s+([123])$/.exec(
+            spell.system.time?.value ?? "",
+          );
+          const minCost = Number(timeMatch[1]);
+          const maxCost = Number(timeMatch[2]);
+          const rangeSquares = (spell.system.area?.value ?? 0) / gridDistanceFt;
+          const isHealing =
+            spell.system.traits?.value?.includes("healing") ?? false;
+          const pool = isHealing ? rawAllies : rawOpponents;
+          const inRange = pool
+            .filter(
+              (c) =>
+                chebyshevSquares(combatant.token, c.token, gridSize) <=
+                rangeSquares,
+            )
+            .filter(
+              (c) =>
+                !isHealing ||
+                (c.actor?.system?.attributes?.hp?.value ?? 0) <
+                  (c.actor?.system?.attributes?.hp?.max ?? 0),
+            )
+            .sort(
+              (a, b) =>
+                (a.actor?.system?.attributes?.hp?.value ?? 0) -
+                (b.actor?.system?.attributes?.hp?.value ?? 0),
+            );
+          const tiers = [];
+          for (let cost = minCost; cost <= maxCost; cost++) {
+            const maxTargets = Math.floor(formula.countPerAction * cost);
+            tiers.push({
+              cost,
+              targets: inRange
+                .slice(0, maxTargets)
+                .map((c) => ({ id: c.id, name: c.name })),
+            });
+          }
+          return {
+            id: spell.id,
+            slug: spell.slug,
+            label: spell.name,
+            entryId: entry.id,
+            save: spell.system.defense?.save?.statistic ?? null,
+            basic: spell.system.defense?.save?.basic ?? null,
+            tiers,
+          };
+        }),
+    )
+    .filter(Boolean);
+
   const readyBreathWeapons = [];
   for (const item of combatant.actor?.items ?? []) {
     if (!isBreathWeaponInScope(item)) continue;
@@ -1708,9 +2221,12 @@ export async function getPendingAgentTurn(combat) {
     readyChainSpells,
     readyHealSpells,
     readyTierScalingAreaSpells,
+    readyDualNatureSpells,
+    readyTargetCountSpells,
+    readyAutoHitAreaSpells,
     allies,
     turnState,
-    hazard: null,
+    hazard: nearestHazardousRegionPoint(combat.scene, combatant.token, gridSize),
     hasRangedOrReach,
   });
   return {
@@ -2280,6 +2796,332 @@ async function castHealSpellAndApply(combatant, target, spellId, entryId) {
 }
 
 /**
+ * The single-target healing-direction execution for a #174-scoped
+ * dual-nature spell (`castDualHeal`) — structurally identical to #132's
+ * `castHealSpellAndApply` (same manual roll-total-negation technique;
+ * confirmed live directly for #174 that BOTH opposite-polarity healing
+ * cases, Harm-heals-undead and Heal-heals-living, hit the exact same
+ * ambiguous-`kinds` no-op the standard roll-object `applyDamage` path
+ * always produces for a healing-direction roll, spell-trait-agnostic — not
+ * kept as a single shared helper with #132's version only because that
+ * function is already shipped and tested on its own narrower contract;
+ * this one adds the tier's own flat `bonus` (#174's 2-action "+8" clause,
+ * confirmed live only ever attached to a single-target healing tier, never
+ * the area tier) before negating.
+ */
+async function castDualHealAndApply(combatant, target, spellId, entryId, bonus) {
+  const entry = combatant.actor?.spellcasting?.contents?.find(
+    (e) => e.id === entryId,
+  );
+  const spell = entry?.spells?.contents?.find((s) => s.id === spellId);
+  if (!entry || !spell) return null;
+
+  const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
+  const prevShowDamage = game.user.flags?.pf2e?.settings?.showDamageDialogs;
+  await game.user.update({
+    "flags.pf2e.settings.showCheckDialogs": false,
+    "flags.pf2e.settings.showDamageDialogs": false,
+  });
+  try {
+    const targetRef = { document: target.token };
+    await entry.cast(spell, { target: targetRef, createMessage: true });
+    const healRoll = await spell.rollDamage?.({
+      target: targetRef,
+      createMessage: true,
+    });
+    if (healRoll?.total != null) {
+      await target.actor.applyDamage({
+        damage: -(healRoll.total + bonus),
+        token: target.token,
+      });
+    }
+    return healRoll?.total != null ? healRoll.total + bonus : null;
+  } finally {
+    await game.user.update({
+      "flags.pf2e.settings.showCheckDialogs": prevShowCheck,
+      "flags.pf2e.settings.showDamageDialogs": prevShowDamage,
+    });
+  }
+}
+
+/**
+ * The 3-action area-tier execution for a #174-scoped dual-nature spell
+ * (`castDualArea`) — casts once (no single target, matching #119/#140's
+ * area-cast convention), then applies BOTH effects within the same cast:
+ * `harmTargets` roll their own basic Fortitude save and take
+ * outcome-scaled damage via the standard roll-object `applyDamage` path
+ * (confirmed live this works correctly for the damage direction
+ * regardless of which spell/target-type combination produces it, and
+ * `spell.rollDamage({target,outcome,...})` already applies basic-save
+ * halving/doubling internally — no manual `.alter()` needed, unlike #140's
+ * spells, since Harm/Heal's damage magnitude never varies by tier at all);
+ * `healTargets` get no save at all (confirmed live from the spell's own
+ * text - "restore that amount of Hit Points", no outcome dependency) and
+ * use #132's manual negation technique, with no bonus (the tier's own
+ * "+8" clause is confirmed live to never attach to the area tier).
+ */
+async function castDualAreaAndApply(
+  combatant,
+  harmTargets,
+  healTargets,
+  spellId,
+  entryId,
+  save,
+) {
+  const entry = combatant.actor?.spellcasting?.contents?.find(
+    (e) => e.id === entryId,
+  );
+  const spell = entry?.spells?.contents?.find((s) => s.id === spellId);
+  if (!entry || !spell) return null;
+
+  const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
+  const prevShowDamage = game.user.flags?.pf2e?.settings?.showDamageDialogs;
+  await game.user.update({
+    "flags.pf2e.settings.showCheckDialogs": false,
+    "flags.pf2e.settings.showDamageDialogs": false,
+  });
+  try {
+    await entry.cast(spell, { createMessage: true });
+    const dc = entry.statistic?.dc?.value ?? 10;
+    const outcomes = [];
+    for (const target of harmTargets) {
+      const saveStat = target.actor?.saves?.[save];
+      if (!saveStat) continue;
+      const targetRef = { document: target.token };
+      await saveStat.roll({ dc: { value: dc }, createMessage: true });
+      const outcome =
+        game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
+      playSpellSaveSound(outcome);
+      const damageRoll = await spell.rollDamage?.({
+        target: targetRef,
+        outcome,
+        createMessage: true,
+      });
+      if (damageRoll) {
+        await target.actor.applyDamage({
+          damage: damageRoll,
+          token: target.token,
+          outcome,
+        });
+        await applyDefeatIfReducedToZero(target);
+      }
+      outcomes.push({ targetId: target.id, effect: "harm", outcome });
+    }
+    for (const target of healTargets) {
+      const targetRef = { document: target.token };
+      const healRoll = await spell.rollDamage?.({
+        target: targetRef,
+        createMessage: true,
+      });
+      if (healRoll?.total != null) {
+        await target.actor.applyDamage({
+          damage: -healRoll.total,
+          token: target.token,
+        });
+      }
+      outcomes.push({
+        targetId: target.id,
+        effect: "heal",
+        healed: healRoll?.total ?? null,
+      });
+    }
+    return outcomes;
+  } finally {
+    await game.user.update({
+      "flags.pf2e.settings.showCheckDialogs": prevShowCheck,
+      "flags.pf2e.settings.showDamageDialogs": prevShowDamage,
+    });
+  }
+}
+
+/**
+ * Executes a #175-scoped target-count-scaling spell (`castTargetCount`,
+ * Rebuke Death-shaped) against `targets` (already pre-selected — up to N
+ * neediest-first, per live discussion) — one cast announcement (matching
+ * #127's chain-spell convention: `entry.cast()` once, referencing the
+ * first target, since this is mechanically ONE casting action reaching
+ * multiple creatures, not N separate casts), then each target's own
+ * effect resolved independently (a fresh roll per target, not one shared
+ * roll reused across all of them, avoiding both the IWR-breaking bug
+ * #127's own doc comment already flags for a shared-roll approach *and* a
+ * more basic correctness bug: each target should get its own random
+ * result, not everyone taking an identical amount). Branches on whether
+ * `save` is present: Rebuke Death itself has no save at all (confirmed
+ * live — pure healing, `defense: null`) and always takes the heal branch,
+ * using the manual negate-and-pass-a-number technique (confirmed live
+ * essential here too — `applyDamage(rollObject)` damaged the target
+ * instead of healing it, despite the roll's own `kinds` being an
+ * *unambiguous* `["healing"]`, refining #132's original theory: the
+ * roll-object path is never correct for healing, regardless of what its
+ * `kinds` say). The save branch exists for a hypothetical non-healing
+ * target-count spell (no real example exists today, but the scope filter
+ * doesn't assume healing), mirroring #118/#127's standard save-and-apply
+ * pattern, already IWR-correct via the real `DamageRoll` object.
+ */
+async function castTargetCountSpellAndApply(
+  combatant,
+  targets,
+  spellId,
+  entryId,
+  save,
+) {
+  const entry = combatant.actor?.spellcasting?.contents?.find(
+    (e) => e.id === entryId,
+  );
+  const spell = entry?.spells?.contents?.find((s) => s.id === spellId);
+  if (!entry || !spell || !targets.length) return null;
+
+  const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
+  const prevShowDamage = game.user.flags?.pf2e?.settings?.showDamageDialogs;
+  await game.user.update({
+    "flags.pf2e.settings.showCheckDialogs": false,
+    "flags.pf2e.settings.showDamageDialogs": false,
+  });
+  try {
+    const primaryRef = { document: targets[0].token };
+    await entry.cast(spell, { target: primaryRef, createMessage: true });
+    const dc = entry.statistic?.dc?.value ?? 10;
+    const outcomes = [];
+    for (const target of targets) {
+      const targetRef = { document: target.token };
+      if (save) {
+        const saveStat = target.actor?.saves?.[save];
+        if (!saveStat) continue;
+        await saveStat.roll({ dc: { value: dc }, createMessage: true });
+        const outcome =
+          game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ??
+          null;
+        playSpellSaveSound(outcome);
+        const damageRoll = await spell.rollDamage?.({
+          target: targetRef,
+          outcome,
+          createMessage: true,
+        });
+        if (damageRoll) {
+          await target.actor.applyDamage({
+            damage: damageRoll,
+            token: target.token,
+            outcome,
+          });
+          await applyDefeatIfReducedToZero(target);
+        }
+        outcomes.push({ targetId: target.id, outcome });
+      } else {
+        const healRoll = await spell.rollDamage?.({
+          target: targetRef,
+          createMessage: true,
+        });
+        if (healRoll?.total != null) {
+          await target.actor.applyDamage({
+            damage: -healRoll.total,
+            token: target.token,
+          });
+        }
+        outcomes.push({ targetId: target.id, healed: healRoll?.total ?? null });
+      }
+    }
+    return outcomes;
+  } finally {
+    await game.user.update({
+      "flags.pf2e.settings.showCheckDialogs": prevShowCheck,
+      "flags.pf2e.settings.showDamageDialogs": prevShowDamage,
+    });
+  }
+}
+
+/**
+ * Executes a #176-scoped auto-hit-at-max-tier area spell at the cost tier
+ * matching `cost` — save-scaled damage for an ordinary tier (manually
+ * constructing a `DamageRoll` per target and `.alter()`-scaling it by
+ * outcome, exactly #140's established pattern, since `spell.rollDamage()`
+ * doesn't scale by action-count tier here either), or, when the resolved
+ * tier is flagged `noSave`, a flat unconditional `DamageRoll` built from a
+ * plain numeric formula (`"(20)[force]"` — confirmed live in #140's own
+ * research this is the correct single-instance IWR-respecting shape for a
+ * fixed, non-dice amount) applied to every target with no save roll at
+ * all, matching Force Rain's own "don't attempt a saving throw" text.
+ */
+async function castAutoHitAreaSpellAndApplyDamage(
+  combatant,
+  targets,
+  spellId,
+  entryId,
+  save,
+  cost,
+) {
+  const entry = combatant.actor?.spellcasting?.contents?.find(
+    (e) => e.id === entryId,
+  );
+  const spell = entry?.spells?.contents?.find((s) => s.id === spellId);
+  if (!entry || !spell) return null;
+  const tier = resolveAutoHitAreaTiers(spell)[cost];
+  if (!tier) return null;
+
+  const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
+  const prevShowDamage = game.user.flags?.pf2e?.settings?.showDamageDialogs;
+  await game.user.update({
+    "flags.pf2e.settings.showCheckDialogs": false,
+    "flags.pf2e.settings.showDamageDialogs": false,
+  });
+  try {
+    await entry.cast(spell, { createMessage: true });
+    const DamageRollClass = CONFIG.Dice.rolls.find(
+      (c) => c.name === "DamageRoll",
+    );
+    const outcomes = [];
+    if (tier.noSave) {
+      for (const target of targets) {
+        const roll = new DamageRollClass(
+          `(${tier.flatDamage})[${tier.damageType}]`,
+        );
+        await roll.evaluate();
+        await target.actor.applyDamage({ damage: roll, token: target.token });
+        await applyDefeatIfReducedToZero(target);
+        outcomes.push({ targetId: target.id, total: roll.total });
+      }
+    } else {
+      const dc = entry.statistic?.dc?.value ?? 10;
+      const formula = tier.damage
+        .map((d) => `(${d.formula})[${d.type}]`)
+        .join(",");
+      for (const target of targets) {
+        const saveStat = target.actor?.saves?.[save];
+        if (!saveStat) continue;
+        const targetRef = { document: target.token };
+        await saveStat.roll({ dc: { value: dc }, createMessage: true });
+        const outcome =
+          game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ??
+          null;
+        playSpellSaveSound(outcome);
+        if (outcome !== "criticalSuccess") {
+          const roll = new DamageRollClass(formula);
+          await roll.evaluate();
+          const scaled =
+            outcome === "success"
+              ? await roll.alter(0.5, 0)
+              : outcome === "criticalFailure"
+                ? await roll.alter(2, 0)
+                : roll;
+          await target.actor.applyDamage({
+            damage: scaled,
+            token: target.token,
+            outcome,
+          });
+          await applyDefeatIfReducedToZero(target);
+        }
+        outcomes.push({ targetId: target.id, outcome });
+      }
+    }
+    return outcomes;
+  } finally {
+    await game.user.update({
+      "flags.pf2e.settings.showCheckDialogs": prevShowCheck,
+      "flags.pf2e.settings.showDamageDialogs": prevShowDamage,
+    });
+  }
+}
+
+/**
  * Rolls each of `targets`' own saves against `dc` and applies
  * basic-save-scaled damage on any outcome but a critical success, then
  * records the ability's recharge timer. Unlike every spell execution
@@ -2403,11 +3245,27 @@ export async function applyAgentDecision(
   const combatant = combat.combatant;
   await postAgentDecisionChat(combatant, candidate, rationale);
   if (candidate.type === "stride") {
-    const target = candidate.targetId
+    let target = candidate.targetId
       ? combatantOpponents(combat, combatant).find(
           (c) => c.id === candidate.targetId,
         )
       : null;
+    if (candidate.posture === "reposition") {
+      // No real combatant to look up (#103) - a synthetic target whose
+      // only job is to give strideByPosture/posturePath an {x, y} to
+      // project away from. Re-resolved fresh here rather than trusting
+      // stale position data off the candidate, matching every other
+      // tier-resolving function in this file's "re-resolve at execution
+      // time" convention - the hazard (or the combatant) may have moved
+      // between candidate generation and this decision being applied.
+      const gridSize = combat.scene?.grid?.size ?? 100;
+      const hazard = nearestHazardousRegionPoint(
+        combat.scene,
+        combatant.token,
+        gridSize,
+      );
+      target = hazard ? { token: { x: hazard.x, y: hazard.y } } : null;
+    }
     await strideByPosture(combat, combatant, candidate.posture, target);
   } else if (candidate.type === "strike") {
     const target = combatantOpponents(combat, combatant).find(
@@ -2517,6 +3375,93 @@ export async function applyAgentDecision(
     );
     if (targets.length)
       await castTierScalingAreaSpellAndApplySaves(
+        combatant,
+        targets,
+        candidate.spellId,
+        candidate.entryId,
+        candidate.save,
+        candidate.cost,
+      );
+  } else if (candidate.type === "castDualHarm") {
+    // The harm-direction effect only ever targets opponents (never an
+    // ally, per #174's design) at both single-target tiers, so this
+    // reuses #118's own castSpellAndApplySave unchanged - confirmed live
+    // its damage roll applies correctly through the standard IWR-
+    // respecting path regardless of which spell/creature-type combination
+    // produced it.
+    const target = combatantOpponents(combat, combatant).find(
+      (c) => c.id === candidate.targetId,
+    );
+    if (target)
+      await castSpellAndApplySave(
+        combatant,
+        target,
+        candidate.spellId,
+        candidate.entryId,
+        candidate.save,
+      );
+  } else if (candidate.type === "castDualHeal") {
+    const target = combatantAllies(combat, combatant).find(
+      (c) => c.id === candidate.targetId,
+    );
+    if (target)
+      await castDualHealAndApply(
+        combatant,
+        target,
+        candidate.spellId,
+        candidate.entryId,
+        candidate.bonus,
+      );
+  } else if (candidate.type === "castDualArea") {
+    // Unlike every other area candidate, this one draws from BOTH pools
+    // without allegiance discrimination (#174, per the spell's own RAW
+    // text) - harmIds/healIds may each contain a mix of opponent and
+    // ally ids.
+    const allNearby = [
+      ...combatantOpponents(combat, combatant),
+      ...combatantAllies(combat, combatant),
+    ];
+    const harmTargets = allNearby.filter((c) =>
+      candidate.harmIds.includes(c.id),
+    );
+    const healTargets = allNearby.filter((c) =>
+      candidate.healIds.includes(c.id),
+    );
+    if (harmTargets.length || healTargets.length)
+      await castDualAreaAndApply(
+        combatant,
+        harmTargets,
+        healTargets,
+        candidate.spellId,
+        candidate.entryId,
+        candidate.save,
+      );
+  } else if (candidate.type === "castTargetCount") {
+    // Pre-selected targets are drawn from a single pool at candidate-build
+    // time (allies for a healing-trait spell, opponents otherwise), but
+    // dispatch doesn't need to know which - searching both is cheap and
+    // correct regardless.
+    const allNearby = [
+      ...combatantOpponents(combat, combatant),
+      ...combatantAllies(combat, combatant),
+    ];
+    const targets = allNearby.filter((c) =>
+      candidate.targetIds.includes(c.id),
+    );
+    if (targets.length)
+      await castTargetCountSpellAndApply(
+        combatant,
+        targets,
+        candidate.spellId,
+        candidate.entryId,
+        candidate.save,
+      );
+  } else if (candidate.type === "castAutoHitAreaTier") {
+    const targets = combatantOpponents(combat, combatant).filter((c) =>
+      candidate.affectedIds.includes(c.id),
+    );
+    if (targets.length)
+      await castAutoHitAreaSpellAndApplyDamage(
         combatant,
         targets,
         candidate.spellId,

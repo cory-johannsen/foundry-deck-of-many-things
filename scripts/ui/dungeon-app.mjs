@@ -7,12 +7,14 @@ import {
   canUndoRoomEntry,
   recordSkillChallengeAttempt,
   setObjective,
+  recordPuzzleStageAttempt,
 } from "../dungeon-runner.mjs";
 import { canActOnDungeon } from "../dungeon-permissions.mjs";
 import { requestDungeonAction } from "../dungeon-remote.mjs";
-import { depthBiasFor } from "../dungeon-deck.mjs";
+import { depthBiasFor, lootGpForTreasureRoom } from "../dungeon-deck.mjs";
 import { makeFoundryApi } from "../foundry-api.mjs";
 import { rollSkillChallengeAttempt } from "../skill-challenge.mjs";
+import { rollPuzzleStageAttempt } from "../puzzle.mjs";
 import { ALL_SKILLS, dcForAttempt } from "../skill-challenge-mechanics.mjs";
 import {
   traitFieldHtml,
@@ -46,6 +48,7 @@ const ROOM_KIND_KEYS = {
   skill_challenge: "DOMMT.Dungeon.Kind.skill_challenge",
   puzzle_or_trap: "DOMMT.Dungeon.Kind.puzzle_or_trap",
   narrative: "DOMMT.Dungeon.Kind.narrative",
+  treasure: "DOMMT.Dungeon.Kind.treasure",
   safe_entry: "DOMMT.Dungeon.Kind.safe_entry",
   safe_rest: "DOMMT.Dungeon.Kind.safe_rest",
 };
@@ -75,8 +78,14 @@ const UNCOUNTED_ROOM_KINDS = new Set(["safe_entry", "safe_rest"]);
  * text), not the label itself, so this always needs the extra localize
  * step. Falls back to the bare slug for a key PF2e's own config doesn't
  * carry (shouldn't happen for anything out of `ALL_SKILLS`, which was
- * itself confirmed live to match `CONFIG.PF2E.skills`'s own keys exactly). */
+ * itself confirmed live to match `CONFIG.PF2E.skills`'s own keys exactly)
+ * — except `"perception"` (#137's own puzzle stages can use it, unlike
+ * `ALL_SKILLS`, which excludes it): confirmed live it has no entry in
+ * `CONFIG.PF2E.skills` at all (it's not a "skill" in PF2e's own model),
+ * resolved instead via the same `"PF2E.PerceptionLabel"` key the system's
+ * own UI uses for it. */
 function skillLabel(slug) {
+  if (slug === "perception") return game.i18n.localize("PF2E.PerceptionLabel");
   const key = CONFIG.PF2E?.skills?.[slug]?.label;
   return key ? game.i18n.localize(key) : slug;
 }
@@ -170,6 +179,57 @@ export async function recordSkillChallengeOutcome(sceneId, roomId, outcome) {
     await resolveCurrentRoom(resolved === "success", {
       scene: game.scenes.get(sceneId),
     });
+}
+
+export async function recordPuzzleStageOutcome(
+  sceneId,
+  roomId,
+  stageIndex,
+  outcome,
+) {
+  const newState = await recordPuzzleStageAttempt(
+    sceneId,
+    roomId,
+    stageIndex,
+    outcome,
+  );
+  const resolved = newState?.rooms.find((r) => r.id === roomId)?.puzzle
+    ?.resolved;
+  if (resolved)
+    await resolveCurrentRoom(resolved === "success", {
+      scene: game.scenes.get(sceneId),
+    });
+}
+
+/** A treasure room's own resolution (#169): grants real coins to the party
+ * actor, scaled by party level and the room's own depthBiasFor ramp
+ * (lootGpForTreasureRoom), then always resolves succeeded — same "nothing
+ * to fail at" shape as continueNarrativeRoom. Silently grants nothing if
+ * there's no party actor to fund (matches resolveSlotCombat's own
+ * `game.actors.party` guard for its combat-loot grant). */
+export async function claimTreasureFor(sceneId) {
+  const scene = game.scenes.get(sceneId);
+  const state = scene ? getRunState(sceneId) : null;
+  const currentRoom = state?.rooms[state.currentIndex];
+  const physicalSlot = currentRoom
+    ? state.physicalSlotByRoomId[currentRoom.id]
+    : null;
+  if (physicalSlot == null) return;
+  if (game.actors.party) {
+    const api = makeFoundryApi();
+    const partyLevel = await api.partyLevel();
+    const gp = lootGpForTreasureRoom({
+      partyLevel,
+      physicalSlot,
+      roomCount: state.rooms.length,
+      isGoal: currentRoom.isGoal,
+    });
+    await api.addCoins(game.actors.party.id, { gp });
+    ui.notifications.info(
+      game.i18n.format("DOMMT.Dungeon.Treasure.Found", { gp }),
+    );
+  }
+  await resolveCurrentRoom(true, { scene });
 }
 
 /**
@@ -271,7 +331,9 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       openCombatTracker: DungeonApp.#onOpenCombatTracker,
       hide: DungeonApp.#onHide,
       attemptSkillChallenge: DungeonApp.#onAttemptSkillChallenge,
+      attemptPuzzleStage: DungeonApp.#onAttemptPuzzleStage,
       continueNarrative: DungeonApp.#onContinueNarrative,
+      claimTreasure: DungeonApp.#onClaimTreasure,
     },
   };
 
@@ -358,9 +420,14 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       ? (game.users.get(state.hostUserId)?.name ?? "?")
       : null;
 
-    // #162/#109: the challenge is now attached at room-build time
-    // (dungeon-scene.mjs's buildPopulateAndUnlockRoom), not lazily on
-    // render — this is a pure read of whatever's already persisted.
+    // #162/#109: the challenge (including its #164 template, if any) is
+    // attached at room-build time (dungeon-scene.mjs's
+    // buildPopulateAndUnlockRoom), not lazily on render — a client logged
+    // in only to relay a GM-less host's requests never renders DungeonApp
+    // at all, so a render-time write would never happen for such a run.
+    // This is a pure read of whatever's already persisted; #166's
+    // `name`/`summary`/`skillFlavor` customization fields are read
+    // straight back off the challenge the same way.
     const isSkillChallenge =
       currentRoom?.kind === "skill_challenge" && !currentRoomResolved;
     let challenge = null;
@@ -370,14 +437,70 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
         vp: raw.vp,
         vpTarget: raw.vpTarget,
         attemptsRemaining: raw.attemptBudget - raw.attemptsUsed,
+        templateName: raw.name,
+        templateSummary: raw.summary,
         specialtySkills: raw.specialtySkills.map((slug) => ({
           slug,
           label: skillLabel(slug),
+          flavor: raw.skillFlavor?.[slug] ?? null,
         })),
         allSkills: ALL_SKILLS.map((slug) => ({
           slug,
           label: skillLabel(slug),
           isSpecialty: raw.specialtySkills.includes(slug),
+        })),
+      };
+    }
+
+    // #137/#109: a puzzle_or_trap room whose resolved setpiece is
+    // puzzle-kind uses its own hint-check UI instead of the plain
+    // Succeed/Fail buttons — fully auto-resolving (per live discussion),
+    // so there's no GM judgment step the way the plain buttons need;
+    // resolveCurrentRoom is still what actually advances the room, called
+    // automatically once recordPuzzleStageAttempt's own reducer sets
+    // `resolved`, the same "only once resolved" gating
+    // #onAttemptSkillChallenge already uses. The puzzle's own state is
+    // attached at room-build time (dungeon-scene.mjs's
+    // buildPopulateAndUnlockRoom), not lazily here — this is a pure read
+    // of whatever's already persisted, same reasoning as the
+    // skill_challenge block above.
+    const isPuzzleRoom =
+      currentRoom?.kind === "puzzle_or_trap" &&
+      setpiece?.kind === "puzzle" &&
+      !currentRoomResolved;
+    let puzzle = null;
+    if (isPuzzleRoom && currentRoom.puzzle) {
+      // #139: persisted onto the puzzle itself so applyPuzzleCustomization
+      // has a stable place to overwrite that actually sticks across
+      // renders — read back below via raw.name/raw.summary, never
+      // setpiece.name/setpiece.summary directly, the same "persisted
+      // state wins over the raw template" rule skill_challenge's own
+      // templateName/templateSummary already follow.
+      const raw = currentRoom.puzzle;
+      puzzle = {
+        name: raw.name,
+        summary: raw.summary,
+        requiredSuccesses: raw.requiredSuccesses,
+        successes: raw.successes,
+        resolved: raw.resolved,
+        // Narrative payoff shown once solved, never during play — #137's
+        // own live-discussed model has no GM judgment step reading this
+        // as "the correct answer" the way the source book's puzzle text
+        // implies; it's flavor color for the reveal, not a check.
+        solution:
+          raw.resolved === "success" ? (setpiece.solution ?? null) : null,
+        stages: raw.stages.map((s, i) => ({
+          index: i,
+          skill: s.skill,
+          skillLabel: skillLabel(s.skill),
+          dc: s.dc,
+          attempted: s.attempted,
+          succeeded: s.succeeded,
+          // #139: an agent's customized stageFlavor entry for this stage
+          // overrides the displayed hint text once revealed — never the
+          // stage's own mechanically-real hint field itself (stored
+          // separately, untouched by applyPuzzleCustomization).
+          hint: s.succeeded ? (raw.stageFlavor?.[i] ?? s.hint) : null,
         })),
       };
     }
@@ -395,6 +518,12 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // placeholder rather than showing nothing.
     const isNarrativeRoom =
       currentRoom?.kind === "narrative" && !currentRoomResolved;
+    // #169: a treasure room, like a narrative room, is never succeeded/
+    // failed the plain way — it always has something to find, so claiming
+    // it always succeeds (still running the usual Reward-side Journey
+    // Spread outcome via resolveCurrentRoom/markRoomOutcome).
+    const isTreasureRoom =
+      currentRoom?.kind === "treasure" && !currentRoomResolved;
 
     return {
       hasScene: true,
@@ -433,11 +562,16 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       // still uses.
       isSkillChallenge,
       challenge,
+      // #137: a puzzle room uses its own hint-check UI instead of the
+      // plain Succeed/Fail buttons.
+      isPuzzleRoom,
+      puzzle,
       // #163: a narrative room's own "direction for the rest of the run" —
       // run-wide, not per-room, so it's shown here regardless of which
       // room kind is actually current, the same way it persists in
       // `state.objective` regardless of which room set it.
       isNarrativeRoom,
+      isTreasureRoom,
       objective: state.objective ?? null,
       partyMembers: (game.actors?.party?.members ?? [])
         .filter((m) => m.type === "character")
@@ -448,9 +582,15 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
         kindLabel: game.i18n.localize(
           ROOM_KIND_KEYS[currentRoom.kind] ?? currentRoom.kind,
         ),
+        // #139: prefers the puzzle's own *persisted* name/summary (which
+        // an agent's applyPuzzleCustomization may have overwritten) over
+        // the raw setpiece template's — this is the one generic display
+        // block every room kind's name/summary renders through, so a
+        // puzzle's customization needs to flow through here to be visible
+        // at all, not just in the puzzle-specific block below.
         setpiece: setpiece && {
-          name: setpiece.name,
-          summary: setpiece.summary,
+          name: puzzle?.name ?? setpiece.name,
+          summary: puzzle?.summary ?? setpiece.summary,
           complete: setpiece.complete,
         },
       },
@@ -612,6 +752,64 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     this.render();
   }
 
+  /**
+   * Rolls the selected actor against one puzzle stage's own fixed
+   * skill/DC (#137 — unlike a skill challenge, a stage's skill isn't the
+   * player's choice), records the attempt, and — only once the puzzle
+   * actually resolves (auto-resolving, no GM judgment step) — hands off
+   * to `resolveCurrentRoom`, the same "only once resolved" gating
+   * `#onAttemptSkillChallenge` already uses. `target` is the clicked
+   * button (Foundry's own ApplicationV2 action-handler signature); its
+   * own `data-stage-index` says which stage's form to read the chosen
+   * actor from. A no-op if the stage doesn't exist, was already
+   * attempted, or the form has no actor selected.
+   */
+  static async #onAttemptPuzzleStage(event, target) {
+    const sceneId = canvas?.scene?.id;
+    const state = sceneId ? getRunState(sceneId) : null;
+    const currentRoom = state?.rooms[state.currentIndex];
+    if (!currentRoom?.puzzle) return;
+
+    const stageIndex = Number(target?.dataset?.stageIndex);
+    const stage = currentRoom.puzzle.stages[stageIndex];
+    if (!stage || stage.attempted) return;
+
+    const form = this.element.querySelector(
+      `.dommt-dungeon__puzzle-stage-form[data-stage-index="${stageIndex}"]`,
+    );
+    const actorId = form?.querySelector('[name="actorId"]')?.value;
+    const actor = actorId ? game.actors.get(actorId) : null;
+    if (!actor) return;
+
+    const result = await rollPuzzleStageAttempt(actor, stage.skill, stage.dc);
+    if (!result) return;
+
+    if (game.user.isGM) {
+      await recordPuzzleStageOutcome(
+        sceneId,
+        currentRoom.id,
+        stageIndex,
+        result.outcome,
+      );
+    } else {
+      await requestDungeonAction("recordPuzzleStageOutcome", {
+        sceneId,
+        roomId: currentRoom.id,
+        stageIndex,
+        outcome: result.outcome,
+      });
+    }
+    this.render();
+  }
+
+  /**
+   * A narrative room's own resolution (#163): saves whatever's in the
+   * objective textarea (if anything — a blank field just leaves whatever
+   * objective was already set alone, `setObjective` itself only clears on
+   * an explicit `null`/whitespace-only call, and an empty textarea here
+   * means "nothing new to set," not "clear it") and always resolves the
+   * room succeeded, since a narrative beat has nothing to fail.
+   */
   static async #onContinueNarrative() {
     const sceneId = canvas?.scene?.id;
     if (!sceneId) return;
@@ -626,6 +824,22 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
         sceneId,
         objective,
       });
+    }
+    this.render();
+  }
+
+  /**
+   * A treasure room's own resolution (#169) — see claimTreasureFor above for
+   * the actual coin grant + resolution logic, routed the same isGM-direct-
+   * vs-relayed way every other mutating action is.
+   */
+  static async #onClaimTreasure() {
+    const sceneId = canvas?.scene?.id;
+    if (!sceneId) return;
+    if (game.user.isGM) {
+      await claimTreasureFor(sceneId);
+    } else {
+      await requestDungeonAction("claimTreasure", { sceneId });
     }
     this.render();
   }
@@ -729,7 +943,11 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (game.user.isGM) {
       await abandonDungeonRun(sceneId);
     } else {
-      await requestDungeonAction("abandonRun", { sceneId }, { timeoutMs: 60_000 });
+      await requestDungeonAction(
+        "abandonRun",
+        { sceneId },
+        { timeoutMs: 60_000 },
+      );
     }
     this.close();
   }

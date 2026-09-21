@@ -8,6 +8,9 @@ import {
   parseChainHopDistance, buildChainSpellCandidates,
   buildHealSpellCandidates,
   parseAreaSpellTierOverrides, buildTierScalingAreaSpellCandidates, endTurnCandidate,
+  parseActionGlyphTiers, buildDualNatureSpellCandidates,
+  parseTargetCountFormula, buildTargetCountSpellCandidates,
+  parseAutoHitAreaTiers, buildAutoHitAreaSpellCandidates,
   buildCandidateList, applyCandidateToTurnState, buildDecisionContext,
   MAX_ACTIONS_PER_TURN, AGENT_MELEE_REACH_SQUARES
 } from '../scripts/agent-candidates.mjs';
@@ -262,6 +265,211 @@ describe('buildTierScalingAreaSpellCandidates', () => {
   it('omits a tier where every placement catches zero opponents', () => {
     const emptyTier = { ...tier1, placements: [{ centerType: 'self', centerId: null, affected: [] }] };
     const candidates = buildTierScalingAreaSpellCandidates({ readyTierScalingAreaSpells: [emptyTier], actionsRemaining: 3 });
+    expect(candidates).toEqual([]);
+  });
+});
+
+describe('parseActionGlyphTiers', () => {
+  const harmDescription = "<p>You channel void energy to harm the living or heal the undead. If the target is a living creature, you deal 1d8 void damage to it, and it gets a basic Fortitude save. If the target is a willing undead creature, you restore that amount of Hit Points. The number of actions you spend when Casting this Spell determines its targets, range, area, and other parameters.</p>\n<p><span class=\"action-glyph\">1</span> The spell has a range of touch.</p>\n<p><span class=\"action-glyph\">2</span> (concentrate) The spell has a range of 30 feet. If you're healing an undead creature, increase the Hit Points restored by 8.</p>\n<p><span class=\"action-glyph\">3</span> (concentrate) You disperse void energy in a @Template[emanation|distance:30]. This targets all living and undead creatures in the area.</p>\n<hr />\n<p><strong>Heightened (+1)</strong> The amount of healing or damage increases by 1d8, and the extra healing for the 2-action version increases by 8.</p>";
+  const healDescription = "<p>You channel vital energy to heal the living or damage the undead. If the target is a willing living creature, you restore 1d8 Hit Points. If the target is undead, you deal that amount of vitality damage to it, and it gets a basic Fortitude save. The number of actions you spend when Casting this Spell determines its targets, range, area, and other parameters.</p>\n<p><span class=\"action-glyph\">1</span> The spell has a range of touch.</p>\n<p><span class=\"action-glyph\">2</span> (concentrate) The spell has a range of 30 feet. If you're healing a living creature, increase the Hit Points restored by 8.</p>\n<p><span class=\"action-glyph\">3</span> (concentrate) You disperse vital energy in a @Template[emanation|distance:30]. This targets all living and undead creatures in the burst.</p>\n<hr />\n<p><strong>Heightened (+1)</strong> The amount of healing or damage increases by 1d8, and the extra healing for the 2-action version increases by 8.</p>";
+
+  it('parses Harm\'s real tiered description', () => {
+    expect(parseActionGlyphTiers(harmDescription)).toEqual({
+      1: { cost: 1, rangeFeet: 'touch', bonus: 0 },
+      2: { cost: 2, rangeFeet: 30, bonus: 8 },
+      3: { cost: 3, area: { type: 'emanation', value: 30 }, bonus: 0 },
+    });
+  });
+
+  it('parses Heal\'s real tiered description identically in shape', () => {
+    expect(parseActionGlyphTiers(healDescription)).toEqual({
+      1: { cost: 1, rangeFeet: 'touch', bonus: 0 },
+      2: { cost: 2, rangeFeet: 30, bonus: 8 },
+      3: { cost: 3, area: { type: 'emanation', value: 30 }, bonus: 0 },
+    });
+  });
+
+  it('returns an empty object for a description with no action-glyph tiers', () => {
+    expect(parseActionGlyphTiers('<p>A plain spell with no tiers.</p>')).toEqual({});
+  });
+});
+
+describe('buildDualNatureSpellCandidates', () => {
+  const livingFoe = { id: 'foe1', name: 'Bandit' };
+  const undeadAlly = { id: 'ally1', name: 'Skeleton Guide' };
+  const spell = {
+    id: 'sp1', slug: 'harm', label: 'Harm', entryId: 'entry1', harmfulTrait: 'living',
+    save: 'fortitude', basic: true,
+    singleTargetTiers: [
+      { cost: 1, bonus: 0, harmTargets: [livingFoe], healTargets: [] },
+      { cost: 2, bonus: 8, harmTargets: [], healTargets: [undeadAlly] },
+    ],
+    areaTier: { cost: 3, harmTargets: [livingFoe], healTargets: [undeadAlly] },
+  };
+
+  it('offers a castDualHarm candidate per single-target harm target', () => {
+    const candidates = buildDualNatureSpellCandidates({ readyDualNatureSpells: [spell], actionsRemaining: 3 });
+    expect(candidates).toContainEqual({
+      id: 'castDualHarm:harm:1:foe1', type: 'castDualHarm',
+      spellId: 'sp1', entryId: 'entry1', cost: 1, targetId: 'foe1', save: 'fortitude', basic: true,
+      summary: 'Harm (1 action) vs Bandit',
+    });
+  });
+
+  it('offers a castDualHeal candidate per single-target heal target, carrying the tier bonus', () => {
+    const candidates = buildDualNatureSpellCandidates({ readyDualNatureSpells: [spell], actionsRemaining: 3 });
+    expect(candidates).toContainEqual({
+      id: 'castDualHeal:harm:2:ally1', type: 'castDualHeal',
+      spellId: 'sp1', entryId: 'entry1', cost: 2, targetId: 'ally1', bonus: 8,
+      summary: 'Harm (2 actions) heals Skeleton Guide',
+    });
+  });
+
+  it('offers one castDualArea candidate combining both harm and heal groups', () => {
+    const candidates = buildDualNatureSpellCandidates({ readyDualNatureSpells: [spell], actionsRemaining: 3 });
+    expect(candidates).toContainEqual({
+      id: 'castDualArea:harm:3', type: 'castDualArea',
+      spellId: 'sp1', entryId: 'entry1', cost: 3, save: 'fortitude', basic: true,
+      harmIds: ['foe1'], healIds: ['ally1'],
+      summary: 'Harm (3 actions) harms Bandit; heals Skeleton Guide',
+    });
+  });
+
+  it('omits any tier whose cost exceeds the actions remaining', () => {
+    const candidates = buildDualNatureSpellCandidates({ readyDualNatureSpells: [spell], actionsRemaining: 1 });
+    expect(candidates.map((c) => c.id)).toEqual(['castDualHarm:harm:1:foe1']);
+  });
+
+  it('omits the area candidate when both harm and heal groups are empty', () => {
+    const emptyArea = { ...spell, singleTargetTiers: [], areaTier: { cost: 3, harmTargets: [], healTargets: [] } };
+    const candidates = buildDualNatureSpellCandidates({ readyDualNatureSpells: [emptyArea], actionsRemaining: 3 });
+    expect(candidates).toEqual([]);
+  });
+});
+
+describe('parseTargetCountFormula', () => {
+  it('parses Rebuke Death\'s real structured target text', () => {
+    expect(parseTargetCountFormula('1 living creature per action spent to Cast this Spell')).toEqual({ countPerAction: 1 });
+  });
+
+  it('parses an explicit "per N actions" denominator', () => {
+    expect(parseTargetCountFormula('1 creature per 2 actions spent')).toEqual({ countPerAction: 0.5 });
+  });
+
+  it('parses a numerator greater than 1', () => {
+    expect(parseTargetCountFormula('2 creatures per action spent')).toEqual({ countPerAction: 2 });
+  });
+
+  it('returns null for an ordinary single-target phrase', () => {
+    expect(parseTargetCountFormula('1 creature')).toBeNull();
+  });
+});
+
+describe('buildTargetCountSpellCandidates', () => {
+  const ally1 = { id: 'ally1', name: 'Fighter' };
+  const ally2 = { id: 'ally2', name: 'Cleric' };
+
+  const rebukeDeath = {
+    id: 'sp1', slug: 'rebuke-death', label: 'Rebuke Death', entryId: 'entry1', save: null, basic: null,
+    tiers: [
+      { cost: 1, targets: [ally1] },
+      { cost: 2, targets: [ally1, ally2] },
+    ],
+  };
+
+  it('offers one candidate per affordable tier, bundling its pre-selected targets', () => {
+    const candidates = buildTargetCountSpellCandidates({ readyTargetCountSpells: [rebukeDeath], actionsRemaining: 3 });
+    expect(candidates).toEqual([
+      {
+        id: 'castTargetCount:rebuke-death:1', type: 'castTargetCount',
+        spellId: 'sp1', entryId: 'entry1', cost: 1, save: null, basic: null,
+        targetIds: ['ally1'],
+        summary: 'Rebuke Death (1 action) on Fighter',
+      },
+      {
+        id: 'castTargetCount:rebuke-death:2', type: 'castTargetCount',
+        spellId: 'sp1', entryId: 'entry1', cost: 2, save: null, basic: null,
+        targetIds: ['ally1', 'ally2'],
+        summary: 'Rebuke Death (2 actions) on Fighter, Cleric',
+      },
+    ]);
+  });
+
+  it('omits a tier whose cost exceeds the actions remaining', () => {
+    const candidates = buildTargetCountSpellCandidates({ readyTargetCountSpells: [rebukeDeath], actionsRemaining: 1 });
+    expect(candidates.map((c) => c.cost)).toEqual([1]);
+  });
+
+  it('omits a tier with no pre-selected targets', () => {
+    const emptyTier = { ...rebukeDeath, tiers: [{ cost: 1, targets: [] }] };
+    const candidates = buildTargetCountSpellCandidates({ readyTargetCountSpells: [emptyTier], actionsRemaining: 3 });
+    expect(candidates).toEqual([]);
+  });
+});
+
+describe('parseAutoHitAreaTiers', () => {
+  const forceRainDescription = "<p>You conjure a magical cloud that batters creatures with shards of solidified magic. Creatures in the spell's area take force damage with a basic Reflex save. The number of actions you spend when Casting this Spell determines the area and other parameters.</p>\n<p><span class=\"action-glyph\">1</span> This spell affects a single 5-foot square and deals 4d6 force damage.</p>\n<p><span class=\"action-glyph\">2</span> This spell affects all squares in a @Template[type:burst|distance:10] and deals 8d6 force damage.</p>\n<p><span class=\"action-glyph\">3</span> The shards home in on creatures. This spell affects all squares in a @Template[type:burst|distance:10]. Creatures in the area don't attempt a saving throw and instead automatically take 20 force damage.</p><hr /><p><strong>Heightened (+1)</strong> The damage increases by 1d6 for the 1-action version, by 2d6 for the 2-action version, and by 5 for the 3-action version.</p>";
+
+  it('parses Force Rain\'s real tiered description', () => {
+    expect(parseAutoHitAreaTiers(forceRainDescription)).toEqual({
+      1: { cost: 1, noSave: false, damageFormula: '4d6', damageType: 'force' },
+      2: { cost: 2, area: { type: 'burst', value: 10 }, noSave: false, damageFormula: '8d6', damageType: 'force' },
+      3: { cost: 3, area: { type: 'burst', value: 10 }, noSave: true, flatDamage: 20, damageType: 'force' },
+    });
+  });
+
+  it('returns an empty object for a description with no action-glyph tiers', () => {
+    expect(parseAutoHitAreaTiers('<p>A plain spell with no tiers.</p>')).toEqual({});
+  });
+});
+
+describe('buildAutoHitAreaSpellCandidates', () => {
+  const opp1 = { id: 'opp1', name: 'Fighter' };
+  const opp2 = { id: 'opp2', name: 'Cleric' };
+
+  const saveTier = {
+    id: 'sp1', slug: 'force-rain-2action', label: 'Force Rain (2 actions)',
+    cost: 2, save: 'reflex', basic: true, noSave: false, entryId: 'entry1',
+    placements: [{ centerType: 'opponent', centerId: 'opp1', affected: [opp1, opp2] }],
+  };
+  const noSaveTier = {
+    id: 'sp1', slug: 'force-rain-3action', label: 'Force Rain (3 actions)',
+    cost: 3, save: null, basic: null, noSave: true, entryId: 'entry1',
+    placements: [{ centerType: 'opponent', centerId: 'opp1', affected: [opp1, opp2] }],
+  };
+
+  it('offers a save-based candidate carrying noSave:false', () => {
+    const candidates = buildAutoHitAreaSpellCandidates({ readyAutoHitAreaSpells: [saveTier], actionsRemaining: 3 });
+    expect(candidates).toEqual([
+      {
+        id: 'castAutoHitAreaTier:force-rain-2action:opponent:opp1', type: 'castAutoHitAreaTier',
+        spellId: 'sp1', entryId: 'entry1', cost: 2, save: 'reflex', basic: true, noSave: false,
+        centerType: 'opponent', centerId: 'opp1', affectedIds: ['opp1', 'opp2'], affectedAllyIds: [],
+        summary: 'Force Rain (2 actions) (hits Fighter, Cleric)',
+      },
+    ]);
+  });
+
+  it('offers a no-save candidate carrying noSave:true and a null save', () => {
+    const candidates = buildAutoHitAreaSpellCandidates({ readyAutoHitAreaSpells: [noSaveTier], actionsRemaining: 3 });
+    expect(candidates).toEqual([
+      {
+        id: 'castAutoHitAreaTier:force-rain-3action:opponent:opp1', type: 'castAutoHitAreaTier',
+        spellId: 'sp1', entryId: 'entry1', cost: 3, save: null, basic: null, noSave: true,
+        centerType: 'opponent', centerId: 'opp1', affectedIds: ['opp1', 'opp2'], affectedAllyIds: [],
+        summary: 'Force Rain (3 actions) (hits Fighter, Cleric)',
+      },
+    ]);
+  });
+
+  it('omits a tier whose cost exceeds the actions remaining', () => {
+    const candidates = buildAutoHitAreaSpellCandidates({ readyAutoHitAreaSpells: [saveTier, noSaveTier], actionsRemaining: 2 });
+    expect(candidates.map((c) => c.cost)).toEqual([2]);
+  });
+
+  it('omits a tier where every placement catches zero opponents', () => {
+    const emptyTier = { ...noSaveTier, placements: [{ centerType: 'opponent', centerId: 'opp1', affected: [] }] };
+    const candidates = buildAutoHitAreaSpellCandidates({ readyAutoHitAreaSpells: [emptyTier], actionsRemaining: 3 });
     expect(candidates).toEqual([]);
   });
 });

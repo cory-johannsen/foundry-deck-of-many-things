@@ -5,17 +5,10 @@
  * can't name something that was never on the list — no freeform-text
  * parsing to get wrong.
  *
- * Also the *only* provider `customizeTrap` (#136) can ever use, full stop
- * — not gated by `DOMMT_AGENT_PROVIDER` the way `decide` is. Laya is
- * non-autoregressive (calibrated probabilities over a fixed candidate set,
- * per `tools/agent-loop/README.md`), which is exactly what makes it usable
- * for `decide`'s "pick one of these" shape and exactly what makes it
- * structurally unable to do `customizeTrap`'s "write new prose" shape at
- * all — there's no candidate set to score. `tools/agent-loop/poll.mjs`
- * imports `customizeTrap` directly from this file rather than through
- * `providers/index.mjs`'s `resolveProvider`, and simply skips trap
- * customization for a cycle if `ANTHROPIC_API_KEY` isn't configured, same
- * as it would skip a combat decision it couldn't reach.
+ * Trap (#136) and skill-challenge (#166) flavor customization used to live
+ * here too (a direct Anthropic API call). #185 moved that to
+ * `mcp-server.mjs`, so an interactive agent session — any model, not a
+ * hardcoded API call — fulfills those instead.
  */
 
 import { readEnvOrDotenv } from "../foundry-client.mjs";
@@ -98,58 +91,4 @@ export async function decide(context, opts = {}) {
     );
   }
   return { candidateId, rationale };
-}
-
-/**
- * `context` is `getPendingTrapCustomization`'s own return shape (name,
- * description, trapLevel, locationTag, partyLevel) — deliberately never
- * the trap's mechanical data (`system.details.disable`/`system.actions`),
- * so nothing in this prompt can even suggest changing how the trap
- * actually works, only how it reads. Returns `{name, description}`.
- */
-export async function customizeTrap(context, opts = {}) {
-  const payload = await callClaude(
-    {
-      model: CLAUDE_MODEL,
-      max_tokens: 4096,
-      tools: [
-        {
-          name: "customize_trap",
-          description:
-            "Write a new name and flavor description for this trap, fitting the room and party — never its mechanics, only how it reads.",
-          input_schema: {
-            type: "object",
-            properties: {
-              name: {
-                type: "string",
-                description:
-                  "A short, evocative name for this specific trap instance.",
-              },
-              description: {
-                type: "string",
-                description:
-                  "A short paragraph describing what the party perceives/experiences discovering or triggering it, matching the room's terrain/theme. Do not state exact DCs, damage, or other mechanical numbers.",
-              },
-            },
-            required: ["name", "description"],
-          },
-        },
-      ],
-      tool_choice: { type: "tool", name: "customize_trap" },
-      messages: [
-        {
-          role: "user",
-          content: `You are dressing a mechanical trap for a Pathfinder 2e dungeon room in fresh narrative flavor, without changing anything about how it actually works — only its name and flavor text. Base trap:\n\n${JSON.stringify(context, null, 2)}\n\nWrite a new name and description matching the room's own terrain/theme, not the base template's generic text.`,
-        },
-      ],
-    },
-    opts,
-  );
-
-  const toolUse = payload.content?.find(
-    (c) => c.type === "tool_use" && c.name === "customize_trap",
-  );
-  if (!toolUse)
-    throw new Error("claude provider: no customize_trap tool call in response");
-  return toolUse.input;
 }

@@ -7,6 +7,8 @@ import {
   dcForAttempt,
   initSkillChallengeState,
   applySkillChallengeAttempt,
+  isValidSkillChallengeTemplate,
+  selectSkillChallengeTemplate,
   ALL_SKILLS,
   VP_TARGET,
   NON_SPECIALTY_DC_BUMP,
@@ -126,6 +128,153 @@ describe("initSkillChallengeState", () => {
     expect(state.vpTarget).toBe(VP_TARGET);
     expect(state.attemptBudget).toBe(6);
     expect(state.specialtySkills).toHaveLength(3);
+  });
+
+  it("uses a valid template's own specialtySkills instead of the generic location-tag pick", () => {
+    const template = {
+      kind: "skill_challenge",
+      specialtySkills: ["diplomacy", "deception", "intimidation"],
+    };
+    const state = initSkillChallengeState({
+      seed: "s",
+      roomId: "r1",
+      locationTag: "undead",
+      partySize: 4,
+      template,
+    });
+    expect(state.specialtySkills).toEqual([
+      "diplomacy",
+      "deception",
+      "intimidation",
+    ]);
+  });
+
+  it("falls back to the generic pick for an invalid/missing template", () => {
+    const withNull = initSkillChallengeState({
+      seed: "s",
+      roomId: "r1",
+      locationTag: "undead",
+      partySize: 4,
+      template: null,
+    });
+    const withInvalid = initSkillChallengeState({
+      seed: "s",
+      roomId: "r1",
+      locationTag: "undead",
+      partySize: 4,
+      template: { kind: "puzzle", specialtySkills: ["diplomacy"] },
+    });
+    const generic = chooseSpecialtySkills("s", "r1", "undead");
+    expect(withNull.specialtySkills).toEqual(generic);
+    expect(withInvalid.specialtySkills).toEqual(generic);
+    expect(withNull.name).toBeNull();
+    expect(withNull.summary).toBeNull();
+    expect(withNull.skillFlavor).toEqual({});
+  });
+
+  it("persists a valid template's own name/summary/skillFlavor (#166)", () => {
+    const template = {
+      kind: "skill_challenge",
+      name: "A Council Divided",
+      summary: "Quarreling factions need talking down.",
+      specialtySkills: ["diplomacy", "deception", "intimidation"],
+      skillFlavor: { diplomacy: "Appeal to shared interests." },
+    };
+    const state = initSkillChallengeState({
+      seed: "s",
+      roomId: "r1",
+      locationTag: "undead",
+      partySize: 4,
+      template,
+    });
+    expect(state.name).toBe("A Council Divided");
+    expect(state.summary).toBe("Quarreling factions need talking down.");
+    expect(state.skillFlavor).toEqual({
+      diplomacy: "Appeal to shared interests.",
+    });
+  });
+});
+
+describe("isValidSkillChallengeTemplate", () => {
+  it("accepts a real skill_challenge entry with exactly 3 real skills", () => {
+    expect(
+      isValidSkillChallengeTemplate({
+        kind: "skill_challenge",
+        specialtySkills: ["acrobatics", "athletics", "stealth"],
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects the wrong kind", () => {
+    expect(
+      isValidSkillChallengeTemplate({
+        kind: "puzzle",
+        specialtySkills: ["acrobatics", "athletics", "stealth"],
+      }),
+    ).toBe(false);
+  });
+
+  it("rejects anything other than exactly 3 specialtySkills", () => {
+    expect(
+      isValidSkillChallengeTemplate({
+        kind: "skill_challenge",
+        specialtySkills: ["acrobatics", "athletics"],
+      }),
+    ).toBe(false);
+  });
+
+  it("rejects a skill slug that isn't a real ALL_SKILLS entry", () => {
+    expect(
+      isValidSkillChallengeTemplate({
+        kind: "skill_challenge",
+        specialtySkills: ["acrobatics", "athletics", "perception"],
+      }),
+    ).toBe(false);
+  });
+
+  it("rejects null/undefined", () => {
+    expect(isValidSkillChallengeTemplate(null)).toBe(false);
+    expect(isValidSkillChallengeTemplate(undefined)).toBe(false);
+  });
+});
+
+describe("selectSkillChallengeTemplate", () => {
+  const entries = [
+    { id: "a", kind: "puzzle", specialtySkills: ["society"] },
+    {
+      id: "b",
+      kind: "skill_challenge",
+      specialtySkills: ["acrobatics", "athletics", "stealth"],
+    },
+    {
+      id: "c",
+      kind: "skill_challenge",
+      specialtySkills: ["diplomacy", "deception", "intimidation"],
+    },
+    { id: "d", kind: "trap", specialtySkills: [] },
+  ];
+
+  it("only ever picks from valid skill_challenge entries, never other kinds", () => {
+    for (let i = 0; i < 20; i += 1) {
+      const picked = selectSkillChallengeTemplate(entries, `seed-${i}`, "r1");
+      expect(["b", "c"]).toContain(picked.id);
+    }
+  });
+
+  it("is deterministic for the same seed/roomId", () => {
+    const a = selectSkillChallengeTemplate(entries, "seed-x", "room-9");
+    const b = selectSkillChallengeTemplate(entries, "seed-x", "room-9");
+    expect(a).toEqual(b);
+  });
+
+  it("returns null when there is no valid skill_challenge entry at all", () => {
+    const noneValid = [{ id: "a", kind: "puzzle", specialtySkills: [] }];
+    expect(selectSkillChallengeTemplate(noneValid, "s", "r1")).toBeNull();
+  });
+
+  it("returns null for an empty/missing entries list", () => {
+    expect(selectSkillChallengeTemplate([], "s", "r1")).toBeNull();
+    expect(selectSkillChallengeTemplate(undefined, "s", "r1")).toBeNull();
   });
 });
 

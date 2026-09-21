@@ -112,29 +112,86 @@ export const STYLE = 'dark fantasy illustration, full color illustration, intric
 //     white smoke haze filling the frame instead of a plain black field —
 //     dark enough at the very corners to slip past `backgroundScore` but
 //     clearly not "nothing else in it" on review.
+//
+// ITEM-18 level 2/3 review pass (2026-09-21): rather than keep re-adding the
+// same clusters per creature as they recurred across levels 2 and 3, this
+// pass went back through everything reviewed so far and promoted every
+// still-recurring failure into the shared list at once, so the ~1,000
+// not-yet-generated prompts (levels 4-25) inherit the fixes before their
+// first generation attempt instead of after.
+//   - ground/floor under a full-body (non-`shapeless`) subject: `pegasus`
+//     came back with grass wisps at its hooves even though it isn't marked
+//     `shapeless` — "ground, floor, terrain, horizon" had only ever been
+//     added to `SHAPELESS_NEGATIVE`, on the assumption a bust portrait crops
+//     before showing the ground. Full-body animal/creature prompts (not
+//     busts) proved that assumption wrong, so the same terms are added here
+//     too rather than only to the shapeless variant.
+//   - diptych / multiple views of the same subject: `soulbound-doll-cruel`,
+//     `soulbound-doll-true-neutral`, and `zyss-serpentfolk` each
+//     independently came back as two side-by-side renders of the subject (or,
+//     for the serpentfolk, two heads) instead of one — never named in the
+//     negative list before now.
+//   - nudity: `rokurokubi`'s prompt (a "cursed woman") produced explicit
+//     nudity twice across redo rounds before the prompt itself was reworded
+//     with modest-clothing framing. Adding it to the shared list is a
+//     content-safety floor, not a per-creature patch — it costs nothing on a
+//     prompt that was never going to drift that way, and catches the next
+//     one that does before a human has to notice.
+//   - ornate frame corners / oval medallion: `giant-eagle` (gold corner
+//     flourishes), `musketeer` (oval medallion), and `soulbound-doll-sassy`
+//     (jeweled frame corners) each slipped past the existing "frame, border,
+//     ornate border" terms — those read as generic enough that the model
+//     wasn't reliably avoiding a *decorative* frame specifically.
+//   - water/ocean scenery: `triton`, `river-drake`, and `giant-seahorse` each
+//     came back half-submerged in a full ocean scene — the existing
+//     "splashing water, ocean spray, water splash effect" terms named the
+//     splash-effect failure ITEM-2 originally caught but not a full body of
+//     water as the backdrop itself.
+//   - photorealistic/CGI rendering: `pachycephalosaurus` drifted to a
+//     photorealistic 3D-render style on top of its other failures —
+//     "photograph, 3d render" didn't hold against a photoreal *painted*
+//     render that isn't literally a photograph.
+//   - additional colored-background hues: `musketeer` (maroon/gold),
+//     `web-lurker` (red/orange), and `soulbound-doll-chaotic-good`
+//     (purple/lavender) all landed on a colored backdrop outside the
+//     green/teal/mint set already named — the existing entries were added
+//     explicitly because the generic "colored background" term alone wasn't
+//     reliable, so the same treatment extends to these hues.
 export const NEGATIVE = 'text, letters, words, watermark, signature, logo, frame, border, ornate border, '
   + 'parchment, paper texture, scroll, background scenery, landscape, architecture, interior, '
   + 'multiple figures, crowd, full body, tiny figure, blurry, deformed hands, extra limbs, '
-  + 'modern clothing, firearms, photograph, 3d render, '
+  + 'modern clothing, firearms, photograph, 3d render, photorealistic, realistic render, '
+  + 'CGI render, video game render, '
   + 'circular frame, circular border, circular halo, glowing ring, decorative ring, ring border, '
   + 'concentric circles, roundel, medallion, coin, wreath border, coiled into a circle, ouroboros, '
   + 'mandala, moon, full moon, arch, archway, gothic arch, doorway, window, stained glass, portal, '
+  + 'aura ring, nimbus, radial halo glow, glowing halo behind head, '
   + 'black and white, monochrome, grayscale, greyscale, line art, woodcut print, engraving, sepia tone, '
   + 'colored background, tinted background, solid color backdrop, colored backdrop, studio backdrop, '
-  + 'green screen, teal background, mint background, '
+  + 'green screen, teal background, mint background, purple background, lavender background, '
+  + 'maroon background, orange background, red background, '
   + 'room interior, indoor room, shop interior, workshop, office, library interior, shelf, shelving, '
   + 'bookshelf, shelf of bottles, shelf of coins, wall decoration, framed picture, painting on wall, '
   + 'chalkboard, city skyline, cityscape, alleyway, mountain vista, forest silhouette, night sky vista, '
   + 'vignette, oval backdrop, framed panel behind subject, '
+  + 'oval medallion, picture frame corners, ornate corner decoration, filigree border, jeweled frame, '
+  + 'gold ornate frame, '
   + 'glowing aura around subject, radiating glow ring, colored aura outline, '
   + 'grey background, gray background, neutral grey backdrop, studio grey background, '
   + 'grey gradient, radial grey vignette, grey studio backdrop, white background, '
   + 'pale grey backdrop, plain field, open landscape, sky, clouds, horizon line, splashing water, '
-  + 'ocean spray, water splash effect, '
+  + 'ocean spray, water splash effect, water, ocean, river, waves, ripples, underwater scene, '
+  + 'submerged, bubbles underwater, '
   + 'ornamental pillar, decorative panel, flanking pillars, symmetrical urns, candelabra, '
   + 'symmetrical mirrored composition, ornamental object flanking subject, matching objects '
-  + 'either side of subject, smoke backdrop, fog backdrop, mist backdrop, cloud backdrop, '
-  + 'hazy cloud vignette, ground fog';
+  + 'either side of subject, flanking foliage, symmetrical plants, twin objects either side, '
+  + 'mirrored decorative elements, '
+  + 'smoke backdrop, fog backdrop, mist backdrop, cloud backdrop, '
+  + 'hazy cloud vignette, ground fog, ground, floor, terrain beneath subject, shadow beneath subject, '
+  + 'standing on visible ground, '
+  + 'diptych, two images, side by side, multiple views of the same subject, split image, '
+  + 'before and after comparison, duplicate subject, two figures, multiple copies of the subject, '
+  + 'nudity, sexualized, exposed intimate anatomy';
 
 /**
  * A style for creatures that have no head to make a bust of.
@@ -1421,9 +1478,11 @@ export const MONSTER_ART = [
   { id: 'street-musician', file: 'street-musician', dir: 'assets/creature-art',
     prompt: "A human street musician in worn colorful traveling clothes, a stringed instrument held mid-strum, an open expression caught in song, a weathered but warm-eyed face" },
   { id: 'surgeon', file: 'surgeon', dir: 'assets/creature-art',
-    prompt: "A human surgeon in a blood-stained apron over plain robes, a set of fine surgical tools laid out or held in steady hands, a focused clinical expression, calm intense eyes" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a human surgeon in a blood-stained apron over plain robes, a set of fine surgical tools held in steady hands, a focused clinical expression, calm intense eyes",
+    avoid: "operating table, surgical table, workshop, tools laid out on a surface, table, counter, shelf" },
   { id: 'tripkee-camoufleur', file: 'tripkee-camoufleur', dir: 'assets/creature-art',
-    prompt: "A tripkee camoufleur, a small frog-like humanoid with mottled green-brown skin patterned for camouflage, large round eyes, long powerful hind legs crouched low, blending against unseen foliage" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a tripkee camoufleur, a small frog-like humanoid with mottled green-brown skin patterned for camouflage, large round eyes, long powerful hind legs crouched low",
+    avoid: "foliage, leaves, plants, jungle, forest scene, vines" },
   { id: 'vermin-catcher', file: 'vermin-catcher', dir: 'assets/creature-art',
     prompt: "A human vermin catcher in a patched leather coat, a wire cage and a long hooked pole in hand, wary narrowed eyes scanning the ground, a practical weathered look" },
   { id: 'aiuvarin-elementalist', file: 'aiuvarin-elementalist', dir: 'assets/creature-art',
@@ -1495,7 +1554,7 @@ export const MONSTER_ART = [
     prompt: "A pipefox, a small fluffy long-bodied snake with the head of a fox and bright curious eyes, soft fur trailing along its coiled serpentine length, coiled alertly as if perched somewhere unseen" },
   { id: 'pridespawn', file: 'pridespawn', dir: 'assets/creature-art',
     prompt: "A pridespawn, an emaciated sinspawn with unnaturally long arms and digitigrade legs ending in three stubby taloned digits, pale hairless bulging-veined flesh, an elongated head with red eyes and a split lower jaw revealing a lolling tongue, held in a haughty upright posture",
-    avoid: "human face, healthy human skin, normal single jaw, clothing, armor" },
+    avoid: "human face, healthy human skin, normal single jaw, clothing, armor, diagonal panel, angled backdrop, split background, two-tone background" },
   { id: 'pteranodon', file: 'pteranodon', dir: 'assets/creature-art',
     prompt: "A pteranodon, a large flying reptile with a 20-foot wingspan, leathery wings spread wide, a long toothless beak and a long backward-swept bony crest, sharp alert eyes" },
   { id: 'pusk', file: 'pusk', dir: 'assets/creature-art',
@@ -1504,11 +1563,12 @@ export const MONSTER_ART = [
     prompt: "A sedacthy scout, an amphibious fish-like humanoid with slick scaled skin and large dark eyes, webbed clawed hands, a lean predatory build, poised in a low hunting crouch" },
   { id: 'skeletal-champion', file: 'skeletal-champion', dir: 'assets/creature-art',
     prompt: "A skeletal champion, an animated skeleton in battered ornate armor, bare bone visible at the joints, a weapon gripped in a bony hand, faint unholy light glowing in hollow eye sockets, a disciplined battle-ready stance" },
-  { id: 'skeletal-horse', file: 'skeletal-horse', dir: 'assets/creature-art',
-    prompt: "A skeletal horse, bare bone and a bared equine skull, faint unholy light glowing in hollow eye sockets, tattered remnants of a saddle or barding, rearing or mid-stride" },
+  { id: 'skeletal-horse', file: 'skeletal-horse', dir: 'assets/creature-art', shapeless: true,
+    prompt: "A skeletal horse, a large animated horse skeleton made entirely of bare white bone with no flesh, no coat and no fur, a bared equine skull, faint unholy light glowing in hollow eye sockets, tattered remnants of a saddle or barding, rearing or mid-stride, floating in empty black space with nothing else in frame",
+    avoid: "flesh, muscle, living horse, black coat, fur, hair, jewelry, decorative frame, framed panel, ornate corners, cream background, tan background" },
   { id: 'slothspawn', file: 'slothspawn', dir: 'assets/creature-art',
-    prompt: "A slothspawn, an emaciated sinspawn with unnaturally long arms and digitigrade legs ending in three stubby taloned digits, pale hairless bulging-veined flesh, an elongated head with red eyes and a split lower jaw revealing a lolling tongue, limbs held slack and heavy",
-    avoid: "human face, healthy human skin, normal single jaw, clothing, armor" },
+    prompt: "A slothspawn, an emaciated humanoid sinspawn aberration with unnaturally long arms and digitigrade legs ending in three stubby taloned digits, pale hairless bulging-veined flesh, an elongated head with red eyes and a split lower jaw revealing a lolling tongue, limbs held slack and heavy, the same twisted aberrant sinspawn body plan as its kin",
+    avoid: "human face, healthy human skin, normal single jaw, clothing, armor, sloth animal, real sloth, animal head, business suit, jacket, tie, necktie" },
   { id: 'slurk', file: 'slurk', dir: 'assets/creature-art',
     prompt: "A slurk, a sticky pale white frog-beast with two long curved ivory tusks, glistening resin-slicked pustules along its back, clinging low as if climbing an unseen wall or ceiling" },
   { id: 'soulbound-doll-brave', file: 'soulbound-doll-brave', dir: 'assets/creature-art',
@@ -1521,8 +1581,8 @@ export const MONSTER_ART = [
     prompt: "A tiny soulbound doll, a small porcelain-and-cloth mannequin figure with a faceted soul-focus gem embedded at the neck, jointed wooden limbs, wide watchful painted eyes, one hand raised as if testing the air, a cautious tiptoe stance",
     avoid: "human size, adult proportions, realistic skin, life-sized figure" },
   { id: 'soulbound-doll-cruel', file: 'soulbound-doll-cruel', dir: 'assets/creature-art',
-    prompt: "A tiny soulbound doll, a small porcelain-and-cloth mannequin figure with a faceted soul-focus gem embedded at the neck, jointed wooden limbs, a sharp cold painted smirk, tilted head, one hand curled like a claw",
-    avoid: "human size, adult proportions, realistic skin, life-sized figure" },
+    prompt: "A single tiny soulbound doll, one solitary small porcelain-and-cloth mannequin figure with a faceted soul-focus gem embedded at the neck, jointed wooden limbs, a sharp cold painted smirk, tilted head, one hand curled like a claw",
+    avoid: "human size, adult proportions, realistic skin, life-sized figure, two images, diptych, side by side, multiple views, split image, before and after, comparison panel" },
   { id: 'soulbound-doll-gentle', file: 'soulbound-doll-gentle', dir: 'assets/creature-art',
     prompt: "A tiny soulbound doll, a small porcelain-and-cloth mannequin figure with a faceted soul-focus gem embedded at the neck, jointed wooden limbs, a soft painted smile, arms open as if offering an embrace, a tilted head",
     avoid: "human size, adult proportions, realistic skin, life-sized figure" },
@@ -1533,14 +1593,14 @@ export const MONSTER_ART = [
     prompt: "A tiny soulbound doll, a small porcelain-and-cloth mannequin figure with a faceted soul-focus gem embedded at the neck, jointed wooden limbs, a wide painted grin, round rosy painted cheeks, arms raised as if mid-laugh",
     avoid: "human size, adult proportions, realistic skin, life-sized figure" },
   { id: 'soulbound-doll-kind', file: 'soulbound-doll-kind', dir: 'assets/creature-art',
-    prompt: "A tiny soulbound doll, a small porcelain-and-cloth mannequin figure with a faceted soul-focus gem embedded at the neck, jointed wooden limbs, a warm gentle painted smile, hands clasped, a soft welcoming posture",
-    avoid: "human size, adult proportions, realistic skin, life-sized figure" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a tiny soulbound doll, a small porcelain-and-cloth mannequin figure with a faceted soul-focus gem embedded at the neck, jointed wooden limbs, a warm gentle painted smile, hands clasped, a soft welcoming posture",
+    avoid: "human size, adult proportions, realistic skin, life-sized figure, display pedestal, plinth, stand, statue base, sculpture display, second doll, blurred figure, out of focus object, bokeh, another doll in background, outdoor background, garden, foliage, green background, nature scene, depth of field blur" },
   { id: 'soulbound-doll-rash', file: 'soulbound-doll-rash', dir: 'assets/creature-art',
     prompt: "A tiny soulbound doll, a small porcelain-and-cloth mannequin figure with a faceted soul-focus gem embedded at the neck, jointed wooden limbs, leaning forward off balance, one fist raised, a reckless eager painted grin",
     avoid: "human size, adult proportions, realistic skin, life-sized figure" },
   { id: 'soulbound-doll-sassy', file: 'soulbound-doll-sassy', dir: 'assets/creature-art',
-    prompt: "A tiny soulbound doll, a small porcelain-and-cloth mannequin figure with a faceted soul-focus gem embedded at the neck, jointed wooden limbs, hands on hips, chin tilted up, a smug knowing painted smirk",
-    avoid: "human size, adult proportions, realistic skin, life-sized figure" },
+    prompt: "A tiny soulbound doll, a small porcelain-and-cloth mannequin figure with a faceted soul-focus gem embedded at the neck, jointed wooden limbs, hands on hips, chin tilted up, a smug knowing painted smirk, isolated alone with nothing else in the frame",
+    avoid: "human size, adult proportions, realistic skin, life-sized figure, ornate frame, decorative border, jeweled frame, metal frame corners, filigree border" },
   { id: 'soulbound-doll-timid', file: 'soulbound-doll-timid', dir: 'assets/creature-art',
     prompt: "A tiny soulbound doll, a small porcelain-and-cloth mannequin figure with a faceted soul-focus gem embedded at the neck, jointed wooden limbs, hunched shoulders, hands drawn close to the chest, wide anxious painted eyes",
     avoid: "human size, adult proportions, realistic skin, life-sized figure" },
@@ -1555,8 +1615,8 @@ export const MONSTER_ART = [
   { id: 'wererat', file: 'wererat', dir: 'assets/creature-art',
     prompt: "A wererat in hybrid form, a lean humanoid body covered in coarse gray-brown fur, a long naked tail, a pointed rodent snout with sharp incisors, clawed hands, a furtive hunched stance" },
   { id: 'wrathspawn', file: 'wrathspawn', dir: 'assets/creature-art',
-    prompt: "A wrathspawn, an emaciated sinspawn with unnaturally long arms and digitigrade legs ending in three stubby taloned digits, pale hairless bulging-veined flesh, an elongated head with red eyes and a split lower jaw revealing a lolling tongue, coiled as if about to lash out in violence",
-    avoid: "human face, healthy human skin, normal single jaw, clothing, armor" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a wrathspawn, an emaciated sinspawn with unnaturally long arms and digitigrade legs ending in three stubby taloned digits, pale hairless bulging-veined flesh, an elongated head with red eyes and a split lower jaw revealing a lolling tongue, coiled as if about to lash out in violence",
+    avoid: "human face, healthy human skin, normal single jaw, clothing, armor, white background, pale backdrop" },
   { id: 'xulgath-skulker', file: 'xulgath-skulker', dir: 'assets/creature-art',
     prompt: "A xulgath skulker, a reptilian humanoid with dull ashen-gray scales, bony protrusions running the length of its spine, a long tail, crouched low in a stealthy ambush stance, sharp reptilian eyes" },
   { id: 'zombie-brute', file: 'zombie-brute', dir: 'assets/creature-art',
@@ -1564,7 +1624,8 @@ export const MONSTER_ART = [
   { id: 'herexen', file: 'herexen', dir: 'assets/creature-art',
     prompt: "A herexen, an undead former cleric in corroded holy armor stripped of its original symbols, grey withered flesh, clutching a corrupted holy symbol or weapon, eyes burning with vengeful unholy light" },
   { id: 'zyss-serpentfolk', file: 'zyss-serpentfolk', dir: 'assets/creature-art',
-    prompt: "A zyss serpentfolk, a slender humanoid with green-scaled reptilian skin and a serpentine head, slitted eyes, a forked tongue flicking from a lipless mouth, an elegant sinuous poised stance" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a single zyss serpentfolk, one solitary slender humanoid with green-scaled reptilian skin and a serpentine head, slitted eyes, a forked tongue flicking from a lipless mouth, an elegant sinuous poised stance",
+    avoid: "two figures, multiple heads, two heads, duplicate, pair, second creature, white background" },
   { id: 'soulbound-doll-chaotic-evil', file: 'soulbound-doll-chaotic-evil', dir: 'assets/creature-art',
     prompt: "A tiny soulbound doll, a small porcelain-and-cloth mannequin figure with a faceted soul-focus gem embedded at the neck, jointed wooden limbs, a jagged cracked painted grin, wild unkempt painted hair, a menacing hunched tilt",
     avoid: "human size, adult proportions, realistic skin, life-sized figure" },
@@ -1578,8 +1639,8 @@ export const MONSTER_ART = [
   { id: 'sea-devil-scout', file: 'sea-devil-scout', dir: 'assets/creature-art',
     prompt: "A sea devil scout, a horrid amphibious humanoid with slick dark green scaled skin, webbed clawed hands, a fin-crested head, rows of sharp teeth bared, a low predatory crouch dripping with brine" },
   { id: 'soulbound-doll-true-neutral', file: 'soulbound-doll-true-neutral', dir: 'assets/creature-art',
-    prompt: "A tiny soulbound doll, a small porcelain-and-cloth mannequin figure with a faceted soul-focus gem embedded at the neck, jointed wooden limbs, a perfectly still neutral painted expression, hands folded, an unremarkable plain stance",
-    avoid: "human size, adult proportions, realistic skin, life-sized figure" },
+    prompt: "A single tiny soulbound doll, one solitary small porcelain-and-cloth mannequin figure with a faceted soul-focus gem embedded at the neck, jointed wooden limbs, a perfectly still neutral painted expression, hands folded, an unremarkable plain stance",
+    avoid: "human size, adult proportions, realistic skin, life-sized figure, two images, diptych, side by side, multiple views, split image, before and after, comparison panel" },
   { id: 'kobold-dragon-mage-green', file: 'kobold-dragon-mage-green', dir: 'assets/creature-art',
     prompt: "A kobold dragon mage, a small reptilian kobold humanoid draped in ornate robes patterned like dragon scales in murky green with faintly acrid glowing trim, clutching a gnarled wooden focus wreathed in green-tinted acrid magic, sharp scheming eyes, a proud reptilian tail" },
   { id: 'kobold-dragon-mage-black', file: 'kobold-dragon-mage-black', dir: 'assets/creature-art',
@@ -1603,8 +1664,8 @@ export const MONSTER_ART = [
     prompt: "A tiny soulbound doll, a small porcelain-and-cloth mannequin figure with a faceted soul-focus gem embedded at the neck, jointed wooden limbs, a plain pleasant painted smile, hands folded, an unremarkable composed stance",
     avoid: "human size, adult proportions, realistic skin, life-sized figure" },
   { id: 'soulbound-doll-chaotic-good', file: 'soulbound-doll-chaotic-good', dir: 'assets/creature-art',
-    prompt: "A tiny soulbound doll, a small porcelain-and-cloth mannequin figure with a faceted soul-focus gem embedded at the neck, jointed wooden limbs, a bright lopsided painted grin, tousled painted hair, an eager bouncing stance",
-    avoid: "human size, adult proportions, realistic skin, life-sized figure" },
+    prompt: "A tiny soulbound doll, a small porcelain-and-cloth mannequin figure with a faceted soul-focus gem embedded at the neck, jointed wooden limbs, a bright lopsided painted grin, tousled painted hair, an eager bouncing stance, isolated alone with nothing else in the frame",
+    avoid: "human size, adult proportions, realistic skin, life-sized figure, melted, distorted anatomy, extra limbs, warped proportions, painterly abstract texture, purple background, lavender background, gradient backdrop" },
   { id: 'kobold-dragon-mage-white', file: 'kobold-dragon-mage-white', dir: 'assets/creature-art',
     prompt: "A kobold dragon mage, a small reptilian kobold humanoid draped in ornate robes patterned like dragon scales in pale white-blue with frost-rimed glowing trim, clutching a gnarled wooden focus wreathed in white-tinted frost magic, sharp scheming eyes, a proud reptilian tail" },
   { id: 'soulbound-doll-lawful-neutral', file: 'soulbound-doll-lawful-neutral', dir: 'assets/creature-art',
@@ -1624,7 +1685,8 @@ export const MONSTER_ART = [
     prompt: "A shocker lizard, a small brightly colored reptile with faintly crackling static sparks dancing along its scaled hide, alert beady eyes, a low quadrupedal stance",
     avoid: "humanoid, large size" },
   { id: 'triton', file: 'triton', dir: 'assets/creature-art',
-    prompt: "A triton, a humanoid with fine scales in silver-blue and seaweed green, webbed fingers and toes, seagrass-like flowing hair, gills at the neck alongside a human-shaped nose and mouth, a poised noble bearing" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a triton, a humanoid with fine scales in silver-blue and seaweed green, webbed fingers and toes, seagrass-like flowing hair, gills at the neck alongside a human-shaped nose and mouth, a poised noble bearing",
+    avoid: "white background, pale backdrop, water, ocean, waves, bubbles" },
   { id: 'mudwretch', file: 'mudwretch', dir: 'assets/creature-art', shapeless: true,
     prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a mudwretch, a roughly humanoid shape made of thick dark dripping mud, its form heaped and glistening, no true face, wet loam-textured flesh, floating in empty black space with no ground, floor, puddle or water surface visible anywhere in frame",
     avoid: "clean, dry, defined face, human skin, ground, floor, puddle, pool of water, water reflection, wet floor, mud pit" },
@@ -1646,15 +1708,15 @@ export const MONSTER_ART = [
   { id: 'blink-dog', file: 'blink-dog', dir: 'assets/creature-art',
     prompt: "A blink dog, a long-eared bearded canine with a tawny coat, a faint blue nimbus of shimmering energy dancing across its fur, intelligent alert eyes, an honorable watchful stance" },
   { id: 'nuglub', file: 'nuglub', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A nuglub, a small hunchbacked gremlin under three feet tall, three glowing blue eyes, black oily hair draped over its back like a cloak, twisted grasping hands, a gleeful malicious grin",
-    avoid: "cute, humanoid child, fairy wings, normal proportioned body" },
+    prompt: "A nuglub, a small hunchbacked gremlin under three feet tall, three glowing blue eyes, black oily hair draped over its back like a cloak, twisted grasping hands, a gleeful malicious grin, floating alone in empty black space with nothing else in the frame",
+    avoid: "cute, humanoid child, fairy wings, normal proportioned body, sketch marks, pencil scribbles, scratchy border lines, torn paper edge, hand-drawn border, green glow, yellow glow, radial color glow, colored spotlight, tree branch, wood branch, perched on branch" },
   { id: 'wereboar', file: 'wereboar', dir: 'assets/creature-art',
     prompt: "A wereboar in hybrid form, a stocky muscular humanoid body covered in coarse bristled hide, a boar’s tusked snout, small angry eyes, a stubborn aggressive stance" },
   { id: 'black-bear', file: 'black-bear', dir: 'assets/creature-art',
     prompt: "A black bear, a large bear with a thick shaggy coat that may be black, cinnamon, or blond, a broad muscular build, small round ears, standing alert on four legs or reared up" },
   { id: 'squirming-swill', file: 'squirming-swill', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A squirming swill, a small writhing mass of cast-off cooked animal remains fused together, blackened crispy skin steaming and popping with grease, no defined face, dripping trails of dark gravy",
-    avoid: "humanoid, face, animal shape, clean" },
+    prompt: "A squirming swill, a small writhing mass of cast-off cooked animal remains fused together, blackened crispy skin steaming and popping with grease, no defined face, dripping trails of dark gravy, floating alone in empty black space with nothing else in the frame",
+    avoid: "humanoid, face, animal shape, clean, white background, pale backdrop, ground, floor, puddle" },
   { id: 'fading-fox', file: 'fading-fox', dir: 'assets/creature-art',
     prompt: "A fading fox, a lustrous fox with a robust build and fur that shifts between red, dull brown, and silver as it moves, sharp watchful eyes, a sly alert stance" },
   { id: 'duende', file: 'duende', dir: 'assets/creature-art',
@@ -1674,7 +1736,8 @@ export const MONSTER_ART = [
   { id: 'azarketi-explorer', file: 'azarketi-explorer', dir: 'assets/creature-art',
     prompt: "An azarketi explorer, a hairless humanoid with pale bluish skin, prominent gills at the neck, webbed hands and feet, striking violet eyes, rugged explorer’s gear slung with salvage tools" },
   { id: 'werebat', file: 'werebat', dir: 'assets/creature-art',
-    prompt: "A werebat in hybrid form, an unusually tall and thin humanoid with angular sharp features, leathery bat wings in place of arms, fine dark fur, sharp fangs bared, an unsettling gaunt stance" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a werebat in hybrid form, an unusually tall and thin humanoid with angular sharp features, leathery bat wings in place of arms, fine dark fur, sharp fangs bared, an unsettling gaunt stance",
+    avoid: "white background, pale backdrop, white fur" },
   { id: 'giant-flying-squirrel', file: 'giant-flying-squirrel', dir: 'assets/creature-art',
     prompt: "A giant flying squirrel, a soft-furred rodent with wide flaps of loose skin stretched between its limbs, big round eyes, a fluffy tail, caught mid-glide with limbs spread wide" },
   { id: 'cactus-leshy', file: 'cactus-leshy', dir: 'assets/creature-art',
@@ -1685,8 +1748,8 @@ export const MONSTER_ART = [
   { id: 'android-infiltrator', file: 'android-infiltrator', dir: 'assets/creature-art',
     prompt: "An android infiltrator, a humanoid with flawless synthetic skin, eyes with a faint metallic sheen, circuit-like tattoos glowing faintly along the skin, an unnervingly composed expressionless face" },
   { id: 'rokurokubi', file: 'rokurokubi', dir: 'assets/creature-art',
-    prompt: "A rokurokubi, a humanoid figure with an unnaturally elongated sinuous neck stretching upward, the head tilted at an unsettling angle far above the shoulders, a hazy dreamlike malicious expression",
-    avoid: "detached head, floating head separate from body, multiple heads" },
+    prompt: "A rokurokubi, a humanoid figure in modest traditional robes buttoned to the neck, with an unnaturally elongated sinuous neck stretching upward, the head tilted at an unsettling angle far above the shoulders, a hazy dreamlike malicious expression, isolated alone with nothing else in the frame",
+    avoid: "detached head, floating head separate from body, multiple heads, nudity, bare chest, exposed skin, revealing clothing, sexualized, cherry blossoms, flowers, flowering branches, floral background, tree branches" },
   { id: 'sasquatch', file: 'sasquatch', dir: 'assets/creature-art',
     prompt: "A sasquatch, a broad-shouldered heavily built humanoid covered head to toe in shaggy dark fur, a low sloped brow, small watchful eyes, standing upright with an imposing but calm bearing" },
   { id: 'munsahir', file: 'munsahir', dir: 'assets/creature-art',
@@ -1698,11 +1761,13 @@ export const MONSTER_ART = [
   { id: 'jotunborn-sage', file: 'jotunborn-sage', dir: 'assets/creature-art',
     prompt: "A jotunborn sage, a towering broad-shouldered humanoid with pale stony-toned skin, intricate silvery weavings threaded along the eyes and ears, a calm knowing expression, an ancient dignified bearing" },
   { id: 'strix-kinmate', file: 'strix-kinmate', dir: 'assets/creature-art',
-    prompt: "A strix kinmate, an avian humanoid with sprawling dark-feathered wings, large sharp talons at the hands and feet, angular features, piercing forward-facing eyes, a poised watchful stance" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a strix kinmate, an avian humanoid with sprawling dark charcoal-black feathered wings, large sharp talons at the hands and feet, angular features, piercing forward-facing eyes, a poised watchful stance",
+    avoid: "white feathers, pale plumage, white background, grey spotlight background, radial light backdrop" },
   { id: 'giant-crab', file: 'giant-crab', dir: 'assets/creature-art',
     prompt: "A giant crab, a hard-shelled crustacean with a mottled blue-brown carapace, two massive pincer claws raised, small dark eyes on short stalks, several jointed legs braced in a sideways scuttling stance" },
   { id: 'terror-bird', file: 'terror-bird', dir: 'assets/creature-art',
-    prompt: "A terror bird, a large flightless bird with powerful legs built for speed, a massive hooked beak capable of tearing flesh, small vestigial wings, sharp predatory eyes" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a terror bird, a large flightless bird with powerful legs built for speed, a massive hooked beak capable of tearing flesh, small vestigial wings, sharp predatory eyes",
+    avoid: "mountain vista, glacier, icy landscape, sketch background, pencil sketch scenery, ground, snow field" },
   { id: 'nagaji-soldier', file: 'nagaji-soldier', dir: 'assets/creature-art',
     prompt: "A nagaji soldier, a lithe muscular humanoid with a serpentine head and tightly layered scales in vivid blue-green hues, unblinking ophidian eyes, armored gear, a poised martial stance" },
   { id: 'slime-mold', file: 'slime-mold', dir: 'assets/creature-art', shapeless: true,
@@ -1748,14 +1813,16 @@ export const MONSTER_ART = [
     prompt: "A weathered stone statue of a humanoid warrior given jerking unnatural life, carved features cracked and worn smooth, grinding stone joints, fine dust sifting from ancient seams as it turns to face an intruder.",
     avoid: "flesh, skin tones, bright colors, organic texture" },
   { id: 'ankhrav', file: 'ankhrav', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A horse-sized burrowing insect with a thick armored exoskeleton, powerful digging foreclaws caked in dirt, and huge serrated mandibles dripping corrosive saliva, multiple segmented legs braced against packed earth." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a horse-sized burrowing insect with a thick armored exoskeleton, powerful digging foreclaws caked in dirt, and huge serrated mandibles dripping corrosive saliva, multiple segmented legs, floating in empty black space",
+    avoid: "ground, dirt floor, packed earth surface, tunnel, burrow, grass, colored glow, green glow, yellow glow, grey background, grey sky, grey gradient" },
   { id: 'artillerist', file: 'artillerist', dir: 'assets/creature-art',
     prompt: "A human artillerist in reinforced leather and buckled straps, a compact miniature cannon mounted on one shoulder, powder-stained hands, a focused calculating gaze surveying the battlefield." },
   { id: 'assassin-vine', file: 'assassin-vine', dir: 'assets/creature-art', shapeless: true,
     prompt: "A sprawling mass of thick green vines twenty feet long, bristling smaller tendrils lined with broad leaves and thorns, coiled and ready to entangle prey, clusters of plump blood-red berries among the foliage.",
     avoid: "humanoid, face" },
   { id: 'athamaru-hunter', file: 'athamaru-hunter', dir: 'assets/creature-art',
-    prompt: "A piscine locathah humanoid athamaru hunter with silvery scales and gill slits, webbed hands gripping a barbed harpoon, wrapped in a simple aquatic harness strung with pouches, alert predatory eyes." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a piscine locathah humanoid athamaru hunter with silvery scales and gill slits, webbed hands gripping a barbed harpoon, wrapped in a simple aquatic harness strung with pouches, alert predatory eyes",
+    avoid: "sketch style, pencil sketch, line art, monochrome, water, ocean, waves, shoreline" },
   { id: 'boggard-swampseer', file: 'boggard-swampseer', dir: 'assets/creature-art',
     prompt: "A hulking frog-like boggard humanoid with mottled green-brown warty skin and bulging eyes, draped in bones, feathers, and muddy ritual vestments, gripping a carved wooden totem crackling with sinister divine power." },
   { id: 'bosun', file: 'bosun', dir: 'assets/creature-art',
@@ -1771,19 +1838,22 @@ export const MONSTER_ART = [
   { id: 'centaur', file: 'centaur', dir: 'assets/creature-art',
     prompt: "A centaur with the heavily muscled torso of a proud warrior joined seamlessly to the powerful body of a horse, long windswept hair, weathered tribal ornaments, hooves planted firmly on open ground." },
   { id: 'centaur-herbalist', file: 'centaur-herbalist', dir: 'assets/creature-art',
-    prompt: "A centaur herbalist with a muscled human torso wrapped in pouches of dried herbs and salves, hair woven with leaves, a satchel of gathered plants across the chest, calm knowledgeable eyes, dappled equine body." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a centaur herbalist with a muscled human torso wrapped in pouches of dried herbs and salves, hair woven with leaves, a satchel of gathered plants across the chest, calm knowledgeable eyes, dappled equine body",
+    avoid: "flanking foliage, plants either side of subject, symmetrical leaf clusters, mirrored plant decoration" },
   { id: 'changeling-exile', file: 'changeling-exile', dir: 'assets/creature-art',
     prompt: "A slight pale-skinned changeling with dark hair and two strikingly different colored eyes, sharp features hinting at hag heritage, worn traveling clothes, a wary watchful expression." },
   { id: 'charlatan', file: 'charlatan', dir: 'assets/creature-art',
     prompt: "A human charlatan in flashy but slightly shabby finery, an oily persuasive smile, bejeweled fingers gesturing smoothly, sly calculating eyes assessing an unsuspecting mark." },
   { id: 'chronicler', file: 'chronicler', dir: 'assets/creature-art',
-    prompt: "A human chronicler in traveling scholar's garb, ink-stained fingers gripping a well-worn journal and quill, spectacles perched on the nose, keen observant eyes taking in every detail." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a human chronicler in traveling scholar's garb, ink-stained fingers gripping a well-worn journal and quill, spectacles perched on the nose, keen observant eyes",
+    avoid: "desk, writing table, open book on a surface, smoke backdrop, fog backdrop, text, decorative text border" },
   { id: 'chupacabra', file: 'chupacabra', dir: 'assets/creature-art', shapeless: true,
     prompt: "A small lean predator about four feet long with faintly reflective grey-green scales, a spiny ridged tail, a hunched stalking posture, an elongated snout and sharp fangs built for draining blood." },
   { id: 'cinder-rat', file: 'cinder-rat', dir: 'assets/creature-art', shapeless: true,
     prompt: "An oversized rat formed of smoldering charcoal and elemental fire, glowing ember-cracked flesh, wisps of smoke and small flames flickering along its body, embers dripping from its bared teeth." },
   { id: 'cockatrice', file: 'cockatrice', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A gaunt sickly rooster-like creature barely two feet tall, mottled feathers, leathery bat-like wings, a long serpent tail, a wickedly hooked beak stained from petrifying its prey." },
+    prompt: "A gaunt sickly rooster-like creature barely two feet tall, mottled feathers, leathery bat-like wings, a long serpent tail, a wickedly hooked beak stained from petrifying its prey, floating alone in empty black space with nothing else in the frame.",
+    avoid: "decorative swirl pattern, ornamental filigree, patterned background, white background" },
   { id: 'dziriak', file: 'dziriak', dir: 'assets/creature-art',
     prompt: "A seven-foot-tall aberration with a segmented termite-like abdomen, four arms with sharp insectile claws on the larger pair, a dull brown chitinous carapace covered in glowing colorful rune markings." },
   { id: 'dero-strangler', file: 'dero-strangler', dir: 'assets/creature-art',
@@ -1791,17 +1861,22 @@ export const MONSTER_ART = [
   { id: 'dire-wolf', file: 'dire-wolf', dir: 'assets/creature-art',
     prompt: "A massive dire wolf far larger than an ordinary wolf, thick shaggy grey fur, a powerful muscled frame, oversized fanged jaws parted in a snarl, feral yellow eyes fixed on prey." },
   { id: 'diver', file: 'diver', dir: 'assets/creature-art',
-    prompt: "A human diver in a simple oiled leather wetsuit, tousled salt-crusted hair, a coil of rope and a small satchel of recovered trinkets at the hip, sharp eyes accustomed to murky depths." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a human diver in a simple oiled leather wetsuit, tousled salt-crusted hair, a coil of rope and a small satchel of recovered trinkets at the hip, sharp eyes",
+    avoid: "colored background shape, maroon background, burgundy backdrop, fish, bubbles, underwater scene" },
   { id: 'draxie', file: 'draxie', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A tiny dragon-shaped sprite with iridescent scaled skin, delicate membranous wings, small curling horns, a sly mischievous grin, hovering mid-air in a playful ready-to-prank pose." },
+    prompt: "A tiny dragon-shaped sprite with iridescent scaled skin, delicate membranous wings, small curling horns, a sly mischievous grin, hovering alone in empty black space with nothing else in the frame, full color illustration.",
+    avoid: "ornate frame, decorative border, rose vine border, filigree corners, black and white, monochrome, line art, sketch" },
   { id: 'drow-priestess', file: 'drow-priestess', dir: 'assets/creature-art',
     prompt: "A drow priestess with lavender-hued skin, sharp elven features, stark white hair, and piercing red eyes, clad in dark ornate vestments etched with demonic sigils, gripping a wicked ceremonial dagger." },
   { id: 'dryad', file: 'dryad', dir: 'assets/creature-art',
-    prompt: "A dryad with elven features and skin like smooth pale bark, hair woven with living leaves and small branches, a flowing gown of woven leaves and vines, serene watchful eyes tied to the forest." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame, full color illustration: a dryad with elven features and skin like smooth pale bark, hair woven with living leaves and small branches, a flowing gown of woven leaves and vines, serene watchful eyes",
+    avoid: "sketch style, pencil sketch, line art, monochrome, white background" },
   { id: 'dvorovoi', file: 'dvorovoi', dir: 'assets/creature-art',
-    prompt: "A small shy fey house spirit resembling a diminutive elderly peasant, a weathered wrinkled face, simple homespun clothes, calloused hands accustomed to tending yards and animals, a watchful sidelong glance." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a small shy fey house spirit resembling a diminutive elderly peasant, a weathered wrinkled face, simple homespun clothes, calloused hands, a watchful sidelong glance",
+    avoid: "house, cottage, farmstead, barn, village scene, animals, trees, forest, yard, ground, grass" },
   { id: 'esobok', file: 'esobok', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A squat powerful quadruped psychopomp guardian with an elongated toothy reptilian skull, a frill of dark feathers ringing its neck, thick muscular legs braced in a watchful stance, teeth bared in warning." },
+    prompt: "A squat powerful quadruped psychopomp guardian with an elongated toothy reptilian skull, a frill of dark feathers ringing its neck, thick muscular legs braced in a watchful stance, teeth bared in warning, floating alone in empty black space with nothing else in the frame, full color illustration.",
+    avoid: "ground, floor, monochrome, black and white, sketch, line art, grey background" },
   { id: 'gambling-companion', file: 'gambling-companion', dir: 'assets/creature-art',
     prompt: "A tengu humanoid gambling companion with a sharp beaked face and sleek black feathers, dressed in fine gambling-house attire, sharp observant eyes gauging the table, feathered hands shuffling cards." },
   { id: 'ganzi-martial-artist', file: 'ganzi-martial-artist', dir: 'assets/creature-art',
@@ -1814,17 +1889,21 @@ export const MONSTER_ART = [
   { id: 'giant-dragonfly-nymph', file: 'giant-dragonfly-nymph', dir: 'assets/creature-art', shapeless: true,
     prompt: "A wingless aquatic dragonfly nymph several feet long, an elongated segmented insectile body in mottled green-brown, large hinged jaws extended forward to snatch prey, gripping clawed legs beneath it." },
   { id: 'giant-eagle', file: 'giant-eagle', dir: 'assets/creature-art',
-    prompt: "A majestic giant eagle with a thirty-foot wingspan, sharp golden eyes, powerful curved talons, richly detailed brown and white plumage, wings poised as if ready to take flight." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a majestic giant eagle with a thirty-foot wingspan, sharp golden eyes, powerful curved talons, richly detailed brown and white plumage, wings poised as if ready to take flight",
+    avoid: "circular halo, circular frame, moon, ring border, white background, gold frame, ornate corner decoration, decorative border pattern, filigree border" },
   { id: 'giant-mantis-mc', file: 'giant-mantis-mc', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A massive praying mantis towering taller than an average human, a bright green segmented exoskeleton, oversized serrated raptorial forelegs poised to strike, a triangular head with large compound eyes." },
+    prompt: "A massive praying mantis towering taller than an average human, a bright green segmented exoskeleton, oversized serrated raptorial forelegs poised to strike, a triangular head with large compound eyes, floating alone in empty black space with nothing else in the frame.",
+    avoid: "ground, floor, shadow beneath subject, white background" },
   { id: 'giant-mantis-b1', file: 'giant-mantis-b1', dir: 'assets/creature-art', shapeless: true,
     prompt: "A silent monstrous mantis stalking through dense undergrowth, a mottled brown-green segmented exoskeleton, lightning-quick serrated forelegs cocked to strike, powerful bone-breaking mandibles beneath a triangular head." },
   { id: 'giant-scorpion', file: 'giant-scorpion', dir: 'assets/creature-art', shapeless: true,
     prompt: "An eight-foot-long giant scorpion with a thick segmented chitinous shell, massive crushing pincers raised, and a curved venomous stinger tail arched overhead ready to strike." },
   { id: 'giant-seahorse', file: 'giant-seahorse', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A bear-sized giant seahorse with bony armor plates beneath mottled color-shifting skin, a long coiled prehensile tail, a curved elongated snout, gentle expressive eyes drifting through open water." },
+    prompt: "A bear-sized giant seahorse with bony armor plates beneath mottled color-shifting skin, a long coiled prehensile tail, a curved elongated snout, gentle expressive eyes, floating alone in empty black space with nothing else in the frame.",
+    avoid: "water, ocean, splash, water spray, bubbles, waves, white background" },
   { id: 'giant-vulture', file: 'giant-vulture', dir: 'assets/creature-art',
-    prompt: "A giant vulture with a twenty-five-foot wingspan, ragged black feathers, a bald wrinkled neck, a hooked scavenging beak, hunched carrion-eating posture atop folded wings." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a giant vulture with a twenty-five-foot wingspan, ragged black feathers, a bald wrinkled neck, a hooked scavenging beak, hunched carrion-eating posture with wings spread",
+    avoid: "tree branch, wood branch, perched on branch, white background, grey background, two-tone background, square panel, geometric shape background" },
   { id: 'giant-wasp', file: 'giant-wasp', dir: 'assets/creature-art', shapeless: true,
     prompt: "A giant wasp with a glossy black and yellow banded segmented body, translucent veined wings, a long curved stinger, spindly clawed legs gripping the air mid-flight." },
   { id: 'giant-whiptail-centipede', file: 'giant-whiptail-centipede', dir: 'assets/creature-art', shapeless: true,
@@ -1832,10 +1911,11 @@ export const MONSTER_ART = [
   { id: 'gorilla', file: 'gorilla', dir: 'assets/creature-art',
     prompt: "A powerful gorilla with thick black fur, broad muscular shoulders, long powerful arms braced against the ground, bared fangs in an aggressive territorial display." },
   { id: 'grizzly-bear', file: 'grizzly-bear', dir: 'assets/creature-art',
-    prompt: "A large grizzly bear with thick brown fur, powerful humped shoulders, long curved claws, jaws open in a ferocious territorial roar." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame, full color illustration: a large grizzly bear with thick brown fur, powerful humped shoulders, long curved claws, jaws open in a ferocious territorial roar",
+    avoid: "black and white, monochrome, grayscale, sketch, line art" },
   { id: 'grothlut', file: 'grothlut', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A sluglike fleshwarped abomination with a vaguely humanoid head and torso atop a boneless slug-like lower body, rubbery arms hanging awkwardly at its sides, moist grey-pink warped flesh.",
-    avoid: "clear human face, healthy skin, distinct limbs" },
+    prompt: "A sluglike fleshwarped abomination with a vaguely humanoid head and torso atop a boneless slug-like lower body, rubbery arms hanging awkwardly at its sides, moist grey-pink warped flesh, floating alone in empty black space with nothing else in the frame.",
+    avoid: "clear human face, healthy skin, distinct limbs, grey background, grey gradient, ground, floor, shadow beneath subject" },
   { id: 'harbormaster', file: 'harbormaster', dir: 'assets/creature-art',
     prompt: "A weathered human harbormaster in a heavy oiled coat, a ledger tucked under one arm, a brass spyglass at the hip, keen eyes scanning the wharf and incoming ships." },
   { id: 'hell-hound', file: 'hell-hound', dir: 'assets/creature-art',
@@ -1876,28 +1956,34 @@ export const MONSTER_ART = [
   { id: 'moose', file: 'moose', dir: 'assets/creature-art',
     prompt: "A massive moose standing seven feet at the shoulder, thick dark brown fur, wide palmate antlers, a broad muzzle, powerful legs planted firmly on the ground." },
   { id: 'musketeer', file: 'musketeer', dir: 'assets/creature-art',
-    prompt: "A flamboyant human musketeer in a plumed hat and long coat, a flintlock pistol in hand, a rapier at the hip, a roguish confident smirk." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a flamboyant human musketeer in a plumed hat and long coat, a flintlock pistol in hand, a rapier at the hip, a roguish confident smirk",
+    avoid: "ornate frame, oval medallion, decorative frame, gold border, maroon backdrop" },
   { id: 'narwhal', file: 'narwhal', dir: 'assets/creature-art', shapeless: true,
     prompt: "A mid-sized narwhal whale with mottled grey-blue skin, a long spiraled tusk extending from its snout, a sleek streamlined body gliding through open water." },
   { id: 'necrophidius', file: 'necrophidius', dir: 'assets/creature-art', shapeless: true,
     prompt: "A construct built from the bare bones of a massive snake, a humanoid skull fused at the top lined with filed fangs, magically animated vertebrae coiled and ready to strike.",
     avoid: "flesh, fur, humanoid proportions" },
   { id: 'noble', file: 'noble', dir: 'assets/creature-art',
-    prompt: "A human noble in rich embroidered finery, an air of confident refinement, perfectly groomed, a faint knowing smile." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a human noble in rich embroidered finery, an air of confident refinement, perfectly groomed, a faint knowing smile",
+    avoid: "flanking headdress plumes, symmetrical veil, mirrored lace decoration either side of subject, grey background, circular halo, circular frame, ring pattern, damask pattern, decorative pattern background" },
   { id: 'ogre-warrior', file: 'ogre-warrior', dir: 'assets/creature-art',
     prompt: "A hulking ogre warrior standing ten feet tall, dense slabs of muscle, a misshapen brutish face with small hateful eyes, crude heavy armor, gripping a massive club." },
   { id: 'pachycephalosaurus', file: 'pachycephalosaurus', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A pachycephalosaurus dinosaur fifteen feet long, a distinctive dome-shaped bony skull ringed with blunt horns, a thick compact muscular neck lowered as if to charge." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame, full color illustration: a living pachycephalosaurus dinosaur fifteen feet long, covered in scaled skin with no bone exposed, a distinctive dome-shaped bony skull ringed with blunt horns, a thick compact muscular neck lowered as if to charge",
+    avoid: "skeleton, exposed bone, x-ray, fossil diagram, white background, rounded panel, framed shape, photorealistic, 3d render, photograph, striped background, two-tone background, grass, ground, dirt, terrain, horizon, sketch, pencil sketch, line art, monochrome, black and white, spikes, stegosaurus plates" },
   { id: 'pegasus', file: 'pegasus', dir: 'assets/creature-art',
-    prompt: "A majestic pegasus with a gleaming white coat, large powerful feathered wings folded at its sides, a proud noble head, a flowing mane catching an unseen wind." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame, full color illustration: a majestic pegasus with a gleaming white coat and dark dappled grey shading, large powerful feathered wings spread wide, a proud noble head, a flowing mane catching an unseen wind",
+    avoid: "monochrome, black and white, line art, sketch, grass, ground, horizon" },
   { id: 'platecarpus', file: 'platecarpus', dir: 'assets/creature-art', shapeless: true,
     prompt: "A massive platecarpus mosasaur fifteen feet long, sleek dark scaled hide, four webbed paddle-like limbs, powerful hinged jaws lined with rows of sharp teeth, gliding through deep water." },
   { id: 'propagandist', file: 'propagandist', dir: 'assets/creature-art',
     prompt: "A human propagandist in sharp tailored attire, a stack of pamphlets and a quill in hand, a persuasive practiced smile masking calculated deceit." },
   { id: 'river-drake', file: 'river-drake', dir: 'assets/creature-art',
-    prompt: "A river drake with glistening blue-green scales, sleek fin-like membranous wings, a streamlined snout lined with sharp teeth, poised half-submerged at the water's edge." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a river drake with glistening blue-green scales, sleek fin-like membranous wings, a streamlined snout lined with sharp teeth, coiled and alert",
+    avoid: "water, ocean, river, splash, ripples, waves, sky, horizon" },
   { id: 'rust-monster', file: 'rust-monster', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A strange five-foot-long creature with four insectile legs, a mottled brown carapace, feathery antennae twitching toward metal, and a long tail ending in a four-pronged appendage." },
+    prompt: "A strange five-foot-long creature with four insectile legs, a mottled brown carapace, feathery antennae twitching toward metal, and a long tail ending in a four-pronged appendage, floating alone in empty black space with nothing else in the frame.",
+    avoid: "white background, ground, floor, shadow beneath subject, signature, watermark, striped background, vertical bar, two-tone background" },
   { id: 'scalescribe', file: 'scalescribe', dir: 'assets/creature-art', shapeless: true,
     prompt: "A tiny snakelike creature with numerous small hands gripping fountain pens of various ink colors, shifting scrawled words drifting across its scaled body, coiled among stacks of books." },
   { id: 'sea-hag', file: 'sea-hag', dir: 'assets/creature-art',
@@ -1913,14 +1999,16 @@ export const MONSTER_ART = [
     prompt: "A carnivorous plant with two sets of tooth-edged leaves each three feet wide, gaping open atop tall ten-foot stalks, ready to snap shut on unwary prey.",
     avoid: "humanoid, face" },
   { id: 'sod-hound', file: 'sod-hound', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A small sod hound elemental formed of packed dirt, moss, and pebbles in a rough doglike shape, faint mineral veins cracking across its earthen hide, a low watchful posture." },
+    prompt: "A small sod hound elemental formed of packed dirt, moss, and pebbles in a rough doglike shape, faint mineral veins cracking across its earthen hide, a low watchful posture, floating alone in empty black space with nothing else in the frame.",
+    avoid: "ground, dirt floor, sky, horizon, rocks scattered on surface, yellow ground, tan ground, sand, standing on terrain" },
   { id: 'spriggan-bully', file: 'spriggan-bully', dir: 'assets/creature-art',
     prompt: "A small spriggan bully with a gnarled gnome-like face twisted into a cruel sneer, wiry muscular arms, a knotted club meant to bruise rather than kill, a menacing gleeful stance." },
   { id: 'street-skelm', file: 'street-skelm', dir: 'assets/creature-art',
-    prompt: "A street skelm disguised in old-fashioned finery and a wide-brimmed hat concealing small antlers, a gnarled cane in hand, a face twisted with self-righteous rage beneath the shadowed brim." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame, full color illustration: a street skelm disguised in old-fashioned finery and a wide-brimmed hat concealing small antlers, a gnarled cane in hand, a face twisted with self-righteous rage beneath the shadowed brim",
+    avoid: "city street, cityscape, buildings, alleyway, sketch style, monochrome, black and white, line art" },
   { id: 'string-slime', file: 'string-slime', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A large slug-like rope of quivering translucent slime coiled upon itself, thin ribbon-like strands of sticky ooze trailing from its body like tangled string.",
-    avoid: "humanoid, face" },
+    prompt: "A large slug-like rope of quivering translucent slime coiled upon itself, thin ribbon-like strands of sticky ooze trailing from its body like tangled string, floating alone in empty black space with nothing else in the frame.",
+    avoid: "humanoid, face, white background, panel border, frame edge" },
   { id: 'swarm-voice', file: 'swarm-voice', dir: 'assets/creature-art',
     prompt: "A small ratfolk swarm voice with sleek grey fur, sharp intelligent eyes, oversized expressive ears, dressed in a practical leader's sash, an authoritative stance." },
   { id: 'tonic-merchant', file: 'tonic-merchant', dir: 'assets/creature-art',
@@ -1938,10 +2026,11 @@ export const MONSTER_ART = [
   { id: 'troubadour', file: 'troubadour', dir: 'assets/creature-art',
     prompt: "A human troubadour in colorful traveling minstrel garb, a lute slung across the back, a warm expressive singing face, a jaunty confident stance." },
   { id: 'tumbleweed-leshy-courier', file: 'tumbleweed-leshy-courier', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A small round leshy courier formed of tightly bundled dry twigs and brush like a tumbleweed, thin twig limbs, a scattering of pale blossoms, poised mid-bounce as if about to roll away." },
+    prompt: "A small round leshy courier formed of tightly bundled dry twigs and brush like a tumbleweed, thin twig limbs, a scattering of pale blossoms, poised mid-bounce, floating alone in empty black space with nothing else in the frame.",
+    avoid: "ground, horizon line, flanking branches either side, symmetrical foliage, white background" },
   { id: 'twigjack', file: 'twigjack', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A tiny twigjack fey formed of prickly interwoven brambles and vines, shaggy mossy growth atop its head, a jagged mouth of splintered broken sticks, leaves sprouting randomly across its thorny body.",
-    avoid: "humanoid, skin, fur" },
+    prompt: "A tiny twigjack fey formed of prickly interwoven brambles and vines, shaggy mossy growth atop its head, a jagged mouth of splintered broken sticks, leaves sprouting randomly across its thorny body, floating alone in empty black space with nothing else in the frame.",
+    avoid: "humanoid, skin, fur, forest backdrop, mossy scenery, white background, pale backdrop, grey backdrop" },
   { id: 'unicorn', file: 'unicorn', dir: 'assets/creature-art',
     prompt: "A majestic unicorn with a pure white coat, a flowing silken mane and tail, a single delicate spiraled horn extending from its forehead, a proud noble bearing." },
   { id: 'urdefhan-warrior', file: 'urdefhan-warrior', dir: 'assets/creature-art',
@@ -1956,14 +2045,16 @@ export const MONSTER_ART = [
   { id: 'watch-officer', file: 'watch-officer', dir: 'assets/creature-art',
     prompt: "A stern human watch officer in polished city-guard armor, a hand resting on a sheathed blade, a hardened commanding expression, insignia of rank on the chest." },
   { id: 'web-lurker', file: 'web-lurker', dir: 'assets/creature-art', shapeless: true,
-    prompt: "An ugly aberrant humanoid with a bloated segmented spider abdomen extending from its back, multiple beady eyes, elongated clawed fingers, spinnerets trailing sticky webbing, hunched among tangled webs." },
+    prompt: "An ugly aberrant humanoid with a bloated segmented spider abdomen extending from its back, multiple beady eyes, elongated clawed fingers, spinnerets trailing sticky webbing, floating alone in empty black space with nothing else in the frame.",
+    avoid: "colored background, red background, orange background, tangled web backdrop, sketch style, line art" },
   { id: 'werewolf', file: 'werewolf', dir: 'assets/creature-art',
     prompt: "A werewolf in mid-transformation, a hulking humanoid frame covered in coarse dark fur, an elongated wolfish snout, clawed hands, feral glowing eyes." },
   { id: 'wight', file: 'wight', dir: 'assets/creature-art',
     prompt: "A gaunt desiccated wight undead with sunken hate-filled eyes, grey withered skin stretched over bone, tattered burial wrappings, clawed grasping hands reaching hungrily.",
     avoid: "living flesh, healthy skin" },
   { id: 'winged-chupacabra', file: 'winged-chupacabra', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A small mutant chupacabra with faintly reflective grey-green scales, a spiny ridged tail, and large leathery reptilian wings unfurled, a hunched predatory stance, sharp fangs bared." },
+    prompt: "A small mutant chupacabra with faintly reflective grey-green scales, a spiny ridged tail, and large leathery reptilian wings unfurled, a hunched predatory stance, sharp fangs bared, floating alone in empty black space with nothing else in the frame.",
+    avoid: "green gradient sky, white background, ground, shadow beneath subject" },
   { id: 'wolliped', file: 'wolliped', dir: 'assets/creature-art',
     prompt: "A large eight-legged wolliped herd animal covered in thick shaggy white fleece, long curved tusks, sturdy stout legs built for icy terrain, a calm docile expression." },
   { id: 'xulgath-leader', file: 'xulgath-leader', dir: 'assets/creature-art',
@@ -1981,10 +2072,11 @@ export const MONSTER_ART = [
   { id: 'divoynik', file: 'divoynik', dir: 'assets/creature-art',
     prompt: "An aberrant shapeshifter divoynik caught between forms, humanoid features rippling and unstable, faint striped markings flickering across its skin, an unsettling hollow-eyed stare." },
   { id: 'doppelganger', file: 'doppelganger', dir: 'assets/creature-art',
-    prompt: "A doppelganger in its natural humanoid form, flesh of an indeterminate grayish hue, facial features soft and underdefined as if unfinished, an unsettling blank expression.",
-    avoid: "sharp facial detail, individual identity, distinct expression" },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a doppelganger in its natural humanoid form, flesh of an indeterminate grayish hue, facial features soft and underdefined as if unfinished, an unsettling blank expression",
+    avoid: "sharp facial detail, individual identity, distinct expression, white background, pale backdrop" },
   { id: 'pitborn-adept', file: 'pitborn-adept', dir: 'assets/creature-art',
-    prompt: "A pitborn nephilim adept, human in build with subtle demonic corruption showing in small curved horns and faintly glowing red-orange eyes, dark hooded robes, hands crackling with infernal-tinged magic." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame, full color illustration: a pitborn nephilim adept, human in build with subtle demonic corruption showing in small curved horns and faintly glowing red-orange eyes, dark hooded robes, hands crackling with infernal-tinged magic",
+    avoid: "sketch style, pencil sketch, line art, monochrome, white background" },
   { id: 'quickling', file: 'quickling', dir: 'assets/creature-art',
     prompt: "A small malicious quickling fey, a lithe wiry frame built for blinding speed, a cruel gleeful grin, twin curved blades ready to strike, a mischievous predatory glint in its eyes." },
   { id: 'runaway-blueblood', file: 'runaway-blueblood', dir: 'assets/creature-art',
@@ -1994,18 +2086,20 @@ export const MONSTER_ART = [
   { id: 'sibyl', file: 'sibyl', dir: 'assets/creature-art',
     prompt: "A human sibyl oracle in flowing ceremonial robes, eyes rolled back in a deep divine trance, arms outstretched, an aura of disquieting prophetic frenzy." },
   { id: 'tattoo-guardian', file: 'tattoo-guardian', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A small tattoo guardian construct come to life, a flat inked figure lifted from skin into three dimensions, dark linework and shading rendered as if still drawn, hovering in an animated protective posture." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame, full color illustration: a small humanoid guardian construct made of solid black ink given form, a compact muscular body covered edge to edge in sharp tattoo-style linework and geometric patterns, glowing red eyes, fists raised in a fighting stance",
+    avoid: "white background, pale backdrop, grey backdrop, circular halo, full moon, moon, circular frame, vertical bar, white pillar, geometric shape background, ground, floor, diagonal panel, shadow beneath subject, crouching on surface, night sky, stars, starfield, mountains, landscape, wings, flying creature, dragon, demon" },
   { id: 'dragonblood-occultist', file: 'dragonblood-occultist', dir: 'assets/creature-art',
     prompt: "A dragonblood occultist human with faint draconic features, small curling horns, patches of fine scales along the jaw, elongated clawed fingernails, clad in occult robes, eyes glinting with a flicker of future-sight." },
   { id: 'fiend-caller', file: 'fiend-caller', dir: 'assets/creature-art',
     prompt: "A human fiend caller in dark ornate robes lined with unholy sigils, a ritual dagger and chain in hand, a cold calculating smile, an aura of quiet menace." },
   { id: 'ghoran-manipulator', file: 'ghoran-manipulator', dir: 'assets/creature-art',
-    prompt: "A ghoran manipulator, a sentient plant humanoid with a body of dense green rind, a bouquet of vividly colored flower petals arranged where a face would be, subtly shifting to express calculated charm." },
+    prompt: "Centered studio portrait on a plain solid black background with absolutely nothing else in the frame: a ghoran manipulator, a sentient plant humanoid with a body of dense green rind, a bouquet of vividly colored flower petals arranged where a face would be, subtly shifting to express calculated charm",
+    avoid: "circular halo, circular frame, moon, ring border, white background" },
   { id: 'grioth-cultist', file: 'grioth-cultist', dir: 'assets/creature-art',
     prompt: "A grioth cultist with a four-eyed bat-like face, thin membranous wings, a wriggling tail, dark robes marked with cosmic symbols, an unsettling alien calm." },
   { id: 'living-graffiti-blood', file: 'living-graffiti-blood', dir: 'assets/creature-art', shapeless: true,
-    prompt: "A two-dimensional living graffiti construct rendered in dripping dark red blood-like pigment, a crude mischievous humanoid figure flattened against an unseen surface, jagged animated brushstroke edges.",
-    avoid: "realistic skin, three-dimensional depth, human flesh tone" },
+    prompt: "A two-dimensional living graffiti construct rendered in dripping dark red blood-like pigment, a crude mischievous humanoid figure flattened against an unseen surface, jagged animated brushstroke edges, floating alone in empty black space with nothing else in the frame.",
+    avoid: "realistic skin, three-dimensional depth, human flesh tone, white wall, white background, wall texture, stone wall, grey gradient, grey background, studio backdrop, vignette" },
   { id: 'living-graffiti-chalk', file: 'living-graffiti-chalk', dir: 'assets/creature-art', shapeless: true,
     prompt: "A two-dimensional living graffiti construct rendered in rough white chalk lines, a crude mischievous humanoid figure flattened against an unseen surface, dusty smudged edges crackling with restless motion.",
     avoid: "realistic skin, three-dimensional depth, human flesh tone" },

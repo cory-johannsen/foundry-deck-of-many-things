@@ -20,7 +20,9 @@ import {
   resolveCombatRoomOutcome,
   startCombatRecoveryFor,
   recordSkillChallengeOutcome,
+  recordPuzzleStageOutcome,
   continueNarrativeRoom,
+  claimTreasureFor,
 } from "./ui/dungeon-app.mjs";
 import { undoRoomEntry } from "./dungeon-scene.mjs";
 
@@ -35,18 +37,30 @@ const pending = new Map();
  * `requestingUserId` (only `startRun` uses it — to set the new run's
  * `hostUserId` to whoever actually asked, not to this client's own id). */
 const DUNGEON_ACTIONS = {
-  startRun: (args) => startDungeonRun({ ...args, hostUserId: args.requestingUserId }),
+  startRun: (args) =>
+    startDungeonRun({ ...args, hostUserId: args.requestingUserId }),
   resolveRoom: (args) =>
-    resolveCurrentRoom(args.succeeded, { scene: game.scenes.get(args.sceneId) }),
+    resolveCurrentRoom(args.succeeded, {
+      scene: game.scenes.get(args.sceneId),
+    }),
   populateNext: (args) => populateNextRoom(args.sceneId),
   undoRoomEntry: (args) => undoRoomEntry(args.sceneId),
   abandonRun: (args) => abandonDungeonRun(args.sceneId),
-  declareOutcome: (args) => resolveCombatRoomOutcome(args.sceneId, args.succeeded),
+  declareOutcome: (args) =>
+    resolveCombatRoomOutcome(args.sceneId, args.succeeded),
   startCombatRecovery: (args) => startCombatRecoveryFor(args.sceneId),
   recordSkillChallengeOutcome: (args) =>
     recordSkillChallengeOutcome(args.sceneId, args.roomId, args.outcome),
+  recordPuzzleStageOutcome: (args) =>
+    recordPuzzleStageOutcome(
+      args.sceneId,
+      args.roomId,
+      args.stageIndex,
+      args.outcome,
+    ),
   continueNarrativeRoom: (args) =>
     continueNarrativeRoom(args.sceneId, args.objective),
+  claimTreasure: (args) => claimTreasureFor(args.sceneId),
 };
 
 /**
@@ -113,7 +127,10 @@ export function registerDungeonActionSocket() {
         ? findActiveHostedRun()
         : getRunState(msg.args?.sceneId);
     let ok = false;
-    if (handler && isAuthorizedRequest(msg.actionName, msg.requestingUserId, run)) {
+    if (
+      handler &&
+      isAuthorizedRequest(msg.actionName, msg.requestingUserId, run)
+    ) {
       try {
         await handler({ ...msg.args, requestingUserId: msg.requestingUserId });
         ok = true;
