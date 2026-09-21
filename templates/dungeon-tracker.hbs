@@ -164,6 +164,19 @@
                   }}</button>
               </form>
             </div>
+          {{else if isTreasureRoom}}
+            <div class="dommt-dungeon__treasure">
+              {{#unless currentRoom.setpiece}}
+                <p class="hint">{{localize
+                    "DOMMT.Dungeon.Treasure.Placeholder"
+                  }}</p>
+              {{/unless}}
+              <footer>
+                <button type="button" data-action="claimTreasure">{{localize
+                    "DOMMT.Dungeon.Treasure.ClaimButton"
+                  }}</button>
+              </footer>
+            </div>
           {{else}}
             {{#unless currentRoomResolved}}
               <footer>

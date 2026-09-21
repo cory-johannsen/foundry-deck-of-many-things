@@ -19,7 +19,8 @@ export const ROOM_KIND_WEIGHTS = [
   { kind: 'combat', weight: 5 },
   { kind: 'skill_challenge', weight: 2 },
   { kind: 'puzzle_or_trap', weight: 2 },
-  { kind: 'narrative', weight: 1 }
+  { kind: 'narrative', weight: 1 },
+  { kind: 'treasure', weight: 2 }
 ];
 
 // Each slot pairs a Reward meaning (the challenge was handled well) with a
@@ -75,6 +76,22 @@ export function depthBiasFor({ physicalSlot, roomCount, isGoal }) {
   if (isGoal) return MAX_DEPTH_BIAS;
   const fraction = physicalSlot / Math.max(1, roomCount - 1);
   return Math.round(fraction * MAX_DEPTH_BIAS);
+}
+
+// Placeholder heuristic, not a real treasure table — same disclosed-tunable
+// spirit as combat-rewards.mjs's LOOT_GP_PER_XP, until a real treasure-table
+// pass exists (#169).
+export const TREASURE_GP_PER_LEVEL = 10;
+
+/**
+ * A treasure room's real coin grant — a party-level-scaled base, scaled up
+ * by the room's own depthBiasFor ramp (1x at room 0, up to 2x at
+ * MAX_DEPTH_BIAS/the goal room), the same depth-escalation signal combat
+ * rooms already use for encounter difficulty.
+ */
+export function lootGpForTreasureRoom({ partyLevel, physicalSlot, roomCount, isGoal }) {
+  const bias = depthBiasFor({ physicalSlot, roomCount, isGoal });
+  return Math.round(partyLevel * TREASURE_GP_PER_LEVEL * (1 + bias / MAX_DEPTH_BIAS));
 }
 
 // Broad PF2e creature-type traits, deliberately common ones rather than
