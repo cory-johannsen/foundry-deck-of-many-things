@@ -314,13 +314,94 @@ export function buildDebuffSpellCandidates({ readyDebuffSpells, opponents, actio
   return candidates;
 }
 
+/**
+ * The hop distance (in feet) a chained spell like Chain Lightning arcs
+ * between successive targets, parsed from its raw description text —
+ * confirmed live this is the only spell in the SRD with this "1 creature,
+ * plus any number of additional creatures" target shape, and its own hop
+ * distance isn't encoded in any structured `system` field, only prose
+ * ("arcs to another creature within 30 feet of the first target, jumps to
+ * another creature within 30 feet of that target, and so on"). Written as
+ * a general pattern match (not hardcoded to Chain Lightning specifically)
+ * in case similar future content shares the phrasing; `null` when no such
+ * phrase is found at all.
+ */
+export function parseChainHopDistance(descriptionHtml) {
+  const match = /(?:arcs?|jumps?|chains?) to another creature within (\d+) feet/i.exec(descriptionHtml);
+  return match ? Number(match[1]) : null;
+}
+
+/** One greedy walk from `startId`, always hopping to the *nearest*
+ * not-yet-visited neighbor in `chainGraph` (opponent-to-opponent distances
+ * only — allies are never included in `chainGraph` at all, see
+ * dungeon-combat.mjs, so they're never a valid hop target), stopping once
+ * no unvisited neighbor remains within hop range. Returns the ordered list
+ * of ids visited, starting with `startId` itself. */
+function buildGreedyChain(startId, chainGraph) {
+  const visited = new Set([startId]);
+  const chain = [startId];
+  let current = startId;
+  for (;;) {
+    const candidates = (chainGraph[current] ?? []).filter((o) => !visited.has(o.id));
+    if (!candidates.length) break;
+    const nearest = candidates.reduce((a, b) => (b.distanceSquares < a.distanceSquares ? b : a));
+    visited.add(nearest.id);
+    chain.push(nearest.id);
+    current = nearest.id;
+  }
+  return chain;
+}
+
+/**
+ * One candidate per ready chained spell (Chain Lightning-shaped: a primary
+ * target plus a greedily-extended chain of further targets), trying every
+ * in-range opponent as the primary target and keeping whichever one
+ * produces the longest resulting chain. `chainGraph` (opponent-to-opponent
+ * hop adjacency, precomputed by the caller from real token geometry) never
+ * includes allies, so the chain never hops into one — the agreed
+ * ally-avoidance approach for #127 is simply "allies are never valid hop
+ * targets," not a scored trade-off the way #126's area-spell placement is.
+ * Damage isn't rolled once and shared across the chain the way Chain
+ * Lightning's own rules text describes — confirmed live that reconstructing
+ * a shared roll for independent per-target outcome scaling silently drops
+ * IWR (resistance/weakness) handling — so dungeon-combat.mjs's execution
+ * rolls damage independently per target instead, reusing #119's already-
+ * proven per-target `spell.rollDamage()` mechanism; a small, disclosed
+ * deviation from strict rules text in favor of correctness.
+ */
+export function buildChainSpellCandidates({ readyChainSpells, opponents, actionsRemaining }) {
+  const candidates = [];
+  for (const spell of readyChainSpells) {
+    if (spell.cost > actionsRemaining) continue;
+    const validPrimaries = opponents.filter((o) => o.distanceSquares <= spell.rangeSquares);
+    if (!validPrimaries.length) continue;
+    let best = null;
+    for (const primary of validPrimaries) {
+      const chain = buildGreedyChain(primary.id, spell.chainGraph);
+      if (!best || chain.length > best.chain.length) best = { primary, chain };
+    }
+    const chainedIds = best.chain.slice(1);
+    const names = best.chain.map(
+      (id) => opponents.find((o) => o.id === id)?.name ?? id,
+    );
+    candidates.push({
+      id: `castChain:${spell.slug}:${best.primary.id}`, type: 'castChain',
+      spellId: spell.id, entryId: spell.entryId, cost: spell.cost,
+      save: spell.save, basic: spell.basic,
+      targetId: best.primary.id, chainedIds,
+      summary: `${spell.label} vs ${names.join(', ')}`
+    });
+  }
+  return candidates;
+}
+
 /** Always available — lets the agent stop spending actions early. */
 export function endTurnCandidate() {
   return { id: 'endTurn', type: 'endTurn', cost: 0, summary: 'End turn' };
 }
 
 /** Full candidate list for one decision iteration. */
-export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], readyAttackSpells = [], readyDebuffSpells = [], readyBreathWeapons = [], turnState, hazard = null, hasRangedOrReach = false }) {
+export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], readyAttackSpells = [], readyDebuffSpells = [], readyBreathWeapons = [], readyChainSpells = [], turnState, hazard = null, hasRangedOrReach = false }) {
   if (turnState.actionsRemaining <= 0) return [endTurnCandidate()];
   return [
     ...buildMovementCandidates({ opponents, hazard, hasRangedOrReach }),
@@ -330,6 +411,7 @@ export function buildCandidateList({ opponents, readyActions, readySpells = [], 
     ...buildAttackSpellCandidates({ readyAttackSpells, opponents, actionsRemaining: turnState.actionsRemaining }),
     ...buildDebuffSpellCandidates({ readyDebuffSpells, opponents, actionsRemaining: turnState.actionsRemaining }),
     ...buildBreathWeaponCandidates({ readyBreathWeapons, actionsRemaining: turnState.actionsRemaining }),
+    ...buildChainSpellCandidates({ readyChainSpells, opponents, actionsRemaining: turnState.actionsRemaining }),
     endTurnCandidate()
   ];
 }
