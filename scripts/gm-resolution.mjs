@@ -2,10 +2,10 @@ import { loadCards } from './data-loader.mjs';
 import { makeCardsById } from './deck.mjs';
 import { planCardEffect, replayPlan } from './effect-plan.mjs';
 import { requiresConfirmation } from './card-effects.mjs';
-import { makeFoundryApi } from './foundry-api.mjs';
+import { makeFoundryApi } from '../../pf2e-dungeon-crawl/scripts/foundry-api.mjs';
 import { playCardSound } from './card-sound.mjs';
-import { promptChooseAbility, promptChooseOption, promptChooseMany } from './choice-prompts.mjs';
-import { askPlayer } from './player-choice.mjs';
+import { promptChooseAbility, promptChooseOption, promptChooseMany } from '../../pf2e-dungeon-crawl/scripts/choice-prompts.mjs';
+import { askPlayer } from '../../pf2e-dungeon-crawl/scripts/player-choice.mjs';
 import { whoDecides } from './choice-routing.mjs';
 
 const MODULE_ID = 'deck-of-many-more-things';
