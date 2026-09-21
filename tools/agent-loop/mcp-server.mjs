@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 /**
  * MCP server exposing pending flavor-customization requests — trap (#136),
- * skill-challenge (#166), and puzzle (#139) — to whatever interactive agent session
- * connects to it. Deliberately has no Anthropic (or any LLM) dependency at
- * all: content generation happens on the connected session's own side,
- * using whatever model it runs on, not a hardcoded API call from this
- * process. See #185 for why this replaced `poll.mjs`'s old
- * `tryCustomizeTrap`/`tryCustomizeSkillChallenge` direct-API calls.
+ * skill-challenge (#166), puzzle (#139), and narrative (#167) — to whatever
+ * interactive agent session connects to it. Deliberately has no Anthropic
+ * (or any LLM) dependency at all: content generation happens on the
+ * connected session's own side, using whatever model it runs on, not a
+ * hardcoded API call from this process. See #185 for why this replaced
+ * `poll.mjs`'s old `tryCustomizeTrap`/`tryCustomizeSkillChallenge`
+ * direct-API calls.
  *
  * Combat-turn decisions (`providers/claude.mjs`'s `decide`,
  * `providers/laya.mjs`) are NOT part of this — they stay on the fast,
@@ -84,21 +85,42 @@ export async function applyPuzzleCustomization(
   );
 }
 
-/** All three kinds share one scene-scoped query so a session can check "is
- * there anything to do" in a single call rather than three. Tags each
+export async function getPendingNarrativeCustomization(sceneId, opts = {}) {
+  return runFoundryScript(
+    `return game.modules.get('${MODULE_ID}').api.getPendingNarrativeCustomization(${JSON.stringify(sceneId ?? null)});`,
+    opts,
+  );
+}
+
+export async function applyNarrativeCustomization(
+  sceneId,
+  roomId,
+  customization,
+  opts = {},
+) {
+  return runFoundryScript(
+    `return game.modules.get('${MODULE_ID}').api.applyNarrativeCustomization(${JSON.stringify(sceneId)}, ${JSON.stringify(roomId)}, ${JSON.stringify(customization)});`,
+    opts,
+  );
+}
+
+/** All four kinds share one scene-scoped query so a session can check "is
+ * there anything to do" in a single call rather than four. Tags each
  * result with `kind` so the response is self-describing without the
  * caller having to remember which shape belongs to which submit tool. */
 export async function listPendingCustomizations(sceneId, opts = {}) {
-  const [trap, skillChallenge, puzzle] = await Promise.all([
+  const [trap, skillChallenge, puzzle, narrative] = await Promise.all([
     getPendingTrapCustomization(sceneId, opts),
     getPendingSkillChallengeCustomization(sceneId, opts),
     getPendingPuzzleCustomization(sceneId, opts),
+    getPendingNarrativeCustomization(sceneId, opts),
   ]);
   const pending = [];
   if (trap) pending.push({ kind: "trap", ...trap });
   if (skillChallenge)
     pending.push({ kind: "skill_challenge", ...skillChallenge });
   if (puzzle) pending.push({ kind: "puzzle", ...puzzle });
+  if (narrative) pending.push({ kind: "narrative", ...narrative });
   return pending;
 }
 
@@ -112,7 +134,7 @@ export function buildServer() {
     "list_pending_customizations",
     {
       description:
-        "List pending trap, skill-challenge, and/or puzzle flavor-customization requests for the current (or given) Foundry scene. Each entry's mechanical fields (trapLevel/partyLevel, specialtySkills/locationTag, or a puzzle's stages skill/dc) are context only, for flavor to match — never rewrite gameplay values, only name/description/summary/flavor text.",
+        "List pending trap, skill-challenge, puzzle, and/or narrative flavor-customization requests for the current (or given) Foundry scene. Each entry's mechanical fields (trapLevel/partyLevel, specialtySkills/locationTag, a puzzle's stages skill/dc, or a narrative entry's archetype) are context only, for flavor to match — never rewrite gameplay values, only name/description/summary/flavor text.",
       inputSchema: {
         sceneId: z
           .string()
@@ -191,6 +213,50 @@ export function buildServer() {
         name,
         summary,
         stageFlavor,
+      });
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    },
+  );
+
+  server.registerTool(
+    "submit_narrative_customization",
+    {
+      description:
+        'Apply new content to a pending narrative room (an entry from list_pending_customizations with kind "narrative", using its sceneId/roomId). Only supply the fields matching that entry\'s own archetype: "lore" wants revealText; "ally" wants npcName and npcHook; "choice" wants exactly 2 options (each with a label and a consequence); "goal" wants suggestedObjective. name/summary always apply. Never changes anything mechanical — a narrative room has no mechanics beyond a single Continue action, so this is purely how it reads.',
+      inputSchema: {
+        sceneId: z.string(),
+        roomId: z.string(),
+        name: z.string(),
+        summary: z.string(),
+        revealText: z.string().optional(),
+        npcName: z.string().optional(),
+        npcHook: z.string().optional(),
+        options: z
+          .array(z.object({ label: z.string(), consequence: z.string() }))
+          .length(2)
+          .optional(),
+        suggestedObjective: z.string().optional(),
+      },
+    },
+    async ({
+      sceneId,
+      roomId,
+      name,
+      summary,
+      revealText,
+      npcName,
+      npcHook,
+      options,
+      suggestedObjective,
+    }) => {
+      const result = await applyNarrativeCustomization(sceneId, roomId, {
+        name,
+        summary,
+        revealText,
+        npcName,
+        npcHook,
+        options,
+        suggestedObjective,
       });
       return { content: [{ type: "text", text: JSON.stringify(result) }] };
     },

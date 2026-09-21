@@ -16,7 +16,6 @@ import { makeFoundryApi } from "../foundry-api.mjs";
 import { rollSkillChallengeAttempt } from "../skill-challenge.mjs";
 import { rollPuzzleStageAttempt } from "../puzzle.mjs";
 import { ALL_SKILLS, dcForAttempt } from "../skill-challenge-mechanics.mjs";
-import { isValidNarrativeTemplate } from "../narrative-mechanics.mjs";
 import {
   traitFieldHtml,
   wireTraitPickerButtons,
@@ -545,25 +544,26 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // of the plain Succeed/Fail choice.
     const isNarrativeRoom =
       currentRoom?.kind === "narrative" && !currentRoomResolved;
-    // #165: unlike puzzle/skill_challenge, a narrative room has no evolving
-    // mechanical state (no successes counter, no attempts) — it's resolved
-    // in a single Continue action — so there's nothing to lazily attach or
-    // persist here. This just reads the archetype-specific fields straight
-    // off the raw setpiece `dungeon-deck.mjs`'s buildRoomSequence already
-    // resolved via `setpieceId`, the same "read what's already there" shape
-    // the puzzle_or_trap branch's own trap half uses. `setpiece.name`/
-    // `.summary` render for free through the generic `currentRoom.setpiece`
-    // block above — this only carries the archetype extras that block
-    // doesn't know about.
+    // #167: read from the room's own *persisted* narrative state (attached
+    // at room-build time by dungeon-scene.mjs's ensureNarrativeState), not
+    // straight off the raw setpiece the way #165 originally did — a
+    // persisted copy is what gives an external agent's customization
+    // somewhere durable to land (see ensureNarrativeState's own docblock)
+    // instead of being silently overwritten by the shared template on the
+    // very next render, the same invisible-customization bug #139 already
+    // caught and fixed for puzzles.
     let narrative = null;
-    if (isNarrativeRoom && setpiece && isValidNarrativeTemplate(setpiece)) {
+    if (isNarrativeRoom && currentRoom.narrative) {
+      const raw = currentRoom.narrative;
       narrative = {
-        archetype: setpiece.archetype,
-        revealText: setpiece.revealText ?? null,
-        npcName: setpiece.npcName ?? null,
-        npcHook: setpiece.npcHook ?? null,
-        options: setpiece.options ?? null,
-        suggestedObjective: setpiece.suggestedObjective ?? null,
+        archetype: raw.archetype,
+        name: raw.name,
+        summary: raw.summary,
+        revealText: raw.revealText ?? null,
+        npcName: raw.npcName ?? null,
+        npcHook: raw.npcHook ?? null,
+        options: raw.options ?? null,
+        suggestedObjective: raw.suggestedObjective ?? null,
       };
     }
     // #169: a treasure room, like a narrative room, is never succeeded/
@@ -635,15 +635,16 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
         kindLabel: game.i18n.localize(
           ROOM_KIND_KEYS[currentRoom.kind] ?? currentRoom.kind,
         ),
-        // #139: prefers the puzzle's own *persisted* name/summary (which
-        // an agent's applyPuzzleCustomization may have overwritten) over
-        // the raw setpiece template's — this is the one generic display
-        // block every room kind's name/summary renders through, so a
-        // puzzle's customization needs to flow through here to be visible
-        // at all, not just in the puzzle-specific block below.
+        // #139/#167: prefers the puzzle's or narrative room's own
+        // *persisted* name/summary (which an agent's applyPuzzleCustomization/
+        // applyNarrativeCustomization may have overwritten) over the raw
+        // setpiece template's — this is the one generic display block every
+        // room kind's name/summary renders through, so either kind's
+        // customization needs to flow through here to be visible at all,
+        // not just in its own kind-specific block below.
         setpiece: setpiece && {
-          name: puzzle?.name ?? setpiece.name,
-          summary: puzzle?.summary ?? setpiece.summary,
+          name: puzzle?.name ?? narrative?.name ?? setpiece.name,
+          summary: puzzle?.summary ?? narrative?.summary ?? setpiece.summary,
           complete: setpiece.complete,
         },
       },

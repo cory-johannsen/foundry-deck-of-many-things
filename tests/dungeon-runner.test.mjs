@@ -18,6 +18,9 @@ import {
   recordPuzzleStageAttempt,
   getPendingPuzzleCustomization,
   applyPuzzleCustomization,
+  ensureNarrativeState,
+  getPendingNarrativeCustomization,
+  applyNarrativeCustomization,
 } from "../scripts/dungeon-runner.mjs";
 
 function makeSettingsStub(initial = {}) {
@@ -1157,6 +1160,163 @@ describe("getPendingPuzzleCustomization / applyPuzzleCustomization", () => {
   it("applyPuzzleCustomization is a no-op with no run at all", async () => {
     const settingsRef = makeSettingsStub();
     const result = await applyPuzzleCustomization(
+      "nope",
+      "room-x",
+      { name: "Anything" },
+      { settingsRef },
+    );
+    expect(result).toBeNull();
+  });
+});
+
+describe("ensureNarrativeState / getPendingNarrativeCustomization / applyNarrativeCustomization", () => {
+  const loreSetpiece = {
+    id: "the_example_lore", kind: "narrative", archetype: "lore",
+    name: "The Example", summary: "An example lore beat.",
+    revealText: "The ruins predate the empire.",
+  };
+  const choiceSetpiece = {
+    id: "the_example_choice", kind: "narrative", archetype: "choice",
+    name: "The Example Choice", summary: "An example dilemma.",
+    options: [
+      { label: "Free them", consequence: "A grateful ally." },
+      { label: "Leave them", consequence: "No new burden." },
+    ],
+  };
+
+  async function makeRoomWithNarrative(settingsRef, setpiece = loreSetpiece) {
+    const created = await createRun(
+      { sceneId: "s", roomCount: 5, seed: "fixed" },
+      { settingsRef },
+    );
+    const roomId = created.rooms[1].id;
+    await ensureNarrativeState("s", roomId, { setpiece }, { settingsRef });
+    return roomId;
+  }
+
+  it("ensureNarrativeState attaches the setpiece's fields and flags it pending", async () => {
+    const settingsRef = makeSettingsStub();
+    const roomId = await makeRoomWithNarrative(settingsRef);
+    const state = getRunState("s", { settingsRef });
+    const room = state.rooms.find((r) => r.id === roomId);
+    expect(room.narrative.archetype).toBe("lore");
+    expect(room.narrative.name).toBe("The Example");
+    expect(room.narrative.summary).toBe("An example lore beat.");
+    expect(room.narrative.revealText).toBe("The ruins predate the empire.");
+    expect(room.narrative.npcName).toBeNull();
+    expect(room.narrative.customization).toEqual({ status: "pending" });
+  });
+
+  it("ensureNarrativeState is a no-op if the room already has narrative state", async () => {
+    const settingsRef = makeSettingsStub();
+    const roomId = await makeRoomWithNarrative(settingsRef);
+    await ensureNarrativeState(
+      "s",
+      roomId,
+      { setpiece: { ...loreSetpiece, name: "Different" } },
+      { settingsRef },
+    );
+    const room = getRunState("s", { settingsRef }).rooms.find(
+      (r) => r.id === roomId,
+    );
+    expect(room.narrative.name).toBe("The Example");
+  });
+
+  it("getPendingNarrativeCustomization finds the pending room and hands back its content", async () => {
+    const settingsRef = makeSettingsStub();
+    const roomId = await makeRoomWithNarrative(settingsRef, choiceSetpiece);
+    const room = getRunState("s", { settingsRef }).rooms.find(
+      (r) => r.id === roomId,
+    );
+    const pending = getPendingNarrativeCustomization("s", { settingsRef });
+    expect(pending.roomId).toBe(roomId);
+    expect(pending.sceneId).toBe("s");
+    expect(pending.archetype).toBe("choice");
+    expect(pending.locationTag).toBe(room.locationTag);
+    expect(pending.options).toEqual(choiceSetpiece.options);
+  });
+
+  it("returns null when nothing is pending", () => {
+    const settingsRef = makeSettingsStub();
+    expect(getPendingNarrativeCustomization("nope", { settingsRef })).toBeNull();
+  });
+
+  it("applyNarrativeCustomization overwrites name/summary/revealText and marks it customized", async () => {
+    const settingsRef = makeSettingsStub();
+    const roomId = await makeRoomWithNarrative(settingsRef);
+    const state = await applyNarrativeCustomization(
+      "s",
+      roomId,
+      {
+        name: "The Warden's Last Stand",
+        summary: "A collapsed guardpost.",
+        revealText: "They knew exactly what was coming.",
+      },
+      { settingsRef },
+    );
+    const room = state.rooms.find((r) => r.id === roomId);
+    expect(room.narrative.name).toBe("The Warden's Last Stand");
+    expect(room.narrative.summary).toBe("A collapsed guardpost.");
+    expect(room.narrative.revealText).toBe("They knew exactly what was coming.");
+    expect(room.narrative.customization).toEqual({ status: "customized" });
+  });
+
+  it("applyNarrativeCustomization replaces options wholesale when given", async () => {
+    const settingsRef = makeSettingsStub();
+    const roomId = await makeRoomWithNarrative(settingsRef, choiceSetpiece);
+    const newOptions = [
+      { label: "Restore it", consequence: "A quiet favor." },
+      { label: "Strip it", consequence: "Real value now." },
+    ];
+    const state = await applyNarrativeCustomization(
+      "s",
+      roomId,
+      { options: newOptions },
+      { settingsRef },
+    );
+    const room = state.rooms.find((r) => r.id === roomId);
+    expect(room.narrative.options).toEqual(newOptions);
+  });
+
+  it("no longer appears as pending once customization is applied", async () => {
+    const settingsRef = makeSettingsStub();
+    const roomId = await makeRoomWithNarrative(settingsRef);
+    await applyNarrativeCustomization(
+      "s",
+      roomId,
+      { name: "New Name" },
+      { settingsRef },
+    );
+    expect(getPendingNarrativeCustomization("s", { settingsRef })).toBeNull();
+  });
+
+  it("stops being offered once the room is resolved, even if still marked pending", async () => {
+    const settingsRef = makeSettingsStub();
+    const roomId = await makeRoomWithNarrative(settingsRef);
+    await advancePastEntry("s", settingsRef);
+    await markRoomOutcome({ sceneId: "s", succeeded: true }, { settingsRef });
+    expect(getPendingNarrativeCustomization("s", { settingsRef })).toBeNull();
+  });
+
+  it("applyNarrativeCustomization is a no-op if the room has no narrative state at all", async () => {
+    const settingsRef = makeSettingsStub();
+    const created = await createRun(
+      { sceneId: "s", roomCount: 5, seed: "fixed" },
+      { settingsRef },
+    );
+    const roomId = created.rooms[1].id;
+    const state = await applyNarrativeCustomization(
+      "s",
+      roomId,
+      { name: "Anything" },
+      { settingsRef },
+    );
+    expect(state.rooms.find((r) => r.id === roomId).narrative).toBeUndefined();
+  });
+
+  it("applyNarrativeCustomization is a no-op with no run at all", async () => {
+    const settingsRef = makeSettingsStub();
+    const result = await applyNarrativeCustomization(
       "nope",
       "room-x",
       { name: "Anything" },

@@ -73,11 +73,13 @@ relay blip, the terminal logs a louder warning once 10 poll cycles in a row
 have failed; at that point, restarting the process (`Ctrl-C`, then
 `node tools/agent-loop/poll.mjs` again) is the known-working fix.
 
-## Flavor customization: trap (#136) and skill-challenge (#166) content, via MCP (#185)
+## Flavor customization: trap (#136), skill-challenge (#166), puzzle (#139), and narrative (#167) content, via MCP (#185)
 
 Unlike combat-turn decisions, flavor customization (a trap's name and
 description; a skill-challenge room's name, summary, and per-skill flavor
-text) doesn't come from a hardcoded API call in `poll.mjs`. It comes from
+text; a puzzle's name, summary, and per-stage hint flavor; a narrative
+room's name, summary, and whichever archetype-specific field it uses)
+doesn't come from a hardcoded API call in `poll.mjs`. It comes from
 whatever _interactive agent session_ connects to `tools/agent-loop/mcp-server.mjs`
 — any model, your choice, not locked to Claude/Anthropic. This is the
 actual point of the "agent bridge" name: the poller automates the
@@ -94,12 +96,18 @@ node tools/agent-loop/mcp-server.mjs
 ```
 
 It's already registered in this repo's `.mcp.json`, so a Claude Code
-session opened here connects to it automatically. It exposes three tools:
+session opened here connects to it automatically. It exposes five tools:
 
-- `list_pending_customizations` — any pending trap and/or skill-challenge
-  customization request for the current (or a given) scene.
+- `list_pending_customizations` — any pending trap, skill-challenge,
+  puzzle, and/or narrative customization request for the current (or a
+  given) scene.
 - `submit_trap_customization(actorId, name, description)`
 - `submit_skill_challenge_customization(sceneId, roomId, name, summary, skillFlavor)`
+- `submit_puzzle_customization(sceneId, roomId, name, summary, stageFlavor)`
+- `submit_narrative_customization(sceneId, roomId, name, summary, ...archetype-specific fields)`
+  — only the fields matching that entry's own `archetype` apply:
+  `revealText` (lore), `npcName`+`npcHook` (ally), `options` (choice,
+  exactly 2 `{label, consequence}` pairs), or `suggestedObjective` (goal).
 
 A GM (or anyone with an MCP-connected session) just asks their agent to
 "check for and fulfill any pending dungeon customizations" — the agent
@@ -109,11 +117,11 @@ original template content — the same graceful degradation the combat-AI
 half already relies on, and never anything that blocks room reveal or
 discovery.
 
-One real timing difference between the two kinds: a trap spawns hidden
-(#135), with a genuine window to customize it before the party ever
-reaches its door. A skill-challenge room's content is shown the instant
-the room becomes current, so there's no such window — the party may see
-the un-customized name/summary first and see it change in place only if
-and when a customization lands before the Dungeon Crawl tracker
+One real timing difference among the kinds: a trap spawns hidden (#135),
+with a genuine window to customize it before the party ever reaches its
+door. A skill-challenge, puzzle, or narrative room's content is shown the
+instant the room becomes current, so there's no such window — the party
+may see the un-customized name/summary first and see it change in place
+only if and when a customization lands before the Dungeon Crawl tracker
 next re-renders. Accepted as the honest trade-off rather than blocking
 room display on it.

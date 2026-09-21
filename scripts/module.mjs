@@ -27,6 +27,8 @@ import {
   applySkillChallengeCustomization,
   getPendingPuzzleCustomization,
   applyPuzzleCustomization,
+  getPendingNarrativeCustomization,
+  applyNarrativeCustomization,
 } from "./dungeon-runner.mjs";
 import {
   decideOpenDungeon,
@@ -303,6 +305,27 @@ Hooks.once("ready", async () => {
           game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
         );
       return applyPuzzleCustomization(
+        sceneId ?? canvas?.scene?.id,
+        roomId,
+        customization,
+      );
+    },
+    // #167: the same narrow read/apply pair as the puzzle/skill-challenge
+    // customization surfaces above, for a narrative room's own pending
+    // content instead.
+    getPendingNarrativeCustomization: (sceneId) => {
+      if (!game.user.isGM)
+        return ui.notifications.warn(
+          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+        );
+      return getPendingNarrativeCustomization(sceneId ?? canvas?.scene?.id);
+    },
+    applyNarrativeCustomization: (sceneId, roomId, customization) => {
+      if (!game.user.isGM)
+        return ui.notifications.warn(
+          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+        );
+      return applyNarrativeCustomization(
         sceneId ?? canvas?.scene?.id,
         roomId,
         customization,

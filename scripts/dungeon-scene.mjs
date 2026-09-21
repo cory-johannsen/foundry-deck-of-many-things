@@ -40,6 +40,7 @@ import {
   canUndoRoomEntry,
   ensureSkillChallenge,
   ensurePuzzleState,
+  ensureNarrativeState,
   markRoomOutcome,
 } from "./dungeon-runner.mjs";
 import { depthBiasFor } from "./dungeon-deck.mjs";
@@ -47,6 +48,7 @@ import { startCombatForSlot } from "./dungeon-combat.mjs";
 import { playDoorSound } from "./dungeon-sound.mjs";
 import { loadDungeonSetpieces } from "./data-loader.mjs";
 import { selectSkillChallengeTemplate } from "./skill-challenge-mechanics.mjs";
+import { isValidNarrativeTemplate } from "./narrative-mechanics.mjs";
 import { makeFoundryApi } from "./foundry-api.mjs";
 import { selectTrap } from "./trap-library.mjs";
 import { splitmix32, seedFromString } from "./prng.mjs";
@@ -823,6 +825,19 @@ export async function buildPopulateAndUnlockRoom(
           name: setpiece.name ?? null,
           summary: setpiece.summary ?? null,
         });
+      }
+    }
+    // #167: a narrative room's own selected content is attached here too
+    // (#165 gives it a setpieceId the same way puzzle_or_trap has always
+    // had one) — persisted as `room.narrative` rather than read straight
+    // off the raw setpiece (#165's original shape), so an external agent's
+    // later customization (ensureNarrativeState's own docblock explains
+    // why) has somewhere durable to land.
+    if (room.kind === "narrative" && room.setpieceId) {
+      const setpieces = await loadDungeonSetpieces();
+      const setpiece = setpieces.find((s) => s.id === room.setpieceId);
+      if (setpiece?.kind === "narrative" && isValidNarrativeTemplate(setpiece)) {
+        await ensureNarrativeState(scene.id, room.id, { setpiece });
       }
     }
     await unlockDoorToSlot(scene, physicalSlot);
