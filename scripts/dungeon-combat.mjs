@@ -32,6 +32,7 @@ import {
   parseAreaSpellTierOverrides,
   parseActionGlyphTiers,
   parseTargetCountFormula,
+  parseAutoHitAreaTiers,
 } from "./agent-candidates.mjs";
 import { findPath, blockedEdgesFromWalls } from "./pathfinding.mjs";
 import { coverBlocksLineOfFire, COVER_EFFECT_DATA } from "./cover-items.mjs";
@@ -535,6 +536,77 @@ function isTargetCountSpellInScope(spell) {
   if (!/^[123]\s+to\s+[123]$/.test(system.time?.value ?? "")) return false;
   if (!Object.keys(system.damage ?? {}).length) return false;
   return parseTargetCountFormula(system.target?.value ?? "") != null;
+}
+
+/**
+ * True for a spell squarely inside #176's scope: an area spell whose lower
+ * tiers are ordinary save-scaled damage but whose top tier bypasses the
+ * save entirely (Force Rain-shaped — confirmed live: "Creatures in the
+ * area don't attempt a saving throw and instead automatically take 20
+ * force damage"). Broadens #140's own `burst`/`emanation`-only area-type
+ * check to also accept `square` — confirmed live Force Rain's own
+ * structured minimum tier is a single 5-foot square, not a burst/
+ * emanation, so #140's existing filter never sees it at all regardless of
+ * this ticket's own scope (no risk of double-matching). A genuinely
+ * variable cost, a save statistic (present for the lower, save-scaled
+ * tiers even though the top tier ends up bypassing it), a damage instance,
+ * and at least one parsed tier actually flagged `noSave` (the real
+ * shape-defining signal, mirroring #140's own "at least one parseable
+ * override" gate) round out the check.
+ */
+function isAutoHitAreaSpellInScope(spell) {
+  const system = spell.system ?? {};
+  const areaType = system.area?.type;
+  if (areaType !== "burst" && areaType !== "emanation" && areaType !== "square")
+    return false;
+  if (!system.defense?.save?.statistic) return false;
+  if (!Object.keys(system.damage ?? {}).length) return false;
+  if (!/^[123]\s+to\s+[123]$/.test(system.time?.value ?? "")) return false;
+  const tiers = parseAutoHitAreaTiers(system.description?.value ?? "");
+  return Object.values(tiers).some((t) => t.noSave);
+}
+
+/**
+ * Every cost tier of a #176-scoped auto-hit-at-max-tier area spell, keyed
+ * by cost — unlike #140's `resolveAreaSpellTiers`, every tier (including
+ * the minimum) comes from `parseAutoHitAreaTiers` directly, since Force
+ * Rain's own action-glyph clauses reliably carry a damage phrase at every
+ * tier, even the one with no `@Template` enricher; only `radiusFeet` falls
+ * back to the spell's own structured `system.area` when a tier's clause
+ * has no `@Template` of its own (true for the minimum tier). A structured
+ * `area.type` of `"square"` means a single grid cell — a *footprint size*,
+ * not a radius-from-center the way `burst`/`emanation`'s `value` is —
+ * confirmed live Force Rain's own minimum tier is exactly this shape
+ * ("a single 5-foot square"), so treating its `value` as a radius would
+ * wrongly pull in the center's neighbors too; it resolves to radius 0
+ * (the chosen center only) instead. A hypothetical minimum tier with a
+ * genuine `burst`/`emanation` structured area (no real example exists
+ * today) still falls back to that area's own `value` as a true radius,
+ * matching #140's established convention.
+ */
+function resolveAutoHitAreaTiers(spell) {
+  const system = spell.system ?? {};
+  const parsed = parseAutoHitAreaTiers(system.description?.value ?? "");
+  const tiers = {};
+  for (const [costStr, tier] of Object.entries(parsed)) {
+    const cost = Number(costStr);
+    const radiusFeet = tier.area
+      ? tier.area.value
+      : system.area?.type === "square"
+        ? 0
+        : (system.area?.value ?? 0);
+    tiers[cost] = {
+      cost,
+      radiusFeet,
+      noSave: tier.noSave,
+      damage: tier.noSave
+        ? []
+        : [{ formula: tier.damageFormula, type: tier.damageType }],
+      flatDamage: tier.noSave ? tier.flatDamage : null,
+      damageType: tier.damageType,
+    };
+  }
+  return tiers;
 }
 
 /**
@@ -1619,6 +1691,63 @@ export async function getPendingAgentTurn(combat) {
       }),
   );
 
+  // One entry per (spell, tier) pair for a #176-scoped auto-hit-at-max-
+  // tier area spell — same geometry pattern as readyTierScalingAreaSpells
+  // above (opponent-centered placements, since Force Rain's tiers are all
+  // burst/square, never a self-centered emanation), but each tier also
+  // carries noSave/flatDamage/damageType so the candidate (and later,
+  // execution) knows whether to roll a save at all.
+  const readyAutoHitAreaSpells = (
+    combatant.actor?.spellcasting?.contents ?? []
+  ).flatMap((entry) =>
+    (entry.spells?.contents ?? [])
+      .filter(isAutoHitAreaSpellInScope)
+      .filter(hasSpellUsesRemaining)
+      .flatMap((spell) => {
+        const tiers = resolveAutoHitAreaTiers(spell);
+        return Object.values(tiers).map((tier) => {
+          const radiusSquares = tier.radiusFeet / gridDistanceFt;
+          const withinRadiusOf = (pool) => (centerToken) =>
+            pool
+              .filter(
+                (o) =>
+                  chebyshevSquares(centerToken, o.token, gridSize) <=
+                  radiusSquares,
+              )
+              .map((o) => ({ id: o.id, name: o.name }));
+          const withinRadius = withinRadiusOf(rawOpponents);
+          const withinRadiusAllies = withinRadiusOf(rawAllies);
+          const placements =
+            spell.system.area.type === "emanation"
+              ? [
+                  {
+                    centerType: "self",
+                    centerId: null,
+                    affected: withinRadius(combatant.token),
+                    affectedAllies: withinRadiusAllies(combatant.token),
+                  },
+                ]
+              : rawOpponents.map((center) => ({
+                  centerType: "opponent",
+                  centerId: center.id,
+                  affected: withinRadius(center.token),
+                  affectedAllies: withinRadiusAllies(center.token),
+                }));
+          return {
+            id: spell.id,
+            slug: `${spell.slug}-${tier.cost}action`,
+            label: `${spell.name} (${tier.cost} action${tier.cost > 1 ? "s" : ""})`,
+            cost: tier.cost,
+            save: tier.noSave ? null : spell.system.defense.save.statistic,
+            basic: tier.noSave ? null : spell.system.defense.save.basic,
+            noSave: tier.noSave,
+            entryId: entry.id,
+            placements,
+          };
+        });
+      }),
+  );
+
   const readyAttackSpells = (combatant.actor?.spellcasting?.contents ?? [])
     .flatMap((entry) =>
       (entry.spells?.contents ?? [])
@@ -1952,6 +2081,7 @@ export async function getPendingAgentTurn(combat) {
     readyTierScalingAreaSpells,
     readyDualNatureSpells,
     readyTargetCountSpells,
+    readyAutoHitAreaSpells,
     allies,
     turnState,
     hazard: null,
@@ -2758,6 +2888,98 @@ async function castTargetCountSpellAndApply(
 }
 
 /**
+ * Executes a #176-scoped auto-hit-at-max-tier area spell at the cost tier
+ * matching `cost` — save-scaled damage for an ordinary tier (manually
+ * constructing a `DamageRoll` per target and `.alter()`-scaling it by
+ * outcome, exactly #140's established pattern, since `spell.rollDamage()`
+ * doesn't scale by action-count tier here either), or, when the resolved
+ * tier is flagged `noSave`, a flat unconditional `DamageRoll` built from a
+ * plain numeric formula (`"(20)[force]"` — confirmed live in #140's own
+ * research this is the correct single-instance IWR-respecting shape for a
+ * fixed, non-dice amount) applied to every target with no save roll at
+ * all, matching Force Rain's own "don't attempt a saving throw" text.
+ */
+async function castAutoHitAreaSpellAndApplyDamage(
+  combatant,
+  targets,
+  spellId,
+  entryId,
+  save,
+  cost,
+) {
+  const entry = combatant.actor?.spellcasting?.contents?.find(
+    (e) => e.id === entryId,
+  );
+  const spell = entry?.spells?.contents?.find((s) => s.id === spellId);
+  if (!entry || !spell) return null;
+  const tier = resolveAutoHitAreaTiers(spell)[cost];
+  if (!tier) return null;
+
+  const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
+  const prevShowDamage = game.user.flags?.pf2e?.settings?.showDamageDialogs;
+  await game.user.update({
+    "flags.pf2e.settings.showCheckDialogs": false,
+    "flags.pf2e.settings.showDamageDialogs": false,
+  });
+  try {
+    await entry.cast(spell, { createMessage: true });
+    const DamageRollClass = CONFIG.Dice.rolls.find(
+      (c) => c.name === "DamageRoll",
+    );
+    const outcomes = [];
+    if (tier.noSave) {
+      for (const target of targets) {
+        const roll = new DamageRollClass(
+          `(${tier.flatDamage})[${tier.damageType}]`,
+        );
+        await roll.evaluate();
+        await target.actor.applyDamage({ damage: roll, token: target.token });
+        await applyDefeatIfReducedToZero(target);
+        outcomes.push({ targetId: target.id, total: roll.total });
+      }
+    } else {
+      const dc = entry.statistic?.dc?.value ?? 10;
+      const formula = tier.damage
+        .map((d) => `(${d.formula})[${d.type}]`)
+        .join(",");
+      for (const target of targets) {
+        const saveStat = target.actor?.saves?.[save];
+        if (!saveStat) continue;
+        const targetRef = { document: target.token };
+        await saveStat.roll({ dc: { value: dc }, createMessage: true });
+        const outcome =
+          game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ??
+          null;
+        playSpellSaveSound(outcome);
+        if (outcome !== "criticalSuccess") {
+          const roll = new DamageRollClass(formula);
+          await roll.evaluate();
+          const scaled =
+            outcome === "success"
+              ? await roll.alter(0.5, 0)
+              : outcome === "criticalFailure"
+                ? await roll.alter(2, 0)
+                : roll;
+          await target.actor.applyDamage({
+            damage: scaled,
+            token: target.token,
+            outcome,
+          });
+          await applyDefeatIfReducedToZero(target);
+        }
+        outcomes.push({ targetId: target.id, outcome });
+      }
+    }
+    return outcomes;
+  } finally {
+    await game.user.update({
+      "flags.pf2e.settings.showCheckDialogs": prevShowCheck,
+      "flags.pf2e.settings.showDamageDialogs": prevShowDamage,
+    });
+  }
+}
+
+/**
  * Rolls each of `targets`' own saves against `dc` and applies
  * basic-save-scaled damage on any outcome but a critical success, then
  * records the ability's recharge timer. Unlike every spell execution
@@ -3075,6 +3297,19 @@ export async function applyAgentDecision(
         candidate.spellId,
         candidate.entryId,
         candidate.save,
+      );
+  } else if (candidate.type === "castAutoHitAreaTier") {
+    const targets = combatantOpponents(combat, combatant).filter((c) =>
+      candidate.affectedIds.includes(c.id),
+    );
+    if (targets.length)
+      await castAutoHitAreaSpellAndApplyDamage(
+        combatant,
+        targets,
+        candidate.spellId,
+        candidate.entryId,
+        candidate.save,
+        candidate.cost,
       );
   }
 
