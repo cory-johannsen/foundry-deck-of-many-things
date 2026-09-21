@@ -92,10 +92,7 @@ function skillLabel(slug) {
  * entirely — `canvas?.scene` alone isn't reliable there the way it is for a
  * button click inside this app.
  */
-export async function resolveCurrentRoom(
-  succeeded,
-  { scene = canvas?.scene } = {},
-) {
+export async function resolveCurrentRoom(succeeded, { scene } = {}) {
   if (!scene) return;
   const setpieces = await loadDungeonSetpieces();
   const { state, mutation, nextRoomId, nextPhysicalSlot } =
@@ -483,11 +480,13 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (context.currentSlot != null && canvas?.scene?.id === context.sceneId) {
       focusCameraOnSlot(canvas.scene, context.currentSlot, context.seed);
     }
-    // #109: a read-only broadcast viewer (or a host who's lost exclusive
-    // control because a GM connected) sees every control disabled except
-    // Hide, which only closes their own local window. This is a UI nicety,
-    // not the real enforcement — each mutating action handler below
-    // re-checks canActOnDungeon itself.
+    // #109: a read-only broadcast viewer sees every control disabled
+    // except Hide, which only closes their own local window. This is a
+    // UI nicety, not the real enforcement — every mutating handler below
+    // branches on game.user.isGM (direct call if GM, else routes a
+    // request over the relay), and the GM-side relay handler is what
+    // actually authorizes a routed request against the run's own tracked
+    // host before executing it (see dungeon-remote.mjs).
     if (context.hasRun && !context.interactive) {
       // Not just `footer button[data-action]` — the skill-challenge
       // (#onAttemptSkillChallenge) and narrative (#onContinueNarrative)
@@ -629,7 +628,7 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** Manual GM override — always available while a combat room's Combat is
    * active, alongside the automatic all-one-side-defeated detection.
-   * `DungeonApp.#resolveCombatRoom(this, ...)`, not `this.constructor...` —
+   * `DungeonApp.#declareOutcome(this, ...)`, not `this.constructor...` —
    * a private static called this way is a plain function call, so `this`
    * has to be threaded through explicitly rather than relying on the
    * instance binding Foundry's action dispatcher gives #onDeclareVictory
