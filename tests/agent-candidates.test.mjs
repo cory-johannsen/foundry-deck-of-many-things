@@ -4,7 +4,8 @@ import {
   initAgentTurnState, buildMovementCandidates, buildStrikeCandidates, buildSpellCandidates,
   buildAreaSpellCandidates, buildAttackSpellCandidates, buildDebuffSpellCandidates,
   parseConditionsByOutcome, hasSpellUsesRemaining,
-  parseBreathWeaponEffect, buildBreathWeaponCandidates, endTurnCandidate,
+  parseBreathWeaponEffect, buildBreathWeaponCandidates,
+  parseChainHopDistance, buildChainSpellCandidates, endTurnCandidate,
   buildCandidateList, applyCandidateToTurnState, buildDecisionContext,
   MAX_ACTIONS_PER_TURN, AGENT_MELEE_REACH_SQUARES
 } from '../scripts/agent-candidates.mjs';
@@ -384,6 +385,78 @@ describe('buildDebuffSpellCandidates', () => {
   it('omits an opponent outside the spell\'s range', () => {
     const candidates = buildDebuffSpellCandidates({ readyDebuffSpells: [fear], opponents: [opponentOutOfRange], actionsRemaining: 3 });
     expect(candidates).toEqual([]);
+  });
+});
+
+describe('parseChainHopDistance', () => {
+  it('parses a real chain-spell description (Chain Lightning-shaped)', () => {
+    const description = 'The electricity arcs to another creature within 30 feet of the first target, jumps to another creature within 30 feet of that target, and so on.';
+    expect(parseChainHopDistance(description)).toBe(30);
+  });
+
+  it('returns null when there is no chain phrasing at all', () => {
+    expect(parseChainHopDistance('You deal 8d12 electricity damage to the target.')).toBeNull();
+  });
+});
+
+describe('buildChainSpellCandidates', () => {
+  const opponentInRange1 = { id: 'opp1', name: 'Fighter', distanceSquares: 3 };
+  const opponentInRange2 = { id: 'opp2', name: 'Cleric', distanceSquares: 5 };
+  const opponentOutOfRange3 = { id: 'opp3', name: 'Rogue', distanceSquares: 8 };
+
+  const chainLightning = {
+    id: 'sp1', slug: 'chain-lightning', label: 'Chain Lightning', cost: 2, rangeSquares: 6,
+    save: 'reflex', basic: true, entryId: 'entry1',
+    chainGraph: {
+      opp1: [{ id: 'opp2', name: 'Cleric', distanceSquares: 2 }],
+      opp2: [{ id: 'opp1', name: 'Fighter', distanceSquares: 2 }, { id: 'opp3', name: 'Rogue', distanceSquares: 3 }],
+      opp3: [{ id: 'opp2', name: 'Cleric', distanceSquares: 3 }],
+    }
+  };
+
+  it('builds the longest greedy chain, picking whichever in-range primary target produces it', () => {
+    const candidates = buildChainSpellCandidates({
+      readyChainSpells: [chainLightning],
+      opponents: [opponentInRange1, opponentInRange2, opponentOutOfRange3],
+      actionsRemaining: 3
+    });
+    expect(candidates).toEqual([
+      {
+        id: 'castChain:chain-lightning:opp1', type: 'castChain',
+        spellId: 'sp1', entryId: 'entry1', cost: 2, save: 'reflex', basic: true,
+        targetId: 'opp1', chainedIds: ['opp2', 'opp3'],
+        summary: 'Chain Lightning vs Fighter, Cleric, Rogue'
+      }
+    ]);
+  });
+
+  it('omits a spell whose cost exceeds the actions remaining', () => {
+    const candidates = buildChainSpellCandidates({
+      readyChainSpells: [chainLightning], opponents: [opponentInRange1], actionsRemaining: 1
+    });
+    expect(candidates).toEqual([]);
+  });
+
+  it('omits a spell when no opponent is within range as a primary target', () => {
+    const candidates = buildChainSpellCandidates({
+      readyChainSpells: [chainLightning], opponents: [opponentOutOfRange3], actionsRemaining: 3
+    });
+    expect(candidates).toEqual([]);
+  });
+
+  it('offers a single-target candidate with an empty chain when no hop extension exists', () => {
+    const isolated = { ...chainLightning, chainGraph: { opp1: [] } };
+    const candidates = buildChainSpellCandidates({
+      readyChainSpells: [isolated], opponents: [opponentInRange1], actionsRemaining: 3
+    });
+    expect(candidates).toEqual([
+      {
+        id: 'castChain:chain-lightning:opp1', type: 'castChain',
+        spellId: 'sp1', entryId: 'entry1', cost: 2, save: 'reflex', basic: true,
+        targetId: 'opp1', chainedIds: [],
+        summary: 'Chain Lightning vs Fighter'
+      }
+    ]);
   });
 });
 

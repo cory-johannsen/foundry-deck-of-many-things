@@ -28,6 +28,7 @@ import {
   parseConditionsByOutcome,
   hasSpellUsesRemaining,
   parseBreathWeaponEffect,
+  parseChainHopDistance,
 } from "./agent-candidates.mjs";
 import { findPath, blockedEdgesFromWalls } from "./pathfinding.mjs";
 import { coverBlocksLineOfFire, COVER_EFFECT_DATA } from "./cover-items.mjs";
@@ -579,6 +580,27 @@ function isDebuffSpellInScope(spell) {
   return /@UUID\[Compendium\.pf2e\.conditionitems\.Item\.[^\]]+\]\{[^}]+\}/.test(
     system.description?.value ?? "",
   );
+}
+
+/**
+ * True for a spell squarely inside #127's scope: a Chain Lightning-shaped
+ * chain spell — no area, save-based damage, a fixed 1/2/3 action cost, and
+ * a `target.value` of the exact "plus any number of additional creatures"
+ * shape #118's `isSpellInScope`/#119's area scope both explicitly exclude.
+ * Also requires a parseable hop distance (`parseChainHopDistance`), since
+ * without one there's no way to know how far the chain can reach between
+ * targets.
+ */
+function isChainSpellInScope(spell) {
+  const system = spell.system ?? {};
+  if (system.area != null) return false;
+  const targetValue = system.target?.value ?? "";
+  if (!/^1\s+creature/i.test(targetValue)) return false;
+  if (!/plus/i.test(targetValue) || !/additional/i.test(targetValue)) return false;
+  if (!system.defense?.save?.statistic) return false;
+  if (!Object.keys(system.damage ?? {}).length) return false;
+  if (!/^[123]$/.test(system.time?.value ?? "")) return false;
+  return parseChainHopDistance(system.description?.value ?? "") != null;
 }
 
 /**
@@ -1374,6 +1396,47 @@ export async function getPendingAgentTurn(combat) {
     )
     .filter(Boolean);
 
+  const readyChainSpells = (combatant.actor?.spellcasting?.contents ?? [])
+    .flatMap((entry) =>
+      (entry.spells?.contents ?? [])
+        .filter(isChainSpellInScope)
+        .filter(hasSpellUsesRemaining)
+        .map((spell) => {
+          const rangeSquares = spellRangeSquares(spell, gridDistanceFt);
+          if (rangeSquares == null) return null;
+          const hopDistanceFeet = parseChainHopDistance(
+            spell.system.description?.value ?? "",
+          );
+          const hopDistanceSquares = hopDistanceFeet / gridDistanceFt;
+          // Opponent-to-opponent hop adjacency only — allies are never
+          // included, so the greedy chain walk in buildChainSpellCandidates
+          // can never hop into one (the agreed ally-avoidance approach).
+          const chainGraph = {};
+          for (const from of rawOpponents) {
+            chainGraph[from.id] = rawOpponents
+              .filter((to) => to.id !== from.id)
+              .map((to) => ({
+                id: to.id,
+                name: to.name,
+                distanceSquares: chebyshevSquares(from.token, to.token, gridSize),
+              }))
+              .filter((o) => o.distanceSquares <= hopDistanceSquares);
+          }
+          return {
+            id: spell.id,
+            slug: spell.slug,
+            label: spell.name,
+            cost: Number(spell.system.time.value),
+            rangeSquares,
+            save: spell.system.defense.save.statistic,
+            basic: spell.system.defense.save.basic,
+            entryId: entry.id,
+            chainGraph,
+          };
+        }),
+    )
+    .filter(Boolean);
+
   const readyBreathWeapons = [];
   for (const item of combatant.actor?.items ?? []) {
     if (!isBreathWeaponInScope(item)) continue;
@@ -1416,6 +1479,7 @@ export async function getPendingAgentTurn(combat) {
     readyAttackSpells,
     readyDebuffSpells,
     readyBreathWeapons,
+    readyChainSpells,
     turnState,
     hazard: null,
     hasRangedOrReach,
@@ -1784,6 +1848,71 @@ async function castDebuffSpellAndApplyCondition(
 }
 
 /**
+ * Casts a chain spell at `orderedTargets[0]` (the primary target), then
+ * rolls each target's own save and applies outcome-scaled damage in chain
+ * order, stopping early the moment a target critically succeeds — matching
+ * Chain Lightning's own rule ("the chain ends if any one of the targets
+ * critically succeeds"). Deliberately does *not* implement "roll the
+ * damage only once, and apply it to each target" from the spell's rules
+ * text: confirmed live that reconstructing a shared already-rolled total as
+ * a fresh per-target `DamageRoll` for independent outcome scaling silently
+ * drops IWR handling (a resistant target took full, un-reduced damage) —
+ * so each target's damage is rolled independently via `spell.rollDamage()`,
+ * the same already-proven per-target mechanism #119's
+ * `castAreaSpellAndApplySaves` uses. A small, disclosed deviation from
+ * strict rules text in favor of correctness.
+ */
+async function castChainSpellAndApplySaves(combatant, orderedTargets, spellId, entryId, save) {
+  const entry = combatant.actor?.spellcasting?.contents?.find(
+    (e) => e.id === entryId,
+  );
+  const spell = entry?.spells?.contents?.find((s) => s.id === spellId);
+  if (!entry || !spell || !orderedTargets.length) return null;
+
+  const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
+  const prevShowDamage = game.user.flags?.pf2e?.settings?.showDamageDialogs;
+  await game.user.update({
+    "flags.pf2e.settings.showCheckDialogs": false,
+    "flags.pf2e.settings.showDamageDialogs": false,
+  });
+  try {
+    const primaryRef = { document: orderedTargets[0].token };
+    await entry.cast(spell, { target: primaryRef, createMessage: true });
+    const dc = entry.statistic?.dc?.value ?? 10;
+    const outcomes = [];
+    for (const target of orderedTargets) {
+      const saveStat = target.actor?.saves?.[save];
+      if (!saveStat) continue;
+      const targetRef = { document: target.token };
+      await saveStat.roll({ dc: { value: dc }, createMessage: true });
+      const outcome =
+        game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
+      const damageRoll = await spell.rollDamage?.({
+        target: targetRef,
+        outcome,
+        createMessage: true,
+      });
+      if (damageRoll) {
+        await target.actor.applyDamage({
+          damage: damageRoll,
+          token: target.token,
+          outcome,
+        });
+        await applyDefeatIfReducedToZero(target);
+      }
+      outcomes.push({ targetId: target.id, outcome });
+      if (outcome === "criticalSuccess") break;
+    }
+    return outcomes;
+  } finally {
+    await game.user.update({
+      "flags.pf2e.settings.showCheckDialogs": prevShowCheck,
+      "flags.pf2e.settings.showDamageDialogs": prevShowDamage,
+    });
+  }
+}
+
+/**
  * Rolls each of `targets`' own saves against `dc` and applies
  * basic-save-scaled damage on any outcome but a critical success, then
  * records the ability's recharge timer. Unlike every spell execution
@@ -1988,6 +2117,21 @@ export async function applyAgentDecision(
         candidate.save,
         candidate.dc,
         candidate.rechargeFormula,
+      );
+  } else if (candidate.type === "castChain") {
+    const opponentsById = new Map(
+      combatantOpponents(combat, combatant).map((c) => [c.id, c]),
+    );
+    const orderedTargets = [candidate.targetId, ...candidate.chainedIds]
+      .map((id) => opponentsById.get(id))
+      .filter(Boolean);
+    if (orderedTargets.length)
+      await castChainSpellAndApplySaves(
+        combatant,
+        orderedTargets,
+        candidate.spellId,
+        candidate.entryId,
+        candidate.save,
       );
   }
 
