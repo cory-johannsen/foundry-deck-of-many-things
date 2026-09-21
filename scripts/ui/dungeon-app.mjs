@@ -274,6 +274,24 @@ export async function continueNarrativeRoom(sceneId, objective) {
   await resolveCurrentRoom(true, { scene: game.scenes.get(sceneId) });
 }
 
+/**
+ * A choice-archetype narrative room's own resolution (#208) — sets the
+ * run's objective directly from the picked option's own `consequence` text
+ * instead of a free-typed one (the branch IS the objective for this
+ * archetype), then always resolves succeeded, same as every other
+ * narrative room (#163) — a narrative beat still has nothing to fail;
+ * branching only ever changes which objective gets set, never the room's
+ * own Reward-side Journey Spread outcome.
+ */
+export async function chooseNarrativeOption(sceneId, optionIndex) {
+  const scene = game.scenes.get(sceneId);
+  const state = scene ? getRunState(sceneId) : null;
+  const option =
+    state?.rooms[state.currentIndex]?.narrative?.options?.[optionIndex];
+  if (option) await setObjective(sceneId, option.consequence);
+  await resolveCurrentRoom(true, { scene });
+}
+
 export async function resolveCombatRoomOutcome(sceneId, succeeded) {
   const scene = game.scenes.get(sceneId);
   const state = scene ? getRunState(sceneId) : null;
@@ -364,6 +382,7 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       attemptSkillChallenge: DungeonApp.#onAttemptSkillChallenge,
       attemptPuzzleStage: DungeonApp.#onAttemptPuzzleStage,
       continueNarrative: DungeonApp.#onContinueNarrative,
+      chooseNarrativeOption: DungeonApp.#onChooseNarrativeOption,
       claimTreasure: DungeonApp.#onClaimTreasure,
     },
   };
@@ -877,6 +896,29 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       await requestDungeonAction("continueNarrativeRoom", {
         sceneId,
         objective,
+      });
+    }
+    this.render();
+  }
+
+  /**
+   * A choice-archetype narrative room's own resolution (#208) — see
+   * chooseNarrativeOption's own comment for what picking an option does.
+   * `target.dataset.optionIndex` is set per-button by the template's own
+   * `{{@index}}`, same indexed-dataset pattern #137's puzzle-stage buttons
+   * already use.
+   */
+  static async #onChooseNarrativeOption(event, target) {
+    const sceneId = canvas?.scene?.id;
+    if (!sceneId) return;
+    const optionIndex = Number(target?.dataset?.optionIndex);
+    if (Number.isNaN(optionIndex)) return;
+    if (game.user.isGM) {
+      await chooseNarrativeOption(sceneId, optionIndex);
+    } else {
+      await requestDungeonAction("chooseNarrativeOption", {
+        sceneId,
+        optionIndex,
       });
     }
     this.render();
