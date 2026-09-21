@@ -101,6 +101,23 @@ describe("initPuzzleState", () => {
     expect(state.stages[0].dc).toBe(10);
   });
 
+  it("persists name/summary and starts with an empty stageFlavor map, for #139's customization to land on", () => {
+    const state = initPuzzleState({
+      hintChecks: HINT_CHECKS,
+      name: "The Perfect Hand",
+      summary: "A statue holds one card.",
+    });
+    expect(state.name).toBe("The Perfect Hand");
+    expect(state.summary).toBe("A statue holds one card.");
+    expect(state.stageFlavor).toEqual({});
+  });
+
+  it("defaults name/summary to null when not given", () => {
+    const state = initPuzzleState({ hintChecks: HINT_CHECKS });
+    expect(state.name).toBeNull();
+    expect(state.summary).toBeNull();
+  });
+
   it("scales every stage's dc to simpleDcForLevel(partyLevel), ignoring the template's own flat dc, when given", () => {
     const state = initPuzzleState({
       hintChecks: [
