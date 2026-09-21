@@ -25,6 +25,7 @@ import {
   initSkillChallengeState,
   applySkillChallengeAttempt,
 } from "./skill-challenge-mechanics.mjs";
+import { initPuzzleState, applyPuzzleStageAttempt } from "./puzzle-mechanics.mjs";
 
 const MODULE_ID = "deck-of-many-more-things";
 
@@ -486,6 +487,68 @@ export async function recordSkillChallengeAttempt(
   const rooms = state.rooms.map((r) =>
     r.id === roomId ? { ...r, challenge } : r,
   );
+  const newState = { ...state, rooms };
+  await persist(sceneId, newState, settingsRef);
+  return newState;
+}
+
+/**
+ * Lazily attaches fresh puzzle state (#137) to `roomId`'s own room object
+ * the first time it's needed — a no-op if that room already has one, the
+ * same read-mutate-persist wrapper `ensureSkillChallenge` already uses
+ * around `initSkillChallengeState`, here around `initPuzzleState`
+ * instead. `hintChecks`/`requiredSuccesses` come from the room's own
+ * resolved `puzzle`-kind setpiece (the caller's job to have looked that up
+ * — `dungeon-setpieces.json` entries aren't loaded from here).
+ *
+ * Also flags the new puzzle `customization: {status: 'pending'}`, the
+ * same seam `ensureSkillChallenge` already leaves for #166's agent-bridge
+ * hook — #139 (this puzzle line's own agent-customization issue) is what
+ * actually builds the read/apply pair for it; this only leaves the flag
+ * in place so #139 has a stable spot to land without needing to touch
+ * this function again.
+ */
+export async function ensurePuzzleState(
+  sceneId,
+  roomId,
+  { hintChecks, requiredSuccesses = null },
+  { settingsRef = defaultSettingsRef() } = {},
+) {
+  const state = getRunState(sceneId, { settingsRef });
+  if (!state) return null;
+  const room = state.rooms.find((r) => r.id === roomId);
+  if (!room || room.puzzle) return state;
+  const puzzle = {
+    ...initPuzzleState({ hintChecks, requiredSuccesses }),
+    customization: { status: "pending" },
+  };
+  const rooms = state.rooms.map((r) => (r.id === roomId ? { ...r, puzzle } : r));
+  const newState = { ...state, rooms };
+  await persist(sceneId, newState, settingsRef);
+  return newState;
+}
+
+/**
+ * Records one resolved puzzle-stage attempt (#137) against `roomId`'s own
+ * puzzle state — a no-op if that room has no puzzle attached yet
+ * (`ensurePuzzleState` never ran) or it's already resolved
+ * (`applyPuzzleStageAttempt` itself is already a no-op past that point
+ * too, and also a no-op for an already-attempted stage; this wrapper just
+ * avoids the pointless persist for the "no puzzle/already resolved" case).
+ */
+export async function recordPuzzleStageAttempt(
+  sceneId,
+  roomId,
+  stageIndex,
+  outcome,
+  { settingsRef = defaultSettingsRef() } = {},
+) {
+  const state = getRunState(sceneId, { settingsRef });
+  if (!state) return null;
+  const room = state.rooms.find((r) => r.id === roomId);
+  if (!room?.puzzle || room.puzzle.resolved) return state;
+  const puzzle = applyPuzzleStageAttempt(room.puzzle, stageIndex, outcome);
+  const rooms = state.rooms.map((r) => (r.id === roomId ? { ...r, puzzle } : r));
   const newState = { ...state, rooms };
   await persist(sceneId, newState, settingsRef);
   return newState;
