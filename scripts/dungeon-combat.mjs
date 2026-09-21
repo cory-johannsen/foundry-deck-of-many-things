@@ -246,6 +246,15 @@ async function resolveCombat(combat, outcome, api) {
   // data and repoints the existing token at it, rather than updating in
   // place. Ownership defaults to full Owner so any player can loot it
   // immediately with no further GM permission step.
+  // Captured before the loop below repoints any token: `Combatant#actor`
+  // resolves through its token, so reading `.actor.id` *after* a repoint
+  // would return the new loot actor's own id instead of the original
+  // hostile's — live-reproduced by Task 5's verifier as a real bug where
+  // the just-created loot actor got deleted instead of the orphaned
+  // original, leaving the corpse token pointed at nothing.
+  const lootedOriginalActorIds = defeatedHostileCombatants
+    .map((c) => c.actor.id)
+    .filter(Boolean);
   for (const combatant of defeatedHostileCombatants) {
     const source = combatant.actor.toObject();
     const lootItems = source.items.filter((i) =>
@@ -263,9 +272,6 @@ async function resolveCombat(combat, outcome, api) {
     ]);
     await combatant.token.update({ actorId: lootActor.id });
   }
-  const lootedOriginalActorIds = defeatedHostileCombatants
-    .map((c) => c.actor.id)
-    .filter(Boolean);
   if (lootedOriginalActorIds.length)
     await Actor.deleteDocuments(lootedOriginalActorIds);
   await combat.delete();
