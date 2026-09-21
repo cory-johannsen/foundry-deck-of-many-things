@@ -4542,5 +4542,317 @@
     "name": "Vishkanya Infiltrator",
     "level": 3,
     "art": "vishkanya-infiltrator.webp"
+  },
+  {
+    "id": "abrikandilu",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "zfy0YOxEAMaeHAWI",
+    "name": "Abrikandilu",
+    "level": 4,
+    "art": "abrikandilu.webp"
+  },
+  {
+    "id": "aghash",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "2Uz8i4Q3xaECmemr",
+    "name": "Aghash",
+    "level": 4,
+    "art": "aghash.webp"
+  },
+  {
+    "id": "alce",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "nlnPjvP35lPLUYQp",
+    "name": "Alce",
+    "level": 4,
+    "art": "alce.webp"
+  },
+  {
+    "id": "amphisbaena",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "TbgHiHtPCK59KStC",
+    "name": "Amphisbaena",
+    "level": 4,
+    "art": "amphisbaena.webp"
+  },
+  {
+    "id": "aphorite_sharpshooter",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "Yei6zuiycFTzNMvN",
+    "name": "Aphorite Sharpshooter",
+    "level": 4,
+    "art": "aphorite-sharpshooter.webp"
+  },
+  {
+    "id": "arboreal_warden",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "0rm0UDbXvwg4sSxQ",
+    "name": "Arboreal Warden",
+    "level": 4,
+    "art": "arboreal-warden.webp"
+  },
+  {
+    "id": "attic_whisperer",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "mtRofD6H5BEDHHSm",
+    "name": "Attic Whisperer",
+    "level": 4,
+    "art": "attic-whisperer.webp"
+  },
+  {
+    "id": "barghest_b1",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "x4mlZseBP5bWcy4H",
+    "name": "Barghest",
+    "level": 4,
+    "art": "barghest-b1.webp"
+  },
+  {
+    "id": "beast_tamer",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "eF87AWFclYpu1cgD",
+    "name": "Beast Tamer",
+    "level": 4,
+    "art": "beast-tamer.webp"
+  },
+  {
+    "id": "bison",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "z2qSD3VrlRsXGHT5",
+    "name": "Bison",
+    "level": 4,
+    "art": "bison.webp"
+  },
+  {
+    "id": "bounty_hunter",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "dNATu2RQLFYY3hYn",
+    "name": "Bounty Hunter",
+    "level": 4,
+    "art": "bounty-hunter.webp"
+  },
+  {
+    "id": "burglar",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "sSa18Ra6zGc4Mp71",
+    "name": "Burglar",
+    "level": 4,
+    "art": "burglar.webp"
+  },
+  {
+    "id": "calathgar",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "DC9b8mG1KdyXZkLp",
+    "name": "Calathgar",
+    "level": 4,
+    "art": "calathgar.webp"
+  },
+  {
+    "id": "caligni_hunter",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "AcUb8s5fiktYw8Fx",
+    "name": "Caligni Hunter",
+    "level": 4,
+    "art": "caligni-hunter.webp"
+  },
+  {
+    "id": "daeodon",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "v4KP0HYaygoFOIlo",
+    "name": "Daeodon",
+    "level": 4,
+    "art": "daeodon.webp"
+  },
+  {
+    "id": "demolitionist",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "ICvWcraGWylA1k9d",
+    "name": "Demolitionist",
+    "level": 4,
+    "art": "demolitionist.webp"
+  },
+  {
+    "id": "dwarf_stonecaster",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "nEB0UekUmP5L8Tj8",
+    "name": "Dwarf Stonecaster",
+    "level": 4,
+    "art": "dwarf-stonecaster.webp"
+  },
+  {
+    "id": "earthen_destrier",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "WrczIpL6U4KotDD0",
+    "name": "Earthen Destrier",
+    "level": 4,
+    "art": "earthen-destrier.webp"
+  },
+  {
+    "id": "enigmatic_conspirant",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "9ZKIadbfdzrJJGOk",
+    "name": "Enigmatic Conspirant",
+    "level": 4,
+    "art": "enigmatic-conspirant.webp"
+  },
+  {
+    "id": "equestrian_constable",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "nVV8UBPEB9gHOh1R",
+    "name": "Equestrian Constable",
+    "level": 4,
+    "art": "equestrian-constable.webp"
+  },
+  {
+    "id": "exuberant_apprentice",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "7A0foSLz3KU3G4jL",
+    "name": "Exuberant Apprentice",
+    "level": 4,
+    "art": "exuberant-apprentice.webp"
+  },
+  {
+    "id": "false_priest",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "OAxxUyACpMlX3q1X",
+    "name": "False Priest",
+    "level": 4,
+    "art": "false-priest.webp"
+  },
+  {
+    "id": "filth_fire",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "vdXh2dETJ21UlgUg",
+    "name": "Filth Fire",
+    "level": 4,
+    "art": "filth-fire.webp"
+  },
+  {
+    "id": "flytrap_leshy",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "vHTvuteLd2kYX3ib",
+    "name": "Flytrap Leshy",
+    "level": 4,
+    "art": "flytrap-leshy.webp"
+  },
+  {
+    "id": "gancanagh",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "hGYIynV60GGfg8Du",
+    "name": "Gancanagh",
+    "level": 4,
+    "art": "gancanagh.webp"
+  },
+  {
+    "id": "gargoyle",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "cvfIkEF6xmWn2soN",
+    "name": "Gargoyle",
+    "level": 4,
+    "art": "gargoyle.webp"
+  },
+  {
+    "id": "ghost_commoner",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "N98ug9jQHqeFoK1N",
+    "name": "Ghost Commoner",
+    "level": 4,
+    "art": "ghost-commoner.webp"
+  },
+  {
+    "id": "giant_dragonfly",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "8abNns0wcbPMYpRD",
+    "name": "Giant Dragonfly",
+    "level": 4,
+    "art": "giant-dragonfly.webp"
+  },
+  {
+    "id": "giant_pangolin",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "c7kP2W6zaZA9oxAd",
+    "name": "Giant Pangolin",
+    "level": 4,
+    "art": "giant-pangolin.webp"
+  },
+  {
+    "id": "giant_stag_beetle",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "MkupNnMKqDBElhhp",
+    "name": "Giant Stag Beetle",
+    "level": 4,
+    "art": "giant-stag-beetle.webp"
+  },
+  {
+    "id": "giant_wolverine",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "MCZgXBC0I4Oovcjd",
+    "name": "Giant Wolverine",
+    "level": 4,
+    "art": "giant-wolverine.webp"
+  },
+  {
+    "id": "gigantopithecus",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "4GXL5FLmN7IxPzVC",
+    "name": "Gigantopithecus",
+    "level": 4,
+    "art": "gigantopithecus.webp"
+  },
+  {
+    "id": "goblin_scavenger",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "Vi0Ydmt5JGqjWhpA",
+    "name": "Goblin Scavenger",
+    "level": 4,
+    "art": "goblin-scavenger.webp"
+  },
+  {
+    "id": "gray_ooze",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "V6OBYa51VcehPj22",
+    "name": "Gray Ooze",
+    "level": 4,
+    "art": "gray-ooze.webp"
+  },
+  {
+    "id": "great_white_shark",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "uNNOQFvuMq8ZsQkn",
+    "name": "Great White Shark",
+    "level": 4,
+    "art": "great-white-shark.webp"
+  },
+  {
+    "id": "green_hag",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "3nOBhH8j9I7ps6fC",
+    "name": "Green Hag",
+    "level": 4,
+    "art": "green-hag.webp"
+  },
+  {
+    "id": "griffon",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "gWgMg7cARqOe82O6",
+    "name": "Griffon",
+    "level": 4,
+    "art": "griffon.webp"
+  },
+  {
+    "id": "guide",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "ndCqM6yNTg2QPZwK",
+    "name": "Guide",
+    "level": 4,
+    "art": "guide.webp"
+  },
+  {
+    "id": "hadrosaurid",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "3zqVFz4FfRYv5Sgy",
+    "name": "Hadrosaurid",
+    "level": 4,
+    "art": "hadrosaurid.webp"
   }
 ]
