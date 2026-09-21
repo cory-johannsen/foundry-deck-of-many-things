@@ -30,6 +30,7 @@ import {
   parseBreathWeaponEffect,
   parseChainHopDistance,
   parseAreaSpellTierOverrides,
+  parseActionGlyphTiers,
 } from "./agent-candidates.mjs";
 import { findPath, blockedEdgesFromWalls } from "./pathfinding.mjs";
 import { coverBlocksLineOfFire, COVER_EFFECT_DATA } from "./cover-items.mjs";
@@ -477,6 +478,46 @@ function spellRangeSquares(spell, gridDistanceFt) {
 }
 
 /**
+ * True for a spell squarely inside #174's scope: a dual-nature spell whose
+ * SHAPE changes with action cost, not just its magnitude — Harm/Heal-
+ * shaped, confirmed live as the only real examples: single-target at 1-2
+ * actions, a self-centered area at 3, living creatures take one effect and
+ * undead take the opposite. Detected structurally, not by spell name: a
+ * genuinely variable cost ("1 to 3"), a `defense.save` statistic, a single
+ * damage instance, `target.value` mentioning both "living" and "undead"
+ * (the dual-nature signal — #122's own broadened single-target regex also
+ * matches Harm/Heal's target text, but doesn't distinguish a dual-nature
+ * spell from an ordinary one), and at least one action-glyph tier
+ * (`parseActionGlyphTiers`) carrying an `area` — the actual shape-change
+ * signal, mirroring #140's `isTierScalingAreaSpellInScope`'s own "at least
+ * one parseable override" gate.
+ */
+function isDualNatureTieredSpellInScope(spell) {
+  const system = spell.system ?? {};
+  if (!/^[123]\s+to\s+[123]$/.test(system.time?.value ?? "")) return false;
+  if (!system.defense?.save?.statistic) return false;
+  if (Object.keys(system.damage ?? {}).length !== 1) return false;
+  const targetValue = system.target?.value ?? "";
+  if (!/living/i.test(targetValue) || !/undead/i.test(targetValue))
+    return false;
+  const tiers = parseActionGlyphTiers(system.description?.value ?? "");
+  return Object.values(tiers).some((t) => t.area != null);
+}
+
+/**
+ * Which creature type a #174-scoped dual-nature spell's damage side
+ * targets — derived from the `healing` trait, the same signal #132 already
+ * uses to tell Harm and Heal apart: Heal (has `healing`) heals the living
+ * and damages the undead; Harm (no `healing` trait) damages the living and
+ * heals the undead.
+ */
+function dualNatureHarmfulTrait(spell) {
+  return spell.system?.traits?.value?.includes("healing")
+    ? "undead"
+    : "living";
+}
+
+/**
  * True for a spell squarely inside #122's *fixed-at-minimum-cost* scope:
  * otherwise shaped exactly like #118's single-target save-based damage
  * spells, but with a genuinely variable `time.value` ("1 to 3", not "1 to
@@ -496,11 +537,15 @@ function spellRangeSquares(spell, gridDistanceFt) {
  * live that casting it at a living enemy this way produces zero effect
  * rather than damage, since its damage roll carries ambiguous
  * `kinds: ["damage", "healing"]` — Harm has no `healing` trait and stays
- * in scope.
+ * in scope. Also excludes any #174-scoped dual-nature tiered spell (Harm
+ * itself, once #174 shipped) — superseded by its own dedicated multi-tier
+ * pathway, which this fixed-at-minimum-cost filter would otherwise offer
+ * as a redundant, strictly-worse 1-action-only duplicate candidate.
  */
 function isVariableCostSpellInScope(spell) {
   const system = spell.system ?? {};
   if (system.traits?.value?.includes("healing")) return false;
+  if (isDualNatureTieredSpellInScope(spell)) return false;
   if (system.area != null) return false;
   const targetValue = system.target?.value ?? "";
   if (
@@ -668,10 +713,14 @@ function isDebuffSpellInScope(spell) {
  * Soothing Ballad's shape) — single-ally healing only for v1, matching
  * every other slice's narrow-first pattern; ally buffs (a different
  * mechanic — typically unconditional, no save) are a separate follow-up.
+ * Also excludes any #174-scoped dual-nature tiered spell (Heal, once #174
+ * shipped) for the same reason #122's filter does — superseded by its own
+ * dedicated multi-tier pathway.
  */
 function isHealSpellInScope(spell) {
   const system = spell.system ?? {};
   if (!system.traits?.value?.includes("healing")) return false;
+  if (isDualNatureTieredSpellInScope(spell)) return false;
   if (system.area != null) return false;
   const targetValue = system.target?.value ?? "";
   if (!/^1\b/.test(targetValue)) return false;
@@ -1661,6 +1710,109 @@ export async function getPendingAgentTurn(combat) {
     )
     .filter(Boolean);
 
+  // One entry per #174-scoped dual-nature tiered spell (Harm/Heal-shaped).
+  // Unlike every other ready-spell block, this one draws from BOTH
+  // rawOpponents and rawAllies for every tier, since which pool a target
+  // is valid FROM depends on the effect it would receive, not on the
+  // spell's usual "opponents only" or "allies only" convention: the
+  // harm-direction effect only ever targets opponents (never harm an
+  // ally), the heal-direction effect only ever targets allies at the
+  // single-target tiers (never heal an opponent) - confirmed live via
+  // isUndeadCombatant/dualNatureHarmfulTrait's polarity split - but the
+  // 3-action area tier hits BOTH pools without discrimination by
+  // allegiance at all, per the spell's own text ("targets all living and
+  // undead creatures in the area", no willingness/allegiance
+  // qualifier there unlike the single-target tiers' "willing undead
+  // creature" phrasing) - a real, deliberate risk/reward tradeoff RAW
+  // itself describes, not a gap in this module's own targeting logic.
+  const isUndeadCombatant = (c) =>
+    c.actor?.system?.traits?.value?.includes("undead") ?? false;
+  const isBelowMaxHp = (c) =>
+    (c.actor?.system?.attributes?.hp?.value ?? 0) <
+    (c.actor?.system?.attributes?.hp?.max ?? 0);
+
+  const readyDualNatureSpells = (combatant.actor?.spellcasting?.contents ?? [])
+    .flatMap((entry) =>
+      (entry.spells?.contents ?? [])
+        .filter(isDualNatureTieredSpellInScope)
+        .filter(hasSpellUsesRemaining)
+        .map((spell) => {
+          const tiers = parseActionGlyphTiers(
+            spell.system.description?.value ?? "",
+          );
+          const harmfulTrait = dualNatureHarmfulTrait(spell);
+          const polarity = (c) =>
+            isUndeadCombatant(c) === (harmfulTrait === "undead")
+              ? "harm"
+              : "heal";
+
+          const singleTargetTiers = [];
+          for (const cost of [1, 2]) {
+            const tier = tiers[cost];
+            if (!tier || tier.area != null || tier.rangeFeet == null)
+              continue;
+            const rangeSquares =
+              tier.rangeFeet === "touch"
+                ? MELEE_REACH_SQUARES
+                : tier.rangeFeet / gridDistanceFt;
+            const harmTargets = rawOpponents
+              .filter(
+                (o) =>
+                  polarity(o) === "harm" &&
+                  chebyshevSquares(combatant.token, o.token, gridSize) <=
+                    rangeSquares,
+              )
+              .map((o) => ({ id: o.id, name: o.name }));
+            const healTargets = rawAllies
+              .filter(
+                (a) =>
+                  polarity(a) === "heal" &&
+                  isBelowMaxHp(a) &&
+                  chebyshevSquares(combatant.token, a.token, gridSize) <=
+                    rangeSquares,
+              )
+              .map((a) => ({ id: a.id, name: a.name }));
+            singleTargetTiers.push({
+              cost,
+              bonus: tier.bonus ?? 0,
+              harmTargets,
+              healTargets,
+            });
+          }
+
+          let areaTier = null;
+          const areaTierRaw = tiers[3];
+          if (areaTierRaw?.area) {
+            const radiusSquares = areaTierRaw.area.value / gridDistanceFt;
+            const allNearby = [...rawOpponents, ...rawAllies].filter(
+              (c) =>
+                chebyshevSquares(combatant.token, c.token, gridSize) <=
+                radiusSquares,
+            );
+            const harmTargets = allNearby
+              .filter((c) => polarity(c) === "harm")
+              .map((c) => ({ id: c.id, name: c.name }));
+            const healTargets = allNearby
+              .filter((c) => polarity(c) === "heal" && isBelowMaxHp(c))
+              .map((c) => ({ id: c.id, name: c.name }));
+            areaTier = { cost: areaTierRaw.cost, harmTargets, healTargets };
+          }
+
+          if (!singleTargetTiers.length && !areaTier) return null;
+          return {
+            id: spell.id,
+            slug: spell.slug,
+            label: spell.name,
+            entryId: entry.id,
+            save: spell.system.defense.save.statistic,
+            basic: spell.system.defense.save.basic,
+            singleTargetTiers,
+            areaTier,
+          };
+        }),
+    )
+    .filter(Boolean);
+
   const readyBreathWeapons = [];
   for (const item of combatant.actor?.items ?? []) {
     if (!isBreathWeaponInScope(item)) continue;
@@ -1708,6 +1860,7 @@ export async function getPendingAgentTurn(combat) {
     readyChainSpells,
     readyHealSpells,
     readyTierScalingAreaSpells,
+    readyDualNatureSpells,
     allies,
     turnState,
     hazard: null,
@@ -2280,6 +2433,145 @@ async function castHealSpellAndApply(combatant, target, spellId, entryId) {
 }
 
 /**
+ * The single-target healing-direction execution for a #174-scoped
+ * dual-nature spell (`castDualHeal`) — structurally identical to #132's
+ * `castHealSpellAndApply` (same manual roll-total-negation technique;
+ * confirmed live directly for #174 that BOTH opposite-polarity healing
+ * cases, Harm-heals-undead and Heal-heals-living, hit the exact same
+ * ambiguous-`kinds` no-op the standard roll-object `applyDamage` path
+ * always produces for a healing-direction roll, spell-trait-agnostic — not
+ * kept as a single shared helper with #132's version only because that
+ * function is already shipped and tested on its own narrower contract;
+ * this one adds the tier's own flat `bonus` (#174's 2-action "+8" clause,
+ * confirmed live only ever attached to a single-target healing tier, never
+ * the area tier) before negating.
+ */
+async function castDualHealAndApply(combatant, target, spellId, entryId, bonus) {
+  const entry = combatant.actor?.spellcasting?.contents?.find(
+    (e) => e.id === entryId,
+  );
+  const spell = entry?.spells?.contents?.find((s) => s.id === spellId);
+  if (!entry || !spell) return null;
+
+  const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
+  const prevShowDamage = game.user.flags?.pf2e?.settings?.showDamageDialogs;
+  await game.user.update({
+    "flags.pf2e.settings.showCheckDialogs": false,
+    "flags.pf2e.settings.showDamageDialogs": false,
+  });
+  try {
+    const targetRef = { document: target.token };
+    await entry.cast(spell, { target: targetRef, createMessage: true });
+    const healRoll = await spell.rollDamage?.({
+      target: targetRef,
+      createMessage: true,
+    });
+    if (healRoll?.total != null) {
+      await target.actor.applyDamage({
+        damage: -(healRoll.total + bonus),
+        token: target.token,
+      });
+    }
+    return healRoll?.total != null ? healRoll.total + bonus : null;
+  } finally {
+    await game.user.update({
+      "flags.pf2e.settings.showCheckDialogs": prevShowCheck,
+      "flags.pf2e.settings.showDamageDialogs": prevShowDamage,
+    });
+  }
+}
+
+/**
+ * The 3-action area-tier execution for a #174-scoped dual-nature spell
+ * (`castDualArea`) — casts once (no single target, matching #119/#140's
+ * area-cast convention), then applies BOTH effects within the same cast:
+ * `harmTargets` roll their own basic Fortitude save and take
+ * outcome-scaled damage via the standard roll-object `applyDamage` path
+ * (confirmed live this works correctly for the damage direction
+ * regardless of which spell/target-type combination produces it, and
+ * `spell.rollDamage({target,outcome,...})` already applies basic-save
+ * halving/doubling internally — no manual `.alter()` needed, unlike #140's
+ * spells, since Harm/Heal's damage magnitude never varies by tier at all);
+ * `healTargets` get no save at all (confirmed live from the spell's own
+ * text - "restore that amount of Hit Points", no outcome dependency) and
+ * use #132's manual negation technique, with no bonus (the tier's own
+ * "+8" clause is confirmed live to never attach to the area tier).
+ */
+async function castDualAreaAndApply(
+  combatant,
+  harmTargets,
+  healTargets,
+  spellId,
+  entryId,
+  save,
+) {
+  const entry = combatant.actor?.spellcasting?.contents?.find(
+    (e) => e.id === entryId,
+  );
+  const spell = entry?.spells?.contents?.find((s) => s.id === spellId);
+  if (!entry || !spell) return null;
+
+  const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
+  const prevShowDamage = game.user.flags?.pf2e?.settings?.showDamageDialogs;
+  await game.user.update({
+    "flags.pf2e.settings.showCheckDialogs": false,
+    "flags.pf2e.settings.showDamageDialogs": false,
+  });
+  try {
+    await entry.cast(spell, { createMessage: true });
+    const dc = entry.statistic?.dc?.value ?? 10;
+    const outcomes = [];
+    for (const target of harmTargets) {
+      const saveStat = target.actor?.saves?.[save];
+      if (!saveStat) continue;
+      const targetRef = { document: target.token };
+      await saveStat.roll({ dc: { value: dc }, createMessage: true });
+      const outcome =
+        game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
+      playSpellSaveSound(outcome);
+      const damageRoll = await spell.rollDamage?.({
+        target: targetRef,
+        outcome,
+        createMessage: true,
+      });
+      if (damageRoll) {
+        await target.actor.applyDamage({
+          damage: damageRoll,
+          token: target.token,
+          outcome,
+        });
+        await applyDefeatIfReducedToZero(target);
+      }
+      outcomes.push({ targetId: target.id, effect: "harm", outcome });
+    }
+    for (const target of healTargets) {
+      const targetRef = { document: target.token };
+      const healRoll = await spell.rollDamage?.({
+        target: targetRef,
+        createMessage: true,
+      });
+      if (healRoll?.total != null) {
+        await target.actor.applyDamage({
+          damage: -healRoll.total,
+          token: target.token,
+        });
+      }
+      outcomes.push({
+        targetId: target.id,
+        effect: "heal",
+        healed: healRoll?.total ?? null,
+      });
+    }
+    return outcomes;
+  } finally {
+    await game.user.update({
+      "flags.pf2e.settings.showCheckDialogs": prevShowCheck,
+      "flags.pf2e.settings.showDamageDialogs": prevShowDamage,
+    });
+  }
+}
+
+/**
  * Rolls each of `targets`' own saves against `dc` and applies
  * basic-save-scaled damage on any outcome but a critical success, then
  * records the ability's recharge timer. Unlike every spell execution
@@ -2523,6 +2815,60 @@ export async function applyAgentDecision(
         candidate.entryId,
         candidate.save,
         candidate.cost,
+      );
+  } else if (candidate.type === "castDualHarm") {
+    // The harm-direction effect only ever targets opponents (never an
+    // ally, per #174's design) at both single-target tiers, so this
+    // reuses #118's own castSpellAndApplySave unchanged - confirmed live
+    // its damage roll applies correctly through the standard IWR-
+    // respecting path regardless of which spell/creature-type combination
+    // produced it.
+    const target = combatantOpponents(combat, combatant).find(
+      (c) => c.id === candidate.targetId,
+    );
+    if (target)
+      await castSpellAndApplySave(
+        combatant,
+        target,
+        candidate.spellId,
+        candidate.entryId,
+        candidate.save,
+      );
+  } else if (candidate.type === "castDualHeal") {
+    const target = combatantAllies(combat, combatant).find(
+      (c) => c.id === candidate.targetId,
+    );
+    if (target)
+      await castDualHealAndApply(
+        combatant,
+        target,
+        candidate.spellId,
+        candidate.entryId,
+        candidate.bonus,
+      );
+  } else if (candidate.type === "castDualArea") {
+    // Unlike every other area candidate, this one draws from BOTH pools
+    // without allegiance discrimination (#174, per the spell's own RAW
+    // text) - harmIds/healIds may each contain a mix of opponent and
+    // ally ids.
+    const allNearby = [
+      ...combatantOpponents(combat, combatant),
+      ...combatantAllies(combat, combatant),
+    ];
+    const harmTargets = allNearby.filter((c) =>
+      candidate.harmIds.includes(c.id),
+    );
+    const healTargets = allNearby.filter((c) =>
+      candidate.healIds.includes(c.id),
+    );
+    if (harmTargets.length || healTargets.length)
+      await castDualAreaAndApply(
+        combatant,
+        harmTargets,
+        healTargets,
+        candidate.spellId,
+        candidate.entryId,
+        candidate.save,
       );
   }
 
