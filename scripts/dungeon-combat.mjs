@@ -39,6 +39,8 @@ import {
   playAttackSpellSound,
   playCreatureDeathSound,
 } from "./dungeon-sound.mjs";
+import { getRunState } from "./dungeon-runner.mjs";
+import { canActOnDungeon } from "./dungeon-permissions.mjs";
 
 const MODULE_ID = "deck-of-many-more-things";
 
@@ -257,7 +259,8 @@ export async function resolveSlotCombat(
  * it first (`game.combats` no longer has it).
  */
 async function autoResolveIfDecided(combat) {
-  if (!game.user.isGM || !game.combats.has(combat.id)) return null;
+  const run = combat.scene ? getRunState(combat.scene.id) : null;
+  if (!canActOnDungeon(run) || !game.combats.has(combat.id)) return null;
   const { hostilesDefeated, partyDefeated } = combatSideStatus(combat);
   if (!hostilesDefeated && !partyDefeated) return null;
   const outcome = hostilesDefeated ? "victory" : "defeat";
@@ -1298,7 +1301,8 @@ async function rollAndApplyStrike(combat, combatant, target) {
  * `nextTurn()` call — no explicit recursion needed here.
  */
 export async function autoPlayCombatantTurnIfDue(combat) {
-  if (!game.user.isGM || !isModuleCombat(combat)) return;
+  const run = combat.scene ? getRunState(combat.scene.id) : null;
+  if (!canActOnDungeon(run) || !isModuleCombat(combat)) return;
   const combatant = combat.combatant;
   if (
     !combatant ||
