@@ -6,7 +6,8 @@ import {
   parseConditionsByOutcome, hasSpellUsesRemaining,
   parseBreathWeaponEffect, buildBreathWeaponCandidates,
   parseChainHopDistance, buildChainSpellCandidates,
-  buildHealSpellCandidates, endTurnCandidate,
+  buildHealSpellCandidates,
+  parseAreaSpellTierOverrides, buildTierScalingAreaSpellCandidates, endTurnCandidate,
   buildCandidateList, applyCandidateToTurnState, buildDecisionContext,
   MAX_ACTIONS_PER_TURN, AGENT_MELEE_REACH_SQUARES
 } from '../scripts/agent-candidates.mjs';
@@ -198,6 +199,70 @@ describe('buildAreaSpellCandidates', () => {
     const candidates = buildAreaSpellCandidates({ readyAreaSpells: [moreEnemiesMoreAllies], actionsRemaining: 3 });
     expect(candidates[0].centerId).toBe('opp1');
     expect(candidates[0].affectedAllyIds).toEqual(['ally1', 'ally2']);
+  });
+});
+
+describe('parseAreaSpellTierOverrides', () => {
+  it('parses a real tier-scaling spell description (Wronged Monk\'s Wrath-shaped)', () => {
+    const description = "<p>You unleash your ki as a powerful storm of force and lightning, dealing 2d6 force damage and 2d12 electricity damage to creatures in the area.</p> <p>If you use 2 actions to cast the spell, increase the size of the emanation to 10 feet and the damage to 3d6 force damage and 3d12 electricity damage.</p> <p>If you use 3 actions to cast the spell, increase the size of the emanation to 20 feet and the damage to 4d6 force damage and 4d12 electricity damage.</p> <hr /> <p><strong>Heightened (+2)</strong> The force damage increases by 1d6 and the electricity damage by 1d12, or 2d6 and 2d12 if you use 2 or 3 actions</p>";
+    expect(parseAreaSpellTierOverrides(description)).toEqual({
+      2: { cost: 2, radiusFeet: 10, damage: [{ formula: '3d6', type: 'force' }, { formula: '3d12', type: 'electricity' }] },
+      3: { cost: 3, radiusFeet: 20, damage: [{ formula: '4d6', type: 'force' }, { formula: '4d12', type: 'electricity' }] }
+    });
+  });
+
+  it('returns an empty object when there is no tier-override phrasing at all', () => {
+    expect(parseAreaSpellTierOverrides('You deal 2d6 force damage to creatures in the area.')).toEqual({});
+  });
+
+  it('ignores a malformed tier clause missing a radius or damage', () => {
+    const description = 'If you use 2 actions to cast the spell, nothing useful happens here.';
+    expect(parseAreaSpellTierOverrides(description)).toEqual({});
+  });
+});
+
+describe('buildTierScalingAreaSpellCandidates', () => {
+  const opp1 = { id: 'opp1', name: 'Fighter' };
+  const opp2 = { id: 'opp2', name: 'Cleric' };
+
+  const tier1 = {
+    id: 'sp1', slug: 'wronged-monks-wrath-1action', label: "Wronged Monk's Wrath (1 action)",
+    cost: 1, save: 'reflex', basic: true, entryId: 'entry1',
+    placements: [{ centerType: 'self', centerId: null, affected: [opp1] }]
+  };
+  const tier2 = {
+    id: 'sp1', slug: 'wronged-monks-wrath-2action', label: "Wronged Monk's Wrath (2 actions)",
+    cost: 2, save: 'reflex', basic: true, entryId: 'entry1',
+    placements: [{ centerType: 'self', centerId: null, affected: [opp1, opp2] }]
+  };
+
+  it('offers one candidate per affordable tier', () => {
+    const candidates = buildTierScalingAreaSpellCandidates({ readyTierScalingAreaSpells: [tier1, tier2], actionsRemaining: 3 });
+    expect(candidates).toEqual([
+      {
+        id: 'castAreaTier:wronged-monks-wrath-1action:self', type: 'castAreaTier',
+        spellId: 'sp1', entryId: 'entry1', cost: 1, save: 'reflex', basic: true,
+        centerType: 'self', centerId: null, affectedIds: ['opp1'], affectedAllyIds: [],
+        summary: "Wronged Monk's Wrath (1 action) (hits Fighter)"
+      },
+      {
+        id: 'castAreaTier:wronged-monks-wrath-2action:self', type: 'castAreaTier',
+        spellId: 'sp1', entryId: 'entry1', cost: 2, save: 'reflex', basic: true,
+        centerType: 'self', centerId: null, affectedIds: ['opp1', 'opp2'], affectedAllyIds: [],
+        summary: "Wronged Monk's Wrath (2 actions) (hits Fighter, Cleric)"
+      }
+    ]);
+  });
+
+  it('omits a tier whose cost exceeds the actions remaining, keeping affordable ones', () => {
+    const candidates = buildTierScalingAreaSpellCandidates({ readyTierScalingAreaSpells: [tier1, tier2], actionsRemaining: 1 });
+    expect(candidates.map((c) => c.cost)).toEqual([1]);
+  });
+
+  it('omits a tier where every placement catches zero opponents', () => {
+    const emptyTier = { ...tier1, placements: [{ centerType: 'self', centerId: null, affected: [] }] };
+    const candidates = buildTierScalingAreaSpellCandidates({ readyTierScalingAreaSpells: [emptyTier], actionsRemaining: 3 });
+    expect(candidates).toEqual([]);
   });
 });
 
@@ -574,6 +639,17 @@ describe('buildCandidateList', () => {
     const turnState = { actionsRemaining: 3, mapIncrement: 0 };
     const candidates = buildCandidateList({ opponents: [opponent], readyActions: [claw], readyHealSpells: [heal], allies: [injuredAlly], turnState, hazard: null, hasRangedOrReach: false });
     expect(candidates.map((c) => c.id)).toEqual(['strike:claw:opp1', 'castHeal:heal:ally1', 'endTurn']);
+  });
+
+  it('includes an affordable tier-scaling area spell candidate alongside strikes', () => {
+    const tier1 = {
+      id: 'sp7', slug: 'wronged-monks-wrath-1action', label: "Wronged Monk's Wrath (1 action)",
+      cost: 1, save: 'reflex', basic: true, entryId: 'entry1',
+      placements: [{ centerType: 'self', centerId: null, affected: [{ id: 'opp1', name: 'Fighter' }] }]
+    };
+    const turnState = { actionsRemaining: 3, mapIncrement: 0 };
+    const candidates = buildCandidateList({ opponents: [opponent], readyActions: [claw], readyTierScalingAreaSpells: [tier1], turnState, hazard: null, hasRangedOrReach: false });
+    expect(candidates.map((c) => c.id)).toEqual(['strike:claw:opp1', 'castAreaTier:wronged-monks-wrath-1action:self', 'endTurn']);
   });
 });
 

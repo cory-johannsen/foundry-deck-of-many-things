@@ -72,3 +72,16 @@ retry opens a fresh connection instead. If it still won't recover after a
 relay blip, the terminal logs a louder warning once 10 poll cycles in a row
 have failed; at that point, restarting the process (`Ctrl-C`, then
 `node tools/agent-loop/poll.mjs` again) is the known-working fix.
+
+## Trap flavor customization (#136)
+
+Once per loop iteration, the poller also checks for a newly spawned,
+still-hidden trap (#135) waiting to be customized, and — if
+`ANTHROPIC_API_KEY` is configured — asks Claude to rewrite its name and
+flavor text to fit the room, before the party ever reaches its door. This
+is **always Claude, regardless of `DOMMT_AGENT_PROVIDER`**: Laya is a
+classifier over a fixed candidate set, not a text generator, so it can't do
+this at all. If the key isn't configured, or nothing responds before the
+room's reveal door opens, the trap just keeps its original compendium name
+and description — the same graceful degradation the combat-AI half already
+relies on, and never anything that blocks room reveal or discovery.

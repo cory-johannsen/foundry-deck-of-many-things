@@ -2550,5 +2550,325 @@
     "name": "Deinonychus",
     "level": 2,
     "art": "deinonychus.webp"
+  },
+  {
+    "id": "giant_flying_squirrel",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "abSsuJM94EvvyQYw",
+    "name": "Giant Flying Squirrel",
+    "level": 2,
+    "art": "giant-flying-squirrel.webp"
+  },
+  {
+    "id": "giant_leech",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "jREewNN2JDyTawa7",
+    "name": "Giant Leech",
+    "level": 2,
+    "art": "giant-leech.webp"
+  },
+  {
+    "id": "giant_monitor_lizard",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "oyfheSs1ta4xvtEg",
+    "name": "Giant Monitor Lizard",
+    "level": 2,
+    "art": "giant-monitor-lizard.webp"
+  },
+  {
+    "id": "giant_opossum",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "kmLBKW8e68HICZau",
+    "name": "Giant Opossum",
+    "level": 2,
+    "art": "giant-opossum.webp"
+  },
+  {
+    "id": "giant_porcupine",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "IijUBFE1vhvgowhD",
+    "name": "Giant Porcupine",
+    "level": 2,
+    "art": "giant-porcupine.webp"
+  },
+  {
+    "id": "giant_toad",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "Y1jsLqhsbqoXiGQe",
+    "name": "Giant Toad",
+    "level": 2,
+    "art": "giant-toad.webp"
+  },
+  {
+    "id": "giant_viper",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "AJ5LuNMVPLCydryP",
+    "name": "Giant Viper",
+    "level": 2,
+    "art": "giant-viper.webp"
+  },
+  {
+    "id": "gluttonyspawn",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "eke1AhiUjNPpyRhG",
+    "name": "Gluttonyspawn",
+    "level": 2,
+    "art": "gluttonyspawn.webp"
+  },
+  {
+    "id": "gnome_daredevil",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "TXu9W2jQezwQNT5k",
+    "name": "Gnome Daredevil",
+    "level": 2,
+    "art": "gnome-daredevil.webp"
+  },
+  {
+    "id": "greedspawn",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "pkhNqTDUttoAzcKn",
+    "name": "Greedspawn",
+    "level": 2,
+    "art": "greedspawn.webp"
+  },
+  {
+    "id": "halfling_head_chef",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "fDUocyyYWJU1grxV",
+    "name": "Halfling Head Chef",
+    "level": 2,
+    "art": "halfling-head-chef.webp"
+  },
+  {
+    "id": "hippogriff",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "eFGPKbhix65FSG9u",
+    "name": "Hippogriff",
+    "level": 2,
+    "art": "hippogriff.webp"
+  },
+  {
+    "id": "hryngar_taskmaster",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "eI6rRuxIPSZcm9OC",
+    "name": "Hryngar Taskmaster",
+    "level": 2,
+    "art": "hryngar-taskmaster.webp"
+  },
+  {
+    "id": "infantry_soldier",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "8ZkfzgUmN06j4jIu",
+    "name": "Infantry Soldier",
+    "level": 2,
+    "art": "infantry-soldier.webp"
+  },
+  {
+    "id": "ittan_momen",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "KG1Zu3EK0wrNdsQC",
+    "name": "Ittan-Momen",
+    "level": 2,
+    "art": "ittan-momen.webp"
+  },
+  {
+    "id": "juggler",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "zeu7M3M3wYt9O3M5",
+    "name": "Juggler",
+    "level": 2,
+    "art": "juggler.webp"
+  },
+  {
+    "id": "kholo_hunter",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "qOAuCiPgsjpjDgA1",
+    "name": "Kholo Hunter",
+    "level": 2,
+    "art": "kholo-hunter.webp"
+  },
+  {
+    "id": "kitsune_trickster",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "uvzy6nHGS430DEfC",
+    "name": "Kitsune Trickster",
+    "level": 2,
+    "art": "kitsune-trickster.webp"
+  },
+  {
+    "id": "kobold_cavern_mage",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "JFmFuoOzCwc3hA1H",
+    "name": "Kobold Cavern Mage",
+    "level": 2,
+    "art": "kobold-cavern-mage.webp"
+  },
+  {
+    "id": "kobold_dragon_mage_black",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "R9eoGwQ2tudxUKxS",
+    "name": "Kobold Dragon Mage (Black)",
+    "level": 2,
+    "art": "kobold-dragon-mage-black.webp"
+  },
+  {
+    "id": "kobold_dragon_mage_blue",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "93hZtLl9pRRfqI05",
+    "name": "Kobold Dragon Mage (Blue)",
+    "level": 2,
+    "art": "kobold-dragon-mage-blue.webp"
+  },
+  {
+    "id": "kobold_dragon_mage_green",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "QaldZV2p9RpMXzzn",
+    "name": "Kobold Dragon Mage (Green)",
+    "level": 2,
+    "art": "kobold-dragon-mage-green.webp"
+  },
+  {
+    "id": "kobold_dragon_mage_red",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "CJuHwIRCAgTB1SEl",
+    "name": "Kobold Dragon Mage (Red)",
+    "level": 2,
+    "art": "kobold-dragon-mage-red.webp"
+  },
+  {
+    "id": "kobold_dragon_mage_white",
+    "pack": "pf2e.pathfinder-bestiary",
+    "docId": "kCRfBZqCugMQmdpd",
+    "name": "Kobold Dragon Mage (White)",
+    "level": 2,
+    "art": "kobold-dragon-mage-white.webp"
+  },
+  {
+    "id": "kobold_trapper",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "nDVrJFeatah7dtvy",
+    "name": "Kobold Trapper",
+    "level": 2,
+    "art": "kobold-trapper.webp"
+  },
+  {
+    "id": "ledalusca",
+    "pack": "pf2e.pathfinder-bestiary-3",
+    "docId": "QYkuUQNVml878cIy",
+    "name": "Ledalusca",
+    "level": 2,
+    "art": "ledalusca.webp"
+  },
+  {
+    "id": "leopard",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "kB7FNn3vosp6cqQg",
+    "name": "Leopard",
+    "level": 2,
+    "art": "leopard.webp"
+  },
+  {
+    "id": "leprechaun",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "RY9Xm1B6NwWuChFs",
+    "name": "Leprechaun",
+    "level": 2,
+    "art": "leprechaun.webp"
+  },
+  {
+    "id": "living_boulder",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "Z6yCW77f44bEUgLH",
+    "name": "Living Boulder",
+    "level": 2,
+    "art": "living-boulder.webp"
+  },
+  {
+    "id": "lizardfolk_stargazer",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "gGdIV6uUHzX23vz6",
+    "name": "Lizardfolk Stargazer",
+    "level": 2,
+    "art": "lizardfolk-stargazer.webp"
+  },
+  {
+    "id": "loan_shark",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "SYrcABPch6qa61Tp",
+    "name": "Loan Shark",
+    "level": 2,
+    "art": "loan-shark.webp"
+  },
+  {
+    "id": "lustspawn",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "k4fqHhiax2GPrkbh",
+    "name": "Lustspawn",
+    "level": 2,
+    "art": "lustspawn.webp"
+  },
+  {
+    "id": "merfolk_wavecaller",
+    "pack": "pf2e.pathfinder-monster-core",
+    "docId": "IxezJU9rIKKyd3LY",
+    "name": "Merfolk Wavecaller",
+    "level": 2,
+    "art": "merfolk-wavecaller.webp"
+  },
+  {
+    "id": "morlock",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "DYBZniwR1Ip4inVr",
+    "name": "Morlock",
+    "level": 2,
+    "art": "morlock.webp"
+  },
+  {
+    "id": "morlock_tinkerer",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "nVCkxbFsxfJ0rReV",
+    "name": "Morlock Tinkerer",
+    "level": 2,
+    "art": "morlock-tinkerer.webp"
+  },
+  {
+    "id": "mudwretch",
+    "pack": "pf2e.pathfinder-bestiary-2",
+    "docId": "Hwy4YrNVVr7NnsMC",
+    "name": "Mudwretch",
+    "level": 2,
+    "art": "mudwretch.webp"
+  },
+  {
+    "id": "munsahir",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "9YU5IF7pIcuq9bNY",
+    "name": "Munsahir",
+    "level": 2,
+    "art": "munsahir.webp"
+  },
+  {
+    "id": "nagaji_soldier",
+    "pack": "pf2e.pathfinder-monster-core-2",
+    "docId": "OLGvwUyA441SwgQn",
+    "name": "Nagaji Soldier",
+    "level": 2,
+    "art": "nagaji-soldier.webp"
+  },
+  {
+    "id": "natural_scientist",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "V6UV4BeMRUUwGL0g",
+    "name": "Natural Scientist",
+    "level": 2,
+    "art": "natural-scientist.webp"
+  },
+  {
+    "id": "navigator",
+    "pack": "pf2e.pathfinder-npc-core",
+    "docId": "nnrvoNBUzKyKQLu4",
+    "name": "Navigator",
+    "level": 2,
+    "art": "navigator.webp"
   }
 ]

@@ -17,6 +17,13 @@
         {{/if}}
       </div>
 
+      {{#if objective}}
+        <p class="dommt-dungeon__objective">{{localize
+            "DOMMT.Dungeon.CurrentObjective"
+            objective=objective
+          }}</p>
+      {{/if}}
+
       {{#if currentRoom}}
         <div class="dommt-dungeon__room">
           {{#if currentRoom.isGoal}}
@@ -74,6 +81,72 @@
                 >{{localize "DOMMT.Dungeon.Combat.StartCombatButton"}}</button>
               </footer>
             {{/if}}
+          {{else if isSkillChallenge}}
+            <div class="dommt-dungeon__skill-challenge">
+              <p>{{localize
+                  "DOMMT.Dungeon.SkillChallenge.Progress"
+                  vp=challenge.vp
+                  target=challenge.vpTarget
+                }}</p>
+              <p class="hint">{{localize
+                  "DOMMT.Dungeon.SkillChallenge.AttemptsRemaining"
+                  n=challenge.attemptsRemaining
+                }}</p>
+              <p class="hint">
+                {{localize "DOMMT.Dungeon.SkillChallenge.SpecialtyHint"}}
+                {{#each challenge.specialtySkills}}{{this.label}}{{#unless
+                    @last
+                  }}, {{/unless}}{{/each}}
+              </p>
+              <form class="dommt-dungeon__skill-challenge-form">
+                <label>
+                  {{localize "DOMMT.Dungeon.SkillChallenge.WhoLabel"}}
+                  <select name="actorId">
+                    {{#each partyMembers}}
+                      <option value="{{this.id}}">{{this.name}}</option>
+                    {{/each}}
+                  </select>
+                </label>
+                <label>
+                  {{localize "DOMMT.Dungeon.SkillChallenge.SkillLabel"}}
+                  <select name="skill">
+                    {{#each challenge.allSkills}}
+                      <option value="{{this.slug}}">{{this.label}}{{#if
+                          this.isSpecialty
+                        }} *{{/if}}</option>
+                    {{/each}}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  data-action="attemptSkillChallenge"
+                >{{localize
+                    "DOMMT.Dungeon.SkillChallenge.AttemptButton"
+                  }}</button>
+              </form>
+            </div>
+          {{else if isNarrativeRoom}}
+            <div class="dommt-dungeon__narrative">
+              {{#unless currentRoom.setpiece}}
+                <p class="hint">{{localize
+                    "DOMMT.Dungeon.Narrative.Placeholder"
+                  }}</p>
+              {{/unless}}
+              <form class="dommt-dungeon__narrative-form">
+                <label>
+                  {{localize "DOMMT.Dungeon.Narrative.ObjectiveLabel"}}
+                  <textarea
+                    name="dommt-narrative-objective"
+                    placeholder="{{localize
+                      'DOMMT.Dungeon.Narrative.ObjectivePlaceholder'
+                    }}"
+                  ></textarea>
+                </label>
+                <button type="button" data-action="continueNarrative">{{localize
+                    "DOMMT.Dungeon.Narrative.ContinueButton"
+                  }}</button>
+              </form>
+            </div>
           {{else}}
             {{#unless currentRoomResolved}}
               <footer>

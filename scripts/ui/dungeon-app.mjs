@@ -5,9 +5,14 @@ import {
   markRoomOutcome,
   abandonRun,
   canUndoRoomEntry,
+  ensureSkillChallenge,
+  recordSkillChallengeAttempt,
+  setObjective,
 } from "../dungeon-runner.mjs";
 import { depthBiasFor } from "../dungeon-deck.mjs";
 import { makeFoundryApi } from "../foundry-api.mjs";
+import { rollSkillChallengeAttempt } from "../skill-challenge.mjs";
+import { ALL_SKILLS, dcForAttempt } from "../skill-challenge-mechanics.mjs";
 import {
   traitFieldHtml,
   wireTraitPickerButtons,
@@ -64,6 +69,17 @@ const EFFECT_KEYS = {
  * the entry here). */
 const UNCOUNTED_ROOM_KINDS = new Set(["safe_entry", "safe_rest"]);
 
+/** A skill slug's own display name — `CONFIG.PF2E.skills[slug].label` is an
+ * i18n *key* (confirmed live: `"PF2E.Skill.Acrobatics"`, not resolved
+ * text), not the label itself, so this always needs the extra localize
+ * step. Falls back to the bare slug for a key PF2e's own config doesn't
+ * carry (shouldn't happen for anything out of `ALL_SKILLS`, which was
+ * itself confirmed live to match `CONFIG.PF2E.skills`'s own keys exactly). */
+function skillLabel(slug) {
+  const key = CONFIG.PF2E?.skills?.[slug]?.label;
+  return key ? game.i18n.localize(key) : slug;
+}
+
 /**
  * Resolve the current room's outcome and build+populate+unlock whatever
  * follows. Not a class method — it only touches globals and the
@@ -114,6 +130,8 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       startCombatRecovery: DungeonApp.#onStartCombatRecovery,
       openCombatTracker: DungeonApp.#onOpenCombatTracker,
       hide: DungeonApp.#onHide,
+      attemptSkillChallenge: DungeonApp.#onAttemptSkillChallenge,
+      continueNarrative: DungeonApp.#onContinueNarrative,
     },
   };
 
@@ -187,6 +205,57 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
         ? getCombatForSlot(scene, currentSlot)
         : null;
 
+    // #162: lazily attach a fresh Victory Point challenge to the current
+    // room the first time it's rendered — ensureSkillChallenge is itself a
+    // no-op if one's already attached, so a plain re-render never rerolls
+    // specialty skills mid-challenge.
+    const isSkillChallenge =
+      currentRoom?.kind === "skill_challenge" && !currentRoomResolved;
+    let challenge = null;
+    if (isSkillChallenge) {
+      const partyMembers = (game.actors?.party?.members ?? []).filter(
+        (m) => m.type === "character",
+      );
+      const ensured = await ensureSkillChallenge(sceneId, currentRoom.id, {
+        seed: state.seed,
+        locationTag: currentRoom.locationTag,
+        partySize: partyMembers.length,
+      });
+      const raw = ensured?.rooms.find(
+        (r) => r.id === currentRoom.id,
+      )?.challenge;
+      if (raw) {
+        challenge = {
+          vp: raw.vp,
+          vpTarget: raw.vpTarget,
+          attemptsRemaining: raw.attemptBudget - raw.attemptsUsed,
+          specialtySkills: raw.specialtySkills.map((slug) => ({
+            slug,
+            label: skillLabel(slug),
+          })),
+          allSkills: ALL_SKILLS.map((slug) => ({
+            slug,
+            label: skillLabel(slug),
+            isSpecialty: raw.specialtySkills.includes(slug),
+          })),
+        };
+      }
+    }
+
+    // #163: a narrative room is never succeeded/failed the way every other
+    // resolvable room kind is — it's not a check or a fight, so it always
+    // resolves as succeeded (still running the room's own Reward-side
+    // Journey Spread outcome via the usual markRoomOutcome/resolveCurrentRoom
+    // path, just never the Ruin side) via a single Continue action instead
+    // of the plain Succeed/Fail choice. `setpieceId` is never actually
+    // assigned for a narrative room yet (dungeon-deck.mjs's buildRoomSequence
+    // only does that for puzzle_or_trap — a future narrative template
+    // library, #165, is what would change that), so `setpiece` here is
+    // always null in practice for now; the template falls back to a plain
+    // placeholder rather than showing nothing.
+    const isNarrativeRoom =
+      currentRoom?.kind === "narrative" && !currentRoomResolved;
+
     return {
       hasScene: true,
       hasRun: true,
@@ -217,6 +286,20 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       isCombatRoom,
       combatActive: !!activeCombat,
       combatMissing: isCombatRoom && !activeCombat,
+      // #162: a skill_challenge room uses its own Victory Point UI instead
+      // of the plain Succeed/Fail buttons every other resolvable room kind
+      // still uses.
+      isSkillChallenge,
+      challenge,
+      // #163: a narrative room's own "direction for the rest of the run" —
+      // run-wide, not per-room, so it's shown here regardless of which
+      // room kind is actually current, the same way it persists in
+      // `state.objective` regardless of which room set it.
+      isNarrativeRoom,
+      objective: state.objective ?? null,
+      partyMembers: (game.actors?.party?.members ?? [])
+        .filter((m) => m.type === "character")
+        .map((m) => ({ id: m.id, name: m.name })),
       currentRoom: currentRoom && {
         isGoal: currentRoom.isGoal,
         kind: currentRoom.kind,
@@ -321,6 +404,71 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
   static async #onFail() {
     await resolveCurrentRoom(false);
+    this.render();
+  }
+
+  /**
+   * Rolls the form's own selected actor/skill against the current room's
+   * challenge (#162), records the attempt, and — only once the challenge
+   * actually resolves — hands off to the same `resolveCurrentRoom` every
+   * other room kind uses, so a skill challenge's own success/failure
+   * consequences flow through the exact same room-resolution path combat,
+   * traps, and puzzles already do. A no-op if the form has nothing
+   * selected, or the roll itself came back empty (`actor.skills[skill]`
+   * missing — shouldn't happen for a real `ALL_SKILLS` slug, guarded
+   * anyway rather than trusted blind).
+   */
+  static async #onAttemptSkillChallenge() {
+    const scene = canvas?.scene;
+    const sceneId = scene?.id;
+    const state = sceneId ? getRunState(sceneId) : null;
+    const currentRoom = state?.rooms[state.currentIndex];
+    if (!currentRoom?.challenge) return;
+
+    const form = this.element.querySelector(
+      ".dommt-dungeon__skill-challenge-form",
+    );
+    const actorId = form?.querySelector('[name="actorId"]')?.value;
+    const skill = form?.querySelector('[name="skill"]')?.value;
+    const actor = actorId ? game.actors.get(actorId) : null;
+    if (!actor || !skill) return;
+
+    const dc = dcForAttempt({
+      partyLevel: await makeFoundryApi().partyLevel(),
+      skill,
+      specialtySkills: currentRoom.challenge.specialtySkills,
+    });
+    const result = await rollSkillChallengeAttempt(actor, skill, dc);
+    if (!result) return;
+
+    const newState = await recordSkillChallengeAttempt(
+      sceneId,
+      currentRoom.id,
+      result.outcome,
+    );
+    const resolved = newState?.rooms.find((r) => r.id === currentRoom.id)
+      ?.challenge?.resolved;
+    if (resolved) await resolveCurrentRoom(resolved === "success");
+    this.render();
+  }
+
+  /**
+   * A narrative room's own resolution (#163): saves whatever's in the
+   * objective textarea (if anything — a blank field just leaves whatever
+   * objective was already set alone, `setObjective` itself only clears on
+   * an explicit `null`/whitespace-only call, and an empty textarea here
+   * means "nothing new to set," not "clear it") and always resolves the
+   * room succeeded, since a narrative beat has nothing to fail.
+   */
+  static async #onContinueNarrative() {
+    const sceneId = canvas?.scene?.id;
+    if (!sceneId) return;
+    const textarea = this.element.querySelector(
+      '[name="dommt-narrative-objective"]',
+    );
+    const value = textarea?.value?.trim();
+    if (value) await setObjective(sceneId, value);
+    await resolveCurrentRoom(true);
     this.render();
   }
 

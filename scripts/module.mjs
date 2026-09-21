@@ -32,6 +32,10 @@ import {
   toggleAgentControlled,
   agentLoopStatus,
 } from "./dungeon-combat.mjs";
+import {
+  getPendingTrapCustomization,
+  applyTrapCustomization,
+} from "./trap-combat.mjs";
 
 const MODULE_ID = "deck-of-many-more-things";
 
@@ -219,6 +223,23 @@ Hooks.once("ready", async () => {
       });
       const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
       return ChatMessage.create({ content, whisper: gmIds });
+    },
+    // #136: the same narrow read/apply pair getPendingAgentTurn/
+    // applyAgentDecision give tools/agent-loop's poller for combat turns,
+    // for a spawned trap's own pending narrative customization instead.
+    getPendingTrapCustomization: (sceneId) => {
+      if (!game.user.isGM)
+        return ui.notifications.warn(
+          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+        );
+      return getPendingTrapCustomization(sceneId ?? canvas?.scene?.id);
+    },
+    applyTrapCustomization: (actorId, customization) => {
+      if (!game.user.isGM)
+        return ui.notifications.warn(
+          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+        );
+      return applyTrapCustomization(actorId, customization);
     },
   };
   if (game.user.isGM) {
