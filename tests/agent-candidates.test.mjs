@@ -5,6 +5,7 @@ import {
   buildAreaSpellCandidates, buildAttackSpellCandidates, buildDebuffSpellCandidates,
   parseConditionsByOutcome, hasSpellUsesRemaining,
   parseBreathWeaponEffect, buildBreathWeaponCandidates,
+  parseMultiStrikeBundle, buildMultiStrikeCandidates,
   parseChainHopDistance, buildChainSpellCandidates,
   buildHealSpellCandidates,
   parseAreaSpellTierOverrides, buildTierScalingAreaSpellCandidates, endTurnCandidate,
@@ -631,6 +632,73 @@ describe('buildBreathWeaponCandidates', () => {
   });
 });
 
+describe('parseMultiStrikeBundle', () => {
+  it('parses a real Draconic Frenzy-shaped description (two-plus-one, distinct strikes)', () => {
+    const description = 'The dragon makes two claw Strikes and one tail Strike in any order.';
+    expect(parseMultiStrikeBundle(description)).toEqual([
+      { count: 2, name: 'claw' },
+      { count: 1, name: 'tail' }
+    ]);
+  });
+
+  it('parses a plural-noun-as-adjective strike name (a real observed phrasing quirk)', () => {
+    const description = 'The gold dragon makes two claw Strikes and one horns Strike in any order.';
+    expect(parseMultiStrikeBundle(description)).toEqual([
+      { count: 2, name: 'claw' },
+      { count: 1, name: 'horns' }
+    ]);
+  });
+
+  it('returns null when the description has no "in any order" phrasing at all', () => {
+    const description = 'The dragon makes a claw Strike.';
+    expect(parseMultiStrikeBundle(description)).toBeNull();
+  });
+
+  it('returns null when "in any order" is present but no "N <name> Strike(s)" clause is found', () => {
+    const description = 'The dragon acts in any order it chooses.';
+    expect(parseMultiStrikeBundle(description)).toBeNull();
+  });
+});
+
+describe('buildMultiStrikeCandidates', () => {
+  const opponentAdjacent = { id: 'opp1', name: 'Fighter', distanceSquares: 1 };
+  const opponentFar = { id: 'opp2', name: 'Cleric', distanceSquares: 3 };
+
+  const draconicFrenzy = {
+    itemId: 'item1', slug: 'draconic-frenzy', label: 'Draconic Frenzy', cost: 2,
+    reachSquares: AGENT_MELEE_REACH_SQUARES,
+    strikes: [{ actionSlug: 'claw', count: 2 }, { actionSlug: 'tail', count: 1 }]
+  };
+
+  it('offers a bundle against every opponent within its reach', () => {
+    const candidates = buildMultiStrikeCandidates({
+      readyMultiStrikeBundles: [draconicFrenzy], opponents: [opponentAdjacent, opponentFar], actionsRemaining: 3
+    });
+    expect(candidates).toEqual([
+      {
+        id: 'multiStrike:draconic-frenzy:opp1', type: 'multiStrike',
+        itemId: 'item1', targetId: 'opp1', cost: 2,
+        strikes: [{ actionSlug: 'claw', count: 2 }, { actionSlug: 'tail', count: 1 }],
+        summary: 'Draconic Frenzy vs Fighter'
+      }
+    ]);
+  });
+
+  it('omits a bundle whose cost exceeds the actions remaining', () => {
+    const candidates = buildMultiStrikeCandidates({
+      readyMultiStrikeBundles: [draconicFrenzy], opponents: [opponentAdjacent], actionsRemaining: 1
+    });
+    expect(candidates).toEqual([]);
+  });
+
+  it('omits an opponent beyond the bundle\'s reach', () => {
+    const candidates = buildMultiStrikeCandidates({
+      readyMultiStrikeBundles: [draconicFrenzy], opponents: [opponentFar], actionsRemaining: 3
+    });
+    expect(candidates).toEqual([]);
+  });
+});
+
 describe('buildDebuffSpellCandidates', () => {
   const fear = {
     id: 'sp5', slug: 'fear', label: 'Fear', cost: 2, rangeSquares: 6, save: 'will', entryId: 'entry1',
@@ -880,6 +948,15 @@ describe('applyCandidateToTurnState', () => {
   it('decrements actionsRemaining by a spell\'s own cost and never touches mapIncrement', () => {
     const next = applyCandidateToTurnState({ actionsRemaining: 3, mapIncrement: 1 }, { type: 'cast', cost: 2 });
     expect(next).toEqual({ actionsRemaining: 1, mapIncrement: 1 });
+  });
+
+  it('increments mapIncrement by the total strike count of a multi-strike bundle', () => {
+    const candidate = {
+      type: 'multiStrike', cost: 2,
+      strikes: [{ actionSlug: 'claw', count: 2 }, { actionSlug: 'tail', count: 1 }]
+    };
+    const next = applyCandidateToTurnState({ actionsRemaining: 3, mapIncrement: 0 }, candidate);
+    expect(next).toEqual({ actionsRemaining: 1, mapIncrement: 3 });
   });
 });
 
