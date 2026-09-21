@@ -285,6 +285,45 @@ const AUTO_PLAY_DELAY_MS = 700;
 // mid-turn (rather than never starting at all) still recovers.
 export const AGENT_TIMEOUT_MS = 45000;
 
+// #113: a heartbeat is considered stale once it's this many multiples of the
+// poller's own reported interval old — long enough that one slow cycle
+// doesn't false-positive "disconnected," short enough to distinguish a
+// genuinely stuck/dead poller well before AGENT_TIMEOUT_MS's 45s fallback
+// fires. Used when a heartbeat exists but didn't report its own interval.
+const HEARTBEAT_STALE_MULTIPLE = 3;
+const HEARTBEAT_STALE_FALLBACK_MS = 15000;
+
+/**
+ * `{connected, lastSeenMs, secondsAgo, provider}` from the world's recorded
+ * agent-loop heartbeat (#113: `tools/agent-loop/poll.mjs` pings
+ * `recordAgentLoopHeartbeat` once per loop iteration, independent of
+ * whether there's a pending turn to act on). `connected` is a heuristic,
+ * not a real handshake — Foundry has no way to know the external poller
+ * process is alive except by this self-reported ping, so a poller that
+ * crashed mid-cycle still reads as "connected" until its last heartbeat
+ * ages past the stale threshold.
+ */
+export function agentLoopStatus() {
+  const heartbeat = game.settings.get(MODULE_ID, "agentLoopHeartbeat");
+  if (!heartbeat?.timestamp)
+    return {
+      connected: false,
+      lastSeenMs: null,
+      secondsAgo: null,
+      provider: null,
+    };
+  const staleAfterMs =
+    (heartbeat.pollIntervalMs ?? 0) * HEARTBEAT_STALE_MULTIPLE ||
+    HEARTBEAT_STALE_FALLBACK_MS;
+  const ageMs = Date.now() - heartbeat.timestamp;
+  return {
+    connected: ageMs < staleAfterMs,
+    lastSeenMs: heartbeat.timestamp,
+    secondsAgo: Math.round(ageMs / 1000),
+    provider: heartbeat.provider ?? null,
+  };
+}
+
 /**
  * Waits AGENT_TIMEOUT_MS, then fires the heuristic fallback for `combatant`
  * — but only if this exact timer is still the freshest thing watching this
@@ -298,6 +337,12 @@ export const AGENT_TIMEOUT_MS = 45000;
  * moved on (catches the same combatant's *next* turn, not just a different
  * one), and the counter is unchanged (catches a decision already applied by
  * this same turn's more-recently-armed timer or the external poller).
+ *
+ * #113: the warning/chat message branches on `agentLoopStatus()` so a GM
+ * sees a different message for "the poller is running but didn't respond in
+ * time for this turn" (heartbeat fresh) than for "the poller doesn't appear
+ * to be running at all" (no/stale heartbeat) — previously both looked
+ * identical, which was the actual gap #113 reported.
  */
 export async function armAgentTimeout(combat, combatant) {
   const armedRound = combat.round;
@@ -311,16 +356,17 @@ export async function armAgentTimeout(combat, combatant) {
   const currentCounter =
     currentStoredAgentTurnState(combat, combatant.id)?.counter ?? 0;
   if (currentCounter !== armedCounter) return;
-  ui.notifications.warn(
-    game.i18n.format("DOMMT.Dungeon.Combat.AgentTimeoutWarning", {
-      name: combatant.name,
-    }),
-  );
+  const { connected } = agentLoopStatus();
+  const warningKey = connected
+    ? "DOMMT.Dungeon.Combat.AgentTimeoutWarning"
+    : "DOMMT.Dungeon.Combat.AgentTimeoutWarningDisconnected";
+  const chatKey = connected
+    ? "DOMMT.Dungeon.Combat.AgentTimeoutChat"
+    : "DOMMT.Dungeon.Combat.AgentTimeoutChatDisconnected";
+  ui.notifications.warn(game.i18n.format(warningKey, { name: combatant.name }));
   const gmIds = ChatMessage.getWhisperRecipients("GM").map((u) => u.id);
   await ChatMessage.create({
-    content: game.i18n.format("DOMMT.Dungeon.Combat.AgentTimeoutChat", {
-      name: combatant.name,
-    }),
+    content: game.i18n.format(chatKey, { name: combatant.name }),
     whisper: gmIds,
   });
   await playHeuristicTurn(combat, combatant);

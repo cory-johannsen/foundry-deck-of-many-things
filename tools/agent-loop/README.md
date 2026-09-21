@@ -9,29 +9,35 @@ for the full design.
 
 1. **Self-host the relay** (avoids the public `foundryrestapi.com` relay's
    100 requests/month free-tier limit — this polls every few seconds):
+
    ```bash
    git clone https://github.com/ThreeHats/foundryvtt-rest-api-relay
    cd foundryvtt-rest-api-relay
    docker compose up -d
    ```
+
    Point Foundry's own `foundryvtt-rest-api` module at this relay instead of
    the public one (module settings → Relay URL).
 
 2. **Environment variables** (a `.env` in the repo root, or the shell
    environment):
+
    ```
    FOUNDRY_BASE_URL=http://localhost:<your relay port>
    FOUNDRY_REST_API_KEY=<your relay's key>
    ANTHROPIC_API_KEY=<your Claude API key>
    ```
+
    `FOUNDRY_CLIENT_ID` and `DOMMT_AGENT_PROVIDER` (default `claude`) and
    `DOMMT_POLL_INTERVAL_MS` (default `3000`) are optional overrides.
 
    **To use Laya instead of Claude** (`DOMMT_AGENT_PROVIDER=laya`), add:
+
    ```
    LAYA_API_KEY=<your Laya deployment's key, if auth is enabled>
    LAYA_BASE_URL=<your Laya deployment, default https://laya.johannsen.cloud>
    ```
+
    Laya never generates a `rationale` (it's non-autoregressive, calibrated
    probabilities only) — decisions still work, just without the "why" text
    Claude's adapter includes.
@@ -43,4 +49,26 @@ for the full design.
 
 Leave it running for the length of a session. If it's not running (or
 crashes), agent-controlled combatants still act — Foundry falls back to the
-default heuristic after `AGENT_TIMEOUT_MS` (45s) and tells you so in chat.
+default heuristic after `AGENT_TIMEOUT_MS` (45s) and tells you so in chat,
+distinguishing "the poller is running but didn't respond in time" from "the
+poller doesn't appear to be running at all" (#113) using the heartbeat
+below.
+
+## Checking whether it's actually running (#113)
+
+The poller pings a heartbeat into the world once per loop iteration, so a
+GM can check its status without watching this terminal: click the robot
+icon in the token scene controls, or run
+`game.modules.get('deck-of-many-more-things').api.postAgentLoopStatus()`
+from the console. Both post a GM-whispered chat card saying whether it's
+connected, stale (was running, hasn't checked in recently), or never seen
+this session.
+
+## If it stops recovering after a relay hiccup (#115)
+
+Every request sends `Connection: close`, so a dropped-then-restored relay
+connection can't leave the poller stuck reusing a dead pooled socket — each
+retry opens a fresh connection instead. If it still won't recover after a
+relay blip, the terminal logs a louder warning once 10 poll cycles in a row
+have failed; at that point, restarting the process (`Ctrl-C`, then
+`node tools/agent-loop/poll.mjs` again) is the known-working fix.
