@@ -97,6 +97,50 @@ directly (which itself imports `choice-prompts.mjs`). All eleven stay here
 rather than moving, so neither module ends up with a dangling import or a
 duplicated copy.
 
+### More gaps found during Task 5 (discovered during implementation)
+
+Task 5 (stripping the old repo) surfaced further items the original file
+analysis missed, since none of them showed up via the `import`-graph
+method — they're either runtime fetch-path literals or files with no
+`.mjs` importer at all (templates, npm-script-only tools):
+
+**Genuinely missed — moved to `foundry-pf2e-dungeon-crawl`, deleted here:**
+- `tools/import-token.mjs`, `tools/token-prompts.mjs` — companion tools to
+  `generate-token-art.mjs` (Task 4), both importing directly from it
+  (`./generate-token-art.mjs`); `import-token.mjs` was flat-out broken in
+  this repo after Task 4/5 (its import target no longer exists here).
+- `tools/validate-dungeon-setpieces.mjs` — the new repo's own
+  `package.json` (`validate:dungeon` script) already referenced this file
+  from Task 1, but the file itself was never copied.
+- `data/schema/dungeon-setpieces.schema.json` — `validate-dungeon-setpieces.mjs`'s
+  load-time schema dependency, same class of gap as `creature-art.schema.json`
+  in Task 4.
+- `docs/token-prompts.md` — `token-prompts.mjs`'s own generated-output
+  target.
+- The new repo's `package.json` needs `tokens:import`/`prompts` npm
+  script entries added (mirroring the old repo's, now-removed ones) once
+  these tools land there.
+
+**Confirmed correctly positioned, no action needed** (same "MODULE_ID
+stays pinned to the owning module" pattern as the room-art/dungeon-sound
+assets below): `templates/dungeon-tracker.hbs` (`dungeon-app.mjs` builds
+its path from a hardcoded `MODULE_ID = "deck-of-many-more-things"`),
+`templates/encounter-chat.hbs` (same, from `encounter-generator.mjs`),
+and `styles/deck.css`'s `.dommt-encounter__*` rules (styles for that
+template, which stays here too).
+
+**Real functional break found and fixed:** `data-loader.mjs`'s
+`loadDungeonSetpieces()`/`loadCreatureArt()` build their fetch path from
+the same file-level `MODULE_ID = "deck-of-many-more-things"` constant
+`loadCards()`/`loadCelticCross()` use — but unlike those two, the actual
+JSON files they read (`data/dungeon-setpieces.json`, `data/creature-art.json`)
+moved to the new repo in Task 2/4. Left as-is, both functions would 404 at
+runtime the instant `pf2e-dungeon-crawl`'s `dungeon-scene.mjs`/
+`encounter-generator.mjs`/`dungeon-app.mjs` called them (which they do,
+via the cross-repo shared-infra import). Fix: these two functions build
+their fetch path from a second constant, `DUNGEON_MODULE_ID = "pf2e-dungeon-crawl"`,
+instead — `loadCards`/`loadCelticCross` are untouched.
+
 ### Room-art and dungeon-sound assets stay behind too (discovered during implementation)
 
 `dungeon-scene.mjs`'s `ROOM_ART_DIR` and `dungeon-sound.mjs`'s `SOUND_DIR`
