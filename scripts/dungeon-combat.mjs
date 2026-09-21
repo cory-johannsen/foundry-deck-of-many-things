@@ -51,10 +51,21 @@ function partyActorIds() {
   return new Set((game.actors?.party?.members ?? []).map((m) => m.id));
 }
 
-/** Every token on `scene` carrying `flagKey === flagValue`, plus every current party token. */
+/** Every token on `scene` carrying `flagKey === flagValue`, plus every
+ * current party token — excluding cover items (#96/#146). Cover-item
+ * tokens carry the exact same `dungeonSlot`/`encounterId` flag monster
+ * tokens do (so `resolveCombat`'s own cleanup can find and delete them
+ * alongside an encounter's monsters), which without this exclusion made
+ * them match here too: an inert, action-less hazard Actor got a real
+ * Combatant, defaulting to `agentControlled: true` and showing up in
+ * initiative — see `coverItemTokensForCombat`'s docblock below, which
+ * already documented "cover items are never Combatants" as the intended
+ * behavior this flag collision was silently violating. */
 function combatantTokens(scene, flagKey, flagValue) {
   const monsterTokens = scene.tokens.filter(
-    (t) => t.getFlag(MODULE_ID, flagKey) === flagValue,
+    (t) =>
+      t.getFlag(MODULE_ID, flagKey) === flagValue &&
+      !t.getFlag(MODULE_ID, "coverItem"),
   );
   const partyIds = partyActorIds();
   const partyTokens = scene.tokens.filter((t) => partyIds.has(t.actor?.id));
