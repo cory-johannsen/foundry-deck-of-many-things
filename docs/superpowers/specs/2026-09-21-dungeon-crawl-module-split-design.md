@@ -54,6 +54,11 @@ not the issue's original list.
 Each moved `.mjs` file's corresponding test file (e.g.
 `tests/dungeon-layout.test.mjs`) moves with it.
 
+`styles/deck.css`'s `.dommt-dungeon*` rules (the dungeon tracker UI) and
+`.dommt-trait-field*` rules (trait-picker's own styles, since
+`trait-picker.mjs` moves) move into a new `styles/dungeon.css` in the new
+module, referenced from its own `module.json`'s `styles` array.
+
 **Not moving, despite the issue listing them as dungeon-crawl candidates:**
 `gm-resolution.mjs` and `npc-benchmark.mjs` have no dungeon-crawl involvement
 at all — `gm-resolution.mjs` is the general "GM confirms a card effect it
@@ -154,6 +159,7 @@ A generator is a plain, duck-typed object (matching this codebase's existing
 `game.modules.get(id).api = {...}` convention) implementing:
 
 - `buildRoomSequence({ seed, roomCount, setpieceIds, narrativeSetpieceIds }) => Room[]`
+- `findOutcomeTemplate(outcomeSlotId) => OutcomeSlotTemplate`
 - `resolveRoomOutcome(outcomeSlotTemplate, succeeded) => { effectKey, mutation }`
 - `applySequenceMutation(rooms, currentIndex, mutation, ctx) => Room[]`
 - `generateEncounterRoster({ resolved, api, partyLevel, traits, excludeTraits, levelOffsetBias, requireTrait, partySize }) => roster`
