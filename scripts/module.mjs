@@ -358,16 +358,32 @@ Hooks.once("ready", registerChargeSound);
 
 Hooks.on("renderChatMessageHTML", bindPendingDrawButton);
 
+/** #158: opens the Dungeon Crawl tracker if it isn't already rendered —
+ * `foundry.applications.instances` (confirmed live) is the ApplicationV2
+ * equivalent of the old `ui.windows` lookup, keyed by `DEFAULT_OPTIONS.id`.
+ * A no-op if the GM already has it open, so this never steals focus from
+ * whatever position/scroll state they left it in. */
+function openDungeonTrackerIfNotOpen() {
+  if (!foundry.applications.instances.get("dommt-dungeon-app"))
+    new DungeonApp().render(true);
+}
+
 /**
  * A dungeon room's discovery trigger — opening its own reveal door (see
  * dungeon-scene.mjs's docblock for why this is a plain hook rather than a
  * Region behavior). Fires on every connected client on every wall update;
  * `handleDungeonDoorOpened` itself both filters for a real dungeon reveal
- * door and only acts on the GM's own client.
+ * door and only acts on the GM's own client. Awaited (unlike this file's
+ * other fire-and-forget hooks) because #158's auto-open needs its
+ * `autoOpenTracker` result.
  */
-Hooks.on("updateWall", (wall, changes) => {
+Hooks.on("updateWall", async (wall, changes) => {
   if (changes.ds !== CONST.WALL_DOOR_STATES.OPEN) return;
-  handleDungeonDoorOpened(wall.parent?.id, wall.id);
+  const { autoOpenTracker } = await handleDungeonDoorOpened(
+    wall.parent?.id,
+    wall.id,
+  );
+  if (autoOpenTracker) openDungeonTrackerIfNotOpen();
 });
 
 /**
