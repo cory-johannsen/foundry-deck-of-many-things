@@ -1,6 +1,9 @@
 {{#if hasScene}}
   {{#if hasRun}}
     <div class="dommt-dungeon">
+      {{#unless interactive}}
+        <p class="hint">{{localize "DOMMT.Dungeon.ReadOnlyHint" host=hostName}}</p>
+      {{/unless}}
       <div class="dommt-dungeon__progress">
         {{#if completed}}
           {{localize "DOMMT.Dungeon.Completed"}}

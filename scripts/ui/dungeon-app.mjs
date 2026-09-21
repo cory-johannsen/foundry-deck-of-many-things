@@ -9,6 +9,7 @@ import {
   recordSkillChallengeAttempt,
   setObjective,
 } from "../dungeon-runner.mjs";
+import { canActOnDungeon } from "../dungeon-permissions.mjs";
 import { depthBiasFor } from "../dungeon-deck.mjs";
 import { makeFoundryApi } from "../foundry-api.mjs";
 import { rollSkillChallengeAttempt } from "../skill-challenge.mjs";
@@ -205,6 +206,14 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
         ? getCombatForSlot(scene, currentSlot)
         : null;
 
+    // #109: whether THIS client may act on the run, not just whether one
+    // exists — false for every read-only broadcast viewer, and also false
+    // for the run's own host once any GM connects (see dungeon-permissions.mjs).
+    const interactive = canActOnDungeon(state);
+    const hostName = state.hostUserId
+      ? (game.users.get(state.hostUserId)?.name ?? "?")
+      : null;
+
     // #162: lazily attach a fresh Victory Point challenge to the current
     // room the first time it's rendered — ensureSkillChallenge is itself a
     // no-op if one's already attached, so a plain re-render never rerolls
@@ -259,6 +268,8 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     return {
       hasScene: true,
       hasRun: true,
+      interactive,
+      hostName,
       sceneId,
       currentSlot,
       // Not rendered — just threaded to _onRender's own focusCameraOnSlot
@@ -338,6 +349,16 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (context.currentSlot != null && canvas?.scene?.id === context.sceneId) {
       focusCameraOnSlot(canvas.scene, context.currentSlot, context.seed);
     }
+    // #109: a read-only broadcast viewer (or a host who's lost exclusive
+    // control because a GM connected) sees every control disabled except
+    // Hide, which only closes their own local window. This is a UI nicety,
+    // not the real enforcement — each mutating action handler below
+    // re-checks canActOnDungeon itself.
+    if (context.hasRun && !context.interactive) {
+      this.element.querySelectorAll("footer button[data-action]").forEach((btn) => {
+        if (btn.dataset.action !== "hide") btn.disabled = true;
+      });
+    }
   }
 
   static async #onStart() {
@@ -356,7 +377,17 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const scene = await createDungeonScene();
     const setpieces = await loadDungeonSetpieces();
     const state = await createRun(
-      { sceneId: scene.id, roomCount, traits, excludeTraits, previousSceneId },
+      {
+        sceneId: scene.id,
+        roomCount,
+        traits,
+        excludeTraits,
+        previousSceneId,
+        // #109: null for a GM (a normal game); the caller's own id when a
+        // non-GM starts it — openDungeon() has already refused this call
+        // unless that's actually allowed (no GM active, no competing run).
+        hostUserId: game.user.isGM ? null : game.user.id,
+      },
       { setpieceIds: setpieces.map((s) => s.id) },
     );
 
@@ -399,10 +430,14 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async #onSucceed() {
+    const sceneId = canvas?.scene?.id;
+    if (!sceneId || !canActOnDungeon(getRunState(sceneId))) return;
     await resolveCurrentRoom(true);
     this.render();
   }
   static async #onFail() {
+    const sceneId = canvas?.scene?.id;
+    if (!sceneId || !canActOnDungeon(getRunState(sceneId))) return;
     await resolveCurrentRoom(false);
     this.render();
   }
@@ -422,6 +457,7 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const scene = canvas?.scene;
     const sceneId = scene?.id;
     const state = sceneId ? getRunState(sceneId) : null;
+    if (!canActOnDungeon(state)) return;
     const currentRoom = state?.rooms[state.currentIndex];
     if (!currentRoom?.challenge) return;
 
@@ -462,7 +498,7 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
    */
   static async #onContinueNarrative() {
     const sceneId = canvas?.scene?.id;
-    if (!sceneId) return;
+    if (!sceneId || !canActOnDungeon(getRunState(sceneId))) return;
     const textarea = this.element.querySelector(
       '[name="dommt-narrative-objective"]',
     );
@@ -490,6 +526,7 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const scene = canvas?.scene;
     const sceneId = scene?.id;
     const state = sceneId ? getRunState(sceneId) : null;
+    if (!canActOnDungeon(state)) return;
     const currentRoom = state?.rooms[state.currentIndex];
     const slot = currentRoom
       ? state.physicalSlotByRoomId[currentRoom.id]
@@ -512,6 +549,7 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const scene = canvas?.scene;
     const sceneId = scene?.id;
     const state = sceneId ? getRunState(sceneId) : null;
+    if (!canActOnDungeon(state)) return;
     const currentRoom = state?.rooms[state.currentIndex];
     const slot = currentRoom
       ? state.physicalSlotByRoomId[currentRoom.id]
@@ -541,6 +579,7 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const scene = canvas?.scene;
     const sceneId = scene?.id;
     const state = sceneId ? getRunState(sceneId) : null;
+    if (!canActOnDungeon(state)) return;
     const nextRoom = state?.rooms[state.currentIndex + 1] ?? null;
     const slot = nextRoom ? state.physicalSlotByRoomId[nextRoom.id] : null;
     if (slot == null) return;
@@ -576,7 +615,7 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #onUndo() {
     const sceneId = canvas?.scene?.id;
-    if (!sceneId) return;
+    if (!sceneId || !canActOnDungeon(getRunState(sceneId))) return;
     await undoRoomEntry(sceneId);
     this.render();
   }
@@ -591,7 +630,7 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #onAbandon() {
     const scene = canvas?.scene;
     const sceneId = scene?.id;
-    if (!sceneId) return;
+    if (!sceneId || !canActOnDungeon(getRunState(sceneId))) return;
 
     const confirmed = await foundry.applications.api.DialogV2.confirm({
       window: { title: game.i18n.localize("DOMMT.Dungeon.AbandonButton") },
