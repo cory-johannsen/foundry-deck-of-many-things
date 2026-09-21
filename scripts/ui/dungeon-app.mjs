@@ -12,7 +12,11 @@ import {
 import { depthBiasFor } from "../dungeon-deck.mjs";
 import { makeFoundryApi } from "../foundry-api.mjs";
 import { rollSkillChallengeAttempt } from "../skill-challenge.mjs";
-import { ALL_SKILLS, dcForAttempt } from "../skill-challenge-mechanics.mjs";
+import {
+  ALL_SKILLS,
+  dcForAttempt,
+  selectSkillChallengeTemplate,
+} from "../skill-challenge-mechanics.mjs";
 import {
   traitFieldHtml,
   wireTraitPickerButtons,
@@ -208,7 +212,11 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // #162: lazily attach a fresh Victory Point challenge to the current
     // room the first time it's rendered — ensureSkillChallenge is itself a
     // no-op if one's already attached, so a plain re-render never rerolls
-    // specialty skills mid-challenge.
+    // specialty skills mid-challenge. #164: the template (if any) is
+    // selected fresh on every render rather than persisted — harmless,
+    // since ensureSkillChallenge only ever actually *uses* it the one time
+    // it creates the challenge; every later render's own selection is
+    // simply thrown away once a challenge already exists.
     const isSkillChallenge =
       currentRoom?.kind === "skill_challenge" && !currentRoomResolved;
     let challenge = null;
@@ -216,22 +224,42 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const partyMembers = (game.actors?.party?.members ?? []).filter(
         (m) => m.type === "character",
       );
+      const template = selectSkillChallengeTemplate(
+        setpieces,
+        state.seed,
+        currentRoom.id,
+      );
       const ensured = await ensureSkillChallenge(sceneId, currentRoom.id, {
         seed: state.seed,
         locationTag: currentRoom.locationTag,
         partySize: partyMembers.length,
+        template,
       });
       const raw = ensured?.rooms.find(
         (r) => r.id === currentRoom.id,
       )?.challenge;
       if (raw) {
+        // The template actually used to build `raw` might not be this
+        // render's own freshly-selected one (a re-render after the
+        // challenge already exists just discards its own pick, per the
+        // comment above) — re-derive the flavor to show from raw's own
+        // specialtySkills matching this render's template instead of
+        // assuming they're the same template.
+        const flavorTemplate =
+          template?.specialtySkills?.length === raw.specialtySkills.length &&
+          template.specialtySkills.every((s) => raw.specialtySkills.includes(s))
+            ? template
+            : null;
         challenge = {
           vp: raw.vp,
           vpTarget: raw.vpTarget,
           attemptsRemaining: raw.attemptBudget - raw.attemptsUsed,
+          templateName: flavorTemplate?.name ?? null,
+          templateSummary: flavorTemplate?.summary ?? null,
           specialtySkills: raw.specialtySkills.map((slug) => ({
             slug,
             label: skillLabel(slug),
+            flavor: flavorTemplate?.skillFlavor?.[slug] ?? null,
           })),
           allSkills: ALL_SKILLS.map((slug) => ({
             slug,

@@ -7,9 +7,21 @@
     "complete": true,
     "summary": "A statue of a halfling holds one card (the Rogue) and speaks a riddle naming four missing cards — Sage, Jester, Knight, Fates — and how each relates to the others (who dislikes being next to whom, who gazes at whom, who stands beside whom, orientation included). The party must find the four missing cards elsewhere nearby, then arrange all five in the statue's hand — in the correct order, each upright or reversed per the riddle — to slide the statue aside and reveal a secret door.",
     "hintChecks": [
-      { "skill": "Perception", "dc": 10, "hint": "Grooves in the statue's palms are sized for a fanned hand of five cards." },
-      { "skill": "Society", "dc": 10, "hint": "The statue's riddle explains the order the cards must be sorted into." },
-      { "skill": "Occultism", "dc": 10, "hint": "For the cards to face the directions the riddle describes, some must be placed reversed." }
+      {
+        "skill": "Perception",
+        "dc": 10,
+        "hint": "Grooves in the statue's palms are sized for a fanned hand of five cards."
+      },
+      {
+        "skill": "Society",
+        "dc": 10,
+        "hint": "The statue's riddle explains the order the cards must be sorted into."
+      },
+      {
+        "skill": "Occultism",
+        "dc": 10,
+        "hint": "For the cards to face the directions the riddle describes, some must be placed reversed."
+      }
     ],
     "solution": "Work outward from the fixed Rogue card using each relationship in the riddle in turn — the book's diagram 4.1 shows the exact five-card final arrangement and orientations. DCs are the book's flat 5e values; scale them to your party's level per PF2e's normal DC-by-level guidance.",
     "source": { "chapter": 4 }
@@ -22,7 +34,11 @@
     "complete": true,
     "summary": "A ghostly jester challenges the party to a Mastermind-style guessing game. She secretly holds four cards (drawn from six possibilities — Comet, Gem, Moon, Skull, Star, Sun — repeats allowed) face down. The party places a guess of four cards into a row; for each guess, a correct card in the correct position scores a red marker and a correct card in the wrong position scores a blue marker. Ten guesses total. Solving it in six or fewer wins a bonus treasure on top of the normal prize for winning at all.",
     "hintChecks": [
-      { "skill": "Diplomacy", "dc": 10, "hint": "Asked politely, the ghost demonstrates one example round so the players can see how the red/blue markers work." }
+      {
+        "skill": "Diplomacy",
+        "dc": 10,
+        "hint": "Asked politely, the ghost demonstrates one example round so the players can see how the red/blue markers work."
+      }
     ],
     "solution": "Solvable only through deduction from the accumulating red/blue feedback, not a fixed answer — the GM secretly picks the four-card hand at the start. The book's diagram 4.4 walks through one full example game (hand: Moon, Sun, Skull, Gem).",
     "source": { "chapter": 4 }
@@ -34,7 +50,10 @@
     "difficulty": "medium",
     "complete": false,
     "summary": "(mechanics not transcribed — the book's Chapter 4 \"Trap Rooms\" section names this trap but gives no base write-up anywhere in the printed text; it only reappears, modified, as a room in the Gardmore Abbey adventure later in the book: a narrow beam spanning a pit of grinding gears, with a pressure plate that raises spiked metal walls when weight shifts to the wrong side of the beam.)",
-    "source": { "chapter": 4, "note": "Only a reused, modified version survives in this copy, in the Gardmore Abbey chapter." }
+    "source": {
+      "chapter": 4,
+      "note": "Only a reused, modified version survives in this copy, in the Gardmore Abbey chapter."
+    }
   },
   {
     "id": "surface_of_the_sun",
@@ -43,7 +62,10 @@
     "difficulty": "medium",
     "complete": false,
     "summary": "(mechanics not transcribed — named only in Chapter 4's \"Trap Rooms\" list, with no base write-up in the printed text; it reappears, modified, in the Gardmore Abbey chapter as three parallel halls under a scorching ceiling that deals fire damage to anyone inside each round.)",
-    "source": { "chapter": 4, "note": "Only a reused, modified version survives in this copy, in the Gardmore Abbey chapter." }
+    "source": {
+      "chapter": 4,
+      "note": "Only a reused, modified version survives in this copy, in the Gardmore Abbey chapter."
+    }
   },
   {
     "id": "test_of_the_empty_moon",
@@ -52,6 +74,99 @@
     "difficulty": "medium",
     "complete": false,
     "summary": "(mechanics not transcribed — named only in Chapter 4's \"Trap Rooms\" list, with no base write-up in the printed text; it reappears, modified, in the Gardmore Abbey chapter as a chamber with a portcullis, a moon-phase glyph, and a lever puzzle gating passage north.)",
-    "source": { "chapter": 4, "note": "Only a reused, modified version survives in this copy, in the Gardmore Abbey chapter." }
+    "source": {
+      "chapter": 4,
+      "note": "Only a reused, modified version survives in this copy, in the Gardmore Abbey chapter."
+    }
+  },
+  {
+    "id": "the_collapsing_span",
+    "kind": "skill_challenge",
+    "archetype": "chase",
+    "name": "The Collapsing Span",
+    "complete": true,
+    "summary": "A rope-and-plank bridge over a chasm has been sabotaged — it's failing section by section as the party crosses, forcing them to keep moving.",
+    "specialtySkills": ["acrobatics", "athletics", "stealth"],
+    "skillFlavor": {
+      "acrobatics": "Dodging snapped planks and swinging across gaps on the fraying ropes.",
+      "athletics": "Muscling across a buckling section by main strength before it gives way.",
+      "stealth": "Picking a path light enough not to put extra strain on a failing plank."
+    },
+    "source": {
+      "chapter": null,
+      "note": "Hand-authored — no PF2e compendium ships skill-challenge content; see #164."
+    }
+  },
+  {
+    "id": "a_council_divided",
+    "kind": "skill_challenge",
+    "archetype": "negotiation",
+    "name": "A Council Divided",
+    "complete": true,
+    "summary": "A room of quarreling local factions has to be talked, cajoled, or leaned on into agreeing to help (or at least stand aside) before the party can move on.",
+    "specialtySkills": ["diplomacy", "deception", "intimidation"],
+    "skillFlavor": {
+      "diplomacy": "Appealing to a faction's own stated interests and honor.",
+      "deception": "Telling each faction exactly what it wants to hear.",
+      "intimidation": "Making the cost of staying difficult plain."
+    },
+    "source": {
+      "chapter": null,
+      "note": "Hand-authored — no PF2e compendium ships skill-challenge content; see #164."
+    }
+  },
+  {
+    "id": "the_sealed_archive",
+    "kind": "skill_challenge",
+    "archetype": "investigation",
+    "name": "The Sealed Archive",
+    "complete": true,
+    "summary": "A room of locked records, half-legible marginalia, and warded stacks holds the specific piece of lore the party actually needs — buried somewhere in all of it.",
+    "specialtySkills": ["society", "occultism", "arcana"],
+    "skillFlavor": {
+      "society": "Cross-referencing the archive's own indexing and filing conventions.",
+      "occultism": "Recognizing which symbols on the sealed cases are decorative and which are warnings.",
+      "arcana": "Reading the residual magic still clinging to the older volumes."
+    },
+    "source": {
+      "chapter": null,
+      "note": "Hand-authored — no PF2e compendium ships skill-challenge content; see #164."
+    }
+  },
+  {
+    "id": "past_the_watch",
+    "kind": "skill_challenge",
+    "archetype": "infiltration",
+    "name": "Past the Watch",
+    "complete": true,
+    "summary": "A patrolled space — guards, wards, or simply too many watchful eyes — has to be crossed without raising an alarm the party isn't ready to deal with yet.",
+    "specialtySkills": ["stealth", "thievery", "deception"],
+    "skillFlavor": {
+      "stealth": "Timing movement to the patrol's own blind spots.",
+      "thievery": "Slipping past or quietly disabling whatever's actually watching the door.",
+      "deception": "Passing as someone who's supposed to be there."
+    },
+    "source": {
+      "chapter": null,
+      "note": "Hand-authored — no PF2e compendium ships skill-challenge content; see #164."
+    }
+  },
+  {
+    "id": "the_shifting_floor",
+    "kind": "skill_challenge",
+    "archetype": "hazard_avoidance",
+    "name": "The Shifting Floor",
+    "complete": true,
+    "summary": "The ground itself is the obstacle — unstable footing, a slow flood, a room that's quietly rearranging itself — and simply enduring it takes real, sustained effort.",
+    "specialtySkills": ["athletics", "survival", "nature"],
+    "skillFlavor": {
+      "athletics": "Forcing a way through by strength when the terrain won't cooperate.",
+      "survival": "Reading the room's own pattern well enough to move with it instead of against it.",
+      "nature": "Recognizing what's actually driving the room's behavior."
+    },
+    "source": {
+      "chapter": null,
+      "note": "Hand-authored — no PF2e compendium ships skill-challenge content; see #164."
+    }
   }
 ]

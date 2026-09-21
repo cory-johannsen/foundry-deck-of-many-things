@@ -324,12 +324,16 @@ export async function abandonRun(
  * specialty skills mid-challenge. `initSkillChallengeState` itself is pure
  * (`skill-challenge-mechanics.mjs`); this is only the read-mutate-persist
  * wrapper around it, same shape every other room-state write in this file
- * already uses.
+ * already uses. `template` (#164, optional) — a hand-authored
+ * `dungeon-setpieces.json` entry the caller already selected via
+ * `selectSkillChallengeTemplate` — passes straight through to
+ * `initSkillChallengeState`, which falls back to its own generic pick when
+ * none is given.
  */
 export async function ensureSkillChallenge(
   sceneId,
   roomId,
-  { seed, locationTag, partySize },
+  { seed, locationTag, partySize, template = null },
   { settingsRef = defaultSettingsRef() } = {},
 ) {
   const state = getRunState(sceneId, { settingsRef });
@@ -341,6 +345,7 @@ export async function ensureSkillChallenge(
     roomId,
     locationTag,
     partySize,
+    template,
   });
   const rooms = state.rooms.map((r) =>
     r.id === roomId ? { ...r, challenge } : r,
