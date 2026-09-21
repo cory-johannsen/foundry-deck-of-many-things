@@ -222,6 +222,7 @@ export async function generateEncounter({
       excludeTraits: theme.excludeTraits,
       levelOffsetBias,
       requireTrait: locationTag,
+      partySize,
     });
     const action = await showEncounterPreview(roster);
     if (action === "accept") break;
