@@ -13,7 +13,7 @@
  */
 import { runFoundryScript, readEnvOrDotenv } from "./foundry-client.mjs";
 import { resolveProvider } from "./providers/index.mjs";
-import { customizeTrap } from "./providers/claude.mjs";
+import { customizeTrap, customizeSkillChallenge } from "./providers/claude.mjs";
 
 const POLL_INTERVAL_MS = Number(
   readEnvOrDotenv("DOMMT_POLL_INTERVAL_MS") ?? 3000,
@@ -62,6 +62,47 @@ async function tryCustomizeTrap() {
   await applyTrapCustomizationResult(pending.actorId, customization);
   console.log(
     `agent-loop: customized trap "${pending.name}" -> "${customization.name}"`,
+  );
+}
+
+async function getPendingSkillChallengeCustomization() {
+  return runFoundryScript(
+    `return game.modules.get('${MODULE_ID}').api.getPendingSkillChallengeCustomization();`,
+  );
+}
+
+async function applySkillChallengeCustomizationResult(
+  sceneId,
+  roomId,
+  customization,
+) {
+  return runFoundryScript(
+    `return game.modules.get('${MODULE_ID}').api.applySkillChallengeCustomization(${JSON.stringify(sceneId)}, ${JSON.stringify(roomId)}, ${JSON.stringify(customization)});`,
+  );
+}
+
+// #166: same Claude-only, DOMMT_AGENT_PROVIDER-independent, silently-skip-
+// without-a-key contract tryCustomizeTrap's own docblock already explains —
+// see there for why. Unlike a trap (spawned hidden, with a real window
+// before the party ever sees it), a skill-challenge room's content is
+// shown the instant the room becomes current — this can't land before the
+// party's first look at it, only update it in place on a later re-render
+// if it's still there (see dungeon-runner.mjs's ensureSkillChallenge for
+// that trade-off's own reasoning).
+async function tryCustomizeSkillChallenge() {
+  if (!readEnvOrDotenv("ANTHROPIC_API_KEY")) return;
+  const pending = await getPendingSkillChallengeCustomization();
+  if (!pending) return;
+  const customization = await customizeSkillChallenge(pending, {
+    fetchImpl: fetch,
+  });
+  await applySkillChallengeCustomizationResult(
+    pending.sceneId,
+    pending.roomId,
+    customization,
+  );
+  console.log(
+    `agent-loop: customized skill challenge "${pending.name}" -> "${customization.name}"`,
   );
 }
 
@@ -169,6 +210,14 @@ async function main() {
     } catch (err) {
       console.error(
         "agent-loop: trap customization failed, will retry next cycle:",
+        err.message,
+      );
+    }
+    try {
+      await tryCustomizeSkillChallenge();
+    } catch (err) {
+      console.error(
+        "agent-loop: skill challenge customization failed, will retry next cycle:",
         err.message,
       );
     }

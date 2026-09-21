@@ -5,17 +5,17 @@
  * can't name something that was never on the list — no freeform-text
  * parsing to get wrong.
  *
- * Also the *only* provider `customizeTrap` (#136) can ever use, full stop
- * — not gated by `DOMMT_AGENT_PROVIDER` the way `decide` is. Laya is
- * non-autoregressive (calibrated probabilities over a fixed candidate set,
- * per `tools/agent-loop/README.md`), which is exactly what makes it usable
- * for `decide`'s "pick one of these" shape and exactly what makes it
- * structurally unable to do `customizeTrap`'s "write new prose" shape at
- * all — there's no candidate set to score. `tools/agent-loop/poll.mjs`
- * imports `customizeTrap` directly from this file rather than through
- * `providers/index.mjs`'s `resolveProvider`, and simply skips trap
- * customization for a cycle if `ANTHROPIC_API_KEY` isn't configured, same
- * as it would skip a combat decision it couldn't reach.
+ * Also the *only* provider `customizeTrap` (#136) and `customizeSkillChallenge`
+ * (#166) can ever use, full stop — not gated by `DOMMT_AGENT_PROVIDER` the
+ * way `decide` is. Laya is non-autoregressive (calibrated probabilities
+ * over a fixed candidate set, per `tools/agent-loop/README.md`), which is
+ * exactly what makes it usable for `decide`'s "pick one of these" shape and
+ * exactly what makes it structurally unable to do either customization
+ * function's "write new prose" shape at all — there's no candidate set to
+ * score. `tools/agent-loop/poll.mjs` imports both directly from this file
+ * rather than through `providers/index.mjs`'s `resolveProvider`, and simply
+ * skips that cycle's customization if `ANTHROPIC_API_KEY` isn't configured,
+ * same as it would skip a combat decision it couldn't reach.
  */
 
 import { readEnvOrDotenv } from "../foundry-client.mjs";
@@ -152,4 +152,87 @@ export async function customizeTrap(context, opts = {}) {
   if (!toolUse)
     throw new Error("claude provider: no customize_trap tool call in response");
   return toolUse.input;
+}
+
+/**
+ * `context` is `getPendingSkillChallengeCustomization`'s own return shape
+ * (name, summary, specialtySkills, skillFlavor, locationTag) — deliberately
+ * never `vpTarget`/`attemptBudget`/anything DC-related, so nothing in this
+ * prompt can even suggest changing how the challenge actually works, only
+ * how it reads. `skillFlavor` is constrained to `context.specialtySkills`'s
+ * own 3 slugs (an `enum`, not freeform) so a response can't invent flavor
+ * for a skill that was never offered — same "can't name something never on
+ * the list" guarantee `decide`'s own `candidateId` enum already gives.
+ * Returns `{name, summary, skillFlavor}`, `skillFlavor` already converted
+ * to the plain `{slug: text}` map `applySkillChallengeCustomization`
+ * expects (from the tool's own array-of-pairs shape, needed because a JSON
+ * schema can't constrain object keys the way it can an array item's enum).
+ */
+export async function customizeSkillChallenge(context, opts = {}) {
+  const payload = await callClaude(
+    {
+      model: CLAUDE_MODEL,
+      max_tokens: 4096,
+      tools: [
+        {
+          name: "customize_skill_challenge",
+          description:
+            "Write a new name, summary, and per-skill flavor for this skill challenge, fitting the room and party — never its mechanics, only how it reads.",
+          input_schema: {
+            type: "object",
+            properties: {
+              name: {
+                type: "string",
+                description:
+                  "A short, evocative name for this specific challenge instance.",
+              },
+              summary: {
+                type: "string",
+                description:
+                  "A short paragraph setting up what the party is actually facing, matching the room's terrain/theme. Do not state exact DCs or other mechanical numbers.",
+              },
+              skillFlavor: {
+                type: "array",
+                description:
+                  "One entry per specialty skill, explaining what attempting it looks like in this specific challenge.",
+                items: {
+                  type: "object",
+                  properties: {
+                    skill: { type: "string", enum: context.specialtySkills },
+                    flavor: { type: "string" },
+                  },
+                  required: ["skill", "flavor"],
+                },
+              },
+            },
+            required: ["name", "summary", "skillFlavor"],
+          },
+        },
+      ],
+      tool_choice: { type: "tool", name: "customize_skill_challenge" },
+      messages: [
+        {
+          role: "user",
+          content: `You are dressing a mechanical skill challenge for a Pathfinder 2e dungeon room in fresh narrative flavor, without changing anything about how it actually works — only its name, summary, and per-skill flavor. Base challenge:\n\n${JSON.stringify(context, null, 2)}\n\nWrite a new name, summary, and flavor for each of the specialty skills listed, matching the room's own terrain/theme, not the base template's generic text.`,
+        },
+      ],
+    },
+    opts,
+  );
+
+  const toolUse = payload.content?.find(
+    (c) => c.type === "tool_use" && c.name === "customize_skill_challenge",
+  );
+  if (!toolUse)
+    throw new Error(
+      "claude provider: no customize_skill_challenge tool call in response",
+    );
+  const { name, summary, skillFlavor } = toolUse.input;
+  return {
+    name,
+    summary,
+    skillFlavor: Object.fromEntries(
+      (skillFlavor ?? []).map(({ skill, flavor }) => [skill, flavor]),
+    ),
+  };
 }

@@ -18,7 +18,12 @@ import {
 } from "./scene-divination.mjs";
 import { generateEncounter } from "./encounter-generator.mjs";
 import { DungeonApp, resolveCurrentRoom } from "./ui/dungeon-app.mjs";
-import { abandonRun, getRunState } from "./dungeon-runner.mjs";
+import {
+  abandonRun,
+  getRunState,
+  getPendingSkillChallengeCustomization,
+  applySkillChallengeCustomization,
+} from "./dungeon-runner.mjs";
 import {
   handleDungeonDoorOpened,
   teardownDungeonRun,
@@ -240,6 +245,29 @@ Hooks.once("ready", async () => {
           game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
         );
       return applyTrapCustomization(actorId, customization);
+    },
+    // #166: the same narrow read/apply pair as #136's trap customization
+    // surface above, for a skill_challenge room's own pending narrative
+    // customization instead.
+    getPendingSkillChallengeCustomization: (sceneId) => {
+      if (!game.user.isGM)
+        return ui.notifications.warn(
+          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+        );
+      return getPendingSkillChallengeCustomization(
+        sceneId ?? canvas?.scene?.id,
+      );
+    },
+    applySkillChallengeCustomization: (sceneId, roomId, customization) => {
+      if (!game.user.isGM)
+        return ui.notifications.warn(
+          game.i18n.localize("DOMMT.Dungeon.GmOnlyWarning"),
+        );
+      return applySkillChallengeCustomization(
+        sceneId ?? canvas?.scene?.id,
+        roomId,
+        customization,
+      );
     },
   };
   if (game.user.isGM) {
