@@ -291,6 +291,10 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const ensured = await ensurePuzzleState(sceneId, currentRoom.id, {
         hintChecks: setpiece.hintChecks,
         requiredSuccesses: setpiece.requiredSuccesses ?? null,
+        // #138: scale the template's own flat DC to the actual party's
+        // level, same partyLevel source skill_challenge's dcForAttempt
+        // call already uses.
+        partyLevel: await makeFoundryApi().partyLevel(),
       });
       const raw = ensured?.rooms.find((r) => r.id === currentRoom.id)?.puzzle;
       if (raw) {

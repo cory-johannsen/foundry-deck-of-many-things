@@ -1,3 +1,5 @@
+import { simpleDcForLevel } from "./skill-challenge-mechanics.mjs";
+
 /**
  * Core puzzle mechanics (#137): the resolution model for a `puzzle`-kind
  * `dungeon-setpieces.json` entry, no Foundry dependency — same pure/glue
@@ -84,7 +86,24 @@ export function isValidPuzzleTemplate(entry) {
  * puzzle author who wants a stricter or looser threshold than the
  * default).
  */
-export function initPuzzleState({ hintChecks, requiredSuccesses = null }) {
+export function initPuzzleState({
+  hintChecks,
+  requiredSuccesses = null,
+  partyLevel = null,
+}) {
+  // #138: hand-authored hintChecks carry the source book's own flat DC
+  // (10 for both real entries) with an explicit note to scale it to the
+  // actual party's level — unlike trap-library.mjs's own deliberate
+  // choice NOT to rescale a picked trap's DC/damage (those are derived
+  // stats off a compendium Actor, too risky to hand-rescale), a puzzle's
+  // DC is just a plain number in hand-authored JSON, safe to replace
+  // outright. Reuses skill-challenge-mechanics.mjs's own
+  // simpleDcForLevel table rather than inventing a second one. Uniform
+  // across every stage, matching skill_challenge's own "one DC for the
+  // room" convention — no real puzzle content differentiates stage
+  // difficulty today. `null` (the default) leaves each hintCheck's own
+  // flat `dc` alone, for a caller that hasn't resolved a party level yet.
+  const scaledDc = partyLevel != null ? simpleDcForLevel(partyLevel) : null;
   const stages = hintChecks.map((c) => ({
     // Lowercased to PF2e's own skill-slug convention — confirmed live the
     // real hand-authored hintChecks carry Title Case ("Perception",
@@ -93,7 +112,7 @@ export function initPuzzleState({ hintChecks, requiredSuccesses = null }) {
     // keys on the lowercase slug. Normalized once here rather than at
     // every call site that reads stages[].skill.
     skill: (c.skill ?? "").toLowerCase(),
-    dc: c.dc,
+    dc: scaledDc ?? c.dc,
     hint: c.hint,
     attempted: false,
     succeeded: false,

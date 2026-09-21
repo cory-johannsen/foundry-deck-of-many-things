@@ -499,7 +499,11 @@ export async function recordSkillChallengeAttempt(
  * around `initSkillChallengeState`, here around `initPuzzleState`
  * instead. `hintChecks`/`requiredSuccesses` come from the room's own
  * resolved `puzzle`-kind setpiece (the caller's job to have looked that up
- * — `dungeon-setpieces.json` entries aren't loaded from here).
+ * — `dungeon-setpieces.json` entries aren't loaded from here). `partyLevel`
+ * (#138, optional) scales every stage's own flat DC to the actual party's
+ * level — locked in at this first attach, the same way specialtySkills/
+ * vpTarget are locked in for a skill challenge, rather than drifting if
+ * the party's level changes mid-room.
  *
  * Also flags the new puzzle `customization: {status: 'pending'}`, the
  * same seam `ensureSkillChallenge` already leaves for #166's agent-bridge
@@ -511,7 +515,7 @@ export async function recordSkillChallengeAttempt(
 export async function ensurePuzzleState(
   sceneId,
   roomId,
-  { hintChecks, requiredSuccesses = null },
+  { hintChecks, requiredSuccesses = null, partyLevel = null },
   { settingsRef = defaultSettingsRef() } = {},
 ) {
   const state = getRunState(sceneId, { settingsRef });
@@ -519,7 +523,7 @@ export async function ensurePuzzleState(
   const room = state.rooms.find((r) => r.id === roomId);
   if (!room || room.puzzle) return state;
   const puzzle = {
-    ...initPuzzleState({ hintChecks, requiredSuccesses }),
+    ...initPuzzleState({ hintChecks, requiredSuccesses, partyLevel }),
     customization: { status: "pending" },
   };
   const rooms = state.rooms.map((r) => (r.id === roomId ? { ...r, puzzle } : r));

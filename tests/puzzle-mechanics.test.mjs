@@ -93,6 +93,26 @@ describe("initPuzzleState", () => {
     expect(state.stages[0].skill).toBe("perception");
     expect(state.stages[1].skill).toBe("society");
   });
+
+  it("uses each hintCheck's own flat dc verbatim when partyLevel isn't given", () => {
+    const state = initPuzzleState({
+      hintChecks: [{ skill: "society", dc: 10, hint: "h1" }],
+    });
+    expect(state.stages[0].dc).toBe(10);
+  });
+
+  it("scales every stage's dc to simpleDcForLevel(partyLevel), ignoring the template's own flat dc, when given", () => {
+    const state = initPuzzleState({
+      hintChecks: [
+        { skill: "society", dc: 10, hint: "h1" },
+        { skill: "occultism", dc: 10, hint: "h2" },
+      ],
+      partyLevel: 5,
+    });
+    // simpleDcForLevel(5) === 20 (skill-challenge-mechanics.mjs's own table)
+    expect(state.stages[0].dc).toBe(20);
+    expect(state.stages[1].dc).toBe(20);
+  });
 });
 
 describe("applyPuzzleStageAttempt", () => {
