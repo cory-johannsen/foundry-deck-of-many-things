@@ -17,6 +17,18 @@ this deck.
 
 ## Module boundary
 
+The issue's own file grounding turned out to be unreliable in several
+places once checked against the actual `import` graph (traced
+programmatically from every `from './x.mjs'` edge in `scripts/`, starting
+from each side's genuine entry points — `ui/dungeon-app.mjs`,
+`dungeon-remote.mjs`, `dungeon-scene.mjs`, `dungeon-runner.mjs`,
+`dungeon-permissions.mjs`, `encounter-generator.mjs` for dungeon-crawl;
+`ui/deck-app.mjs`, `ui/divination-app.mjs`, `draw-run.mjs`,
+`scene-divination.mjs`, `charge-sound.mjs`, `keep-one.mjs`,
+`death-avatar.mjs`, `warrior-template.mjs`, `gm-resolution.mjs`,
+`card-effects.mjs` for the deck). The boundary below is the verified result,
+not the issue's original list.
+
 ### Moves to `foundry-pf2e-dungeon-crawl`
 
 - `scripts/dungeon-combat.mjs`, `dungeon-deck.mjs`, `dungeon-layout.mjs`,
@@ -24,13 +36,13 @@ this deck.
   `dungeon-scene.mjs`, `dungeon-sound.mjs`
 - `scripts/encounter-deck.mjs`, `encounter-generator.mjs`,
   `encounter-roster.mjs`
-- `scripts/trap-combat.mjs`, `trap-library.mjs`, `trap-mechanics.mjs`
-- `scripts/pathfinding.mjs`, `placement.mjs`, `agent-candidates.mjs`,
-  `npc-benchmark.mjs`, `gm-resolution.mjs`, `combat-rewards.mjs`,
-  `cover-items.mjs`
+- `scripts/trap-library.mjs`
+- `scripts/pathfinding.mjs`, `agent-candidates.mjs`, `combat-rewards.mjs`
 - `scripts/puzzle.mjs`, `puzzle-mechanics.mjs`
 - `scripts/skill-challenge.mjs`, `skill-challenge-mechanics.mjs`
 - `scripts/narrative-mechanics.mjs`
+- `scripts/trait-picker.mjs` — used only by `encounter-generator.mjs` and
+  `dungeon-app.mjs`, despite the issue listing it as deck-side.
 - `scripts/ui/dungeon-app.mjs`
 - `scripts/creature-art.mjs`, `data/creature-art.json`,
   `assets/creature-art/`, `docs/creature-art-todo.csv`,
@@ -42,23 +54,56 @@ this deck.
 Each moved `.mjs` file's corresponding test file (e.g.
 `tests/dungeon-layout.test.mjs`) moves with it.
 
-### Stays in `deck-of-many-more-things` (deck-focused)
+**Not moving, despite the issue listing them as dungeon-crawl candidates:**
+`gm-resolution.mjs` and `npc-benchmark.mjs` have no dungeon-crawl involvement
+at all — `gm-resolution.mjs` is the general "GM confirms a card effect it
+couldn't auto-apply" flow (imported only by `module.mjs` and `draw-run.mjs`),
+and `npc-benchmark.mjs` is NPC-statblock-by-level data used only by
+`death-avatar.mjs`/`warrior-template.mjs` (the Skull/Knight cards building a
+creature from nothing). Both stay in the deck module as ordinary deck-only
+files.
+
+### Stays in `deck-of-many-more-things` (deck-only, no cross-module exposure needed)
 
 `scripts/deck.mjs`, `card-effects.mjs`, `card-handlers-extra.mjs`,
 `card-handlers-narrative.mjs`, `card-sound.mjs`, `charge-sound.mjs`,
-`choice-prompts.mjs`, `choice-routing.mjs`, `death-avatar.mjs`,
-`draw-run.mjs`, `draw-target.mjs`, `keep-one.mjs`, `player-choice.mjs`,
-`scene-divination.mjs`, `trait-picker.mjs`, `warrior-template.mjs`.
+`choice-routing.mjs`, `death-avatar.mjs`, `dice.mjs`, `draw-run.mjs`,
+`draw-target.mjs`, `effect-plan.mjs`, `gm-resolution.mjs`, `i18n.mjs`,
+`keep-one.mjs`, `npc-benchmark.mjs`, `scene-divination.mjs`,
+`warrior-template.mjs`, `ui/card-message.mjs`, `ui/deck-app.mjs`,
+`ui/divination-app.mjs`.
+
+`effect-plan.mjs`, `dice.mjs` and `i18n.mjs` were originally thought to need
+shared-infra treatment, but that was based on `gm-resolution.mjs` wrongly
+being treated as dungeon-side; none of the three is ever imported from the
+dungeon-crawl side, so they need no cross-module exposure.
 
 ### Shared infra (stays here, consumed via Foundry module dependency)
 
-`scripts/foundry-api.mjs`, `data-loader.mjs`, `prng.mjs`, `dice.mjs`,
-`audio.mjs`, `i18n.mjs`, `treasure.mjs`, `effect-plan.mjs`.
+`scripts/foundry-api.mjs`, `data-loader.mjs`, `prng.mjs`, `audio.mjs`,
+`choice-prompts.mjs`, `player-choice.mjs`, `cover-items.mjs`,
+`placement.mjs`, `treasure.mjs`, `trap-combat.mjs`, `trap-mechanics.mjs`.
 
-`treasure.mjs` is imported directly by `foundry-api.mjs`; `effect-plan.mjs`
-is imported by both dungeon-side `gm-resolution.mjs` and deck-side
-`keep-one.mjs`/`draw-run.mjs`. Both stay here rather than moving, so neither
-module ends up with a dangling import or a duplicated copy.
+Each is here because a moving file needs it transitively through
+`foundry-api.mjs` (`placement.mjs`, `cover-items.mjs`, `treasure.mjs`,
+`trap-combat.mjs` → `trap-mechanics.mjs`, all imported by `foundry-api.mjs`
+directly) or because `dungeon-remote.mjs` imports `player-choice.mjs`
+directly (which itself imports `choice-prompts.mjs`). All eleven stay here
+rather than moving, so neither module ends up with a dangling import or a
+duplicated copy.
+
+### `module.mjs` splits
+
+`scripts/module.mjs` is the one file genuinely shared by intent (it's the
+init/ready entry point for both subsystems today) rather than by the graph.
+Its dungeon-related pieces move to the new module's own `module.mjs`: the
+`dungeonRuns` and `agentLoopHeartbeat` world settings, the
+`DungeonApp`/`resolveCurrentRoom` import and its macro/hook wiring, the
+`handleDungeonDoorOpened`/`teardownDungeonRun` hooks, and the "DOMMT:
+Generate Encounter"/"DOMMT: Dungeon Crawl" macro definitions (plus their
+`assets/icons/macro-encounter.webp`/`macro-dungeon.webp` icons). Everything
+else in `module.mjs` — deck settings, deck macros, the deck/divination
+hooks — stays.
 
 `foundry-pf2e-dungeon-crawl`'s `module.json` declares
 `deck-of-many-more-things` under `relationships.requires`, and its moved
@@ -67,6 +112,35 @@ tree (same mechanism Foundry already uses for cross-module dependencies —
 load order guaranteed by the manifest relationship). `deck-of-many-more-things`
 does **not** depend on `foundry-pf2e-dungeon-crawl` — it can run standalone
 with no dungeon-crawl functionality.
+
+## Module identity and cross-repo imports
+
+The new module's Foundry package id is `pf2e-dungeon-crawl` (the repo is
+named `foundry-pf2e-dungeon-crawl`, matching this repo's own precedent of
+repo name differing from package id — `foundry-deck-of-many-things` repo,
+`deck-of-many-more-things` id).
+
+Foundry installs modules into sibling directories named after their package
+id (`Data/modules/<id>/`), regardless of source repo name. So at runtime, a
+moved file importing shared infra uses a relative path keyed to the
+**package id**, e.g. from `foundry-pf2e-dungeon-crawl/scripts/dungeon-combat.mjs`:
+
+```js
+import { makeFoundryApi } from "../../deck-of-many-more-things/scripts/foundry-api.mjs";
+```
+
+This is correct for the real deployed layout but won't resolve during local
+`npm test`, since local git checkouts are cloned under whatever directory
+names the developer chose (in this environment, `~/src/foundry-deck-of-many-things`
+and `~/src/foundry-pf2e-dungeon-crawl` — package-id-named path, not
+repo-name-named). `foundry-pf2e-dungeon-crawl`'s `vitest.config.mjs` adds a
+`resolve.alias` redirecting the `../../deck-of-many-more-things/scripts/`
+prefix to the actual local sibling checkout path
+(`path.resolve(__dirname, '../foundry-deck-of-many-things/scripts')`), so
+production import paths stay correct for Foundry's real layout while local
+tests still resolve. If a developer's local clone lives somewhere else, the
+alias's relative path needs adjusting — this is a one-line, obvious fix,
+not a design concern.
 
 ## Generator interface
 
@@ -98,10 +172,10 @@ open for a future card effect to register a deck-flavored generator later
 without requiring one now.
 
 `startDungeonRun`, `createRun`, the dungeon-related macros ("DOMMT: Generate
-Encounter", "DOMMT: Open Dungeon Tracker") and UI move to the new module
-wholesale. Internally they call whatever generator is currently registered
-instead of importing `dungeon-deck.mjs`/`encounter-roster.mjs` functions
-directly.
+Encounter", "DOMMT: Dungeon Crawl" — plus their `macro-encounter.webp`/
+`macro-dungeon.webp` icons) and UI move to the new module wholesale.
+Internally they call whatever generator is currently registered instead of
+importing `dungeon-deck.mjs`/`encounter-roster.mjs` functions directly.
 
 ## Creature art migration
 
@@ -161,28 +235,25 @@ This is a large split, sequenced as several PRs rather than one atomic
 commit:
 
 1. Scaffold `foundry-pf2e-dungeon-crawl`: `module.json` (with the
-   `relationships.requires` dependency on `deck-of-many-more-things`),
-   `package.json`, test runner config, CI, README.
-2. Move the dungeon-crawl `.mjs` files and their tests into the new repo;
-   get `npm test` green there against the shared-infra files copied
-   temporarily (not yet wired via the real dependency) just to unblock this
-   step, OR wire the real cross-module import path from the start if the
-   local dev/test setup can resolve it — implementation plan decides which
-   is less friction.
+   `relationships.requires` dependency on `deck-of-many-more-things` and
+   package id `pf2e-dungeon-crawl`), `package.json` mirroring this repo's
+   `vitest`-based test setup, and a `vitest.config.mjs` with the
+   shared-infra path alias described above.
+2. Move the dungeon-crawl `.mjs` files and their tests into the new repo,
+   using the real package-id-keyed cross-module import path
+   (`../../deck-of-many-more-things/scripts/...`) for shared infra from the
+   start — the vitest alias from step 1 makes `npm test` resolve it locally
+   immediately, so there's no temporary-copy step to later undo.
 3. Build the generator interface (`registerGenerator` API) and
    `DefaultGenerator`; wire `startDungeonRun`/`createRun`/UI/macros to call
    the registered generator instead of importing `dungeon-deck.mjs`
    directly.
-4. Wire the real Foundry module dependency for shared infra
-   (`foundry-api.mjs`, `data-loader.mjs`, `prng.mjs`, `dice.mjs`,
-   `audio.mjs`, `i18n.mjs`, `treasure.mjs`, `effect-plan.mjs`), removing any
-   temporary copies from step 2.
-5. Migrate creature art (data, assets, tooling, docs) into the new repo;
+4. Migrate creature art (data, assets, tooling, docs) into the new repo;
    verify; update #93.
-6. Strip all moved code/data from `deck-of-many-more-things`; bump both
+5. Strip all moved code/data from `deck-of-many-more-things`; bump both
    modules' `module.json` versions.
-7. Transfer #134–139 and #162–167 to the new repo.
-8. Live-verify via `foundry-rest` with both modules installed in the test
+6. Transfer #134–139 and #162–167 to the new repo.
+7. Live-verify via `foundry-rest` with both modules installed in the test
    world.
 
 ## Out of scope
