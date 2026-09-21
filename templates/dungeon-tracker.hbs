@@ -165,26 +165,36 @@
                 </p>
               {{/if}}
               {{#if narrative.options}}
-                <ul class="dommt-dungeon__narrative-options">
+                {{! #208: a choice-archetype room resolves through its own
+                  two option buttons instead of the plain Continue form —
+                  the picked option's own consequence text becomes the
+                  run's objective directly, so there's nothing left to
+                  free-type. }}
+                <div class="dommt-dungeon__narrative-options">
                   {{#each narrative.options}}
-                    <li><strong>{{this.label}}</strong> — {{this.consequence}}</li>
+                    <button
+                      type="button"
+                      data-action="chooseNarrativeOption"
+                      data-option-index="{{@index}}"
+                    ><strong>{{this.label}}</strong> — {{this.consequence}}</button>
                   {{/each}}
-                </ul>
+                </div>
+              {{else}}
+                <form class="dommt-dungeon__narrative-form">
+                  <label>
+                    {{localize "DOMMT.Dungeon.Narrative.ObjectiveLabel"}}
+                    <textarea
+                      name="dommt-narrative-objective"
+                      placeholder="{{localize
+                        'DOMMT.Dungeon.Narrative.ObjectivePlaceholder'
+                      }}"
+                    >{{narrative.suggestedObjective}}</textarea>
+                  </label>
+                  <button type="button" data-action="continueNarrative">{{localize
+                      "DOMMT.Dungeon.Narrative.ContinueButton"
+                    }}</button>
+                </form>
               {{/if}}
-              <form class="dommt-dungeon__narrative-form">
-                <label>
-                  {{localize "DOMMT.Dungeon.Narrative.ObjectiveLabel"}}
-                  <textarea
-                    name="dommt-narrative-objective"
-                    placeholder="{{localize
-                      'DOMMT.Dungeon.Narrative.ObjectivePlaceholder'
-                    }}"
-                  >{{narrative.suggestedObjective}}</textarea>
-                </label>
-                <button type="button" data-action="continueNarrative">{{localize
-                    "DOMMT.Dungeon.Narrative.ContinueButton"
-                  }}</button>
-              </form>
             </div>
           {{else if isTreasureRoom}}
             <div class="dommt-dungeon__treasure">

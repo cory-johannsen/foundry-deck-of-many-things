@@ -22,6 +22,7 @@ import {
   recordSkillChallengeOutcome,
   recordPuzzleStageOutcome,
   continueNarrativeRoom,
+  chooseNarrativeOption,
   claimTreasureFor,
 } from "./ui/dungeon-app.mjs";
 import { undoRoomEntry } from "./dungeon-scene.mjs";
@@ -60,6 +61,8 @@ const DUNGEON_ACTIONS = {
     ),
   continueNarrativeRoom: (args) =>
     continueNarrativeRoom(args.sceneId, args.objective),
+  chooseNarrativeOption: (args) =>
+    chooseNarrativeOption(args.sceneId, args.optionIndex),
   claimTreasure: (args) => claimTreasureFor(args.sceneId),
 };
 
