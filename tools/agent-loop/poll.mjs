@@ -32,6 +32,16 @@ async function applyDecision(combatId, combatantId, candidateId, rationale) {
   );
 }
 
+// #113: pinged once per outer loop iteration (see main()), independent of
+// whether there's a pending turn — the only way Foundry can tell "the
+// poller is running but nothing's due yet" apart from "the poller isn't
+// running at all."
+async function recordHeartbeat() {
+  return runFoundryScript(
+    `return game.modules.get('${MODULE_ID}').api.recordAgentLoopHeartbeat(${JSON.stringify({ provider: AGENT_PROVIDER_NAME, pollIntervalMs: POLL_INTERVAL_MS })});`,
+  );
+}
+
 async function playOnePendingTurnToCompletion(decide) {
   let pending = await getPendingTurn();
   while (pending) {
@@ -65,17 +75,59 @@ async function playOnePendingTurnToCompletion(decide) {
   }
 }
 
+// #115: after this many consecutive failed cycles (heartbeat or poll, each
+// counts), log one louder warning per streak rather than letting the same
+// "will retry" line scroll by forever — a GM/dev watching the terminal
+// should be able to tell "still retrying normally" apart from "this has
+// been stuck a while and might need a restart" without counting lines.
+const CONSECUTIVE_FAILURE_WARN_THRESHOLD = 10;
+let consecutiveFailures = 0;
+let warnedThisStreak = false;
+
+function noteCycleOutcome(ok) {
+  if (ok) {
+    consecutiveFailures = 0;
+    warnedThisStreak = false;
+    return;
+  }
+  consecutiveFailures += 1;
+  if (
+    consecutiveFailures >= CONSECUTIVE_FAILURE_WARN_THRESHOLD &&
+    !warnedThisStreak
+  ) {
+    warnedThisStreak = true;
+    const approxSeconds = Math.round(
+      (consecutiveFailures * POLL_INTERVAL_MS) / 1000,
+    );
+    console.error(
+      `agent-loop: ${consecutiveFailures} consecutive relay failures (~${approxSeconds}s) — this may need attention beyond automatic retry (check the relay/self-hosted service, or restart this process).`,
+    );
+  }
+}
+
 async function main() {
   const decide = resolveProvider();
   console.log(
     `agent-loop: polling every ${POLL_INTERVAL_MS}ms with provider "${AGENT_PROVIDER_NAME}"`,
   );
   for (;;) {
+    let cycleOk = true;
+    try {
+      await recordHeartbeat();
+    } catch (err) {
+      cycleOk = false;
+      console.error(
+        "agent-loop: heartbeat failed (Foundry may be unreachable):",
+        err.message,
+      );
+    }
     try {
       await playOnePendingTurnToCompletion(decide);
     } catch (err) {
+      cycleOk = false;
       console.error("agent-loop: poll cycle failed, will retry:", err.message);
     }
+    noteCycleOutcome(cycleOk);
     await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
   }
 }
