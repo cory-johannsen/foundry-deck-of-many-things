@@ -1,48 +1,68 @@
-import { loadDungeonSetpieces } from '../data-loader.mjs';
+import { loadDungeonSetpieces } from "../data-loader.mjs";
 import {
-  getRunState, createRun, markRoomOutcome, abandonRun, canUndoRoomEntry
-} from '../dungeon-runner.mjs';
-import { depthBiasFor } from '../dungeon-deck.mjs';
-import { makeFoundryApi } from '../foundry-api.mjs';
-import { traitFieldHtml, wireTraitPickerButtons, readTraitField } from '../trait-picker.mjs';
+  getRunState,
+  createRun,
+  markRoomOutcome,
+  abandonRun,
+  canUndoRoomEntry,
+} from "../dungeon-runner.mjs";
+import { depthBiasFor } from "../dungeon-deck.mjs";
+import { makeFoundryApi } from "../foundry-api.mjs";
 import {
-  createDungeonScene, buildRoomAtSlot, unlockDoorToSlot, populateSlotEncounter,
-  isSlotPopulated, isSlotBuilt, placePartyInSlot, undoRoomEntry, focusCameraOnSlot, teardownDungeonRun,
-  buildPopulateAndUnlockRoom
-} from '../dungeon-scene.mjs';
-import { startCombatForSlot, getCombatForSlot, resolveSlotCombat } from '../dungeon-combat.mjs';
+  traitFieldHtml,
+  wireTraitPickerButtons,
+  readTraitField,
+} from "../trait-picker.mjs";
+import {
+  createDungeonScene,
+  buildRoomAtSlot,
+  unlockDoorToSlot,
+  populateSlotEncounter,
+  isSlotPopulated,
+  isSlotBuilt,
+  placePartyInSlot,
+  undoRoomEntry,
+  focusCameraOnSlot,
+  teardownDungeonRun,
+  buildPopulateAndUnlockRoom,
+} from "../dungeon-scene.mjs";
+import {
+  startCombatForSlot,
+  getCombatForSlot,
+  resolveSlotCombat,
+} from "../dungeon-combat.mjs";
 
-const MODULE_ID = 'deck-of-many-more-things';
+const MODULE_ID = "deck-of-many-more-things";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 const ROOM_KIND_KEYS = {
-  combat: 'DOMMT.Dungeon.Kind.combat',
-  skill_challenge: 'DOMMT.Dungeon.Kind.skill_challenge',
-  puzzle_or_trap: 'DOMMT.Dungeon.Kind.puzzle_or_trap',
-  narrative: 'DOMMT.Dungeon.Kind.narrative',
-  safe_entry: 'DOMMT.Dungeon.Kind.safe_entry',
-  safe_rest: 'DOMMT.Dungeon.Kind.safe_rest'
+  combat: "DOMMT.Dungeon.Kind.combat",
+  skill_challenge: "DOMMT.Dungeon.Kind.skill_challenge",
+  puzzle_or_trap: "DOMMT.Dungeon.Kind.puzzle_or_trap",
+  narrative: "DOMMT.Dungeon.Kind.narrative",
+  safe_entry: "DOMMT.Dungeon.Kind.safe_entry",
+  safe_rest: "DOMMT.Dungeon.Kind.safe_rest",
 };
 
 const EFFECT_KEYS = {
-  friendly_aid: 'DOMMT.Dungeon.Effect.friendly_aid',
-  encounter: 'DOMMT.Dungeon.Effect.encounter',
-  ready_foraging: 'DOMMT.Dungeon.Effect.ready_foraging',
-  restless_night: 'DOMMT.Dungeon.Effect.restless_night',
-  reduced_travel_time: 'DOMMT.Dungeon.Effect.reduced_travel_time',
-  extra_travel_time: 'DOMMT.Dungeon.Effect.extra_travel_time',
-  treasure: 'DOMMT.Dungeon.Effect.treasure',
-  lost_gear: 'DOMMT.Dungeon.Effect.lost_gear',
-  exhaustion: 'DOMMT.Dungeon.Effect.exhaustion',
-  goal_cleared: 'DOMMT.Dungeon.Effect.goal_cleared',
-  goal_failed: 'DOMMT.Dungeon.Effect.goal_failed',
-  rest_room_passed: 'DOMMT.Dungeon.Effect.rest_room_passed'
+  friendly_aid: "DOMMT.Dungeon.Effect.friendly_aid",
+  encounter: "DOMMT.Dungeon.Effect.encounter",
+  ready_foraging: "DOMMT.Dungeon.Effect.ready_foraging",
+  restless_night: "DOMMT.Dungeon.Effect.restless_night",
+  reduced_travel_time: "DOMMT.Dungeon.Effect.reduced_travel_time",
+  extra_travel_time: "DOMMT.Dungeon.Effect.extra_travel_time",
+  treasure: "DOMMT.Dungeon.Effect.treasure",
+  lost_gear: "DOMMT.Dungeon.Effect.lost_gear",
+  exhaustion: "DOMMT.Dungeon.Effect.exhaustion",
+  goal_cleared: "DOMMT.Dungeon.Effect.goal_cleared",
+  goal_failed: "DOMMT.Dungeon.Effect.goal_failed",
+  rest_room_passed: "DOMMT.Dungeon.Effect.rest_room_passed",
 };
 
 /** Rooms with nothing to resolve (no outcomeSlotId ever assigned) — never
  * counted toward the GM's own requested room total (ITEM-5's rest room joins
  * the entry here). */
-const UNCOUNTED_ROOM_KINDS = new Set(['safe_entry', 'safe_rest']);
+const UNCOUNTED_ROOM_KINDS = new Set(["safe_entry", "safe_rest"]);
 
 /**
  * Resolve the current room's outcome and build+populate+unlock whatever
@@ -55,14 +75,21 @@ const UNCOUNTED_ROOM_KINDS = new Set(['safe_entry', 'safe_rest']);
  * entirely — `canvas?.scene` alone isn't reliable there the way it is for a
  * button click inside this app.
  */
-export async function resolveCurrentRoom(succeeded, { scene = canvas?.scene } = {}) {
+export async function resolveCurrentRoom(
+  succeeded,
+  { scene = canvas?.scene } = {},
+) {
   if (!scene) return;
   const setpieces = await loadDungeonSetpieces();
-  const { state, mutation, nextRoomId, nextPhysicalSlot } = await markRoomOutcome(
-    { sceneId: scene.id, succeeded },
-    { setpieceIds: setpieces.map((s) => s.id) }
-  );
-  if (mutation === 'rerun_encounter') ui.notifications.warn(game.i18n.localize('DOMMT.Dungeon.RerunEncounterHint'));
+  const { state, mutation, nextRoomId, nextPhysicalSlot } =
+    await markRoomOutcome(
+      { sceneId: scene.id, succeeded },
+      { setpieceIds: setpieces.map((s) => s.id) },
+    );
+  if (mutation === "rerun_encounter")
+    ui.notifications.warn(
+      game.i18n.localize("DOMMT.Dungeon.RerunEncounterHint"),
+    );
   if (!nextRoomId) return; // the goal room was just resolved — nothing more to build
 
   const nextRoom = state.rooms.find((r) => r.id === nextRoomId);
@@ -71,10 +98,10 @@ export async function resolveCurrentRoom(succeeded, { scene = canvas?.scene } = 
 
 export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
-    id: 'dommt-dungeon-app',
-    tag: 'section',
-    window: { title: 'DOMMT.Dungeon.Title', icon: 'fa-solid fa-dungeon' },
-    position: { width: 480, height: 'auto' },
+    id: "dommt-dungeon-app",
+    tag: "section",
+    window: { title: "DOMMT.Dungeon.Title", icon: "fa-solid fa-dungeon" },
+    position: { width: 480, height: "auto" },
     actions: {
       start: DungeonApp.#onStart,
       succeed: DungeonApp.#onSucceed,
@@ -85,12 +112,13 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       declareVictory: DungeonApp.#onDeclareVictory,
       declareDefeat: DungeonApp.#onDeclareDefeat,
       startCombatRecovery: DungeonApp.#onStartCombatRecovery,
-      openCombatTracker: DungeonApp.#onOpenCombatTracker
-    }
+      openCombatTracker: DungeonApp.#onOpenCombatTracker,
+      hide: DungeonApp.#onHide,
+    },
   };
 
   static PARTS = {
-    main: { template: `modules/${MODULE_ID}/templates/dungeon-tracker.hbs` }
+    main: { template: `modules/${MODULE_ID}/templates/dungeon-tracker.hbs` },
   };
 
   async _prepareContext() {
@@ -105,40 +133,59 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // crash on every render, clear it and let the GM start fresh.
     if (state && !state.physicalSlotByRoomId) {
       await abandonRun({ sceneId });
-      ui.notifications.info(game.i18n.localize('DOMMT.Dungeon.StaleRunCleared'));
+      ui.notifications.info(
+        game.i18n.localize("DOMMT.Dungeon.StaleRunCleared"),
+      );
       state = null;
     }
     if (!state) {
       const availableTraits = await makeFoundryApi().listCreatureTraits();
       return {
-        hasScene: true, hasRun: false, defaultRoomCount: 6, availableTraits,
+        hasScene: true,
+        hasRun: false,
+        defaultRoomCount: 6,
+        availableTraits,
         traitsFieldHtml: traitFieldHtml({
-          name: 'traits', label: game.i18n.localize('DOMMT.Encounter.ThemeLabel'),
-          buttonLabel: game.i18n.localize('DOMMT.Encounter.ChooseTraitsButton')
+          name: "traits",
+          label: game.i18n.localize("DOMMT.Encounter.ThemeLabel"),
+          buttonLabel: game.i18n.localize("DOMMT.Encounter.ChooseTraitsButton"),
         }),
         excludeTraitsFieldHtml: traitFieldHtml({
-          name: 'excludeTraits', label: game.i18n.localize('DOMMT.Encounter.ExcludeTraitsLabel'),
-          buttonLabel: game.i18n.localize('DOMMT.Encounter.ChooseTraitsButton')
-        })
+          name: "excludeTraits",
+          label: game.i18n.localize("DOMMT.Encounter.ExcludeTraitsLabel"),
+          buttonLabel: game.i18n.localize("DOMMT.Encounter.ChooseTraitsButton"),
+        }),
       };
     }
 
     const setpieces = await loadDungeonSetpieces();
     const setpiecesById = new Map(setpieces.map((s) => [s.id, s]));
     const currentRoom = state.rooms[state.currentIndex] ?? null;
-    const setpiece = currentRoom?.setpieceId ? setpiecesById.get(currentRoom.setpieceId) : null;
-    const currentRoomResolved = !!currentRoom && state.history.some((h) => h.roomId === currentRoom.id);
+    const setpiece = currentRoom?.setpieceId
+      ? setpiecesById.get(currentRoom.setpieceId)
+      : null;
+    const currentRoomResolved =
+      !!currentRoom && state.history.some((h) => h.roomId === currentRoom.id);
 
     const nextRoom = state.rooms[state.currentIndex + 1] ?? null;
     const nextSlot = nextRoom ? state.physicalSlotByRoomId[nextRoom.id] : null;
-    const nextRoomPending = !!(nextRoom && nextRoom.kind === 'combat'
-      && nextSlot != null && !isSlotPopulated(scene, nextSlot));
+    const nextRoomPending = !!(
+      nextRoom &&
+      nextRoom.kind === "combat" &&
+      nextSlot != null &&
+      !isSlotPopulated(scene, nextSlot)
+    );
 
-    const currentSlot = currentRoom ? state.physicalSlotByRoomId[currentRoom.id] : null;
-    const isCombatRoom = currentRoom?.kind === 'combat' && !currentRoomResolved;
-    const isSafeEntry = currentRoom?.kind === 'safe_entry';
-    const isSafeRest = currentRoom?.kind === 'safe_rest';
-    const activeCombat = isCombatRoom && currentSlot != null ? getCombatForSlot(scene, currentSlot) : null;
+    const currentSlot = currentRoom
+      ? state.physicalSlotByRoomId[currentRoom.id]
+      : null;
+    const isCombatRoom = currentRoom?.kind === "combat" && !currentRoomResolved;
+    const isSafeEntry = currentRoom?.kind === "safe_entry";
+    const isSafeRest = currentRoom?.kind === "safe_rest";
+    const activeCombat =
+      isCombatRoom && currentSlot != null
+        ? getCombatForSlot(scene, currentSlot)
+        : null;
 
     return {
       hasScene: true,
@@ -153,9 +200,11 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       // the room total the GM asked for — currentIndex 1 is real room 1 of
       // roomTotal, not room 2 of roomTotal+1, and a rest room further along
       // doesn't bump either number for the rooms after it.
-      roomNumber: state.rooms.slice(0, state.currentIndex + 1)
+      roomNumber: state.rooms
+        .slice(0, state.currentIndex + 1)
         .filter((r) => !UNCOUNTED_ROOM_KINDS.has(r.kind)).length,
-      roomTotal: state.rooms.filter((r) => !UNCOUNTED_ROOM_KINDS.has(r.kind)).length,
+      roomTotal: state.rooms.filter((r) => !UNCOUNTED_ROOM_KINDS.has(r.kind))
+        .length,
       currentRoomResolved,
       nextRoomPending,
       canUndo: canUndoRoomEntry(state),
@@ -171,16 +220,29 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
       currentRoom: currentRoom && {
         isGoal: currentRoom.isGoal,
         kind: currentRoom.kind,
-        kindLabel: game.i18n.localize(ROOM_KIND_KEYS[currentRoom.kind] ?? currentRoom.kind),
-        setpiece: setpiece && { name: setpiece.name, summary: setpiece.summary, complete: setpiece.complete }
+        kindLabel: game.i18n.localize(
+          ROOM_KIND_KEYS[currentRoom.kind] ?? currentRoom.kind,
+        ),
+        setpiece: setpiece && {
+          name: setpiece.name,
+          summary: setpiece.summary,
+          complete: setpiece.complete,
+        },
       },
-      traits: state.traits.join(', '),
-      excludeTraits: state.excludeTraits.join(', '),
-      history: state.history.slice().reverse().map((h) => ({
-        ...h,
-        effectLabel: game.i18n.localize(EFFECT_KEYS[h.effectKey] ?? h.effectKey),
-        outcomeLabel: game.i18n.localize(`DOMMT.Dungeon.Outcome.${h.outcome}`)
-      }))
+      traits: state.traits.join(", "),
+      excludeTraits: state.excludeTraits.join(", "),
+      history: state.history
+        .slice()
+        .reverse()
+        .map((h) => ({
+          ...h,
+          effectLabel: game.i18n.localize(
+            EFFECT_KEYS[h.effectKey] ?? h.effectKey,
+          ),
+          outcomeLabel: game.i18n.localize(
+            `DOMMT.Dungeon.Outcome.${h.outcome}`,
+          ),
+        })),
     };
   }
 
@@ -196,10 +258,13 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async #onStart() {
-    const form = this.element.querySelector('form');
-    const roomCount = Math.max(2, parseInt(form?.querySelector('[name="roomCount"]')?.value ?? '6', 10));
-    const traits = readTraitField(this.element, 'traits');
-    const excludeTraits = readTraitField(this.element, 'excludeTraits');
+    const form = this.element.querySelector("form");
+    const roomCount = Math.max(
+      2,
+      parseInt(form?.querySelector('[name="roomCount"]')?.value ?? "6", 10),
+    );
+    const traits = readTraitField(this.element, "traits");
+    const excludeTraits = readTraitField(this.element, "excludeTraits");
     // Wherever the GM/party were right before starting — teardownDungeonRun
     // (ITEM-18) sends them back here if this run is later abandoned.
     // Captured before createDungeonScene/activate ever touch canvas.scene.
@@ -209,14 +274,17 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const setpieces = await loadDungeonSetpieces();
     const state = await createRun(
       { sceneId: scene.id, roomCount, traits, excludeTraits, previousSceneId },
-      { setpieceIds: setpieces.map((s) => s.id) }
+      { setpieceIds: setpieces.map((s) => s.id) },
     );
 
     // Room 0 is always the safe entry — no encounter, trap or puzzle ever
     // spawns there (see dungeon-deck.mjs's buildRoomSequence).
     const entryRoom = state.rooms[0];
     await buildRoomAtSlot(scene, 0, {
-      isGoal: entryRoom.isGoal, locationTag: entryRoom.locationTag, artVariant: entryRoom.artVariant, seed: state.seed
+      isGoal: entryRoom.isGoal,
+      locationTag: entryRoom.locationTag,
+      artVariant: entryRoom.artVariant,
+      seed: state.seed,
     });
 
     // The entry has nothing to resolve, so — unlike every other room — its
@@ -228,11 +296,13 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // Start used to pop its Accept/Reroll preview immediately, before the GM
     // had even seen the dungeon scene (ITEM-11 reopening).
     const firstRealRoom = state.rooms[1];
-    if (firstRealRoom && firstRealRoom.kind !== 'combat') {
+    if (firstRealRoom && firstRealRoom.kind !== "combat") {
       await buildPopulateAndUnlockRoom(scene, state, firstRealRoom, 1);
     }
 
-    const partyMembers = (game.actors?.party?.members ?? []).filter((m) => m.type === 'character');
+    const partyMembers = (game.actors?.party?.members ?? []).filter(
+      (m) => m.type === "character",
+    );
     await placePartyInSlot(scene, 0, partyMembers, state.seed);
     await scene.activate();
     // The canvas doesn't finish switching to the new scene the instant
@@ -245,8 +315,14 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     this.render();
   }
 
-  static async #onSucceed() { await resolveCurrentRoom(true); this.render(); }
-  static async #onFail() { await resolveCurrentRoom(false); this.render(); }
+  static async #onSucceed() {
+    await resolveCurrentRoom(true);
+    this.render();
+  }
+  static async #onFail() {
+    await resolveCurrentRoom(false);
+    this.render();
+  }
 
   /** Manual GM override — always available while a combat room's Combat is
    * active, alongside the automatic all-one-side-defeated detection.
@@ -255,17 +331,28 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
    * has to be threaded through explicitly rather than relying on the
    * instance binding Foundry's action dispatcher gives #onDeclareVictory
    * itself. */
-  static async #onDeclareVictory() { await DungeonApp.#resolveCombatRoom(this, true); }
-  static async #onDeclareDefeat() { await DungeonApp.#resolveCombatRoom(this, false); }
+  static async #onDeclareVictory() {
+    await DungeonApp.#resolveCombatRoom(this, true);
+  }
+  static async #onDeclareDefeat() {
+    await DungeonApp.#resolveCombatRoom(this, false);
+  }
 
   static async #resolveCombatRoom(app, succeeded) {
     const scene = canvas?.scene;
     const sceneId = scene?.id;
     const state = sceneId ? getRunState(sceneId) : null;
     const currentRoom = state?.rooms[state.currentIndex];
-    const slot = currentRoom ? state.physicalSlotByRoomId[currentRoom.id] : null;
+    const slot = currentRoom
+      ? state.physicalSlotByRoomId[currentRoom.id]
+      : null;
     if (slot == null) return;
-    await resolveSlotCombat(scene, slot, succeeded ? 'victory' : 'defeat', makeFoundryApi());
+    await resolveSlotCombat(
+      scene,
+      slot,
+      succeeded ? "victory" : "defeat",
+      makeFoundryApi(),
+    );
     await resolveCurrentRoom(succeeded);
     app.render();
   }
@@ -278,13 +365,29 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const sceneId = scene?.id;
     const state = sceneId ? getRunState(sceneId) : null;
     const currentRoom = state?.rooms[state.currentIndex];
-    const slot = currentRoom ? state.physicalSlotByRoomId[currentRoom.id] : null;
+    const slot = currentRoom
+      ? state.physicalSlotByRoomId[currentRoom.id]
+      : null;
     if (slot == null) return;
     await startCombatForSlot(scene, slot);
     this.render();
   }
 
-  static #onOpenCombatTracker() { ui.sidebar.activateTab('combat'); }
+  static #onOpenCombatTracker() {
+    ui.sidebar.activateTab("combat");
+  }
+
+  /** #158: a plain, explicit "close this for a bit" affordance, distinct
+   * from Abandon (which deletes the whole run) — this only closes the
+   * rendered window, exactly what the standard window-chrome close button
+   * already does (confirmed live: no `_onClose` override exists on this
+   * class, so `close()` here has no side effect on the persisted run
+   * state). Needed once #158's auto-open makes the tracker pop open on its
+   * own more often — a labeled in-content button makes it obvious this is
+   * safe to dismiss, rather than relying on the small title-bar X. */
+  static #onHide() {
+    this.close();
+  }
 
   static async #onPopulateNext() {
     const scene = canvas?.scene;
@@ -301,14 +404,23 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // built back when the room before it resolved.
     if (!isSlotBuilt(scene, slot)) {
       await buildRoomAtSlot(scene, slot, {
-        isGoal: nextRoom.isGoal, locationTag: nextRoom.locationTag, artVariant: nextRoom.artVariant, seed: state.seed
+        isGoal: nextRoom.isGoal,
+        locationTag: nextRoom.locationTag,
+        artVariant: nextRoom.artVariant,
+        seed: state.seed,
       });
     }
 
     await populateSlotEncounter(scene, slot, {
-      prefillTraits: state.traits, prefillExcludeTraits: state.excludeTraits,
-      levelOffsetBias: depthBiasFor({ physicalSlot: slot, roomCount: state.rooms.length, isGoal: nextRoom.isGoal }),
-      locationTag: nextRoom.locationTag, seed: state.seed
+      prefillTraits: state.traits,
+      prefillExcludeTraits: state.excludeTraits,
+      levelOffsetBias: depthBiasFor({
+        physicalSlot: slot,
+        roomCount: state.rooms.length,
+        isGoal: nextRoom.isGoal,
+      }),
+      locationTag: nextRoom.locationTag,
+      seed: state.seed,
     });
     if (isSlotPopulated(scene, slot)) await unlockDoorToSlot(scene, slot);
     this.render();
@@ -334,15 +446,17 @@ export class DungeonApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!sceneId) return;
 
     const confirmed = await foundry.applications.api.DialogV2.confirm({
-      window: { title: game.i18n.localize('DOMMT.Dungeon.AbandonButton') },
-      content: `<p>${game.i18n.localize('DOMMT.Dungeon.AbandonConfirm')}</p>`,
-      rejectClose: false
+      window: { title: game.i18n.localize("DOMMT.Dungeon.AbandonButton") },
+      content: `<p>${game.i18n.localize("DOMMT.Dungeon.AbandonConfirm")}</p>`,
+      rejectClose: false,
     });
     if (!confirmed) return;
 
     const state = getRunState(sceneId);
     await abandonRun({ sceneId });
-    await teardownDungeonRun(scene, { previousSceneId: state?.previousSceneId ?? null });
+    await teardownDungeonRun(scene, {
+      previousSceneId: state?.previousSceneId ?? null,
+    });
     this.close();
   }
 }

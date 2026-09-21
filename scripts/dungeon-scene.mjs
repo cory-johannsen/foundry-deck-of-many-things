@@ -649,20 +649,33 @@ export async function buildPopulateAndUnlockRoom(
  * reveal door (`dungeonRevealDoorForSlot`), so a plain scenery door, an
  * already-passed room's door being reopened, or a GM idly clicking a wall
  * can't desync the tracker.
+ *
+ * Returns `{ autoOpenTracker }` (`false` on every early-return path, since
+ * nothing was actually revealed) — #158: a combat room's own reveal already
+ * draws the GM's attention through Foundry's native Combat Tracker the
+ * instant `startCombatForSlot` runs below, but a skill challenge, puzzle/
+ * trap, narrative, or rest room has no such native surface at all, so
+ * without this the GM has to know to reopen the Dungeon Crawl tracker
+ * themselves just to see the Succeed/Fail buttons. module.mjs's own
+ * `updateWall` hook (which this file deliberately never imports back into,
+ * see this file's own docblock) is what actually opens `DungeonApp` — this
+ * only ever hands back the plain boolean, same bridge pattern
+ * `onCombatAutoResolved` already uses for `resolveCurrentRoom`.
  */
 export async function handleDungeonDoorOpened(sceneId, wallId) {
   // Called directly from a global hook, which fires on every connected
   // client — only the GM's own client should act on it.
-  if (!game.user.isGM) return;
+  if (!game.user.isGM) return { autoOpenTracker: false };
   const scene = game.scenes.get(sceneId);
   const wall = scene?.walls.get(wallId);
   const slot = wall?.getFlag(MODULE_ID, "dungeonRevealDoorForSlot");
-  if (slot == null) return;
+  if (slot == null) return { autoOpenTracker: false };
 
   const state = getRunState(sceneId);
-  if (!state) return;
+  if (!state) return { autoOpenTracker: false };
   const nextRoomId = state.rooms[state.currentIndex + 1]?.id;
-  if (!nextRoomId || state.physicalSlotByRoomId[nextRoomId] !== slot) return;
+  if (!nextRoomId || state.physicalSlotByRoomId[nextRoomId] !== slot)
+    return { autoOpenTracker: false };
 
   playDoorSound("open");
   const revealedTokenIds = await revealSlotTokens(scene, slot);
@@ -699,6 +712,8 @@ export async function handleDungeonDoorOpened(sceneId, wallId) {
       );
     }
   }
+
+  return { autoOpenTracker: nextRoom?.kind !== "combat" };
 }
 
 /** Reverses the most recent automatic entry: re-hides what was revealed,
