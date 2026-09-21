@@ -12,7 +12,7 @@
       "description": "Gain telepathy within 90 feet.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/aberration.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/aberration.png",
           "text": "You gain the ability to communicate telepathically with any creature you can see within 90 feet of you. The creature understands you only if the two of you share a language."
         }
       ],
@@ -34,11 +34,11 @@
       "_id": "cardbalancexxxxx",
       "name": "Balance",
       "type": "base",
-      "description": "Your alignment reverses (lawful↔chaotic, good↔evil).",
+      "description": "Take a 2-point penalty to Will saves, and gain a 2-point bonus to Deception, Diplomacy and Intimidation.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/balance.webp",
-          "text": "Your mind suffers a wrenching alteration, causing your alignment to change. Lawful becomes chaotic, good becomes evil, and vice versa. If you are neutral or unaligned, this card has no effect on you."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/balance.png",
+          "text": "Your mind suffers a wrenching alteration and your convictions invert. You take a -2 status penalty to Will saves, and gain a +2 status bonus to Deception, Diplomacy and Intimidation checks. The change is permanent."
         }
       ],
       "face": 0,
@@ -59,11 +59,11 @@
       "_id": "cardbeastxxxxxxx",
       "name": "Beast",
       "type": "base",
-      "description": "Transform into a random CR 5 or lower beast for 2d12 days.",
+      "description": "Transform into a random animal battle form for 2d12 days.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/beast.webp",
-          "text": "You are transformed into a random beast of challenge rating 5 or lower for 2d12 days. Your game statistics, including mental ability scores, are replaced by those of the beast. You retain your alignment and personality."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/beast.png",
+          "text": "You are transformed into a random animal for 2d12 days. Your statistics are replaced by those of the battle form. You retain your personality and your memories."
         }
       ],
       "face": 0,
@@ -87,7 +87,7 @@
       "description": "Learn 1d6+2 languages.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/book.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/book.png",
           "text": "You immediately learn 1d6+2 languages of your choice. You gain fluency in these languages as if you had studied them for years."
         }
       ],
@@ -109,11 +109,11 @@
       "_id": "cardbridgexxxxxx",
       "name": "Bridge",
       "type": "base",
-      "description": "Cast Time Stop 1d3 times.",
+      "description": "Cast Time Freeze 1d3 times without spending a spell slot.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/bridge.webp",
-          "text": "You can cast Time Stop (or its PF2e equivalent, Time Freeze) 1d3 times without expending a spell slot. In PF2e this becomes 1d3 free castings of Time Freeze; the GM tracks uses."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/bridge.png",
+          "text": "You can cast Time Freeze 1d3 times without expending a spell slot. The uses are tracked on your sheet and are spent as you use them."
         }
       ],
       "face": 0,
@@ -134,11 +134,11 @@
       "_id": "cardcampfirexxxx",
       "name": "Campfire",
       "type": "base",
-      "description": "Gain benefits of a long rest immediately.",
+      "description": "Immediately gain the benefits of a full night's rest.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/campfire.webp",
-          "text": "You immediately gain the benefits of a long rest — in PF2e, this restores you to full HP, resets focus points, and refreshes your daily preparations as if you had rested 8 hours."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/campfire.png",
+          "text": "You are immediately restored to full Hit Points, your focus points are refreshed, and your daily preparations are renewed as though you had rested for eight hours."
         }
       ],
       "face": 0,
@@ -162,7 +162,7 @@
       "description": "Gain a climbing speed equal to your walking speed; climb surfaces freely.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/cavern.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/cavern.png",
           "text": "You gain a climbing speed equal to your current walking speed and can climb difficult surfaces, including upside down on ceilings, without needing to make a check."
         }
       ],
@@ -184,11 +184,11 @@
       "_id": "cardcelestialxxx",
       "name": "Celestial",
       "type": "base",
-      "description": "Sprout luminescent wings; gain 30 ft flying speed.",
+      "description": "Sprout luminescent wings: a 30-foot fly Speed, and bright light for 20 feet.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/celestial.webp",
-          "text": "Luminescent wings sprout from your back, granting you a flying speed of 30 feet. The wings shed a soft light in a 10-foot radius."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/celestial.png",
+          "text": "Wings of light unfold from your shoulders. You gain a fly Speed of 30 feet, and you shed bright light in a 20-foot radius and dim light for 20 feet beyond that."
         }
       ],
       "face": 0,
@@ -212,7 +212,7 @@
       "description": "If you solo-defeat the next hostile creature(s) you encounter, gain 1 level.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/comet.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/comet.png",
           "text": "If you single-handedly defeat the next hostile creature or group of creatures you encounter, you gain enough experience to advance one level. Otherwise, this card has no effect."
         }
       ],
@@ -237,7 +237,7 @@
       "description": "A homunculus appears and treats you as its creator.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/construct.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/construct.png",
           "text": "A homunculus appears in an unoccupied space within 30 feet of you. It treats you as its creator and is loyal to you for as long as it lives."
         }
       ],
@@ -259,11 +259,11 @@
       "_id": "cardcorpsexxxxxx",
       "name": "Corpse",
       "type": "base",
-      "description": "You drop to 0 HP, unconscious; death saves required; only Wish can resurrect.",
+      "description": "You drop to 0 Hit Points and enter Dying 1; only a wish-tier miracle can restore you.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/corpse.webp",
-          "text": "You immediately drop to 0 hit points and fall unconscious, requiring death saving throws (PF2e: enter Dying 1). If you die from this effect, only a Wish spell (or equivalent divine miracle) can bring you back."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/corpse.png",
+          "text": "You immediately drop to 0 Hit Points, fall unconscious and enter Dying 1. If you die from this effect, only a wish-tier divine miracle can bring you back."
         }
       ],
       "face": 0,
@@ -287,7 +287,7 @@
       "description": "Roll d20: even = age 1d10 years older; odd = 1d10 years younger.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/crossroads.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/crossroads.png",
           "text": "Roll a d20. On an even result, you age 1d10 years. On an odd result, you become 1d10 years younger (minimum 1 year old). The change is instantaneous and permanent."
         }
       ],
@@ -312,7 +312,7 @@
       "description": "Entombed in an extradimensional sphere; you draw no more cards.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/donjon.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/donjon.png",
           "text": "You disappear and become entombed in a state of suspended animation in an extradimensional sphere. Everything you were wearing and carrying stays behind in the space you occupied. You remain there until you are found and removed. You draw no more cards."
         }
       ],
@@ -334,11 +334,11 @@
       "_id": "carddoorxxxxxxxx",
       "name": "Door",
       "type": "base",
-      "description": "Cast Gate 1d4 times without material components.",
+      "description": "Cast Gate 1d4 times without spending a spell slot or components.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/door.webp",
-          "text": "You can cast the Gate spell (or PF2e Gate) 1d4 times without expending a spell slot or material components. The GM tracks the number of uses."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/door.png",
+          "text": "You can cast Gate 1d4 times without expending a spell slot or material components. The uses are tracked on your sheet."
         }
       ],
       "face": 0,
@@ -359,11 +359,11 @@
       "_id": "carddragonxxxxxx",
       "name": "Dragon",
       "type": "base",
-      "description": "A dragon wyrmling hatches nearby; it views you as its parent and is loyal.",
+      "description": "A dragon suited to your own power appears; it takes you for its parent and is loyal.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/dragon.webp",
-          "text": "A dragon wyrmling of a type chosen by the GM appears in an unoccupied space within 30 feet of you. The wyrmling views you as its parent and is loyal to you for as long as you both live."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/dragon.png",
+          "text": "A dragon of a kind chosen by the GM appears in an unoccupied space within 30 feet of you. It is no greater than your own level — a drake or dragonet early on, a true dragon later — and it takes you for its parent, loyal for as long as you both live."
         }
       ],
       "face": 0,
@@ -384,11 +384,11 @@
       "_id": "cardelementalxxx",
       "name": "Elemental",
       "type": "base",
-      "description": "Become immune to one of: acid, cold, fire, lightning, or thunder (choice).",
+      "description": "Become immune to one of acid, cold, fire, electricity or sonic damage.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/elemental.webp",
-          "text": "You choose one damage type: acid, cold, fire, lightning, or thunder. You become permanently immune to damage of the chosen type."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/elemental.png",
+          "text": "You become immune to one damage type of your choice: acid, cold, fire, electricity or sonic."
         }
       ],
       "face": 0,
@@ -412,7 +412,7 @@
       "description": "You suffer a −2 penalty on saving throws until removed by divine intervention.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/euryale.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/euryale.png",
           "text": "The card's medusa-like visage curses you. You suffer a −2 penalty on all saving throws. Only a god or the magic of the Fates card (or equivalent divine intervention) can end this curse."
         }
       ],
@@ -434,11 +434,11 @@
       "_id": "cardexpertxxxxxx",
       "name": "Expert",
       "type": "base",
-      "description": "Your Dexterity score increases by 2 (max 22).",
+      "description": "Your Dexterity modifier increases by 1, to a maximum of +7.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/expert.webp",
-          "text": "Your Dexterity score increases by 2, to a maximum of 22 (5e cap). In PF2e translation, this becomes a +1 to your Dexterity modifier, capped at the PF2e mod ceiling."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/expert.png",
+          "text": "Your Dexterity modifier increases by 1, to a maximum of +7. The boost is permanent."
         }
       ],
       "face": 0,
@@ -462,7 +462,7 @@
       "description": "Erase one event as if it never happened; usable anytime before your death.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/fates.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/fates.png",
           "text": "Reality's fabric unravels and reshapes itself, allowing you to avoid or erase one event as if it never happened. You can use the card's magic as soon as you draw the card or at any other time before your death."
         }
       ],
@@ -487,7 +487,7 @@
       "description": "You are pulled into the Feywild through a fey crossing; you draw no more cards.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/fey.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/fey.png",
           "text": "You are pulled through a spontaneously opened fey crossing and deposited into the Feywild. You must find your own way back. You draw no more cards."
         }
       ],
@@ -512,7 +512,7 @@
       "description": "A powerful fiend offers a deal (task in exchange for reward). Indifferent and keeps its bargains.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/fiend.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/fiend.png",
           "text": "A powerful fiend (chosen by the GM) appears and offers you a deal — a task in exchange for a reward. The fiend is indifferent to you and honors its bargains, though it interprets them literally."
         }
       ],
@@ -537,8 +537,8 @@
       "description": "A powerful devil becomes your permanent enemy, seeking your ruin and death.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/flames.webp",
-          "text": "A powerful devil (chosen by the GM) becomes your enemy. The devil seeks your ruin and plagues your life, savoring your suffering before attempting to slay you. This enmity lasts until either you or the devil dies."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/flames.png",
+          "text": "A powerful devil becomes your enemy. The devil seeks your ruin and plagues your life, savoring your suffering before attempting to slay you. Its identity is known only to the GM until it chooses to reveal itself. This enmity lasts until either you or the devil dies."
         }
       ],
       "face": 0,
@@ -559,11 +559,11 @@
       "_id": "cardfoolxxxxxxxx",
       "name": "Fool",
       "type": "base",
-      "description": "Lose 10,000 XP, discard this card, and draw two more (counts as one declared draw).",
+      "description": "Lose 1,000 XP, discard this card, and draw two more (counts as one declared draw).",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/fool.webp",
-          "text": "You lose 10,000 XP, discard this card, and draw two more cards beyond your declared draws. In PF2e terms, this is a loss of experience toward your next level (or a level drain if it exceeds your current XP)."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/fool.png",
+          "text": "You lose 1,000 XP, discard this card, and draw two more cards beyond your declared draws. If the loss exceeds the experience you have earned toward your current level, it costs you a level."
         }
       ],
       "face": 0,
@@ -587,7 +587,7 @@
       "description": "25 pieces of jewelry (2,000 gp each) OR 50 gems (1,000 gp each) appear at your feet.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/gem.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/gem.png",
           "text": "Twenty-five pieces of jewelry worth 2,000 gp each, or fifty gems worth 1,000 gp each, appear at your feet. Choose one option."
         }
       ],
@@ -612,7 +612,7 @@
       "description": "You grow 2d10 inches; your HP maximum and current HP increase by 20.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/giant.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/giant.png",
           "text": "You grow 2d10 inches taller, and your hit point maximum and current hit points each increase by 20."
         }
       ],
@@ -637,7 +637,7 @@
       "description": "You may stop drawing regardless of the declared number.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/humanoid.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/humanoid.png",
           "text": "You can choose to stop drawing cards regardless of how many you originally declared. The remaining declared draws are forfeited."
         }
       ],
@@ -659,11 +659,11 @@
       "_id": "cardjesterxxxxxx",
       "name": "Jester",
       "type": "base",
-      "description": "Gain 10,000 XP OR draw two additional cards beyond your declared draws.",
+      "description": "Gain 1,000 XP, or draw two additional cards beyond your declared draws.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/jester.webp",
-          "text": "You gain 10,000 XP, or you can choose to draw two additional cards beyond your declared draws."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/jester.png",
+          "text": "You gain 1,000 XP — a full level's worth — or you can choose instead to draw two additional cards beyond your declared draws."
         }
       ],
       "face": 0,
@@ -684,11 +684,11 @@
       "_id": "cardkeyxxxxxxxxx",
       "name": "Key",
       "type": "base",
-      "description": "A rare or rarer magic weapon appears in your hands, and you are proficient with it.",
+      "description": "An uncommon or rarer magic weapon appears in your hands, and you can wield it.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/key.webp",
-          "text": "A rare or rarer magic weapon with which you are proficient suddenly appears in your hands. In PF2e translation, an uncommon+ magic weapon of appropriate level appears, and you gain the proficiency needed to wield it if you lacked it."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/key.png",
+          "text": "An uncommon or rarer magic weapon suddenly appears in your hands. You gain whatever proficiency you need to wield it, if you lacked it."
         }
       ],
       "face": 0,
@@ -709,11 +709,11 @@
       "_id": "cardknightxxxxxx",
       "name": "Knight",
       "type": "base",
-      "description": "A 4th-level fighter of the same race as you appears; loyal until death.",
+      "description": "A warrior of your own level and ancestry appears and serves you loyally until death.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/knight.webp",
-          "text": "You gain the service of a 4th-level fighter (PF2e: 4th-level warrior NPC) who appears in a space you choose within 30 feet. The fighter is of the same race as you and serves you loyally until death."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/knight.png",
+          "text": "You gain the service of a warrior who appears in a space you choose within 30 feet. They are of your level and share your ancestry, and they serve you loyally until death."
         }
       ],
       "face": 0,
@@ -734,11 +734,11 @@
       "_id": "cardlancexxxxxxx",
       "name": "Lance",
       "type": "base",
-      "description": "All your ability scores increase by 1 (max 20).",
+      "description": "Every one of your ability modifiers increases by 1, to a maximum of +7.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/lance.webp",
-          "text": "Each of your ability scores increases by 1, to a maximum of 20 (5e cap). In PF2e, each ability modifier gains a +1 boost, capped at PF2e's mod ceiling."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/lance.png",
+          "text": "Each of your ability modifiers increases by 1, to a maximum of +7. The boost is permanent."
         }
       ],
       "face": 0,
@@ -759,11 +759,11 @@
       "_id": "cardmagexxxxxxxx",
       "name": "Mage",
       "type": "base",
-      "description": "Your Intelligence score increases by 2 (max 22).",
+      "description": "Your Intelligence modifier increases by 1, to a maximum of +7.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/mage.webp",
-          "text": "Your Intelligence score increases by 2, to a maximum of 22 (5e cap). PF2e translation: +1 to Intelligence modifier, capped at the PF2e mod ceiling."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/mage.png",
+          "text": "Your Intelligence modifier increases by 1, to a maximum of +7. The boost is permanent."
         }
       ],
       "face": 0,
@@ -787,7 +787,7 @@
       "description": "Within 1 year, mentally name an object or person to learn its location, distance, and condition.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/map.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/map.png",
           "text": "At any time within the next year, you can mentally name a specific object or person you have seen and instantly learn its current location, distance from you, and general condition. The card's magic is expended after one use."
         }
       ],
@@ -809,11 +809,11 @@
       "_id": "cardmazexxxxxxxx",
       "name": "Maze",
       "type": "base",
-      "description": "You gain 1d3 levels of exhaustion.",
+      "description": "You become Fatigued, and Drained 1 or 2 besides.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/maze.webp",
-          "text": "You gain 1d3 levels of exhaustion. In PF2e translation, this becomes Fatigued (for 1 level) plus Drained equal to the remaining levels (2 or 3)."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/maze.png",
+          "text": "Roll 1d3. You become Fatigued; on a 2 or 3 you are also Drained 1 or Drained 2 respectively. The conditions are removed by the usual means."
         }
       ],
       "face": 0,
@@ -837,7 +837,7 @@
       "description": "2d6 gems (5,000 gp each) plus 1d10 ore chunks (2,500 gp each) appear.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/mine.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/mine.png",
           "text": "2d6 gems worth 5,000 gp each and 1d10 chunks of precious ore worth 2,500 gp each appear at your feet."
         }
       ],
@@ -859,11 +859,11 @@
       "_id": "cardmonstrosityx",
       "name": "Monstrosity",
       "type": "base",
-      "description": "A Large or larger monstrosity of CR 10 or lower appears, hostile, and attacks immediately.",
+      "description": "A Large or larger creature appears, hostile, and attacks the whole party.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/monstrosity.webp",
-          "text": "A Large or larger monstrosity of challenge rating 10 or lower (GM's choice) appears in an unoccupied space within 60 feet of you. The creature is hostile and attacks you immediately."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/monstrosity.png",
+          "text": "A Large or larger creature appears in an unoccupied space within 60 feet of you, of a level chosen to threaten your whole party rather than you alone. It is hostile and attacks immediately."
         }
       ],
       "face": 0,
@@ -884,11 +884,11 @@
       "_id": "cardmoonxxxxxxxx",
       "name": "Moon",
       "type": "base",
-      "description": "Cast Wish 1d3 times.",
+      "description": "Call on a divine miracle 1d3 times.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/moon.webp",
-          "text": "You gain the ability to cast the Wish spell (or an equivalent divine miracle in PF2e, where Wish does not exist) 1d3 times."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/moon.png",
+          "text": "You gain the ability to call on a divine miracle 1d3 times. The GM adjudicates the scope of each; the uses are tracked on your sheet."
         }
       ],
       "face": 0,
@@ -909,11 +909,11 @@
       "_id": "cardoozexxxxxxxx",
       "name": "Ooze",
       "type": "base",
-      "description": "A gelatinous cube appears in your space and engulfs you (hostile).",
+      "description": "An ooze appears in your space and tries to engulf you (hostile).",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/ooze.webp",
-          "text": "A gelatinous cube appears in your space and immediately attempts to engulf you. The cube is hostile and will pursue you if you escape."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/ooze.png",
+          "text": "An ooze appears in your space and immediately attempts to engulf you: a gelatinous cube at first, and heavier things as you grow. It is hostile and will pursue you if you escape."
         }
       ],
       "face": 0,
@@ -937,7 +937,7 @@
       "description": "Your walking speed increases by 10 feet.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/path.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/path.png",
           "text": "Your walking speed permanently increases by 10 feet."
         }
       ],
@@ -962,7 +962,7 @@
       "description": "You fall 3d6×10 feet, taking falling damage; you land prone.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/pit.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/pit.png",
           "text": "The ground beneath you opens into a chasm. You fall 3d6 × 10 feet, taking falling damage on landing, and end prone."
         }
       ],
@@ -984,11 +984,11 @@
       "_id": "cardplantxxxxxxx",
       "name": "Plant",
       "type": "base",
-      "description": "You can cast Speak with Plants without a slot (once per long rest).",
+      "description": "Cast Speak with Plants once per day without spending a spell slot.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/plant.webp",
-          "text": "You can cast Speak with Plants (or the PF2e equivalent, Speak with Plants) once per long rest without expending a spell slot."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/plant.png",
+          "text": "You can cast Speak with Plants once per day without expending a spell slot."
         }
       ],
       "face": 0,
@@ -1009,11 +1009,11 @@
       "_id": "cardpriestxxxxxx",
       "name": "Priest",
       "type": "base",
-      "description": "Your Wisdom score increases by 2 (max 22).",
+      "description": "Your Wisdom modifier increases by 1, to a maximum of +7.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/priest.webp",
-          "text": "Your Wisdom score increases by 2, to a maximum of 22 (5e cap). PF2e translation: +1 to Wisdom modifier, capped at the PF2e mod ceiling."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/priest.png",
+          "text": "Your Wisdom modifier increases by 1, to a maximum of +7. The boost is permanent."
         }
       ],
       "face": 0,
@@ -1037,7 +1037,7 @@
       "description": "Magical force chains restrain you; you cannot cast spells; you draw no more cards.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/prisoner.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/prisoner.png",
           "text": "Chains of magical force wrap around you, restraining you. You cannot cast spells while restrained by these chains, and you draw no more cards. The chains persist until dispelled or removed by powerful magic."
         }
       ],
@@ -1059,10 +1059,10 @@
       "_id": "cardpuzzlexxxxxx",
       "name": "Puzzle",
       "type": "base",
-      "description": "Your Intelligence score decreases by 1d4+1 (min 1); draw one additional card.",
+      "description": "Your Intelligence modifier drops by 1d4+1; draw one additional card.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/puzzle.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/puzzle.png",
           "text": "Your Intelligence score decreases by 1d4+1 (minimum 1). You must also draw one additional card beyond your declared draws."
         }
       ],
@@ -1084,11 +1084,11 @@
       "_id": "cardringxxxxxxxx",
       "name": "Ring",
       "type": "base",
-      "description": "A rare or rarer magic ring appears and auto-attunes if you have slots available.",
+      "description": "An uncommon or rarer magic ring appears on your finger and is invested automatically.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/ring.webp",
-          "text": "A rare or rarer magic ring appears on your finger. If you have an available attunement slot (5e) or ring-slot (PF2e), it attunes to you automatically."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/ring.png",
+          "text": "An uncommon or rarer magic ring appears on your finger. It is invested to you automatically, if you have an investiture available."
         }
       ],
       "face": 0,
@@ -1109,11 +1109,11 @@
       "_id": "cardroguexxxxxxx",
       "name": "Rogue",
       "type": "base",
-      "description": "A random NPC known to you becomes a hostile enemy; only Wish or divine intervention ends it.",
+      "description": "A non-player character you know becomes your enemy; only a wish-tier miracle ends it.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/rogue.webp",
-          "text": "A nonplayer character of the GM's choice becomes hostile toward you. The identity of your new enemy is not known until they or someone else reveals it. Nothing less than a Wish spell (or divine intervention) can end their hostility."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/rogue.png",
+          "text": "A non-player character of the GM's choice becomes hostile toward you. The identity of your new enemy is not known until they or someone else reveals it. Nothing short of a wish-tier divine miracle can end their hostility."
         }
       ],
       "face": 0,
@@ -1137,7 +1137,7 @@
       "description": "All non-magical wealth you own is lost; property and ownership documentation disappear.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/ruin.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/ruin.png",
           "text": "All forms of non-magical wealth you carry or own vanish. Portable property is reduced to dust; documents that establish your ownership also disappear, along with the deeds and titles."
         }
       ],
@@ -1162,7 +1162,7 @@
       "description": "Within 1 year, ask one question in meditation and receive a truthful answer with attendant wisdom.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/sage.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/sage.png",
           "text": "At any time within the next year, you can meditate for one hour and ask a single question. You receive a truthful answer and gain any additional wisdom the answer entails. The card's magic is expended after one use."
         }
       ],
@@ -1184,11 +1184,11 @@
       "_id": "cardshieldxxxxxx",
       "name": "Shield",
       "type": "base",
-      "description": "A rare or rarer magic armor appears; if you lack armor proficiency, your unarmored AC becomes 12 + DEX.",
+      "description": "An uncommon or rarer suit of magic armor appears on your body.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/shield.webp",
-          "text": "A rare or rarer suit of magic armor appears on your body. If you are not proficient with the armor, your unarmored AC becomes 12 + your Dexterity modifier while the armor is present. PF2e translation grants an uncommon+ armor of appropriate level and applies a similar unarmored fallback."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/shield.png",
+          "text": "An uncommon or rarer suit of magic armor appears on your body. If you lack the proficiency to wear it, you gain a +2 item bonus to AC from it regardless while it remains."
         }
       ],
       "face": 0,
@@ -1209,11 +1209,11 @@
       "_id": "cardshipxxxxxxxx",
       "name": "Ship",
       "type": "base",
-      "description": "Gain proficiency in three skills (GM chooses).",
+      "description": "Become Trained in three skills of the GM's choice, or advance one step if already Trained.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/ship.webp",
-          "text": "You gain proficiency in three skills chosen by the GM. In PF2e translation, you become Trained in three skills of the GM's choice (or advanced one step if already Trained)."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/ship.png",
+          "text": "You become Trained in three skills chosen by the GM, or advance one proficiency step in them if you are already Trained."
         }
       ],
       "face": 0,
@@ -1234,11 +1234,11 @@
       "_id": "cardskullxxxxxxx",
       "name": "Skull",
       "type": "base",
-      "description": "An avatar of death appears; it attacks you; any it kills cannot be resurrected.",
+      "description": "An avatar of death at your own level attacks you; any it kills cannot be raised.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/skull.webp",
-          "text": "You summon an avatar of death — a ghostly humanoid skeleton clad in a tattered black robe. It appears in an unoccupied space of the GM's choice within 10 feet of you and attacks you, warning all others that you must win the battle alone. Creatures it slays cannot be restored to life by any means short of a Wish."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/skull.png",
+          "text": "You summon an avatar of death — a ghostly humanoid skeleton clad in a tattered black robe, of your own level. It appears in an unoccupied space of the GM's choice within 10 feet of you and attacks you, warning all others that you must win the battle alone. Creatures it slays cannot be restored to life by any means short of a wish."
         }
       ],
       "face": 0,
@@ -1259,11 +1259,11 @@
       "_id": "cardstaffxxxxxxx",
       "name": "Staff",
       "type": "base",
-      "description": "A rare or rarer magic rod, staff, or wand appears.",
+      "description": "An uncommon or rarer magic staff, wand, or rod appears in your hands.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/staff.webp",
-          "text": "A rare or rarer magic rod, staff, or wand (GM's choice) appears in your hands. PF2e translation grants an uncommon+ magical implement (staff/wand/rod) of appropriate level."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/staff.png",
+          "text": "An uncommon or rarer magical implement — a staff, wand, or rod, at the GM's choice — appears in your hands."
         }
       ],
       "face": 0,
@@ -1284,11 +1284,11 @@
       "_id": "cardstairwayxxxx",
       "name": "Stairway",
       "type": "base",
-      "description": "Reduce your remaining declared draws by 2 OR receive a rare+ wondrous item (choice).",
+      "description": "An uncommon or rarer wondrous item appears in your hands.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/stairway.webp",
-          "text": "You may choose to reduce the number of cards you have yet to draw by 2 (to a minimum of zero), or you may receive a rare or rarer wondrous item that appears in your possession."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/stairway.png",
+          "text": "An uncommon or rarer wondrous item appears in your hands."
         }
       ],
       "face": 0,
@@ -1309,11 +1309,11 @@
       "_id": "cardstarxxxxxxxx",
       "name": "Star",
       "type": "base",
-      "description": "+2 to one ability score of your choice (max 24).",
+      "description": "Increase one ability modifier of your choice by 1, to a maximum of +7.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/star.webp",
-          "text": "Increase one of your ability scores by 2, to a maximum of 24 (5e cap). PF2e translation: +1 to a chosen ability modifier, capped at the PF2e mod ceiling."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/star.png",
+          "text": "Increase one ability modifier of your choice by 1, to a maximum of +7. You choose which ability when the card is applied."
         }
       ],
       "face": 0,
@@ -1334,10 +1334,10 @@
       "_id": "cardstatuexxxxxx",
       "name": "Statue",
       "type": "base",
-      "description": "You are petrified; freed by Greater Restoration or similar magic.",
+      "description": "You are petrified — removable only by remove petrification or a wish-tier ritual.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/statue.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/statue.png",
           "text": "You are turned to stone (Petrified condition). You remain petrified until freed by Greater Restoration, Wish, or comparable magic."
         }
       ],
@@ -1359,11 +1359,11 @@
       "_id": "cardsunxxxxxxxxx",
       "name": "Sun",
       "type": "base",
-      "description": "Gain 50,000 XP; a random rare+ wondrous item appears.",
+      "description": "Gain 2,000 XP (two levels); a random uncommon+ wondrous item appears.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/sun.webp",
-          "text": "You gain 50,000 XP, and a random wondrous item (of rare rarity or greater) appears in your possession. PF2e translation: gain XP appropriate for your level (GM may convert) and an uncommon+ wondrous item."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/sun.png",
+          "text": "You gain 2,000 XP, and a random wondrous item of uncommon rarity or greater appears in your possession."
         }
       ],
       "face": 0,
@@ -1387,7 +1387,7 @@
       "description": "All your magic items disintegrate; artifacts vanish but survive.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/talons.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/talons.png",
           "text": "Every magic item you wear or carry disintegrates. Artifacts in your possession are not destroyed but vanish to another location."
         }
       ],
@@ -1409,11 +1409,11 @@
       "_id": "cardtavernxxxxxx",
       "name": "Tavern",
       "type": "base",
-      "description": "Your Charisma score increases by 2 (max 22).",
+      "description": "Your Charisma modifier increases by 1, to a maximum of +7.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/tavern.webp",
-          "text": "Your Charisma score increases by 2, to a maximum of 22 (5e cap). PF2e translation: +1 to Charisma modifier, capped at the PF2e mod ceiling."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/tavern.png",
+          "text": "Your Charisma modifier increases by 1, to a maximum of +7. The boost is permanent."
         }
       ],
       "face": 0,
@@ -1437,7 +1437,7 @@
       "description": "A deity is bound to aid you once via divine intervention or Resurrection.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/temple.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/temple.png",
           "text": "A deity of the GM's choice is bound to aid you once, either through divine intervention or by a Resurrection spell cast on your behalf. The debt is honored once and then expended."
         }
       ],
@@ -1459,11 +1459,11 @@
       "_id": "cardthronexxxxxx",
       "name": "Throne",
       "type": "base",
-      "description": "Gain Persuasion proficiency with doubled bonus; rightful ownership of a monster-occupied keep.",
+      "description": "Advance in Diplomacy, and gain the deed to a monster-held keep.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/throne.webp",
-          "text": "You gain proficiency in the Persuasion skill (PF2e: Diplomacy), and your proficiency bonus is doubled on checks made with it. You also become the rightful owner of a small keep in a distant land; however, the keep is currently occupied by monsters that you must clear out before you can claim it."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/throne.png",
+          "text": "You advance one proficiency step in Diplomacy, to Expert at the least. You also become the rightful owner of a small keep in a distant land — though it is currently held by monsters you must clear out before you can claim it."
         }
       ],
       "face": 0,
@@ -1484,11 +1484,11 @@
       "_id": "cardtombxxxxxxxx",
       "name": "Tomb",
       "type": "base",
-      "description": "Within 1 year, cast True Resurrection once without slot or components.",
+      "description": "Within a year, cast Resurrect once without spending a spell slot or components.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/tomb.webp",
-          "text": "At any time within the next year, you can cast True Resurrection (PF2e equivalent: Resurrect at high heightened level) once, without expending a spell slot or material components. After that use, the card's magic is expended."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/tomb.png",
+          "text": "At any time within the next year you can cast Resurrect, heightened as far as your level allows, once without expending a spell slot or material components. After that use the card's magic is spent."
         }
       ],
       "face": 0,
@@ -1512,7 +1512,7 @@
       "description": "Draw 2 additional cards; keep one and return the other to the deck.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/tower.webp",
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/tower.png",
           "text": "You immediately draw two additional cards. Choose one of the two to keep as if you had drawn it normally, and return the other to the deck."
         }
       ],
@@ -1534,11 +1534,11 @@
       "_id": "cardtreexxxxxxxx",
       "name": "Tree",
       "type": "base",
-      "description": "While unarmored, your AC = 15 + DEX; vulnerable to fire; undoable only by Wish.",
+      "description": "While unarmoured you gain a +2 item bonus to AC, and weakness 5 to fire.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/tree.webp",
-          "text": "Your skin toughens like bark. While unarmored, your Armor Class becomes 15 + your Dexterity modifier. You also become vulnerable to fire damage. Only a Wish can end this effect."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/tree.png",
+          "text": "Your skin toughens into bark. While you wear no armour you gain a +2 item bonus to AC, and you take weakness 5 to fire. PF2e has no way to set an unarmoured AC outright, so the bonus is the closest equivalent."
         }
       ],
       "face": 0,
@@ -1559,11 +1559,11 @@
       "_id": "cardundeadxxxxxx",
       "name": "Undead",
       "type": "base",
-      "description": "A revenant blames you and hunts you for 1 year (or until your death, or a Wish).",
+      "description": "A revenant hunts you for a year, until your death, or until a miracle ends it.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/undead.webp",
-          "text": "A revenant (PF2e: revenant undead) rises with the singular purpose of destroying you. It hunts you for one year or until you die. A Wish spell ends the pursuit."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/undead.png",
+          "text": "An undead revenant rises with the singular purpose of destroying you. It hunts you for one year or until you die. A wish-tier miracle ends the pursuit."
         }
       ],
       "face": 0,
@@ -1584,11 +1584,11 @@
       "_id": "cardvoidxxxxxxxx",
       "name": "Void",
       "type": "base",
-      "description": "Your soul is trapped in an object; your body is incapacitated; Wish reveals the location; you draw no more.",
+      "description": "Your soul is trapped in an object and your body left incapacitated; a wish-tier miracle reveals where. You draw no more cards.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/void.webp",
-          "text": "Your soul is drawn from your body and imprisoned in an object at a distant, secret location. Your body is incapacitated. A Wish spell can reveal the object's location; recovering your soul requires physical retrieval. You draw no more cards."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/void.png",
+          "text": "Your soul is drawn from your body and imprisoned in an object at a distant, secret location. Your body is left incapacitated. A wish-tier divine miracle can reveal where the object lies; recovering your soul still requires going to get it. You draw no more cards."
         }
       ],
       "face": 0,
@@ -1609,11 +1609,11 @@
       "_id": "cardwarriorxxxxx",
       "name": "Warrior",
       "type": "base",
-      "description": "Your Strength score increases by 2 (max 22).",
+      "description": "Your Strength modifier increases by 1, to a maximum of +7.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/warrior.webp",
-          "text": "Your Strength score increases by 2, to a maximum of 22 (5e cap). PF2e translation: +1 to Strength modifier, capped at the PF2e mod ceiling."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/warrior.png",
+          "text": "Your Strength modifier increases by 1, to a maximum of +7. The boost is permanent."
         }
       ],
       "face": 0,
@@ -1634,11 +1634,11 @@
       "_id": "cardwellxxxxxxxx",
       "name": "Well",
       "type": "base",
-      "description": "Learn three cantrips of your choice from any spell list.",
+      "description": "Learn three cantrips of your choice from any tradition.",
       "faces": [
         {
-          "img": "modules/deck-of-many-more-things/assets/cards/well.webp",
-          "text": "You learn three cantrips of your choice from any spell list. PF2e translation: you learn three cantrips of your choice from any tradition; the GM adjudicates casting statistics."
+          "img": "modules/deck-of-many-more-things/assets/cards-labeled/well.png",
+          "text": "You learn three cantrips of your choice from any magical tradition. The GM adjudicates your casting statistics for them."
         }
       ],
       "face": 0,
