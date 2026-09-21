@@ -96,35 +96,84 @@ export function buildSpellCandidates({ readySpells, opponents, actionsRemaining 
 }
 
 /**
- * One candidate per ready area spell (burst/emanation, save-based damage —
- * see dungeon-combat.mjs's isAreaSpellInScope), centered at whichever of the
- * caller's precomputed `placements` scores best. A spell with no placement
- * catching at least one opponent is never offered at all — an ally-only or
- * empty blast simply isn't a candidate. Among placements that do catch at
- * least one opponent, scoring is lexicographic (#126, decided live):
+ * The tier-specific overrides for a #140-scoped tier-scaling area spell
+ * (Wronged Monk's Wrath-shaped: same emanation/burst shape at every tier,
+ * only the radius and damage grow with action cost), parsed from raw
+ * description prose — there is no structured field for this at all, only
+ * "If you use N actions to cast the spell, increase the size of the
+ * emanation/area to X feet and the damage to YdZ ... damage[, and AdB ...
+ * damage]." clauses, one per non-minimum tier. The spell's own minimum
+ * tier (1 action, usually) is *not* included here — it comes from the
+ * spell's already-structured `system.area`/`system.damage` fields instead,
+ * matching #122's established "minimum tier = structured data" convention.
+ * Keyed by cost (2, 3, ...); a spell with no matching clauses at all
+ * returns `{}`.
+ */
+export function parseAreaSpellTierOverrides(descriptionHtml) {
+  const tiers = {};
+  const tierRegex = /If you use (\d)\s+actions?\s+to cast the spell,([^]*?)(?=If you use \d|<hr|<\/p>\s*$|$)/gi;
+  let match;
+  while ((match = tierRegex.exec(descriptionHtml))) {
+    const cost = Number(match[1]);
+    const clause = match[2];
+    const radiusMatch = /(\d+)\s*feet/.exec(clause);
+    const damageMatches = Array.from(
+      clause.matchAll(/(\d+d\d+)\s+(\w+)\s+damage/gi),
+    );
+    if (!radiusMatch || !damageMatches.length) continue;
+    tiers[cost] = {
+      cost,
+      radiusFeet: Number(radiusMatch[1]),
+      damage: damageMatches.map((m) => ({
+        formula: m[1],
+        type: m[2].toLowerCase(),
+      })),
+    };
+  }
+  return tiers;
+}
+
+/**
+ * The best-scoring placement among a set of precomputed options, or `null`
+ * if none catch at least one opponent — an ally-only or empty blast simply
+ * isn't a candidate. Scoring is lexicographic (#126, decided live):
  * maximize opponents hit first, then — only to break a tie on that count —
  * prefer whichever placement hits fewer allies. A placement is never passed
  * over for a strictly worse one just because it grazes one fewer ally; this
- * is not a net "enemies minus allies" score. Real token geometry (which
- * opponents/allies actually fall within a given radius of a given point,
- * `affected`/`affectedAllies` on each placement) is computed by the caller
- * — this function only ever picks among already-computed options.
+ * is not a net "enemies minus allies" score. Shared by
+ * `buildAreaSpellCandidates` (#119/#126, one candidate per spell) and
+ * `buildTierScalingAreaSpellCandidates` (#140, one candidate per
+ * cost tier of the same spell) — both need the identical placement-scoring
+ * rule, just applied to a different unit of "one candidate."
+ */
+function bestAreaPlacement(placements) {
+  return placements
+    .filter((p) => p.affected.length > 0)
+    .reduce((a, b) => {
+      if (!a) return b;
+      if (b.affected.length !== a.affected.length) {
+        return b.affected.length > a.affected.length ? b : a;
+      }
+      const aAllies = a.affectedAllies?.length ?? 0;
+      const bAllies = b.affectedAllies?.length ?? 0;
+      return bAllies < aAllies ? b : a;
+    }, null);
+}
+
+/**
+ * One candidate per ready area spell (burst/emanation, save-based damage —
+ * see dungeon-combat.mjs's isAreaSpellInScope), centered at whichever of the
+ * caller's precomputed `placements` scores best (`bestAreaPlacement`). Real
+ * token geometry (which opponents/allies actually fall within a given
+ * radius of a given point, `affected`/`affectedAllies` on each placement)
+ * is computed by the caller — this function only ever picks among
+ * already-computed options.
  */
 export function buildAreaSpellCandidates({ readyAreaSpells, actionsRemaining }) {
   const candidates = [];
   for (const spell of readyAreaSpells) {
     if (spell.cost > actionsRemaining) continue;
-    const best = spell.placements
-      .filter((p) => p.affected.length > 0)
-      .reduce((a, b) => {
-        if (!a) return b;
-        if (b.affected.length !== a.affected.length) {
-          return b.affected.length > a.affected.length ? b : a;
-        }
-        const aAllies = a.affectedAllies?.length ?? 0;
-        const bAllies = b.affectedAllies?.length ?? 0;
-        return bAllies < aAllies ? b : a;
-      }, null);
+    const best = bestAreaPlacement(spell.placements);
     if (!best) continue;
     const idSuffix = best.centerId ? `:${best.centerId}` : '';
     candidates.push({
@@ -135,6 +184,43 @@ export function buildAreaSpellCandidates({ readyAreaSpells, actionsRemaining }) 
       affectedIds: best.affected.map((o) => o.id),
       affectedAllyIds: (best.affectedAllies ?? []).map((o) => o.id),
       summary: `${spell.label} (hits ${best.affected.map((o) => o.name).join(', ')})`
+    });
+  }
+  return candidates;
+}
+
+/**
+ * One candidate per affordable cost tier of a ready tier-scaling area
+ * spell (#140 — Wronged Monk's Wrath-shaped: same burst/emanation shape at
+ * every tier, only the radius and damage grow with cost) — unlike
+ * `buildAreaSpellCandidates`, which offers one candidate per *spell*, this
+ * offers one candidate per (spell, tier) pair, since a combatant with
+ * enough actions remaining might reasonably choose to cast at 1, 2, *or* 3
+ * actions and each tier has its own best placement (a bigger radius can
+ * catch different opponents/allies than a smaller one centered the same
+ * way). `readyTierScalingAreaSpells` entries are one per tier already (the
+ * caller expands a single spell into its N tier entries), each carrying
+ * its own `cost`/`placements`/`label` — execution re-derives which tier's
+ * damage formula to use from the candidate's own `cost`, since a plain
+ * spell's `rollDamage()` has no notion of action-count tiers at all
+ * (confirmed live it only reads spell rank/heightening, never how many
+ * actions were spent).
+ */
+export function buildTierScalingAreaSpellCandidates({ readyTierScalingAreaSpells, actionsRemaining }) {
+  const candidates = [];
+  for (const tier of readyTierScalingAreaSpells) {
+    if (tier.cost > actionsRemaining) continue;
+    const best = bestAreaPlacement(tier.placements);
+    if (!best) continue;
+    const idSuffix = best.centerId ? `:${best.centerId}` : '';
+    candidates.push({
+      id: `castAreaTier:${tier.slug}:${best.centerType}${idSuffix}`, type: 'castAreaTier',
+      spellId: tier.id, entryId: tier.entryId, cost: tier.cost,
+      save: tier.save, basic: tier.basic,
+      centerType: best.centerType, centerId: best.centerId,
+      affectedIds: best.affected.map((o) => o.id),
+      affectedAllyIds: (best.affectedAllies ?? []).map((o) => o.id),
+      summary: `${tier.label} (hits ${best.affected.map((o) => o.name).join(', ')})`
     });
   }
   return candidates;
@@ -429,7 +515,7 @@ export function endTurnCandidate() {
 }
 
 /** Full candidate list for one decision iteration. */
-export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], readyAttackSpells = [], readyDebuffSpells = [], readyBreathWeapons = [], readyChainSpells = [], readyHealSpells = [], allies = [], turnState, hazard = null, hasRangedOrReach = false }) {
+export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], readyAttackSpells = [], readyDebuffSpells = [], readyBreathWeapons = [], readyChainSpells = [], readyHealSpells = [], readyTierScalingAreaSpells = [], allies = [], turnState, hazard = null, hasRangedOrReach = false }) {
   if (turnState.actionsRemaining <= 0) return [endTurnCandidate()];
   return [
     ...buildMovementCandidates({ opponents, hazard, hasRangedOrReach }),
@@ -441,6 +527,7 @@ export function buildCandidateList({ opponents, readyActions, readySpells = [], 
     ...buildBreathWeaponCandidates({ readyBreathWeapons, actionsRemaining: turnState.actionsRemaining }),
     ...buildChainSpellCandidates({ readyChainSpells, opponents, actionsRemaining: turnState.actionsRemaining }),
     ...buildHealSpellCandidates({ readyHealSpells, allies, actionsRemaining: turnState.actionsRemaining }),
+    ...buildTierScalingAreaSpellCandidates({ readyTierScalingAreaSpells, actionsRemaining: turnState.actionsRemaining }),
     endTurnCandidate()
   ];
 }

@@ -29,6 +29,7 @@ import {
   hasSpellUsesRemaining,
   parseBreathWeaponEffect,
   parseChainHopDistance,
+  parseAreaSpellTierOverrides,
 } from "./agent-candidates.mjs";
 import { findPath, blockedEdgesFromWalls } from "./pathfinding.mjs";
 import { coverBlocksLineOfFire, COVER_EFFECT_DATA } from "./cover-items.mjs";
@@ -556,6 +557,56 @@ function isAreaSpellInScope(spell) {
   if (!system.defense?.save?.statistic) return false;
   if (!Object.keys(system.damage ?? {}).length) return false;
   return /^[123]$/.test(system.time?.value ?? "");
+}
+
+/**
+ * True for a spell squarely inside #140's scope: otherwise shaped exactly
+ * like #119's area spells (burst/emanation, save-based damage), but with a
+ * genuinely variable `time.value` ("1 to 3") *and* at least one parseable
+ * tier override (`parseAreaSpellTierOverrides`) — a variable-cost area
+ * spell whose higher tiers can't be parsed at all (no "If you use N
+ * actions..." phrasing found) is left to #122's fixed-at-minimum-cost
+ * handling instead, same as any other variable-cost spell.
+ */
+function isTierScalingAreaSpellInScope(spell) {
+  const system = spell.system ?? {};
+  const areaType = system.area?.type;
+  if (areaType !== "burst" && areaType !== "emanation") return false;
+  if (!system.defense?.save?.statistic) return false;
+  if (!Object.keys(system.damage ?? {}).length) return false;
+  if (!/^[123]\s+to\s+[123]$/.test(system.time?.value ?? "")) return false;
+  return (
+    Object.keys(
+      parseAreaSpellTierOverrides(system.description?.value ?? ""),
+    ).length > 0
+  );
+}
+
+/**
+ * Every cost tier of a #140-scoped tier-scaling area spell, keyed by cost —
+ * the minimum tier (usually 1 action) comes from the spell's own
+ * structured `system.area`/`system.damage` fields (matching #122's
+ * "minimum tier = structured data" convention), and any higher tiers come
+ * from `parseAreaSpellTierOverrides`'s parsed prose. A spell whose minimum
+ * tier isn't itself the cheapest end of its `"N to M"` range (shouldn't
+ * happen given `isTierScalingAreaSpellInScope`'s own filtering, but
+ * defensive regardless) is skipped for that base entry.
+ */
+function resolveAreaSpellTiers(spell) {
+  const system = spell.system ?? {};
+  const tiers = { ...parseAreaSpellTierOverrides(system.description?.value ?? "") };
+  const minCost = minimumVariableCost(spell);
+  if (minCost != null) {
+    tiers[minCost] = {
+      cost: minCost,
+      radiusFeet: system.area?.value ?? 0,
+      damage: Object.values(system.damage ?? {}).map((d) => ({
+        formula: d.formula,
+        type: d.type,
+      })),
+    };
+  }
+  return tiers;
 }
 
 /**
@@ -1443,6 +1494,62 @@ export async function getPendingAgentTurn(combat) {
       }),
   );
 
+  // One entry per (spell, tier) pair — a #140-scoped tier-scaling area
+  // spell offers a separate castAreaTier candidate for each affordable
+  // cost tier, each with its own radius (and therefore its own real
+  // placements, computed the same way #119's readyAreaSpells does, just
+  // parameterized per tier instead of using the spell's single structured
+  // radius).
+  const readyTierScalingAreaSpells = (
+    combatant.actor?.spellcasting?.contents ?? []
+  ).flatMap((entry) =>
+    (entry.spells?.contents ?? [])
+      .filter(isTierScalingAreaSpellInScope)
+      .filter(hasSpellUsesRemaining)
+      .flatMap((spell) => {
+        const tiers = resolveAreaSpellTiers(spell);
+        return Object.values(tiers).map((tier) => {
+          const radiusSquares = tier.radiusFeet / gridDistanceFt;
+          const withinRadiusOf = (pool) => (centerToken) =>
+            pool
+              .filter(
+                (o) =>
+                  chebyshevSquares(centerToken, o.token, gridSize) <=
+                  radiusSquares,
+              )
+              .map((o) => ({ id: o.id, name: o.name }));
+          const withinRadius = withinRadiusOf(rawOpponents);
+          const withinRadiusAllies = withinRadiusOf(rawAllies);
+          const placements =
+            spell.system.area.type === "emanation"
+              ? [
+                  {
+                    centerType: "self",
+                    centerId: null,
+                    affected: withinRadius(combatant.token),
+                    affectedAllies: withinRadiusAllies(combatant.token),
+                  },
+                ]
+              : rawOpponents.map((center) => ({
+                  centerType: "opponent",
+                  centerId: center.id,
+                  affected: withinRadius(center.token),
+                  affectedAllies: withinRadiusAllies(center.token),
+                }));
+          return {
+            id: spell.id,
+            slug: `${spell.slug}-${tier.cost}action`,
+            label: `${spell.name} (${tier.cost} action${tier.cost > 1 ? "s" : ""})`,
+            cost: tier.cost,
+            save: spell.system.defense.save.statistic,
+            basic: spell.system.defense.save.basic,
+            entryId: entry.id,
+            placements,
+          };
+        });
+      }),
+  );
+
   const readyAttackSpells = (combatant.actor?.spellcasting?.contents ?? [])
     .flatMap((entry) =>
       (entry.spells?.contents ?? [])
@@ -1600,6 +1707,7 @@ export async function getPendingAgentTurn(combat) {
     readyBreathWeapons,
     readyChainSpells,
     readyHealSpells,
+    readyTierScalingAreaSpells,
     allies,
     turnState,
     hazard: null,
@@ -1831,6 +1939,88 @@ async function castAreaSpellAndApplySaves(
       if (damageRoll) {
         await target.actor.applyDamage({
           damage: damageRoll,
+          token: target.token,
+          outcome,
+        });
+        await applyDefeatIfReducedToZero(target);
+      }
+      outcomes.push({ targetId: target.id, outcome });
+    }
+    return outcomes;
+  } finally {
+    await game.user.update({
+      "flags.pf2e.settings.showCheckDialogs": prevShowCheck,
+      "flags.pf2e.settings.showDamageDialogs": prevShowDamage,
+    });
+  }
+}
+
+/**
+ * Casts a #140-scoped tier-scaling area spell at the cost tier matching
+ * `cost`, then rolls each target's own save and applies outcome-scaled
+ * damage from *that tier's* formula — never `spell.rollDamage()`, since
+ * confirmed live it has no notion of action-count tiers at all (it only
+ * ever reads spell rank/heightening, always producing the spell's base/
+ * minimum-tier damage regardless of how many actions were spent). Instead
+ * constructs a real `DamageRoll` directly from the tier's own damage
+ * instances, joined with commas (`"(NdM)[type1],(PdQ)[type2]"`) — confirmed
+ * live this is the correct multi-instance syntax: a `+`-joined formula
+ * silently collapses every instance into one combined "untyped" total,
+ * losing per-type resistance/weakness handling entirely, while comma-
+ * joining keeps each instance independently typed and IWR-correct. Scaled
+ * with the roll's own `.alter(mult, 0)` for basic-save halving/doubling,
+ * the same technique #123/#127 already use.
+ */
+async function castTierScalingAreaSpellAndApplySaves(
+  combatant,
+  targets,
+  spellId,
+  entryId,
+  save,
+  cost,
+) {
+  const entry = combatant.actor?.spellcasting?.contents?.find(
+    (e) => e.id === entryId,
+  );
+  const spell = entry?.spells?.contents?.find((s) => s.id === spellId);
+  if (!entry || !spell) return null;
+  const tier = resolveAreaSpellTiers(spell)[cost];
+  if (!tier) return null;
+
+  const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
+  const prevShowDamage = game.user.flags?.pf2e?.settings?.showDamageDialogs;
+  await game.user.update({
+    "flags.pf2e.settings.showCheckDialogs": false,
+    "flags.pf2e.settings.showDamageDialogs": false,
+  });
+  try {
+    await entry.cast(spell, { createMessage: true });
+    const dc = entry.statistic?.dc?.value ?? 10;
+    const DamageRollClass = CONFIG.Dice.rolls.find(
+      (c) => c.name === "DamageRoll",
+    );
+    const formula = tier.damage
+      .map((d) => `(${d.formula})[${d.type}]`)
+      .join(",");
+    const outcomes = [];
+    for (const target of targets) {
+      const saveStat = target.actor?.saves?.[save];
+      if (!saveStat) continue;
+      await saveStat.roll({ dc: { value: dc }, createMessage: true });
+      const outcome =
+        game.messages.contents.at(-1)?.flags?.pf2e?.context?.outcome ?? null;
+      playSpellSaveSound(outcome);
+      if (outcome !== "criticalSuccess") {
+        const roll = new DamageRollClass(formula);
+        await roll.evaluate();
+        const scaled =
+          outcome === "success"
+            ? await roll.alter(0.5, 0)
+            : outcome === "criticalFailure"
+              ? await roll.alter(2, 0)
+              : roll;
+        await target.actor.applyDamage({
+          damage: scaled,
           token: target.token,
           outcome,
         });
@@ -2320,6 +2510,19 @@ export async function applyAgentDecision(
         target,
         candidate.spellId,
         candidate.entryId,
+      );
+  } else if (candidate.type === "castAreaTier") {
+    const targets = combatantOpponents(combat, combatant).filter((c) =>
+      candidate.affectedIds.includes(c.id),
+    );
+    if (targets.length)
+      await castTierScalingAreaSpellAndApplySaves(
+        combatant,
+        targets,
+        candidate.spellId,
+        candidate.entryId,
+        candidate.save,
+        candidate.cost,
       );
   }
 
