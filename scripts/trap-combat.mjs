@@ -161,3 +161,82 @@ export async function triggerTrap(hazardActor, target) {
     return outcome;
   });
 }
+
+// --- #136: external agent customization of a trap's narrative flavor ----
+
+/**
+ * The trap-tagged hazard `dungeon-scene.mjs`'s `populateSlotTrap` most
+ * recently spawned and flagged `trapCustomization: {status: 'pending'}`,
+ * or `null` if there's nothing for an external agent to customize right
+ * now. The *only* read surface `tools/agent-loop`'s poller uses for this
+ * feature — mirrors `dungeon-combat.mjs`'s `getPendingAgentTurn` exactly:
+ * a thin, narrow read surface rather than exposing arbitrary script access.
+ *
+ * Scoped to still-hidden tokens only: `dungeon-scene.mjs`'s
+ * `revealSlotTokens` un-hides a room's tokens the moment its own reveal
+ * door opens, with no idea any of them might be mid-customization —
+ * rather than coordinate that race, a trap simply stops being offered for
+ * customization the instant it's actually revealed, so the agent can
+ * never rewrite a name/description a player has already seen in chat.
+ * Falling back to the un-customized template past that point is exactly
+ * the same "unreachable/timed-out agent" fallback #94's combat-AI design
+ * already establishes — reached here by construction (nothing ever blocks
+ * room reveal on this), not by an explicit timeout.
+ *
+ * Deliberately narrow about what it hands the agent: the hazard's own
+ * name/description/level and the room's terrain tag and party level —
+ * never `system.details.disable`/`system.actions`, so a customization
+ * response has no way to touch (or even see) the mechanical data #134's
+ * engine actually runs.
+ */
+export function getPendingTrapCustomization(sceneId = canvas?.scene?.id) {
+  const scene = game.scenes.get(sceneId);
+  if (!scene) return null;
+  const token = scene.tokens.find((t) => {
+    if (t.hidden !== true) return false;
+    return (
+      t.actor?.getFlag(MODULE_ID, "trapCustomization")?.status === "pending"
+    );
+  });
+  if (!token?.actor) return null;
+  const actor = token.actor;
+  const pending = actor.getFlag(MODULE_ID, "trapCustomization");
+  return {
+    sceneId: scene.id,
+    actorId: actor.id,
+    name: actor.name,
+    // A hazard Actor's own description is a plain string at
+    // system.details.description — confirmed live against Scythe Blades —
+    // not the {value} wrapper an NPC's own system.details.description
+    // uses. Read/written as a bare string throughout this pair for exactly
+    // that reason.
+    description: actor.system?.details?.description ?? "",
+    trapLevel: actor.system?.details?.level?.value ?? null,
+    locationTag: pending?.locationTag ?? null,
+    partyLevel: pending?.partyLevel ?? null,
+  };
+}
+
+/**
+ * Applies an external agent's customized name/description to a pending
+ * trap (or, called with no `name`/`description` at all, just marks it
+ * no-longer-pending — the "decline to customize" case a provider can
+ * return instead of forcing one). Only ever touches display fields never
+ * read by `classifyTrap`/`parseDisableChecks`/`triggerTrap` above — this
+ * cannot change a trap's DC, damage, or whether it's automatable, by
+ * construction, since it never writes to `system.details.disable` or
+ * `system.actions`. See module.mjs's api.applyTrapCustomization.
+ */
+export async function applyTrapCustomization(
+  actorId,
+  { name = null, description = null } = {},
+) {
+  const actor = game.actors.get(actorId);
+  if (!actor) return null;
+  const updates = {};
+  if (name) updates.name = name;
+  if (description) updates["system.details.description"] = description;
+  if (Object.keys(updates).length) await actor.update(updates);
+  await actor.setFlag(MODULE_ID, "trapCustomization", { status: "customized" });
+  return { actorId, name: actor.name };
+}

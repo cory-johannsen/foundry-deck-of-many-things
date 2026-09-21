@@ -806,8 +806,20 @@ export function makeFoundryApi() {
         obj.hidden = hidden;
         if (extraFlags)
           obj.flags = foundry.utils.mergeObject(obj.flags ?? {}, extraFlags);
-        await scene.createEmbeddedDocuments("Token", [obj]);
-        created.push(actor.name);
+        const [createdToken] = await scene.createEmbeddedDocuments("Token", [
+          obj,
+        ]);
+        // {name} only, historically — widened to include the real ids
+        // (#136 needs actorId to flag a spawned trap for agent
+        // customization afterward). No existing caller reads this return
+        // value at all (every `spawnCreatures` call site in this module is
+        // a bare `await`), so this is a safe, non-breaking shape change,
+        // not a compatibility concern.
+        created.push({
+          name: actor.name,
+          actorId: actor.id,
+          tokenId: createdToken.id,
+        });
       }
       return created;
     },
