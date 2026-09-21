@@ -8,6 +8,7 @@ import {
   parseMultiStrikeBundle, buildMultiStrikeCandidates,
   parseChainHopDistance, buildChainSpellCandidates,
   buildHealSpellCandidates,
+  parseSpellEffectUuid, buildBuffSpellCandidates,
   parseAreaSpellTierOverrides, buildTierScalingAreaSpellCandidates, endTurnCandidate,
   parseActionGlyphTiers, buildDualNatureSpellCandidates,
   parseTargetCountFormula, buildTargetCountSpellCandidates,
@@ -831,6 +832,52 @@ describe('buildHealSpellCandidates', () => {
 
   it('omits a spell whose cost exceeds the actions remaining', () => {
     const candidates = buildHealSpellCandidates({ readyHealSpells: [heal], allies: [injuredAllyInRange], actionsRemaining: 0 });
+    expect(candidates).toEqual([]);
+  });
+});
+
+describe('parseSpellEffectUuid', () => {
+  it('parses a real linked Spell Effect UUID (Mountain Resilience-shaped)', () => {
+    const description = "<p>The target's skin hardens like stone. It gains resistance 5 to physical damage.</p>\n<p>@UUID[Compendium.pf2e.spell-effects.Item.JHpYudY14g0H4VWU]{Spell Effect: Mountain Resilience}</p>\n<hr />";
+    expect(parseSpellEffectUuid(description)).toBe(
+      'Compendium.pf2e.spell-effects.Item.JHpYudY14g0H4VWU',
+    );
+  });
+
+  it('returns null when there is no linked Spell Effect UUID at all', () => {
+    const description = '<p>You deal 4d6 fire damage.</p>';
+    expect(parseSpellEffectUuid(description)).toBeNull();
+  });
+
+  it('returns null for a UUID from an unrelated compendium', () => {
+    const description = '<p>@UUID[Compendium.pf2e.conditionitems.Item.abc123]{Frightened 1}</p>';
+    expect(parseSpellEffectUuid(description)).toBeNull();
+  });
+});
+
+describe('buildBuffSpellCandidates', () => {
+  const mountainResilience = { id: 'sp1', slug: 'mountain-resilience', label: 'Mountain Resilience', cost: 2, rangeSquares: 6, entryId: 'entry1' };
+  const allyInRange = { id: 'ally1', name: 'Fighter', distanceSquares: 3 };
+  const allyOutOfRange = { id: 'ally2', name: 'Rogue', distanceSquares: 10 };
+
+  it('offers a buff candidate for an ally within range, regardless of HP', () => {
+    const candidates = buildBuffSpellCandidates({ readyBuffSpells: [mountainResilience], allies: [allyInRange], actionsRemaining: 3 });
+    expect(candidates).toEqual([
+      {
+        id: 'castBuff:mountain-resilience:ally1', type: 'castBuff',
+        spellId: 'sp1', entryId: 'entry1', targetId: 'ally1', cost: 2,
+        summary: 'Mountain Resilience on Fighter'
+      }
+    ]);
+  });
+
+  it('omits an ally outside the spell\'s range', () => {
+    const candidates = buildBuffSpellCandidates({ readyBuffSpells: [mountainResilience], allies: [allyOutOfRange], actionsRemaining: 3 });
+    expect(candidates).toEqual([]);
+  });
+
+  it('omits a spell whose cost exceeds the actions remaining', () => {
+    const candidates = buildBuffSpellCandidates({ readyBuffSpells: [mountainResilience], allies: [allyInRange], actionsRemaining: 1 });
     expect(candidates).toEqual([]);
   });
 });

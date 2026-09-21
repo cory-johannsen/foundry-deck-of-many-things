@@ -33,6 +33,7 @@ import {
   parseActionGlyphTiers,
   parseTargetCountFormula,
   parseAutoHitAreaTiers,
+  parseSpellEffectUuid,
 } from "./agent-candidates.mjs";
 import { findPath, blockedEdgesFromWalls } from "./pathfinding.mjs";
 import { LOOTABLE_ITEM_TYPES } from "./treasure.mjs";
@@ -1002,6 +1003,34 @@ function healSpellRangeSquares(spell, gridDistanceFt) {
     return minimumTierRangeSquares(spell, gridDistanceFt);
   }
   return spellRangeSquares(spell, gridDistanceFt);
+}
+
+/**
+ * True for a spell squarely inside #170's scope: single-ally, no save, no
+ * damage, a fixed 1/2/3 action cost, and a parseable linked Spell Effect
+ * (`parseSpellEffectUuid`) — confirmed live (Mountain Resilience) this is
+ * the real, structured signal for "this spell grants an unconditional
+ * status effect," the same way the `healing` trait is #132's own signal.
+ * Deliberately excludes the `healing` trait (#132's own domain, even
+ * though a couple of healing spells also carry a linked Spell Effect —
+ * Regenerate, sampled during research), any save-based spell (#121's
+ * domain), and multi-target/variable-cost phrasing ("varies",
+ * Blessing of Defiance's own shape, or "1 to 3", Infuse Vitality's) — v1
+ * is single-target, fixed-cost only, matching every other slice's
+ * narrow-first pattern.
+ */
+function isBuffSpellInScope(spell) {
+  const system = spell.system ?? {};
+  if (system.traits?.value?.includes("healing")) return false;
+  if (isDualNatureTieredSpellInScope(spell)) return false;
+  if (system.area != null) return false;
+  const targetValue = system.target?.value ?? "";
+  if (!/^1\b/.test(targetValue)) return false;
+  if (/plus|additional|allies|and up to/i.test(targetValue)) return false;
+  if (system.defense?.save?.statistic) return false;
+  if (Object.keys(system.damage ?? {}).length) return false;
+  if (!/^[123]$/.test(system.time?.value ?? "")) return false;
+  return parseSpellEffectUuid(system.description?.value ?? "") != null;
 }
 
 /**
@@ -2144,6 +2173,26 @@ export async function getPendingAgentTurn(combat) {
     )
     .filter(Boolean);
 
+  const readyBuffSpells = (combatant.actor?.spellcasting?.contents ?? [])
+    .flatMap((entry) =>
+      (entry.spells?.contents ?? [])
+        .filter(isBuffSpellInScope)
+        .filter(hasSpellUsesRemaining)
+        .map((spell) => {
+          const rangeSquares = spellRangeSquares(spell, gridDistanceFt);
+          if (rangeSquares == null) return null;
+          return {
+            id: spell.id,
+            slug: spell.slug,
+            label: spell.name,
+            cost: Number(spell.system.time.value),
+            rangeSquares,
+            entryId: entry.id,
+          };
+        }),
+    )
+    .filter(Boolean);
+
   // One entry per #174-scoped dual-nature tiered spell (Harm/Heal-shaped).
   // Unlike every other ready-spell block, this one draws from BOTH
   // rawOpponents and rawAllies for every tier, since which pool a target
@@ -2391,6 +2440,7 @@ export async function getPendingAgentTurn(combat) {
     readyMultiStrikeBundles,
     readyChainSpells,
     readyHealSpells,
+    readyBuffSpells,
     readyTierScalingAreaSpells,
     readyDualNatureSpells,
     readyTargetCountSpells,
@@ -3004,6 +3054,48 @@ async function castHealSpellAndApply(combatant, target, spellId, entryId) {
 }
 
 /**
+ * Casts a #170-scoped buff spell at `target` and applies its linked Spell
+ * Effect item — confirmed live `entry.cast()` alone creates no item on the
+ * target at all (same "cast() only announces" pattern #132's own healRoll
+ * and #121's condition application already need a separate step for);
+ * `fromUuid(effectUuid)` fetches the real compendium effect
+ * (`parseSpellEffectUuid`'s own result) and
+ * `target.actor.createEmbeddedDocuments` is what actually grants it —
+ * confirmed live directly against Mountain Resilience that this correctly
+ * derives the effect's own rule elements (its resistance showed up in the
+ * target's `system.attributes.resistances` immediately, no extra step
+ * needed). Returns the applied effect's name, or `null` if the spell has
+ * no ready action, no parseable effect UUID, or the UUID doesn't resolve.
+ */
+async function castBuffSpellAndApply(combatant, target, spellId, entryId) {
+  const entry = combatant.actor?.spellcasting?.contents?.find(
+    (e) => e.id === entryId,
+  );
+  const spell = entry?.spells?.contents?.find((s) => s.id === spellId);
+  if (!entry || !spell) return null;
+
+  const effectUuid = parseSpellEffectUuid(spell.system.description?.value ?? "");
+  if (!effectUuid) return null;
+
+  const prevShowCheck = game.user.flags?.pf2e?.settings?.showCheckDialogs;
+  await game.user.update({
+    "flags.pf2e.settings.showCheckDialogs": false,
+  });
+  try {
+    const targetRef = { document: target.token };
+    await entry.cast(spell, { target: targetRef, createMessage: true });
+    const effectDoc = await fromUuid(effectUuid);
+    if (!effectDoc) return null;
+    await target.actor.createEmbeddedDocuments("Item", [effectDoc.toObject()]);
+    return effectDoc.name;
+  } finally {
+    await game.user.update({
+      "flags.pf2e.settings.showCheckDialogs": prevShowCheck,
+    });
+  }
+}
+
+/**
  * The single-target healing-direction execution for a #174-scoped
  * dual-nature spell (`castDualHeal`) — structurally identical to #132's
  * `castHealSpellAndApply` (same manual roll-total-negation technique;
@@ -3590,6 +3682,17 @@ export async function applyAgentDecision(
     );
     if (target)
       await castHealSpellAndApply(
+        combatant,
+        target,
+        candidate.spellId,
+        candidate.entryId,
+      );
+  } else if (candidate.type === "castBuff") {
+    const target = combatantAllies(combat, combatant).find(
+      (c) => c.id === candidate.targetId,
+    );
+    if (target)
+      await castBuffSpellAndApply(
         combatant,
         target,
         candidate.spellId,

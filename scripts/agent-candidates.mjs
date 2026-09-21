@@ -820,13 +820,59 @@ export function buildHealSpellCandidates({ readyHealSpells, allies, actionsRemai
   return candidates;
 }
 
+/**
+ * The linked "Spell Effect" compendium item a buff spell (#170) actually
+ * applies, parsed from its own description — confirmed live that
+ * `entry.cast()` alone does NOT create this on the target (the same
+ * "cast() only announces, never applies" pattern #118's own damage roll
+ * and #121's condition application already need a separate step for);
+ * dungeon-combat.mjs's `castBuffSpellAndApply` fetches this UUID via
+ * `fromUuid()` and applies it directly via
+ * `target.actor.createEmbeddedDocuments`. Every buff spell sampled during
+ * research (Mountain Resilience, Blessing of Defiance, Infuse Vitality)
+ * carries exactly one `@UUID[Compendium.pf2e.spell-effects.Item.ID]{...}`
+ * tag; `null` when none is found (or it's from an unrelated compendium —
+ * `pf2e.conditionitems`, say, which #121's debuff path already owns).
+ */
+export function parseSpellEffectUuid(descriptionHtml) {
+  const match = /@UUID\[(Compendium\.pf2e\.spell-effects\.Item\.[^\]]+)\]\{[^}]*\}/.exec(
+    descriptionHtml,
+  );
+  return match ? match[1] : null;
+}
+
+/**
+ * One candidate per ready single-target buff spell x each ally within
+ * range — same shape as `buildHealSpellCandidates`, minus its full-HP
+ * exclusion (a buff applies regardless of current HP; there's no
+ * equivalent "already at max" signal to check for a status effect without
+ * inspecting the target's own current effects, deliberately out of scope
+ * for v1 — an agent re-buffing an already-buffed ally is a minor
+ * inefficiency, not a correctness bug).
+ */
+export function buildBuffSpellCandidates({ readyBuffSpells, allies, actionsRemaining }) {
+  const candidates = [];
+  for (const spell of readyBuffSpells) {
+    if (spell.cost > actionsRemaining) continue;
+    for (const ally of allies) {
+      if (ally.distanceSquares > spell.rangeSquares) continue;
+      candidates.push({
+        id: `castBuff:${spell.slug}:${ally.id}`, type: 'castBuff',
+        spellId: spell.id, entryId: spell.entryId, targetId: ally.id, cost: spell.cost,
+        summary: `${spell.label} on ${ally.name}`
+      });
+    }
+  }
+  return candidates;
+}
+
 /** Always available — lets the agent stop spending actions early. */
 export function endTurnCandidate() {
   return { id: 'endTurn', type: 'endTurn', cost: 0, summary: 'End turn' };
 }
 
 /** Full candidate list for one decision iteration. */
-export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], readyAttackSpells = [], readyDebuffSpells = [], readyBreathWeapons = [], readyMultiStrikeBundles = [], readyChainSpells = [], readyHealSpells = [], readyTierScalingAreaSpells = [], readyDualNatureSpells = [], readyTargetCountSpells = [], readyAutoHitAreaSpells = [], allies = [], turnState, hazard = null, hasRangedOrReach = false }) {
+export function buildCandidateList({ opponents, readyActions, readySpells = [], readyAreaSpells = [], readyAttackSpells = [], readyDebuffSpells = [], readyBreathWeapons = [], readyMultiStrikeBundles = [], readyChainSpells = [], readyHealSpells = [], readyBuffSpells = [], readyTierScalingAreaSpells = [], readyDualNatureSpells = [], readyTargetCountSpells = [], readyAutoHitAreaSpells = [], allies = [], turnState, hazard = null, hasRangedOrReach = false }) {
   if (turnState.actionsRemaining <= 0) return [endTurnCandidate()];
   return [
     ...buildMovementCandidates({ opponents, hazard, hasRangedOrReach }),
@@ -839,6 +885,7 @@ export function buildCandidateList({ opponents, readyActions, readySpells = [], 
     ...buildMultiStrikeCandidates({ readyMultiStrikeBundles, opponents, actionsRemaining: turnState.actionsRemaining }),
     ...buildChainSpellCandidates({ readyChainSpells, opponents, actionsRemaining: turnState.actionsRemaining }),
     ...buildHealSpellCandidates({ readyHealSpells, allies, actionsRemaining: turnState.actionsRemaining }),
+    ...buildBuffSpellCandidates({ readyBuffSpells, allies, actionsRemaining: turnState.actionsRemaining }),
     ...buildTierScalingAreaSpellCandidates({ readyTierScalingAreaSpells, actionsRemaining: turnState.actionsRemaining }),
     ...buildDualNatureSpellCandidates({ readyDualNatureSpells, actionsRemaining: turnState.actionsRemaining }),
     ...buildTargetCountSpellCandidates({ readyTargetCountSpells, actionsRemaining: turnState.actionsRemaining }),
