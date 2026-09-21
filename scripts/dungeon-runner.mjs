@@ -92,6 +92,12 @@ export async function createRun(
     // — where to send them back to if the run is later cancelled. Null if
     // they started with no scene active at all.
     previousSceneId,
+    // A narrative room's own "direction for the rest of the run" (#163) —
+    // free text the GM sets, persisting run-wide (not per-room) once set,
+    // the same way the Journey Spread's own Reward/Ruin outcomes already
+    // shape what happens next without being tied to any one room's own
+    // display. Null until a narrative room sets one.
+    objective: null,
   };
   return persist(sceneId, state, settingsRef);
 }
@@ -340,6 +346,27 @@ export async function ensureSkillChallenge(
     r.id === roomId ? { ...r, challenge } : r,
   );
   const newState = { ...state, rooms };
+  await persist(sceneId, newState, settingsRef);
+  return newState;
+}
+
+/**
+ * Sets (or clears, with `objective: null`) the run's current narrative
+ * objective (#163) — a plain, run-wide field, not scoped to any one room,
+ * so it's visible from `getRunState` regardless of where the party is by
+ * the time a player asks "wait, what were we doing again?" A blank/
+ * whitespace-only string is treated the same as `null` (nothing to show),
+ * rather than persisting an empty-looking objective line.
+ */
+export async function setObjective(
+  sceneId,
+  objective,
+  { settingsRef = defaultSettingsRef() } = {},
+) {
+  const state = getRunState(sceneId, { settingsRef });
+  if (!state) return null;
+  const trimmed = objective?.trim();
+  const newState = { ...state, objective: trimmed ? trimmed : null };
   await persist(sceneId, newState, settingsRef);
   return newState;
 }

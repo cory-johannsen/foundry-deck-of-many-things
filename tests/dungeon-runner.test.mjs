@@ -9,6 +9,7 @@ import {
   getRunState,
   ensureSkillChallenge,
   recordSkillChallengeAttempt,
+  setObjective,
 } from "../scripts/dungeon-runner.mjs";
 
 function makeSettingsStub(initial = {}) {
@@ -52,6 +53,7 @@ describe("createRun / getRunState", () => {
     expect(state.nextPhysicalSlot).toBe(2);
     expect(state.lastAutoEntry).toBeNull();
     expect(state.previousSceneId).toBeNull();
+    expect(state.objective).toBeNull();
     expect(getRunState("scene-1", { settingsRef })).toEqual(state);
   });
 
@@ -569,6 +571,62 @@ describe("ensureSkillChallenge / recordSkillChallengeAttempt", () => {
       "success",
       { settingsRef },
     );
+    expect(result).toBeNull();
+  });
+});
+
+describe("setObjective", () => {
+  it("sets a run-wide objective, visible regardless of the current room", async () => {
+    const settingsRef = makeSettingsStub();
+    await createRun(
+      { sceneId: "s", roomCount: 5, seed: "fixed" },
+      { settingsRef },
+    );
+    const state = await setObjective("s", "Find the missing relic", {
+      settingsRef,
+    });
+    expect(state.objective).toBe("Find the missing relic");
+    expect(getRunState("s", { settingsRef }).objective).toBe(
+      "Find the missing relic",
+    );
+  });
+
+  it("overwrites a previously-set objective rather than accumulating a log", async () => {
+    const settingsRef = makeSettingsStub();
+    await createRun(
+      { sceneId: "s", roomCount: 5, seed: "fixed" },
+      { settingsRef },
+    );
+    await setObjective("s", "First objective", { settingsRef });
+    const state = await setObjective("s", "Second objective", { settingsRef });
+    expect(state.objective).toBe("Second objective");
+  });
+
+  it("treats a blank/whitespace-only string as clearing the objective", async () => {
+    const settingsRef = makeSettingsStub();
+    await createRun(
+      { sceneId: "s", roomCount: 5, seed: "fixed" },
+      { settingsRef },
+    );
+    await setObjective("s", "Something", { settingsRef });
+    const state = await setObjective("s", "   ", { settingsRef });
+    expect(state.objective).toBeNull();
+  });
+
+  it("clears the objective when called with null", async () => {
+    const settingsRef = makeSettingsStub();
+    await createRun(
+      { sceneId: "s", roomCount: 5, seed: "fixed" },
+      { settingsRef },
+    );
+    await setObjective("s", "Something", { settingsRef });
+    const state = await setObjective("s", null, { settingsRef });
+    expect(state.objective).toBeNull();
+  });
+
+  it("is a no-op with no run at all", async () => {
+    const settingsRef = makeSettingsStub();
+    const result = await setObjective("nope", "Anything", { settingsRef });
     expect(result).toBeNull();
   });
 });
